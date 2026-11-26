@@ -1,14 +1,21 @@
-# Every push to trunk, and every pull request: on each system, after
-# installing the tools and the bundle, the packages the test fixtures lock
-# (rake fixtures), a setup step that no test task runs. Then on Linux, the
-# whole of rake check (Standard, rbs validate, the comment on every public
-# part of sig/, Steep, the tests with their coverage, the tests under
-# RBS's runtime type checker, every Ruby example in the documentation,
-# CrossLint's own check of this repository, usage lint, the check that
-# docs/reference/cli.md is what usage generates, and REUSE); and on macOS
-# and Windows the tests, each with the Ruby, the Node, and tools mise.toml
-# pins. The macOS and Windows jobs leave out the Gemfile's check group,
-# which only rake check uses.
+# The full run, for every push to trunk in batches, and for every pull
+# request: on each system, after installing the tools and the bundle, the
+# packages the test fixtures lock (rake fixtures), a setup step that no
+# test task runs. Then on Linux, the whole of rake check (Standard, rbs
+# validate, the comment on every public part of sig/, Steep, the tests
+# with their coverage, the tests under RBS's runtime type checker, every
+# Ruby example in the documentation, CrossLint's own check of this
+# repository, usage lint, the check that docs/reference/cli.md is what
+# usage generates, and REUSE), which fast.yml also runs on every push of
+# its own; and on macOS and Windows the tests, each with the Ruby, the
+# Node, and tools mise.toml pins. The macOS and Windows jobs leave out the
+# Gemfile's check group, which only rake check uses.
+#
+# On trunk one run goes and one waits, and a newer push replaces the run
+# that waits and never the one that goes, so every run that starts
+# finishes, and it proves the commit at its head. A release is a commit
+# that heads a run of this workflow that passed
+# (.github/scripts/check-ci-passed.sh).
 
 name: CI
 
@@ -20,13 +27,12 @@ on:
 permissions:
   contents: read
 
-# On trunk every push has a separate group, named for its commit, so no
-# push cancels another's run and every commit gets a result. On a branch a
-# push cancels the run before it.
+# On trunk every push is in one group, which holds one run going and one
+# waiting: GitHub replaces the waiting run with a newer push's, and
+# cancels the run going only when cancel-in-progress is true. On a branch
+# a push cancels the run before it.
 concurrency:
-  group: >-
-    ${{ github.workflow }}-${{ github.ref }}-${{
-    github.ref == 'refs/heads/trunk' && github.sha || 'branch' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/trunk' }}
 
 defaults:
