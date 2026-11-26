@@ -48,10 +48,24 @@ class SharedPluginTest < Minitest::Test
   end
 
   def test_knows_a_url_with_a_user_name_or_password_by_what_comes_before_the_first_slash_after_the_scheme
-    with = %w[https://u:p@example.com/o/r https://u@example.com/o/r https://:p@example.com/o/r https://u:p@example.com ssh://git@example.com/o/r]
+    with = %w[https://u:p@example.com/o/r https://u@example.com/o/r https://:p@example.com/o/r https://u:p@example.com ssh://git@example.com/o/r x://u@h HTTPS://u:p@h https://@h/o]
     without = %w[https://example.com/o/r https://example.com/o/a@b https://example.com/?a=b@c https://example.com#a@b https://example.com:8080/o/r file:///tmp/a@b]
 
     assert_equal [[true] * with.size, [false] * without.size], [with, without].map { |urls| urls.map { |url| SharedPlugin.credentials?(url) } }
+  end
+
+  def test_refuses_the_first_shared_plugin_whose_url_has_a_user_name_or_password_and_no_other
+    listing = ->(name, line, ref = nil) { CrossLint::Core::ListedPlugin.new(name:, ref:, settings: [], line:) }
+    port = CrossLint::Adapters::MemorySharedPlugins.new(err: StringIO.new, schemes: ["file://"])
+    plugins = [listing.call("./a@b", 1), listing.call("https://example.com/o/ok", 2, "v1"), listing.call("file://u@h/o", 3, "v1"),
+      listing.call("https://u:p@h/o/r", 4, "v1"), listing.call("https://v@h/o/r", 5, "v1")]
+    configuration = CrossLint::Core::Configuration.new(file: "c.kdl", plugins:, policies: [], warnings: nil, verbosity: nil)
+    mistake = assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration, port) }
+
+    assert_equal ["c.kdl", 3], [mistake.file, mistake.line]
+    SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.first(2)), port)
+    assert_equal 4, assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.drop(3)), port) }.line
+    SharedPlugin.refuse_credentials(configuration.with(plugins: []), port)
   end
 
   def test_picks_the_tag_with_the_highest_version_by_number_not_by_text
