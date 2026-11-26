@@ -29,7 +29,7 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | --- | --- | --- |
 | **plugin** | A folder of artifacts, policies, and rules, with a `plugin.kdl` that declares them. A project uses a plugin by listing it in its configuration. | extension, package, preset |
 | **local plugin** | A plugin kept in the project's repository, for that project's rules. It is a plugin in every way; only where it lives differs. | custom rules, project rules |
-| **shared plugin** | A plugin kept in a separate Git repository, which projects list by its URL and a tag or commit. CrossLint fetches it into the user's cache. | remote plugin, package |
+| **shared plugin** | A plugin kept in a separate Git repository, which projects list by its URL and a tag or commit, and, for a plugin in a folder of the repository, that folder's `path`. CrossLint fetches it into the user's cache. | remote plugin, package |
 | **ref** | The tag or full 40-character commit SHA at which a project lists a shared plugin, as `ref="v1.2.0"`. Never a branch. | version, pin |
 | **cache** | The folder outside every project where CrossLint keeps the shared plugins it has fetched, one copy for each URL and ref, such as `~/.cache/crosslint/plugins`. | download folder, store |
 | **step** | Code a plugin runs once, after every rule of every plugin has run. It sees every violation and can excuse some, add others, and report stale entries, as the debt plugin's `track-debt` does. | hook, post-processor |
@@ -40,6 +40,7 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **setting** | One value in the configuration, such as a plugin's `src-dir` or a policy's `severity`. | option (an option is on the command line), preference |
 | **mistake** | Something in the configuration or a manifest that CrossLint can't use, such as a node it doesn't know. A mistake stops CrossLint with exit status 2 before it checks anything, naming the file and the line. | error (an error is a severity), invalid config |
 | **plugin command** | A command a plugin adds under the plugin's name, which a project runs as `crosslint PLUGIN COMMAND`, such as the debt plugin's `crosslint debt update`. It runs the check, and the plugin's step does the command's work. | subcommand, plugin flag |
+| **command flag** | A flag of one plugin command, which the plugin declares in the command's block in its `plugin.kdl`, such as `--dry-run` of `crosslint debt update`. A plugin adds no flag to CrossLint's commands. | plugin flag, option |
 | **helper** | A program in another language that a plugin carries to read files of that language, such as the Angular plugin's JavaScript that asks the project's TypeScript compiler for a component's inputs. It runs on the runtime for that language that the project already has. | adapter, bridge, sidecar |
 
 ## Debt

@@ -145,7 +145,9 @@ policy "has-debt"
 setting "file"
 setting "report-entries"
 
-command "update" help="Rewrite the debt file to list the current violations"
+command "update" help="Rewrite the debt file to list the current violations" {
+  flag "-n --dry-run" help="List the entries update would add and remove, and write nothing"
+}
 ```
 
 | Line | Meaning |
@@ -154,8 +156,9 @@ command "update" help="Rewrite the debt file to list the current violations"
 | `policy NAME` with no block | A policy no rule runs, whose violations the plugin's step reports, such as `has-debt`. The configuration disables it or changes its severity like any other policy. |
 | `setting NAME` | A setting the plugin takes in its block in the configuration. A setting the plugin doesn't declare stops CrossLint with exit status 2. |
 | `command NAME help=TEXT` | A command the project runs as `crosslint PLUGIN NAME`, with `TEXT` as its one line in `--help`. It runs the check, then tells the plugin's step the command's name, and the step does the command's work; a plugin with a command and no step is a mistake. `NAME` is lowercase letters, digits, and `-`, and can't be `help`. It exits with 0 when it did what it was asked, and with 2 when CrossLint can't run it. |
+| `flag NAMES help=TEXT` in a command's block | A command flag: a flag of that command alone, such as `flag "-n --dry-run"`, with its names in the usage spec's syntax and `TEXT` as its line in the command's `--help`. CrossLint tells the step which command flags were given. A command flag can't have the name of a global flag, `-h`, `--help`, or another flag of the same command; one that does stops CrossLint with exit status 2, naming the plugin. A `flag` line outside a command is a mistake. |
 
-A plugin adds no flag to `crosslint check` or to any other command of CrossLint's, and a plugin that has commands can't have the name of one of CrossLint's commands, or one of the names CrossLint keeps for commands it may add: `version`, `completion`, `config`, `plugin`, `plugins`, `list`, `cache`, `doctor`, `explain`, `fix`, and `self`. A local or shared plugin can't have the name of a built-in plugin, `angular` or `debt`. Its commands take the global flags, anywhere on the line. What `--help` shows for them, and what a mistyped one prints, is in [Plugins](../design/plugins.md#plugin-commands).
+A plugin adds no flag to `crosslint check` or to any other command of CrossLint's, and a plugin that has commands can't have the name of one of CrossLint's commands, or one of the names CrossLint keeps for commands it may add: `version`, `completion`, `config`, `plugin`, `plugins`, `list`, `cache`, `doctor`, `explain`, `fix`, and `self`. A local or shared plugin can't have the name of a built-in plugin, `angular` or `debt`. Its commands take the global flags anywhere on the line, and their command flags after the command's name. What `--help` shows for them, and what a mistyped one prints, is in [Plugins](../design/plugins.md#plugin-commands).
 
 ## Artifacts declared in Ruby
 
