@@ -6,9 +6,8 @@ require_relative "../core"
 
 module CrossLint
   module Adapters
-    # Windows alone runs this, so only Windows tests it: mutant and the
-    # coverage of macOS and Linux leave this file out (.mutant.yml,
-    # test/test_helper.rb).
+    # Windows alone runs this, so only Windows tests it: the coverage of
+    # macOS and Linux leaves this file out (test/test_helper.rb).
     class JobObject
       # JOBOBJECT_EXTENDED_LIMIT_INFORMATION's size on x64, and where its
       # LimitFlags are.

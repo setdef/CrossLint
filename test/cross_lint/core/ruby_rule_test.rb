@@ -147,7 +147,7 @@ class RubyRuleTest < Minitest::Test
     faults = begin
       check(code: {"names_class.rb" => source}, files: {"lib/a.rb" => ""}).faults
     rescue SystemExit
-      # Mutant reads a test process that exits with 0 as one that passed.
+      # A test process that exits with 0 reads as one that passed.
       flunk "the rule's exit ended the check"
     end
 

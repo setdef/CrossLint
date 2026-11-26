@@ -5,9 +5,8 @@
 /build/.bundle/
 /build/vendor/
 
-# What the tests, mutant, and the Fledge build write.
+# What the tests and the Fledge build write.
 /coverage/
-/.mutant/
 /build/dist/
 
 # The packages a plugin's tests install into their fixtures.

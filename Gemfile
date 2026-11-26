@@ -19,14 +19,7 @@ end
 
 group :test do
   gem "minitest", "~> 6.1"
-  # Mutation testing, which is free for open-source projects
-  # (.mutant.yml, usage).
-  gem "mutant-minitest", "~> 0.17.1"
   gem "simplecov", "~> 0.22"
-  # rdoc, which mutant needs, needs erb, and Ruby 4.1.0-preview1's erb is
-  # a version no gem server has, so its lockfile entry could have no
-  # checksum.
-  gem "erb", "~> 6.0.7"
   # rbs validate, and RBS's runtime type checker (rake test:rbs).
   gem "rbs", "~> 4.2"
 end

@@ -1,38 +1,34 @@
 # frozen_string_literal: true
 
 # Every line and branch of lib/ and of each built-in plugin's Ruby must run
-# in the tests. Under mutant, which loads the tests once for every
-# mutation it tries, coverage is left off.
+# in the tests.
 require "minitest/autorun"
+require "simplecov"
 
-unless defined?(Mutant)
-  require "simplecov"
-  SimpleCov.start do
-    root File.expand_path("..", __dir__)
-    enable_coverage :branch
-    track_files "{lib,plugins}/**/*.rb"
-    # A plugin's tests are counted no more than test/ is.
-    add_filter %r{\A/(test|tasks|vendor)/}
-    add_filter %r{\A/plugins/[^/]+/test/}
-    # A helper's process tree is a job object on Windows and a process
-    # group elsewhere, and each system runs only its own.
-    add_filter(RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/) ? "lib/cross_lint/adapters/process_group.rb" : "lib/cross_lint/adapters/job_object.rb")
-    # One process runs every test, so there is nothing to merge. SimpleCov
-    # would merge in the result of any run in the same folder within the
-    # last ten minutes, such as one of a few tests, or of other code, and
-    # that run's branches, at lines that have since moved, would count as
-    # branches no test reached.
-    use_merging false
-    minimum_coverage line: 100, branch: 100
-  end
-  # Minitest 6 loads no plugin it isn't asked to, SimpleCov's included,
-  # so this does what that plugin would: it checks the coverage once the
-  # tests have run, and not when Ruby exits, which can come first.
-  SimpleCov.external_at_exit = true
-  Minitest.after_run { SimpleCov.at_exit_behavior }
+SimpleCov.start do
+  root File.expand_path("..", __dir__)
+  enable_coverage :branch
+  track_files "{lib,plugins}/**/*.rb"
+  # A plugin's tests are counted no more than test/ is.
+  add_filter %r{\A/(test|tasks|vendor)/}
+  add_filter %r{\A/plugins/[^/]+/test/}
+  # A helper's process tree is a job object on Windows and a process
+  # group elsewhere, and each system runs only its own.
+  add_filter(RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/) ? "lib/cross_lint/adapters/process_group.rb" : "lib/cross_lint/adapters/job_object.rb")
+  # One process runs every test, so there is nothing to merge. SimpleCov
+  # would merge in the result of any run in the same folder within the
+  # last ten minutes, such as one of a few tests, or of other code, and
+  # that run's branches, at lines that have since moved, would count as
+  # branches no test reached.
+  use_merging false
+  minimum_coverage line: 100, branch: 100
 end
+# Minitest 6 loads no plugin it isn't asked to, SimpleCov's included,
+# so this does what that plugin would: it checks the coverage once the
+# tests have run, and not when Ruby exits, which can come first.
+SimpleCov.external_at_exit = true
+Minitest.after_run { SimpleCov.at_exit_behavior }
 
-require "mutant/minitest/coverage"
 require "fileutils"
 require "open3"
 require "securerandom"
@@ -42,8 +38,8 @@ require "tmpdir"
 # CrossLint keeps what it fetches in the user's cache, and Git reads the
 # user's home folder. A test gives its own folder to every port it makes,
 # and these point the ones it doesn't, and every program a test starts,
-# at folders that go with the run, so that a mistake in CrossLint, or a
-# mutation of it, reads and writes nowhere in the user's home. Git's
+# at folders that go with the run, so that a mistake in CrossLint reads and
+# writes nowhere in the user's home. Git's
 # settings for the tests are in one file, which is all of Git's
 # configuration: no system file, and no file in the home folder.
 SANDBOX = Dir.mktmpdir("crosslint-sandbox")
@@ -62,20 +58,14 @@ require "cross_lint"
 require "cross_lint/testing"
 require_relative "plugin_ruby"
 
+# The tests name what each covers, with `cover "CrossLint::App*"`, a
+# declaration that mutation testing used and that nothing reads now.
+class Minitest::Test
+  def self.cover(*) = nil
+end
+
 module TestHelper
   ROOT = File.expand_path("..", __dir__)
-
-  # Mutant runs the tests with Thread.abort_on_exception on, which raises
-  # the exception of any thread that dies in the main thread, at whatever
-  # moment it is in. A mutation that makes a thread raise then ends
-  # mutant's process with a failure status when the exception arrives
-  # after the test has failed, and mutant counts that mutation as alive,
-  # whichever tests failed. The flag is turned off before every test, since
-  # a thread of an earlier test can die at any later time.
-  def before_setup
-    Thread.abort_on_exception = false
-    super
-  end
 
   def fixture_spec = CrossLint::UsageSpec.load(File.join(__dir__, "fixtures", "tool.usage.kdl"))
 

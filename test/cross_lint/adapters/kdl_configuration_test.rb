@@ -10,9 +10,9 @@ class KDLConfigurationTest < Minitest::Test
   Mistake = CrossLint::Core::Mistake
   FILE = ".config/crosslint/config.kdl"
 
-  # The tests run in their base, so that a mutation of the adapter that
-  # writes a configuration to the path FILE, relative to the folder it runs
-  # in, writes it there and not over the checkout's own configuration.
+  # The tests run in their base, so that a fault in the adapter that writes
+  # a configuration to the path FILE, relative to the folder it runs in,
+  # writes it there and not over the checkout's own configuration.
   def setup
     @base = Dir.mktmpdir("crosslint")
     @folder = Dir.pwd

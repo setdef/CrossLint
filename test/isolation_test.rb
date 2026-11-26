@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-# What test/test_helper.rb does so that no test, and no mutant, reaches
+# What test/test_helper.rb does so that no test reaches
 # the user's home folder, cache, or Git settings.
 class IsolationTest < Minitest::Test
   def test_points_every_folder_a_program_would_use_in_the_users_home_at_a_folder_that_goes_with_the_run

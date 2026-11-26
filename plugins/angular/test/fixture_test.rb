@@ -11,8 +11,8 @@ require "open3"
 # ng-nudge's defects it lists that reading TypeScript could copy as a test
 # that it doesn't.
 class AngularFixtureTest < Minitest::Test
-  # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage and
-  # mutant follow it.
+  # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage
+  # follows it.
   cover "Artifacts*"
   cover "StubMatchesComponent*"
   cover "InterfaceMatchesComponent*"

@@ -1,12 +1,10 @@
 # frozen_string_literal: true
 
 # A built-in plugin's Ruby, which a check loads anew into a namespace of
-# its own. Coverage and mutant follow a file's methods from the time it
-# loads, so a file loaded anew for each check is measured as the last
-# check loaded it, and mutant, which finds a method in the file by the
-# constants around it there, changes the methods of a constant at the top
-# level. Here each file loads once, at the top level, before any test
-# runs (.mutant.yml has mutant require this file); the plugins' tests give
+# its own. Coverage follows a file's methods from the time it loads, so a
+# file loaded anew for each check is measured as the last check loaded it.
+# Here each file loads once, at the top level, before any test runs
+# (test/test_helper.rb requires this file); the plugins' tests give
 # CrossLint::App a PluginRuby, which puts the classes that file defined in
 # the namespace a check asks for.
 require "cross_lint"

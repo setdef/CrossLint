@@ -12,19 +12,11 @@ GEM
     bigdecimal (3.1.9)
     concurrent-ruby (1.3.8)
     csv (3.3.7)
-    diff-lcs (2.0.0)
     docile (1.4.1)
     drb (2.2.3)
-    erb (6.0.7)
     ffi (1.17.4)
     fiddle (1.1.8)
     fileutils (1.8.1)
-    io-console (0.9.5)
-    irb (1.19.0)
-      pp (>= 0.6.0)
-      prism (>= 1.3.0)
-      rdoc (>= 4.0.0)
-      reline (>= 0.4.2)
     json (3.2.0)
     kdl (2.2.0)
       base64 (~> 0.2.0)
@@ -41,26 +33,10 @@ GEM
     minitest (6.1.0)
       drb (~> 2.0)
       prism (>= 1.5, < 3)
-    mutant (0.17.1)
-      diff-lcs (>= 1.6, < 3)
-      irb (~> 1.15)
-      parser (~> 3.3.10)
-      regexp_parser (~> 2.10)
-      securerandom (>= 0.3)
-      sorbet-runtime (~> 0.6.0)
-      unparser (>= 0.8.2, < 0.10)
-    mutant-minitest (0.17.1)
-      minitest (>= 5.11, < 7)
-      mutant (= 0.17.1)
-      mutex_m (~> 0.2)
-    mutex_m (0.3.0)
     parallel (2.3.0)
     parser (3.3.14.0)
       ast (~> 2.4.1)
       racc
-    pp (0.6.4)
-      prettyprint
-    prettyprint (0.2.1)
     prism (2.1.0)
     racc (1.8.1)
     rainbow (3.1.1)
@@ -72,14 +48,7 @@ GEM
       logger
       prism (>= 1.6.0)
       tsort
-    rdoc (8.1.0)
-      erb
-      prism (>= 1.6.0)
-      rbs (>= 4.0.0)
-      tsort
     regexp_parser (2.13.4)
-    reline (0.7.0)
-      io-console (~> 0.5)
     rubocop (1.91.0)
       json (>= 2.3)
       language_server-protocol (~> 3.17.0.2)
@@ -109,7 +78,6 @@ GEM
     simplecov-html (0.13.2)
     simplecov_json_formatter (0.1.4)
     simpleidn (0.2.3)
-    sorbet-runtime (0.6.13728)
     standard (1.57.0)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.0)
@@ -145,10 +113,6 @@ GEM
     unicode-display_width (3.3.0)
       unicode-emoji (~> 4.3)
     unicode-emoji (4.3.0)
-    unparser (0.9.0)
-      diff-lcs (>= 1.6, < 3)
-      parser (>= 3.3.0)
-      prism (>= 1.5.1)
     uri (1.1.2)
 
 PLATFORMS
@@ -158,10 +122,8 @@ PLATFORMS
 
 DEPENDENCIES
   cross_lint!
-  erb (~> 6.0.7)
   fiddle (~> 1.1)
   minitest (~> 6.1)
-  mutant-minitest (~> 0.17.1)
   rake (~> 13.4)
   rbs (~> 4.2)
   simplecov (~> 0.22)
@@ -176,15 +138,11 @@ CHECKSUMS
   concurrent-ruby (1.3.8) sha256=b2f1be836e968ccc78ccfce277ea79c72a88633f22306782c16ff23fb415d1e1
   cross_lint (0.1.0)
   csv (3.3.7) sha256=15a3f16f6628da8664d455eb634e7f22031bcf53044923caf56975109e71b9f8
-  diff-lcs (2.0.0) sha256=708a5d52ec2945b50f8f53a181174aa1ef2c496edf81c05957fe956dabb363d5
   docile (1.4.1) sha256=96159be799bfa73cdb721b840e9802126e4e03dfc26863db73647204c727f21e
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
-  erb (6.0.7) sha256=c5ca6dc25b0ef974a44dc8f59fe847577122483b1968a38dec305c60bf91ee92
   ffi (1.17.4) sha256=bcd1642e06f0d16fc9e09ac6d49c3a7298b9789bcb58127302f934e437d60acf
   fiddle (1.1.8) sha256=7fa8ee3627271497f3add5503acdbc3f40b32f610fc1cf49634f083ef3f32eee
   fileutils (1.8.1) sha256=2d541a1ee34a9ed5c4f054be8fb819a26b5d654488a31dc8806917cf448b9cc3
-  io-console (0.9.5) sha256=83dd9bbf4c4680416629245b39cd4212eb5f4d9a4ea91804870c1f6b846414d5
-  irb (1.19.0) sha256=55ee56acbdd6c9fe06a2e6909f46a24e5c41f45f16906bab04e8049cf46f1d27
   json (3.2.0) sha256=4a4e222a9ee6ffb296ab3171b6b39d85fec83afc4e7b57eee17edf68c74aec87
   kdl (2.2.0) sha256=46e56c6686dbb681625a0d6c6193e4b732d6627e8758f8d5e9295309ded958e6
   language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
@@ -192,13 +150,8 @@ CHECKSUMS
   listen (3.10.1) sha256=4c3f32855657f348747da4dd2372ff3790d90a6b1d3e4f21a3706adb2d04783c
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   minitest (6.1.0) sha256=ff373595aa8888631e8a5463986a76b3845346ae6d7fa46e139c1633d418076e
-  mutant (0.17.1) sha256=24c7ceecae0b4efe550ab88ff06017a93828c73cd9569bda1b2689575b120e6c
-  mutant-minitest (0.17.1) sha256=53b71286b28019b64d3c565680244ce8dc3aa9095d1aa4ea4faee235ddea8a78
-  mutex_m (0.3.0) sha256=cfcb04ac16b69c4813777022fdceda24e9f798e48092a2b817eb4c0a782b0751
   parallel (2.3.0) sha256=f75a3e904101ce6a1ccb6b8dc800cbafd42166d83330192438dcf29395167a6f
   parser (3.3.14.0) sha256=62f8f76af7b919425ee2d811880e9dcb8011ab40bfd59970dfb583141697e58f
-  pp (0.6.4) sha256=dfcb0fce700c41456265922884f9fe195d7fbb0674a3578e6c0f69588e82b570
-  prettyprint (0.2.1) sha256=d555d57ea6d7cf001d4774b693546a6bd88bec1e778ddffb5c60b68ceec4b7d4
   prism (2.1.0) sha256=1c0a7c6dea0e93183390fb123f007564dbe663198e2f86ad87204151147601f3
   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rainbow (3.1.1) sha256=039491aa3a89f42efa1d6dec2fc4e62ede96eb6acd95e52f1ad581182b79bc6a
@@ -206,9 +159,7 @@ CHECKSUMS
   rb-fsevent (0.11.2) sha256=43900b972e7301d6570f64b850a5aa67833ee7d87b458ee92805d56b7318aefe
   rb-inotify (0.11.1) sha256=a0a700441239b0ff18eb65e3866236cd78613d6b9f78fea1f9ac47a85e47be6e
   rbs (4.2.0) sha256=51f7b886dcc05bc09e10b901daa6a81829f6adc03101d6ca9ea4aac6103e0674
-  rdoc (8.1.0) sha256=befc37880a5cfd36dcb176c748b5fd5ee39dd3536a75e81824e4972ce230f60a
   regexp_parser (2.13.4) sha256=1d0547814f57e6f00946957bd0ca201bc42f42cfb08eee89df60998aedcd8a3b
-  reline (0.7.0) sha256=5b012d8e55dbf9d450f12bde2cf7d15ff546ae80b3f8f3b30e570d431815583d
   rubocop (1.91.0) sha256=9c82b7bf391c5d7e3798c5b9996e22a1fe3bd7468e351dfdeb96140c058296d0
   rubocop-ast (1.54.0) sha256=11f7cadec54e593e905b1bb78f2b28bdd4b8e13b34cb82fe49c876e3dd5008c1
   rubocop-performance (1.26.1) sha256=cd19b936ff196df85829d264b522fd4f98b6c89ad271fa52744a8c11b8f71834
@@ -218,7 +169,6 @@ CHECKSUMS
   simplecov-html (0.13.2) sha256=bd0b8e54e7c2d7685927e8d6286466359b6f16b18cb0df47b508e8d73c777246
   simplecov_json_formatter (0.1.4) sha256=529418fbe8de1713ac2b2d612aa3daa56d316975d307244399fa4838c601b428
   simpleidn (0.2.3) sha256=08ce96f03fa1605286be22651ba0fc9c0b2d6272c9b27a260bc88be05b0d2c29
-  sorbet-runtime (0.6.13728) sha256=90db0140031c7b06a5dca2ffe06d27872ebe56e39cdd8cba5835dec09e44cd7f
   standard (1.57.0) sha256=4a65ea92421fbaf77fb54da91e16093cf79b335b8f62c35aaa3dd714c8592858
   standard-custom (1.0.2) sha256=424adc84179a074f1a2a309bb9cf7cd6bfdb2b6541f20c6bf9436c0ba22a652b
   standard-performance (1.9.0) sha256=49483d31be448292951d80e5e67cdcb576c2502103c7b40aec6f1b6e9c88e3f2
@@ -228,7 +178,6 @@ CHECKSUMS
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
   unicode-display_width (3.3.0) sha256=4b7aa66a4b11db50f6f7e98411215cd0dd10eaecb665d36eec5bcacb3fa0b613
   unicode-emoji (4.3.0) sha256=11c02fa73290378c066bb0562cd4c87d8e1b706fbbe0059ca12746a4244de8ce
-  unparser (0.9.0) sha256=4331f174a73a23b69250b13d47da3794ed1449711ee0f9ed8947dc020ba76067
   uri (1.1.2) sha256=89292e98eabbef6248b0a0ed5e7e398e152f83f17560023a6d94a7f492b169fb
 
 BUNDLED WITH
