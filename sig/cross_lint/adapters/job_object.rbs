@@ -30,7 +30,9 @@ module CrossLint
       ASSIGN: Integer
 
       # A job object that holds the process `pid`. Raises
-      # Core::PluginError when Windows doesn't put it there.
+      # Core::PluginError, saying which Windows call failed with which
+      # error, and closes the job, when Windows doesn't create the job,
+      # set its limits, or put the process in it.
       def initialize: (Integer pid) -> void
 
       # Ends every process in the job and closes the job, the first time;
@@ -42,6 +44,15 @@ module CrossLint
       @kernel32: Fiddle::Handle
 
       @job: untyped
+
+      # Puts the process `pid` in the job. Raises Core::PluginError when
+      # Windows doesn't open the process or put it in.
+      def hold: (Integer pid) -> void
+
+      # What kernel32's function `name`, of `arguments` and `result`
+      # Fiddle types, returns for `values`. Raises Core::PluginError, as
+      # every call that fails by returning zero does.
+      def checked: (String name, Array[Integer] arguments, Integer result, *untyped values) -> untyped
 
       # Calls kernel32's function `name`, of `arguments` and `result`
       # Fiddle types, with `values`.

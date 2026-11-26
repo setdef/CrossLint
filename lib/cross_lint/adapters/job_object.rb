@@ -32,14 +32,16 @@ module CrossLint
         @kernel32 = Fiddle.dlopen("kernel32")
         pointer = Fiddle::TYPE_VOIDP
         int = Fiddle::TYPE_INT
-        @job = call("CreateJobObjectW", [pointer, pointer], pointer, nil, nil)
-        limits = "\0" * LIMITS_SIZE
-        limits[LIMIT_FLAGS, 4] = [KILL_ON_JOB_CLOSE].pack("L")
-        call("SetInformationJobObject", [pointer, int, pointer, int], int, @job, EXTENDED_LIMIT_INFORMATION, limits, LIMITS_SIZE)
-        process = call("OpenProcess", [int, int, int], pointer, ASSIGN, 0, pid)
-        assigned = call("AssignProcessToJobObject", [pointer, pointer], int, @job, process)
-        call("CloseHandle", [pointer], int, process)
-        raise Core::PluginError, "started a helper CrossLint couldn't put in a job object, so it couldn't end what the helper starts" if assigned.zero?
+        @job = checked("CreateJobObjectW", [pointer, pointer], pointer, nil, nil)
+        begin
+          limits = "\0" * LIMITS_SIZE
+          limits[LIMIT_FLAGS, 4] = [KILL_ON_JOB_CLOSE].pack("L")
+          checked("SetInformationJobObject", [pointer, int, pointer, int], int, @job, EXTENDED_LIMIT_INFORMATION, limits, LIMITS_SIZE)
+          hold(pid)
+        rescue Core::PluginError
+          kill
+          raise
+        end
       end
 
       # Binary, or Windows' Ruby turns each "\n" written to the helper
@@ -67,6 +69,27 @@ module CrossLint
       end
 
       private
+
+      # Puts the process `pid` in the job.
+      def hold(pid)
+        pointer = Fiddle::TYPE_VOIDP
+        int = Fiddle::TYPE_INT
+        process = checked("OpenProcess", [int, int, int], pointer, ASSIGN, 0, pid)
+        begin
+          checked("AssignProcessToJobObject", [pointer, pointer], int, @job, process)
+        ensure
+          call("CloseHandle", [pointer], int, process)
+        end
+      end
+
+      # What the call `name` returns, or an error when Windows returns
+      # zero, which is how each of these calls fails.
+      def checked(name, arguments, result, *values)
+        value = call(name, arguments, result, *values)
+        raise Core::PluginError, "couldn't be put in a job object: #{name} failed with Windows error #{Fiddle.win32_last_error.to_i}" if value.to_i.zero?
+
+        value
+      end
 
       def call(name, arguments, result, *values) = Fiddle::Function.new(@kernel32[name], arguments, result).call(*values)
     end

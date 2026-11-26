@@ -242,6 +242,47 @@ class ProcessHelpersTest < Minitest::Test
     assert_gone(File.read(File.join(@base, "stays.pid")).strip)
   end
 
+  def test_ends_a_helper_it_cant_put_in_a_process_tree_and_fails_it
+    started = []
+    running = start("stays", tree: unholding_tree(started) { |_pid| })
+    error = assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("stays"), "stays", {}) }
+    *pipes, waiter = started
+
+    assert_equal "called helper stays, which couldn't be put in a tree, so CrossLint ended it", error.message
+    assert_equal [true, true, true, false], [*pipes.map(&:closed?), waiter.alive?]
+  end
+
+  def test_ends_a_helper_it_cant_put_in_a_process_tree_that_has_exited_already
+    started = []
+    tree = unholding_tree(started) do |pid|
+      sleep 0.05 while process_exists?(pid)
+    end
+    error = assert_raises(CrossLint::Core::PluginError) { start("quits", tree:).call(plugin_of("quits"), "quits", {}) }
+
+    assert_equal "called helper quits, which couldn't be put in a tree, so CrossLint ended it", error.message
+  end
+
+  def test_fails_a_helper_that_isnt_in_a_process_group_of_its_own
+    skip "Windows has job objects, not process groups" if CrossLint::Adapters::ProcessHelpers::WINDOWS
+
+    pid = Process.spawn("sleep", "30")
+    error = assert_raises(CrossLint::Core::PluginError) { CrossLint::Adapters::ProcessGroup.new(pid) }
+
+    assert_equal "wasn't put in a process group of its own", error.message
+  ensure
+    Process.kill("KILL", pid) if pid
+    Process.wait(pid) if pid
+  end
+
+  def test_has_nothing_to_hold_of_a_helper_that_has_exited
+    skip "Windows has job objects, not process groups" if CrossLint::Adapters::ProcessHelpers::WINDOWS
+
+    pid = Process.spawn("true")
+    Process.wait(pid)
+
+    assert_instance_of CrossLint::Adapters::ProcessGroup, CrossLint::Adapters::ProcessGroup.new(pid)
+  end
+
   def test_stops_at_a_helper_file_the_plugins_folder_lacks
     plugin = plugin_of("missing")
     mistake = assert_raises(CrossLint::Core::Mistake) { helpers_port.start(@base, [plugin]) }
@@ -277,6 +318,26 @@ class ProcessHelpersTest < Minitest::Test
   end
 
   private
+
+  # A tree class that holds nothing: it pushes the pipes and waiter of
+  # each helper it starts to `started`, runs the block with the helper's
+  # pid, and raises that it couldn't hold the helper.
+  def unholding_tree(started, &before)
+    Class.new(CrossLint::Adapters::ProcessHelpers::TREE) do
+      define_singleton_method(:popen3) { |*arguments| super(*arguments, &nil).tap { |started_by_it| started.concat(started_by_it) } }
+      define_method(:initialize) do |pid|
+        before.call(pid)
+        raise CrossLint::Core::PluginError, "couldn't be put in a tree"
+      end
+    end
+  end
+
+  def process_exists?(pid)
+    Process.kill(0, pid)
+    true
+  rescue Errno::ESRCH
+    false
+  end
 
   # The plugin "tests" with the one helper `name`, in `name`.sh.
   def plugin_of(name)

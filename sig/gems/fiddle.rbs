@@ -7,6 +7,9 @@ module Fiddle
 
   def self.dlopen: (String library) -> Handle
 
+  # The last error Windows reported to a call through Fiddle.
+  def self.win32_last_error: () -> Integer
+
   class Handle
     def []: (String name) -> Integer
   end

@@ -21,8 +21,9 @@ module CrossLint
 
       attr_reader :time_limit, :stop_limit
 
-      def initialize(err:, debug:, time_limit: TIME_LIMIT, stop_limit: STOP_LIMIT, env: ENV)
+      def initialize(err:, debug:, time_limit: TIME_LIMIT, stop_limit: STOP_LIMIT, env: ENV, tree: TREE)
         @err = err
+        @tree_class = tree
         @debug = debug
         @time_limit = time_limit
         @stop_limit = stop_limit
@@ -35,7 +36,7 @@ module CrossLint
             [[plugin.name, helper.name], command(plugin, helper)] #: [[String, String], [String, String]]
           end
         end
-        Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit)
+        Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit, tree: @tree_class)
       end
 
       # On Windows, node is node.exe or node.cmd, and a file with no
@@ -66,7 +67,8 @@ module CrossLint
       end
 
       class Running
-        def initialize(root, commands, err:, debug:, time_limit:, stop_limit:)
+        def initialize(root, commands, err:, debug:, time_limit:, stop_limit:, tree:)
+          @tree_class = tree
           @root = root
           @commands = commands
           @err = err
@@ -79,7 +81,7 @@ module CrossLint
         def call(plugin, name, input)
           key = [plugin.name, name] #: [String, String]
           process = @processes[key] ||= HelperProcess.new(name, @commands.fetch(key), root: @root, err: @err, debug: @debug, time_limit: @time_limit,
-            stop_limit: @stop_limit)
+            stop_limit: @stop_limit, tree: @tree_class)
           process.call(input)
         end
 
@@ -96,14 +98,15 @@ module CrossLint
       end
 
       class HelperProcess
-        def initialize(name, command, root:, err:, debug:, time_limit:, stop_limit:)
+        def initialize(name, command, root:, err:, debug:, time_limit:, stop_limit:, tree:)
           @name = name
           @time_limit = time_limit
           @stop_limit = stop_limit
-          @stdin, @stdout, stderr, @wait = TREE.popen3(command, root)
+          @tree_class = tree
+          @stdin, @stdout, stderr, @wait = @tree_class.popen3(command, root)
           # Before the first request, so that every process the helper
           # starts to answer one is in the tree.
-          @tree = TREE.new(@wait.pid)
+          @tree = contain(stderr)
           # A binary string, which JSON reads as UTF-8 whatever the
           # locale's encoding.
           @stdout.binmode
@@ -126,7 +129,7 @@ module CrossLint
         end
 
         def stop
-          TREE.close_input(@stdin)
+          @tree_class.close_input(@stdin)
           @wait.join(@stop_limit)
           finish
         end
@@ -139,6 +142,22 @@ module CrossLint
         end
 
         private
+
+        # The tree the helper is in. A helper that can't be put in one is
+        # ended, since CrossLint couldn't end what it starts, and is a
+        # fault.
+        def contain(stderr)
+          @tree_class.new(@wait.pid)
+        rescue Core::PluginError => error
+          begin
+            Process.kill("KILL", @wait.pid)
+          rescue Errno::ESRCH
+            # It has exited already.
+          end
+          @wait.join
+          [@stdin, @stdout, stderr].each(&:close)
+          raise Core::PluginError, "called helper #{@name}, which #{error}, so CrossLint ended it"
+        end
 
         def exchange(input)
           # The write too, since a helper that reads nothing fills the pipe.
