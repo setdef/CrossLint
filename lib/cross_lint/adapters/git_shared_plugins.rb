@@ -14,6 +14,10 @@ module CrossLint
     class GitSharedPlugins
       TIME_LIMIT = 60
 
+      # A fetch that ends by a kill leaves its folder. No fetch takes an
+      # hour, so a folder that old belongs to none that is running.
+      STALE = 3600
+
       SCHEMES = ["https://"].freeze
 
       # The transports Git may use, whatever the user's settings say. A
@@ -40,7 +44,7 @@ module CrossLint
       end
 
       def initialize(err:, cache: nil, schemes: SCHEMES, time_limit: TIME_LIMIT, git: "git", env: ENV, windows: ProcessHelpers::WINDOWS,
-        home: -> { Dir.home }, tree: ProcessHelpers::TREE)
+        home: -> { Dir.home }, tree: ProcessHelpers::TREE, clock: Time)
         @err = err
         @cache = cache
         @schemes = schemes
@@ -48,6 +52,7 @@ module CrossLint
         @env = env
         @windows = windows
         @home = home
+        @clock = clock
         # Proxies are left to Git, which reads HTTPS_PROXY, HTTP_PROXY, and
         # NO_PROXY itself. Git must never wait for a person to type a
         # password: the time limit would end it, a minute later.
@@ -105,6 +110,7 @@ module CrossLint
       # Fetches into a folder of its own and renames it to `entry`, so that
       # a fetch that stops partway leaves no entry.
       def download(url, ref, entry, name)
+        prune
         work = File.join(plugins, ".fetching-#{SecureRandom.hex}")
         begin
           files = File.join(work, "files")
@@ -115,6 +121,19 @@ module CrossLint
           raise Core::FetchError, "couldn't write in #{plugins}: #{error.message}"
         ensure
           FileUtils.rm_rf(work)
+        end
+      end
+
+      # Removes the folders of fetches that were killed. Another CrossLint may
+      # remove one first, and one that can't be removed is left for the next
+      # fetch; neither stops this one.
+      def prune
+        oldest = @clock.now - STALE
+        Dir.glob(".fetching-*", base: plugins).each do |name|
+          folder = File.join(plugins, name)
+          FileUtils.rm_rf(folder) if File.mtime(folder) <= oldest
+        rescue SystemCallError
+          # Gone already, or left for the next fetch.
         end
       end
 

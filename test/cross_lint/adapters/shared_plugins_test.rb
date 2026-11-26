@@ -131,6 +131,17 @@ module DeniedRenames
 end
 File.singleton_class.prepend(DeniedRenames)
 
+# Lets a test make a folder's time unreadable, as when another CrossLint
+# removes the folder between listing it and reading it.
+module VanishingFolders
+  def mtime(path)
+    raise Errno::ENOENT, path if Thread.current[:crosslint_shared_vanishing]&.include?(File.basename(path))
+
+    super
+  end
+end
+File.singleton_class.prepend(VanishingFolders)
+
 # The shared-plugins port with Git, against repositories built in a
 # temporary folder and used by file:// URLs, so that no test reaches the
 # network. A fake git is a Ruby script that GitSharedPlugins runs as
@@ -345,6 +356,32 @@ class GitSharedPluginsTest < Minitest::Test
     names.zip(before) { |name, value| ENV[name] = value }
   end
 
+  # A fetch that is killed leaves its folder, which no later fetch would
+  # use, so a fetch removes the ones that are an hour old.
+  def test_removes_the_folder_of_a_fetch_that_was_killed_an_hour_ago_and_no_other
+    plugins = File.join(@base, "cache", "plugins")
+    now = Time.at(1_800_000_000)
+    ages = {".fetching-old" => 3601, ".fetching-hour" => 3600, ".fetching-recent" => 3599, "other-old" => 7200}
+    ages.each do |name, age|
+      FileUtils.mkdir_p(File.join(plugins, name, "files"))
+      File.utime(now - age, now - age, File.join(plugins, name))
+    end
+    port(clock: Struct.new(:now).new(now)).fetch(repository_url, "v1.0.0")
+
+    assert_equal [".fetching-recent", "other-old"], Dir.children(plugins).reject { |name| name == File.basename(entry_for(repository_url, "v1.0.0")) }.sort
+  end
+
+  def test_fetches_when_a_folder_of_an_earlier_fetch_goes_before_its_age_is_read
+    plugins = File.join(@base, "cache", "plugins")
+    FileUtils.mkdir_p(File.join(plugins, ".fetching-gone"))
+    Thread.current[:crosslint_shared_vanishing] = [".fetching-gone"]
+    folder = port.fetch(repository_url, "v1.0.0")
+
+    assert_equal PLUGIN, File.binread(File.join(folder, "plugin.kdl"))
+  ensure
+    Thread.current[:crosslint_shared_vanishing] = nil
+  end
+
   def test_keeps_the_copy_another_crosslint_saved_first
     entry = entry_for(repository_url, "v1.0.0")
     err = StringIO.new
@@ -410,6 +447,22 @@ class GitSharedPluginsTest < Minitest::Test
     error = assert_raises(Core::FetchError) { port(git: fake("quits.rb", "exit 0\n"), tree:).tags(repository_url) }
 
     assert_equal "git couldn't be put in a tree, so CrossLint ended it", error.message
+  end
+
+  # Windows can't put a process that has exited and been reaped in a job
+  # object, and answers error 87.
+  def test_reads_what_git_wrote_when_it_exited_before_it_was_put_in_a_tree
+    test = self
+    tree = Class.new(Adapters::ProcessHelpers::TREE) do
+      define_method(:initialize) do |pid|
+        sleep 0.05 while test.send(:process_exists?, pid)
+        sleep 0.3
+        super(pid)
+      end
+    end
+    quick = fake("quick.rb", "puts \"a\\trefs/tags/v1.0.0\"\n")
+
+    assert_equal ["v1.0.0"], port(git: quick, tree:).tags(repository_url)
   end
 
   def test_says_what_git_wrote_when_it_fails

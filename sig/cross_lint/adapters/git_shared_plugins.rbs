@@ -25,6 +25,10 @@ module CrossLint
       # How long a fetch, or a listing of tags, may take, in seconds.
       TIME_LIMIT: Integer
 
+      # How old a `.fetching-` folder in the cache must be, in seconds,
+      # before a fetch removes it.
+      STALE: Integer
+
       # The schemes a URL may start with: "https://".
       SCHEMES: Array[String]
 
@@ -45,6 +49,12 @@ module CrossLint
       # user's home folder, and is called only when that is needed.
       def self.cache_folder: (environment env, windows: bool, home: ^() -> String) -> String
 
+      # What tells the time: Time, or an object with `now`.
+      interface _Clock
+        # The time now.
+        def now: () -> Time
+      end
+
       # What the port reads of the environment, as ENV or a hash has it.
       type environment = ProcessHelpers::_Environment & GitEnvironment::_Variables
 
@@ -53,9 +63,10 @@ module CrossLint
       # (cache_folder) with none, accepts URLs that start with one of
       # `schemes`, and ends git after `time_limit` seconds. It runs
       # `git`, a program or a program and arguments, in `tree`, with the
-      # environment `env`; `windows` and `home` say how the cache is found.
+      # environment `env`; `windows` and `home` say how the cache is found;
+      # `clock` says what time it is.
       def initialize: (err: CLI::_Output, ?cache: String?, ?schemes: Array[String], ?time_limit: Numeric, ?git: String | Array[String],
-                       ?env: environment, ?windows: bool, ?home: ^() -> String, ?tree: ProcessHelpers::_Tree) -> void
+                       ?env: environment, ?windows: bool, ?home: ^() -> String, ?tree: ProcessHelpers::_Tree, ?clock: _Clock) -> void
 
       # The folder fetch returns for `ref` of the repository at `url`,
       # whether or not it exists yet. Raises Core::FetchError when `url`
@@ -78,6 +89,8 @@ module CrossLint
 
       @command: GitCommand
 
+      @clock: _Clock
+
       # Raises Core::FetchError unless the port accepts `url`.
       def check: (String url) -> void
 
@@ -91,6 +104,10 @@ module CrossLint
       # Fetches the plugin into a separate folder in the cache, and
       # renames it to `entry`, in which the plugin's folder is `name`.
       def download: (String url, String ref, String entry, String name) -> void
+
+      # Removes each `.fetching-` folder of the cache that is at least
+      # STALE seconds old, which a killed fetch left. Fails no fetch.
+      def prune: () -> void
 
       # Renames `files` to `entry`, which is as good as another
       # CrossLint's copy when that got there first.
