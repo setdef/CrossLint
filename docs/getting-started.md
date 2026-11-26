@@ -16,7 +16,7 @@ If you get stuck, [open an issue](https://github.com/setdef/CrossLint/issues) wi
 
 You don't need Ruby installed; CrossLint carries the Ruby it runs on.
 
-<!-- Placeholder: replace every output on this page with that of a real run on a project laid out like invoices. -->
+<!-- Placeholder: replace the output of crosslint init with that of a real run once init works (#11), and the output of the steps in "Accept the rest as debt" once the debt plugin works (#10). -->
 
 ## Write a configuration
 

@@ -6,6 +6,7 @@ What `crosslint check` must guarantee, and the traps known so far. Its interface
 
 - The project's root is the nearest folder, from the current one or `-C`'s upward, that has `.config/crosslint.kdl`. With none, stop with exit status 2 and say how to write one; never guess.
 - **Files come from the working tree, minus what Git ignores.** A file Git ignores never matches a pattern, and neither does anything under `.git/`. Whether a companion exists is asked of the filesystem, never of another tool's idea of the project, such as the files a `tsconfig.json` includes.
+- **Run Git with no `GIT_*` variables from CrossLint's environment.** Inside a Git hook, Git sets `GIT_DIR`, `GIT_INDEX_FILE`, and others, and a Git command that inherits them reads that repository instead of the project, as when a pre-push hook in a linked worktree runs `crosslint check`.
 - **A pattern is matched case-sensitively, with `/` on every system,** and reported paths use `/` too, so output and debt keys agree between macOS, Linux, and Windows. macOS and Windows filesystems ignore case, so check a companion's existence by its exact name, not by asking whether a path exists.
 - **Each file is a primary file of each artifact whose pattern matches it, once,** however many ways the pattern could match it.
 - A pattern that matches no file is a warning, since it usually has a typo.

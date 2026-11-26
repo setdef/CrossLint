@@ -40,14 +40,19 @@ The artifact covers every Ruby file under `lib/`, each with the path of the sign
 plugin ".config/crosslint/signatures"
 ```
 
-Running `crosslint check` in the project reports each Ruby file with no signature file, and exits with 1:
+Running `crosslint check` in the project checks every Ruby file under `lib/`. Each one has its signature file, so the check passes, and `crosslint` exits with 0:
 
-<!-- Placeholder: replace the file names and counts with those of a real run on Fledge. -->
+```console
+$ crosslint check
+crosslint: checked 112 ruby-file artifacts: no violations
+```
+
+Add `lib/fledge/doctor.rb` without writing `sig/fledge/doctor.rbs`, and the check fails, with exit status 1:
+
 ```console
 $ crosslint check
 lib/fledge/doctor.rb: no signature file at sig/fledge/doctor.rbs (signatures/has-signature)
-lib/fledge/notices.rb: no signature file at sig/fledge/notices.rbs (signatures/has-signature)
-crosslint: checked 112 ruby-file artifacts: 2 errors
+crosslint: checked 113 ruby-file artifacts: 1 error
 ```
 
 Each finding is one line on standard output, with the file, the message, and the plugin and policy it comes from, so `grep` and an editor's problem matcher both read it. `crosslint check --json` prints the same findings as JSON for a script.

@@ -73,7 +73,7 @@ Violations listed in the debt file don't fail the check. An entry that no violat
   **Choices:** `all`, `none`, `error`
 
   **Default:** `all`
-- **`-a --all`** — List every artifact checked, passing ones included
+- **`-a --all`** — List every artifact checked, passing ones included; --json leaves passing ones out
 - **`--json`** — Print the findings and the summary as one JSON object in place of lines
 - **`--update-debt`** — After checking, rewrites the debt file to list exactly the current violations: keeps each entry that still matches, with its comment, drops stale entries, and adds one entry with an empty comment for each new violation. Then reports the state the update left, and exits with 0.
 

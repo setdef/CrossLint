@@ -47,7 +47,7 @@ Violations listed in the debt file don't fail the check. An entry that no violat
     choices "all" "none" "error"
     default "all"
   }
-  flag "-a --all" help="List every artifact checked, passing ones included"
+  flag "-a --all" help="List every artifact checked, passing ones included; --json leaves passing ones out"
   flag "--json" help="Print the findings and the summary as one JSON object in place of lines"
   flag "--update-debt" effect="write" help="After checking, rewrite the debt file to list the current violations" {
     long_help "After checking, rewrites the debt file to list exactly the current violations: keeps each entry that still matches, with its comment, drops stale entries, and adds one entry with an empty comment for each new violation. Then reports the state the update left, and exits with 0."
