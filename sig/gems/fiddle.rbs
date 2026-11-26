@@ -1,0 +1,19 @@
+# The parts of the fiddle gem (https://github.com/ruby/fiddle) that
+# CrossLint uses, on Windows alone. The gem ships no signatures.
+module Fiddle
+  TYPE_VOIDP: Integer
+
+  TYPE_INT: Integer
+
+  def self.dlopen: (String library) -> Handle
+
+  class Handle
+    def []: (String name) -> Integer
+  end
+
+  class Function
+    def initialize: (Integer address, Array[Integer] arguments, Integer result) -> void
+
+    def call: (*untyped values) -> untyped
+  end
+end

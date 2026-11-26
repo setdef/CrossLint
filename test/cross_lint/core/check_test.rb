@@ -262,14 +262,14 @@ class CheckTest < Minitest::Test
 
   def test_stops_at_a_root_outside_a_git_working_tree
     port = CrossLint::Adapters::MemoryProjectFiles.new
-    assert_raises(Mistake) { Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new).call(project(tests_plugin)) }
+    assert_raises(Mistake) { Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new, helpers: CrossLint::Adapters::MemoryHelpers.new).call(project(tests_plugin)) }
   end
 
   private
 
   def check(project, files:, ignored: [], **options)
     port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files}, ignored: {ROOT => ignored})
-    Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new).call(project, **options)
+    Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new, helpers: CrossLint::Adapters::MemoryHelpers.new).call(project, **options)
   end
 
   def declaration(name, files, line: 1, **companions)

@@ -23,13 +23,22 @@ module CrossLint
 
       # SystemExit too, since a rule that calls exit would otherwise end
       # the check with a status that says nothing of the rule.
-      def self.load(plugin_ruby, plugin, declaration, namespace)
+      def self.load(plugin_ruby, plugin, declaration, namespace, helpers)
         plugin_ruby.load(plugin, declaration.ruby, declaration.line, namespace)
-        new(plugin:, name: declaration.name, rule: find(declaration, namespace).new)
+        new(plugin:, name: declaration.name, rule: make(find(declaration, namespace), helpers))
       rescue Mistake
         raise
       rescue StandardError, ScriptError, SystemExit => error
         raise Stopped, Fault.of(error, plugin:, rule: declaration.name)
+      end
+
+      # A rule's class may define initialize, and helper works there too,
+      # so the instance has its helpers before initialize runs.
+      def self.make(rule_class, helpers)
+        rule = rule_class.allocate
+        rule.instance_variable_set(:@crosslint_helpers, helpers)
+        rule.__send__(:initialize)
+        rule
       end
 
       def self.find(declaration, namespace)

@@ -1,0 +1,46 @@
+module CrossLint
+  module Adapters
+    # The helpers port in memory, for the use cases' tests: each helper a
+    # proc, by "PLUGIN/HELPER", that answers a request, and the commands
+    # it counts as on the PATH.
+    #
+    # ```ruby
+    # helper = CrossLint::Core::HelperDeclaration.new(name: "echo", command: "node", file: "echo.mjs", line: 1)
+    # manifest = CrossLint::Core::Manifest.new(file: "p/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [helper])
+    # plugin = CrossLint::Core::Plugin.new(name: "p", folder: "/p", manifest:,
+    #   listing: CrossLint::Core::ListedPlugin.new(name: "./p", ref: nil, settings: [], line: 1))
+    # port = CrossLint::Adapters::MemoryHelpers.new({"p/echo" => ->(input) { [input] }}, commands: ["node"])
+    # port.start("/app", [plugin]).call(plugin, "echo", 1) # => [1]
+    # ```
+    class MemoryHelpers
+      include _Helpers
+
+      # A port that holds `helpers` and finds `commands`.
+      def initialize: (?Hash[String, ^(untyped input) -> untyped] helpers, ?commands: Array[String]) -> void
+
+      private
+
+      @helpers: Hash[String, ^(untyped input) -> untyped]
+
+      @commands: Array[String]
+
+      # The helpers of one check.
+      class Running
+        include _RunningHelpers
+
+        # The project's root the check started the helpers in.
+        attr_reader root: String
+
+        # Whether stop was called.
+        attr_reader stopped: bool
+
+        # Helpers started in `root` that answer with `helpers`.
+        def initialize: (String root, Hash[String, ^(untyped input) -> untyped] helpers) -> void
+
+        private
+
+        @helpers: Hash[String, ^(untyped input) -> untyped]
+      end
+    end
+  end
+end

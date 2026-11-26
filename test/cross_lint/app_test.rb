@@ -90,6 +90,30 @@ class AppTest < Minitest::Test
     assert_equal [["a.md", "hi"]], App.new.check(@base).violations.map { |violation| [violation.artifact, violation.message] }
   end
 
+  def test_runs_a_helper_as_a_process_writing_its_standard_error_with_debug
+    write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r"\n))
+    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n}\nrule "asks" ruby="asks.rb"\n) +
+      %(helper "h" command="sh" file="h.sh"\npolicy "p" {\n  applies-to "a"\n  rule "asks"\n}\n))
+    write(@base, ".config/crosslint/r/asks.rb", %(class Asks < CrossLint::Rule\n  def check(artifact) = [violation(artifact, helper("h").call(1))]\nend\n))
+    write(@base, ".config/crosslint/r/h.sh", %(while read -r line; do echo said >&2; echo '"hi"'; done\n))
+    write(@base, "a.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    err = StringIO.new
+
+    assert_equal ["hi"], App.new(err:).check(@base).violations.map(&:message)
+    assert_empty err.string
+    assert_equal ["hi"], App.new(err:, debug: true).check(@base).violations.map(&:message)
+    assert_equal "crosslint: helper h: said\n", err.string
+    assert_output(nil, "crosslint: helper h: said\n") { App.new(debug: true).check(@base) }
+  end
+
+  def test_runs_helpers_through_the_port_it_is_given
+    helpers = CrossLint::Adapters::MemoryHelpers.new
+    def helpers.start(*) = raise(CrossLint::Core::Mistake, "asked")
+
+    assert_equal "asked", assert_raises(Mistake) { memory_app(helpers:).check("/app") }.message
+  end
+
   def test_loads_ruby_rules_through_the_port_it_is_given
     rule = ->(namespace) { namespace.const_set(:SaysHi, Class.new(CrossLint::Rule) { define_method(:check) { |artifact| [violation(artifact, "hi")] } }) }
     app = memory_app(ruby: {File.expand_path("/app/local/hi.rb") => rule})
@@ -122,7 +146,7 @@ class AppTest < Minitest::Test
 
   # A project at /app whose plugin, local, warns of each a.md with no
   # a.txt beside it.
-  def memory_app(files: ["a.md"], ruby: nil)
+  def memory_app(files: ["a.md"], ruby: nil, helpers: nil)
     core = CrossLint::Core
     configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", warnings: nil, verbosity: nil, policies: [],
       plugins: [core::ListedPlugin.new(name: "./local", ref: nil, settings: [], line: 1)])
@@ -136,6 +160,6 @@ class AppTest < Minitest::Test
     App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}),
       manifests: CrossLint::Adapters::MemoryPluginManifests.new({File.expand_path("/app/local") => manifest}),
       project_files: CrossLint::Adapters::MemoryProjectFiles.new({"/app" => files}), plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(ruby || {}),
-      plugins: @base)
+      helpers:, plugins: @base)
   end
 end

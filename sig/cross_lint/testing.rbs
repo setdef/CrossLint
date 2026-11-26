@@ -206,6 +206,38 @@ module CrossLint
       def ruby_plugin: (String name) -> Core::Plugin
     end
 
+    # What a test of a helpers adapter defines.
+    interface _HelpersTest
+      # A port that finds a command named "ruby" on the PATH and no other,
+      # unless the test sets up more.
+      def helpers_port: () -> _Helpers
+
+      # The absolute path of the project's root.
+      def helper_root: () -> String
+
+      # The plugin "tests", whose manifest is "tests/plugin.kdl", with the
+      # helper "echo" on line 4, which answers each request `input` with
+      # `{"echo" => input}`, and the helper "fails" on line 5, which writes
+      # "nope" to standard error and exits with status 3 before it
+      # answers; both run on `command`, or on the test's own command.
+      def helper_plugin: (?command: String?) -> Core::Plugin
+    end
+
+    # The tests every adapter of the helpers port passes.
+    module HelpersContract : _HelpersTest, Minitest::Assertions
+      # call returns each answer, in order, text that isn't ASCII
+      # included.
+      def test_answers_each_request_with_what_the_helper_answers: () -> void
+
+      # call raises a plugin error saying the helper exited, and what it
+      # wrote.
+      def test_says_what_a_failing_helper_did_and_wrote: () -> void
+
+      # start raises a mistake naming the plugin and the command when the
+      # command isn't on the PATH.
+      def test_stops_before_any_helper_starts_at_a_command_not_on_the_path: () -> void
+    end
+
     # What a report adapter's test defines.
     interface _ReportTest
       # A port that writes where `reported` reads.

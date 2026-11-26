@@ -4,21 +4,24 @@ module CrossLint
     # applies each enabled policy where its condition holds, runs its
     # rules, gives each violation its severity, and returns what to
     # report under the --warnings mode and the verbosity. It reads the
-    # project's files only through `project_files`, and plugins' Ruby only
-    # through `plugin_ruby`, and writes nothing. A plugin whose Ruby rule
-    # has a fault, while it loads or checks, reports the fault alone, and
-    # the other plugins run.
+    # project's files only through `project_files`, plugins' Ruby only
+    # through `plugin_ruby`, and runs helpers only through `helpers`, and
+    # writes nothing. A plugin whose Ruby rule has a fault, while it loads
+    # or checks, reports the fault alone, and the other plugins run.
     class Check
       # A use case that reads the project's files through `project_files`,
-      # and loads plugins' Ruby through `plugin_ruby`.
-      def initialize: (project_files: _ProjectFiles, plugin_ruby: _PluginRuby) -> void
+      # loads plugins' Ruby through `plugin_ruby`, and runs their helpers
+      # through `helpers`.
+      def initialize: (project_files: _ProjectFiles, plugin_ruby: _PluginRuby, helpers: _Helpers) -> void
 
       # The result of checking `project`. `warnings` and `verbosity` are
       # the command line's, nil when it gives none, and the configuration's
       # or CrossLint's defaults (`:all`, `:normal`) apply then. With `all`,
       # the findings include each artifact checked that has no violation.
-      # Raises Mistake for a root outside a Git working tree, and for a
-      # Ruby rule whose file isn't there.
+      # Raises Mistake for a root outside a Git working tree, for a helper
+      # whose command isn't on the PATH, and for a Ruby rule whose file
+      # isn't there, each before any rule runs. Ends every helper before
+      # it returns.
       def call: (Project project, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
                  ?all: bool) -> CheckResult
 
@@ -28,6 +31,13 @@ module CrossLint
 
       @plugin_ruby: _PluginRuby
 
+      @helpers: _Helpers
+
+      # The violations of every plugin that didn't stop, and each fault
+      # that stopped one, with Ruby rules calling `helpers`.
+      def run_plugins: (Project project, Array[[Plugin, Policy]] policies, Hash[String, Hash[String, Array[Artifact]]] kinds,
+                        _RunningHelpers helpers) -> [Array[Violation], Array[Fault]]
+
       # Each policy the configuration doesn't disable, with its plugin.
       def enabled_policies: (Project project) -> Array[[Plugin, Policy]]
 
@@ -36,7 +46,11 @@ module CrossLint
 
       # Each Ruby rule an enabled policy runs, loaded, by its plugin's and
       # its name, and the fault of each plugin that stopped while loading.
-      def load_rules: (Array[[Plugin, Policy]] policies) -> [Hash[[String, String], RubyRule], Array[Fault]]
+      def load_rules: (Array[[Plugin, Policy]] policies, _RunningHelpers helpers) -> [Hash[[String, String], RubyRule], Array[Fault]]
+
+      # What `plugin`'s helper `name` answers `input` with. Raises
+      # PluginError when the plugin declares no such helper.
+      def call_helper: (_RunningHelpers helpers, Plugin plugin, String name, untyped input) -> untyped
 
       # The artifacts `declaration` finds among `files`, in their order.
       def find: (Project project, Plugin plugin, ArtifactDeclaration declaration, Array[String] files) -> Array[Artifact]

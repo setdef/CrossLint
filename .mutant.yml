@@ -17,3 +17,5 @@ matcher:
     - CrossLint*
   ignore:
     - CrossLint::Testing*
+    # Windows alone runs the job object, and mutant doesn't run there.
+    - CrossLint::Adapters::JobObject*

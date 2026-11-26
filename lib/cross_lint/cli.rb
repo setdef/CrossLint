@@ -44,7 +44,7 @@ module CrossLint
     def check(line)
       return say("--update-debt needs the debt plugin, which doesn't work yet") if line.flags.key?("update-debt")
 
-      app = @app || App.new
+      app = @app || App.new(err: @err, debug: debug?)
       given = line.value("warnings") if line.given?("warnings")
       warnings = WARNINGS.fetch(given) if given
       verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?

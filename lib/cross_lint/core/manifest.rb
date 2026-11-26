@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "mistake"
+
 module CrossLint
   module Core
     class CompanionDeclaration < Data.define(:name, :pattern, :line); end
@@ -16,7 +18,12 @@ module CrossLint
 
     class RuleDeclaration < Data.define(:name, :ruby, :line); end
 
-    class HelperDeclaration < Data.define(:name, :command, :file, :line); end
+    class HelperDeclaration < Data.define(:name, :command, :file, :line)
+      def missing_command(plugin)
+        Mistake.new("plugin #{plugin.name} needs #{command} on the PATH for its helper #{name.dump}, and there is none",
+          file: plugin.manifest.file, line:)
+      end
+    end
 
     class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers); end
   end

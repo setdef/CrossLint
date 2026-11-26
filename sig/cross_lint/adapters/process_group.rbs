@@ -1,0 +1,26 @@
+module CrossLint
+  module Adapters
+    # A helper's process tree on macOS and Linux: the process group its
+    # process starts, which every process it starts joins.
+    class ProcessGroup
+      # Starts the program and file `command` in `root`, in a process
+      # group of its own, with pipes to its standard input, output, and
+      # error.
+      def self.popen3: ([String, String] command, String root) -> [IO, IO, IO, Process::Waiter]
+
+      # Closes `input`, the pipe to a helper's standard input.
+      def self.close_input: (IO input) -> void
+
+      # The group of the process `pid` started with popen3.
+      def initialize: (Integer pid) -> void
+
+      # Sends KILL to every process in the group, or does nothing when
+      # none is left.
+      def kill: () -> void
+
+      private
+
+      @pid: Integer
+    end
+  end
+end

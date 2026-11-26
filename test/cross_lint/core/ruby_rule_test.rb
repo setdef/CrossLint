@@ -213,6 +213,51 @@ class RubyRuleTest < Minitest::Test
     assert_equal "checked 1 ruby-file artifact: 2 faults", result.summary.line
   end
 
+  ASKS = <<~RUBY
+    class NamesClass < CrossLint::Rule
+      def initialize
+        @members = helper("members")
+      end
+
+      def check(artifact)
+        @members.call({"path" => artifact.path}).map { |member| violation(artifact, "no \#{member}", detail: member) }
+      end
+    end
+  RUBY
+
+  def test_calls_its_plugins_helper_from_a_ruby_rule_even_in_initialize
+    seen = []
+    members = ->(input) { seen << input and ["a", "b"] }
+    result = check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => members})
+
+    assert_equal [[{"path" => "lib/x.rb"}], [["no a", "a"], ["no b", "b"]]], [seen, result.findings.map { |violation| [violation.message, violation.detail] }]
+  end
+
+  def test_stops_a_plugin_whose_rule_calls_a_helper_that_fails_or_that_it_doesnt_declare
+    failing = ->(_) { raise PluginError, "called helper members, which exited with status 1 before it answered" }
+
+    assert_equal ["called helper members, which exited with status 1 before it answered"],
+      check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => failing}).faults.map(&:message)
+    assert_equal [%(called helper "members", which plugin tests doesn't declare)] * 2,
+      [{}, {"others" => ->(_) { [] }}].flat_map { |helpers| check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers:).faults.map(&:message) }
+  end
+
+  def test_starts_helpers_before_any_rule_and_stops_them_after_every_rule
+    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { [] }}, commands: ["node"])
+    started = []
+    port.define_singleton_method(:start) { |root, plugins| super(root, plugins).tap { |running| started << running } }
+    check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port)
+    assert_raises(Mistake) { check(code: {}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port) }
+
+    assert_equal [[true, ROOT], [true, ROOT]], started.map { |running| [running.stopped, running.root] }
+    mistake = assert_raises(Mistake) do
+      check(code: {"names_class.rb" => "raise 'never loaded'"}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil},
+        running: CrossLint::Adapters::MemoryHelpers.new)
+    end
+
+    assert_equal ".config/tests/plugin.kdl:9", mistake.location
+  end
+
   def test_names_a_rules_class_in_camel_case
     assert_equal %w[SignatureNamesClass NamesClass X Html5Check AB], %w[signature-names-class names_class x html5-check a--b].map { RubyRule.class_name(_1) }
   end
@@ -224,9 +269,10 @@ class RubyRuleTest < Minitest::Test
   # the code in `code` by file name under rules/, as source or a proc.
   # With `others`, a second plugin reports every lib file with no
   # signature, or, when `others` is Ruby source, runs it as a rule
-  # "names-class" of its own.
+  # "names-class" of its own. The plugin "tests" declares a helper of
+  # each name in `helpers`, which answers with its proc, run on "node".
   def check(files:, code: {"names_class.rb" => NAMES_CLASS}, name: "names-class", severity: nil, override: nil, enabled: nil, policies: 1,
-    others: false)
+    others: false, helpers: {}, running: CrossLint::Adapters::MemoryHelpers.new(helpers.transform_keys { |helper| "tests/#{helper}" }, commands: ["node"]))
     if others.is_a?(String)
       source = others
       code = code.merge("../../other/rules/names_class.rb" => source)
@@ -236,7 +282,8 @@ class RubyRuleTest < Minitest::Test
     rule = PolicyRule.new(name:, arguments: {}, severity:, line: 7)
     policies = (1..policies).map { |index| Policy.new(name: "names-match#{index if index > 1}", applies_to: AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, rules: [rule], line: 5) }
     declaration = RuleDeclaration.new(name:, ruby: "rules/#{name.tr("-", "_")}.rb", line: 3)
-    plugins = [plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies:, rules: [declaration], helpers: []))]
+    declared = helpers.keys.map { |helper| HelperDeclaration.new(name: helper, command: "node", file: "#{helper}.mjs", line: 9) }
+    plugins = [plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies:, rules: [declaration], helpers: declared))]
     if others
       everything = source ? rule.with(name: "names-class") : PolicyRule.new(name: "companion-exists", arguments: {"companion" => "signature"}, severity: nil, line: 3)
       plugins << plugin("other", Manifest.new(file: ".config/other/plugin.kdl", artifacts: [],
@@ -250,7 +297,8 @@ class RubyRuleTest < Minitest::Test
       path = File.expand_path(file, RULES)
       [path, text.is_a?(String) ? ->(namespace) { namespace.module_eval(text, path, 1) } : text]
     end
-    Check.new(project_files:, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(loaded)).call(Project.new(root: ROOT, configuration:, plugins:))
+    Check.new(project_files:, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(loaded), helpers: running)
+      .call(Project.new(root: ROOT, configuration:, plugins:))
   end
 
   def plugin(name, manifest)

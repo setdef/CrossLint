@@ -33,14 +33,14 @@ module CrossLint
       # Where the error was raised, innermost first.
       attr_reader trace: Array[String]
 
-      # The fault of `plugin` that `error` makes while `rule` loads or
-      # checks `artifact`.
+      # The fault for `error`, which `rule` of `plugin` raised while it
+      # loaded, or while it checked `artifact`.
       def self.of: (Exception error, plugin: Plugin, rule: String, ?artifact: String?) -> Fault
 
-      # What `error` says the code did. A require of a feature by name
-      # that Ruby can't find, such as a gem's, says it names no part of
-      # Ruby's standard library or the plugin's folder (`folder`), and
-      # that CrossLint can't load a gem it wasn't built with.
+      # What the code did, from `error`. For a require of a feature by
+      # name that Ruby can't find, such as a gem's: that the feature is in
+      # neither Ruby's standard library nor the plugin's folder (`folder`),
+      # and that CrossLint can't load a gem it wasn't built with.
       #
       # ```ruby
       # error = LoadError.new("cannot load such file -- rainbow")

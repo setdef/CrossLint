@@ -5,6 +5,11 @@ source "https://rubygems.org"
 # CrossLint's gems, from cross_lint.gemspec.
 gemspec
 
+# On Windows, CrossLint puts each helper in a job object through fiddle,
+# which Ruby 4.1 has as a bundled gem rather than in its standard
+# library. A gemspec can't ask for a gem on one platform alone.
+gem "fiddle", "~> 1.1", platforms: :windows
+
 # For contributors only. The Fledge build leaves these groups out of the
 # app (Rakefile, build), and Fledge has a separate bundle, in build/, so
 # the app doesn't carry it.

@@ -17,6 +17,7 @@ GEM
     drb (2.2.3)
     erb (6.0.7)
     ffi (1.17.4)
+    fiddle (1.1.8)
     fileutils (1.8.1)
     io-console (0.9.5)
     irb (1.19.0)
@@ -158,6 +159,7 @@ PLATFORMS
 DEPENDENCIES
   cross_lint!
   erb (~> 6.0.7)
+  fiddle (~> 1.1)
   minitest (~> 6.1)
   mutant-minitest (~> 0.17.1)
   rake (~> 13.4)
@@ -179,6 +181,7 @@ CHECKSUMS
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
   erb (6.0.7) sha256=c5ca6dc25b0ef974a44dc8f59fe847577122483b1968a38dec305c60bf91ee92
   ffi (1.17.4) sha256=bcd1642e06f0d16fc9e09ac6d49c3a7298b9789bcb58127302f934e437d60acf
+  fiddle (1.1.8) sha256=7fa8ee3627271497f3add5503acdbc3f40b32f610fc1cf49634f083ef3f32eee
   fileutils (1.8.1) sha256=2d541a1ee34a9ed5c4f054be8fb819a26b5d654488a31dc8806917cf448b9cc3
   io-console (0.9.5) sha256=83dd9bbf4c4680416629245b39cd4212eb5f4d9a4ea91804870c1f6b846414d5
   irb (1.19.0) sha256=55ee56acbdd6c9fe06a2e6909f46a24e5c41f45f16906bab04e8049cf46f1d27

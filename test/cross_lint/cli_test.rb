@@ -2,6 +2,7 @@
 
 require "test_helper"
 require "json"
+require "open3"
 
 class CLITest < Minitest::Test
   cover "CrossLint::CLI*"
@@ -222,6 +223,21 @@ class CLITest < Minitest::Test
     debugged = check("check", "--debug", app: app(raises: true))[1].lines
 
     assert_equal [fault, "crosslint:   from raises.rb:1:in 'check'\n"], debugged.take(2)
+  end
+
+  def test_check_writes_what_a_helper_writes_to_standard_error_with_debug
+    Dir.mktmpdir("crosslint") do |project|
+      write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
+      write(project, "plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n}\nrule "asks" ruby="asks.rb"\nhelper "h" command="sh" file="h.sh"\n) +
+        %(policy "p" {\n  applies-to "a"\n  rule "asks"\n}\n))
+      write(project, "asks.rb", %(class Asks < CrossLint::Rule\n  def check(artifact) = (helper("h").call(1) && [])\nend\n))
+      write(project, "h.sh", %(while read -r line; do echo said >&2; echo 1; done\n))
+      write(project, "a.md", "")
+      Open3.capture3("git", "init", "-q", chdir: project)
+
+      assert_equal ["", "crosslint: checked 1 a artifact: no violations\n", 0], check("check", "-C", project)
+      assert_equal "crosslint: helper h: said\n", check("check", "-C", project, "--debug")[1].lines.first
+    end
   end
 
   def test_check_names_the_file_and_line_of_a_mistake

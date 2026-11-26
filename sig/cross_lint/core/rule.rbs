@@ -87,11 +87,24 @@ module CrossLint
     # which stops the plugin.
     def check: (Artifact artifact) -> Array[Core::RuleResult]
 
+    # The plugin's helper `name`, as something whose `call(input)` sends
+    # `input` to the helper as JSON and returns the JSON it answers with.
+    # The helper starts at the first call, and runs until the check ends.
+    # A helper the plugin doesn't declare, or one that fails, raises
+    # Core::PluginError, which stops the plugin unless the rule rescues
+    # it.
+    def helper: (String name) -> ^(untyped input) -> untyped
+
     # A violation of `artifact`, an Artifact `check` was given, with
     # `message`, a String, and, where one artifact can fail the rule in
     # several ways, a `detail` that tells them apart, a String such as a
     # member's name. Rule files call it with anything, so it takes
     # anything, and raises Core::PluginError for what isn't those.
     def violation: (untyped artifact, untyped message, ?detail: untyped) -> Core::RuleResult
+
+    private
+
+    # What calls the plugin's helpers, by name, set before initialize.
+    @crosslint_helpers: ^(String name, untyped input) -> untyped
   end
 end

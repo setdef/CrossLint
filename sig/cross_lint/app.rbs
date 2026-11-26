@@ -7,10 +7,12 @@ module CrossLint
 
     # An app that reads the configuration through `configuration`, the
     # manifests through `manifests`, the project's files through
-    # `project_files`, and plugins' Ruby through `plugin_ruby`, with the
-    # built-in plugins in `plugins`.
+    # `project_files`, plugins' Ruby through `plugin_ruby`, and runs
+    # helpers through `helpers`, with the built-in plugins in `plugins`.
+    # With no `helpers`, it runs them as processes, writing what they
+    # write to standard error to `err` with `debug`.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
-                     ?plugin_ruby: _PluginRuby, ?plugins: String) -> void
+                     ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?plugins: String, ?err: CLI::_Output, ?debug: bool) -> void
 
     # The project whose root is `start` or the nearest folder above it
     # with a configuration, read and checked (Core::LoadProject).
@@ -35,6 +37,8 @@ module CrossLint
     @project_files: _ProjectFiles
 
     @plugin_ruby: _PluginRuby
+
+    @helpers: _Helpers
 
     @built_in: Hash[String, String]
 

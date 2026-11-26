@@ -244,6 +244,32 @@ module CrossLint
       end
     end
 
+    module HelpersContract
+      def test_answers_each_request_with_what_the_helper_answers
+        running = helpers_port.start(helper_root, [helper_plugin])
+        answers = [[1, "two"], {"three" => nil}, "café"].map { |input| running.call(helper_plugin, "echo", input) }
+        running.stop
+
+        assert_equal [{"echo" => [1, "two"]}, {"echo" => {"three" => nil}}, {"echo" => "café"}], answers
+      end
+
+      def test_says_what_a_failing_helper_did_and_wrote
+        running = helpers_port.start(helper_root, [helper_plugin])
+        error = assert_raises(Core::PluginError) { running.call(helper_plugin, "fails", {}) }
+        running.stop
+
+        assert_equal "called helper fails, which exited with status 3 before it answered, and wrote:\nnope", error.message
+      end
+
+      def test_stops_before_any_helper_starts_at_a_command_not_on_the_path
+        plugin = helper_plugin(command: "crosslint-no-such-command")
+        mistake = assert_raises(Core::Mistake) { helpers_port.start(helper_root, [plugin]) }
+
+        assert_equal ["tests/plugin.kdl:4", %(plugin tests needs crosslint-no-such-command on the PATH for its helper "echo", and there is none)],
+          [mistake.location, mistake.message]
+      end
+    end
+
     module ReportContract
       def test_reports_each_violation_in_order
         port = report_port

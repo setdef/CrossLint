@@ -7,9 +7,10 @@ require_relative "ruby_rule"
 module CrossLint
   module Core
     class Check
-      def initialize(project_files:, plugin_ruby:)
+      def initialize(project_files:, plugin_ruby:, helpers:)
         @project_files = project_files
         @plugin_ruby = plugin_ruby
+        @helpers = helpers
       end
 
       def call(project, warnings: nil, verbosity: nil, all: false)
@@ -17,20 +18,16 @@ module CrossLint
         verbosity ||= project.configuration.verbosity || :normal
         policies = enabled_policies(project)
         files = @project_files.files(project.root)
-        rules, faults = load_rules(policies)
         kinds = project.plugins.to_h do |plugin|
           [plugin.name, plugin.manifest.artifacts.to_h { |declaration| [declaration.name, find(project, plugin, declaration, files)] }]
         end
-        checked = checked_kinds(project, policies)
-        read = ->(path) { @project_files.read(project.root, path) }
-        stopped = faults.map(&:plugin)
-        violations = project.plugins.reject { |plugin| stopped.include?(plugin.name) }.flat_map do |plugin|
-          policies.select { |owner, _| owner == plugin }.flat_map { |_, policy| run(project, plugin, policy, kinds, rules, read) }
-        rescue RubyRule::Stopped => error
-          faults << error.fault
-          []
+        helpers = @helpers.start(project.root, project.plugins)
+        begin
+          violations, faults = run_plugins(project, policies, kinds, helpers)
+        ensure
+          helpers.stop
         end
-        report(project, kinds, checked, violations, faults, warnings:, verbosity:, all:)
+        report(project, kinds, checked_kinds(project, policies), violations, faults, warnings:, verbosity:, all:)
       end
 
       private
@@ -47,20 +44,42 @@ module CrossLint
         project.configuration.policies.find { |setting| setting.name == "#{plugin.name}/#{policy.name}" }
       end
 
+      def run_plugins(project, policies, kinds, helpers)
+        rules, faults = load_rules(policies, helpers)
+        read = ->(path) { @project_files.read(project.root, path) }
+        stopped = faults.map(&:plugin)
+        violations = project.plugins.reject { |plugin| stopped.include?(plugin.name) }.flat_map do |plugin|
+          policies.select { |owner, _| owner == plugin }.flat_map { |_, policy| run(project, plugin, policy, kinds, rules, read) }
+        rescue RubyRule::Stopped => error
+          faults << error.fault
+          []
+        end
+        [violations, faults]
+      end
+
       # Each plugin's files run in a namespace of the plugin's own, and a
       # plugin stops at its first fault.
-      def load_rules(policies)
+      def load_rules(policies, helpers)
         loaded = {} #: Hash[[String, String], RubyRule]
         faults = [] #: Array[Fault]
         policies.group_by(&:first).each do |plugin, owned|
           namespace = Module.new
           declarations = plugin.manifest.rules.to_h { |rule| [rule.name, rule] }
           names = owned.flat_map { |_, policy| policy.rules.map(&:name) }.uniq.reject { |name| BuiltInRule.named(name) }
-          names.each { |name| loaded[[plugin.name, name]] = RubyRule.load(@plugin_ruby, plugin, declarations.fetch(name), namespace) }
+          call = ->(name, input) { call_helper(helpers, plugin, name, input) }
+          names.each { |name| loaded[[plugin.name, name]] = RubyRule.load(@plugin_ruby, plugin, declarations.fetch(name), namespace, call) }
         rescue RubyRule::Stopped => error
           faults << error.fault
         end
         [loaded, faults]
+      end
+
+      def call_helper(helpers, plugin, name, input)
+        unless plugin.manifest.helpers.any? { |helper| helper.name == name }
+          raise PluginError, "called helper #{name.inspect}, which plugin #{plugin.name} doesn't declare"
+        end
+
+        helpers.call(plugin, name, input)
       end
 
       def find(project, plugin, declaration, files)

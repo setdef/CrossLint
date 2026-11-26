@@ -151,6 +151,11 @@ module CrossLint
 
       # A helper with these fields.
       def initialize: (name: String, command: String, file: String, line: Integer) -> void
+
+      # The mistake to stop at when `plugin`'s helper has no command on the
+      # PATH: it names the plugin's manifest, the line, the plugin, and the
+      # command.
+      def missing_command: (Plugin plugin) -> Mistake
     end
 
     # What a plugin's manifest declares: its artifacts, policies, rules,

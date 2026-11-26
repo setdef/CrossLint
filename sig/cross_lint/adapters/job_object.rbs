@@ -1,0 +1,51 @@
+module CrossLint
+  module Adapters
+    # A helper's process tree on Windows: a job object, which every
+    # process the helper starts joins, MSYS2's included, which
+    # `taskkill /T` misses. Closing its last handle, as when CrossLint
+    # ends, ends its processes.
+    class JobObject
+      # Starts the program and file `command` in `root`, with pipes to its
+      # standard input, written in binary mode, and its output and error.
+      def self.popen3: ([String, String] command, String root) -> [IO, IO, IO, Process::Waiter]
+
+      # Closes `input`, the pipe to a helper's standard input, which
+      # raises EPIPE on Windows when the helper has exited; that ends
+      # nothing.
+      def self.close_input: (IO input) -> void
+
+      # The size of JOBOBJECT_EXTENDED_LIMIT_INFORMATION on x64.
+      LIMITS_SIZE: Integer
+
+      # Where its LimitFlags are.
+      LIMIT_FLAGS: Integer
+
+      # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.
+      KILL_ON_JOB_CLOSE: Integer
+
+      # JobObjectExtendedLimitInformation.
+      EXTENDED_LIMIT_INFORMATION: Integer
+
+      # PROCESS_SET_QUOTA and PROCESS_TERMINATE.
+      ASSIGN: Integer
+
+      # A job object that holds the process `pid`. Raises
+      # Core::PluginError when Windows doesn't put it there.
+      def initialize: (Integer pid) -> void
+
+      # Ends every process in the job and closes the job, the first time;
+      # does nothing after.
+      def kill: () -> void
+
+      private
+
+      @kernel32: Fiddle::Handle
+
+      @job: untyped
+
+      # Calls kernel32's function `name`, of `arguments` and `result`
+      # Fiddle types, with `values`.
+      def call: (String name, Array[Integer] arguments, Integer result, *untyped values) -> untyped
+    end
+  end
+end

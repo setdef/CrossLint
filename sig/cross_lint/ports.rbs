@@ -65,10 +65,37 @@ module CrossLint
     # Runs the Ruby file `file`, relative to `plugin`'s folder, with its
     # constants in `namespace` rather than at the top level, so that two
     # plugins' classes of one name stay apart. Raises Core::Mistake,
-    # naming the plugin's manifest and `line`, the line that names the
-    # file, when the folder has no such file; raises whatever the file
+    # naming the plugin's manifest and `line`, the line with the file's
+    # name, when the folder has no such file; raises whatever the file
     # raises.
     def load: (Core::Plugin plugin, String file, Integer line, Module namespace) -> void
+  end
+
+  # Where the core runs plugins' helpers, programs in another language
+  # that answer a rule's requests. Adapters::ProcessHelpers runs each as a
+  # process, and Adapters::MemoryHelpers answers with procs in memory;
+  # both pass Testing::HelpersContract.
+  interface _Helpers
+    # Finds the command each helper of `plugins` runs on, before any
+    # helper starts, and returns them ready to start in `root`, the
+    # project's root. Raises Core::Mistake, naming the plugin's manifest,
+    # the helper's line, the plugin, and the command, when a command
+    # isn't on the PATH.
+    def start: (String root, Array[Core::Plugin] plugins) -> _RunningHelpers
+  end
+
+  # The helpers of a check, each started the first time a rule calls it,
+  # and kept running for the rest of the check.
+  interface _RunningHelpers
+    # Sends `input` to `plugin`'s helper `name`, one the plugin declares,
+    # and returns what the helper answers. Raises Core::PluginError, whose
+    # message says what the helper did and what it wrote to standard
+    # error, when the helper fails: exits, answers with what isn't JSON,
+    # or doesn't answer within a time limit.
+    def call: (Core::Plugin plugin, String name, untyped input) -> untyped
+
+    # Ends each helper and everything it started.
+    def stop: () -> void
   end
 
   # Where a check's result goes: a format, such as lines of text or JSON,

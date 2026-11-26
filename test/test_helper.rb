@@ -11,6 +11,9 @@ unless defined?(Mutant)
     enable_coverage :branch
     track_files "lib/**/*.rb"
     add_filter %r{\A/(test|tasks|vendor)/}
+    # A helper's process tree is a job object on Windows and a process
+    # group elsewhere, and each system runs only its own.
+    add_filter(RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/) ? "lib/cross_lint/adapters/process_group.rb" : "lib/cross_lint/adapters/job_object.rb")
     minimum_coverage line: 100, branch: 100
   end
   # Minitest 6 loads no plugin it isn't asked to, SimpleCov's included,
