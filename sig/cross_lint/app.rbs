@@ -11,10 +11,12 @@ module CrossLint
     # helpers through `helpers`, with the built-in plugins in `plugins`,
     # and whose step track-debt reads and writes debt files through
     # `debt_files`. With no `helpers`, it runs them as processes, writing
-    # what they write to standard error to `err` with `debug`.
+    # what they write to standard error to `err` with `debug`. It fetches
+    # shared plugins through `shared_plugins`, with Git by default, saying
+    # what it fetches on `err`.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
-                     ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?plugins: String, ?debt_files: _DebtFiles, ?err: CLI::_Output,
-                     ?debug: bool) -> void
+                     ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String,
+                     ?debt_files: _DebtFiles, ?err: CLI::_Output, ?debug: bool) -> void
 
     # The project whose root is `start` or the nearest folder above it
     # with a configuration, read and checked (Core::LoadProject).
@@ -43,6 +45,8 @@ module CrossLint
     @plugin_ruby: _PluginRuby
 
     @helpers: _Helpers
+
+    @shared_plugins: _SharedPlugins
 
     @built_in: Hash[String, String]
 

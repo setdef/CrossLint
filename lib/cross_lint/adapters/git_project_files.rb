@@ -2,6 +2,7 @@
 
 require "open3"
 require_relative "../core"
+require_relative "git_environment"
 
 module CrossLint
   module Adapters
@@ -53,10 +54,7 @@ module CrossLint
 
       private
 
-      # Inside a Git hook, Git sets GIT_DIR and others, and a Git run that
-      # inherits them reads that repository instead of the project's. The
-      # values are nil, which unsets the variable.
-      def environment = ENV.keys.filter_map { |name| [name, nil] if name.start_with?("GIT_") }.to_h
+      def environment = GitEnvironment.cleared
 
       def entries(folder)
         @entries[folder] ||= begin

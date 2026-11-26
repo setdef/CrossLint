@@ -1,0 +1,24 @@
+module CrossLint
+  module Core
+    # A shared plugin that couldn't be fetched, or a repository whose tags
+    # couldn't be listed: what went wrong, in the message, without the
+    # plugin and URL, which the use case that asked adds.
+    class FetchError < StandardError
+      # The error for a `url` that starts with none of `schemes`.
+      def self.scheme: (String url, Array[String] schemes) -> FetchError
+
+      # The error for a ref that is neither a tag name nor a full commit
+      # SHA.
+      def self.bad_ref: (String ref) -> FetchError
+
+      # The error for a ref that names a branch.
+      def self.branch: (String ref) -> FetchError
+
+      # The error for a ref that names no tag.
+      def self.no_tag: (String ref) -> FetchError
+
+      # The error for a full commit SHA the repository doesn't have.
+      def self.no_commit: (String sha) -> FetchError
+    end
+  end
+end

@@ -1,0 +1,72 @@
+module CrossLint
+  module Adapters
+    # One run of Git: a program with arguments, never through a shell, in a
+    # process tree that is ended with it, so that nothing Git started
+    # outlives the run.
+    class GitCommand
+      # How long the run waits for each of Git's output pipes to close, in
+      # seconds, once Git and its tree have ended.
+      PIPE_LIMIT: Integer
+
+      # How many bytes the run reads from a pipe at a time.
+      CHUNK: Integer
+
+      # Raised when Git hasn't exited by the deadline.
+      class Late < StandardError
+      end
+
+      # What a run wrote, as UTF-8 with what isn't valid replaced, and
+      # whether Git exited with status 0.
+      class Output < Data
+        # What Git wrote to standard output.
+        attr_reader out: String
+
+        # What Git wrote to standard error.
+        attr_reader err: String
+
+        # Whether Git exited with status 0.
+        attr_reader success: bool
+
+        # An output with these fields.
+        def self.new: (out: String, err: String, success: bool) -> instance
+
+        # An output with these fields.
+        def initialize: (out: String, err: String, success: bool) -> void
+      end
+
+      # How long the run waits for each of Git's output pipes to close, in
+      # seconds, once Git and its tree have ended.
+      attr_reader pipe_limit: Numeric
+
+      # A command that runs `git`, a program and the arguments that
+      # come before every run's, in `tree`, a class of the shape of
+      # ProcessHelpers::TREE, with `environment`'s changes to CrossLint's
+      # environment.
+      def initialize: (git: Array[String], tree: ProcessHelpers::_Tree, environment: Hash[String, String?], ?pipe_limit: Numeric) -> void
+
+      # Runs git with `arguments` in `folder`, to exit by `deadline`, a time
+      # on the monotonic clock, and returns what it wrote. Ends git and
+      # everything it started when it is done, and when the deadline
+      # passes. Raises Late when git hasn't exited by then, and
+      # Core::FetchError when git isn't there to run, or can't be put in
+      # its tree.
+      def run: (Array[String] arguments, String folder, Numeric deadline) -> Output
+
+      private
+
+      @git: Array[String]
+
+      @tree_class: ProcessHelpers::_Tree
+
+      @environment: Hash[String, String?]
+
+      # What git wrote to standard output and standard error, after it has
+      # exited or the deadline has passed, and its tree is ended.
+      def read: (IO stdout, IO stderr, Process::Waiter wait, ProcessHelpers::_TreeProcesses tree, Numeric deadline) -> Array[String]
+
+      # The tree of git's process. Ends git, and raises Core::FetchError,
+      # when it can't be put in one.
+      def contain: (Process::Waiter wait, Array[IO] pipes) -> ProcessHelpers::_TreeProcesses
+    end
+  end
+end

@@ -1,0 +1,44 @@
+module CrossLint
+  module Core
+    # What a shared plugin's URL and ref must look like, and which tag is
+    # newest.
+    #
+    # ```ruby
+    # CrossLint::Core::SharedPlugin.plugin_name("https://github.com/OWNER/signatures.git") # => "signatures"
+    # CrossLint::Core::SharedPlugin.ref?("v1.2.0") # => true
+    # CrossLint::Core::SharedPlugin.ref?("main:other") # => false
+    # CrossLint::Core::SharedPlugin.newest_tag(%w[v1.2.0 v1.10.0 v2.0.0-rc.1 latest]) # => "v1.10.0"
+    # ```
+    module SharedPlugin
+      # A plugin's name: letters, digits, and . _ -.
+      NAME: Regexp
+
+      # A full commit SHA, 40 hexadecimal digits.
+      SHA: Regexp
+
+      # A tag name, such as "v1.2.0": no character Git reads as part of a
+      # refspec.
+      TAG: Regexp
+
+      # A tag that is a version: three integers, with an optional "v"
+      # before them and nothing after.
+      VERSION: Regexp
+
+      # The name of the plugin at `url`: the last part of the URL without
+      # a ".git" after it, or nil when that has a character a name
+      # can't, or is "." or "..".
+      def self.plugin_name: (String url) -> String?
+
+      # Whether `ref` is a full commit SHA or a tag name.
+      def self.ref?: (String ref) -> bool
+
+      # Whether `ref` is a full commit SHA.
+      def self.sha?: (String ref) -> bool
+
+      # The tag among `tags` with the highest version, or nil when none is
+      # a version. Of the tags that have that version, such as v1.2.0 and
+      # 1.2.0, `keep` when it is one, else the first by name.
+      def self.newest_tag: (Array[String] tags, ?keep: String?) -> String?
+    end
+  end
+end

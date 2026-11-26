@@ -59,6 +59,11 @@ module CrossLint
 
       # What kind of plugin the name lists.
       def kind: () -> (:local | :shared | :built_in)
+
+      # Whether the name lists a shared plugin: its kind is shared, or
+      # `shared_plugins` accepts it as the URL of one, as a port that
+      # accepts "file://" does in the tests.
+      def shared?: (_SharedPlugins shared_plugins) -> bool
     end
 
     # What the configuration says about one listed plugin's policy.

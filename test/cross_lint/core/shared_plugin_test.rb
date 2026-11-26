@@ -1,0 +1,80 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class SharedPluginTest < Minitest::Test
+  cover "CrossLint::Core::SharedPlugin*"
+  cover "CrossLint::Core::FetchError*"
+
+  SharedPlugin = CrossLint::Core::SharedPlugin
+
+  def test_names_a_plugin_for_the_last_part_of_its_repositorys_url
+    urls = ["https://github.com/OWNER/signatures", "https://github.com/OWNER/signatures.git", "https://github.com/OWNER/signatures/",
+      "https://github.com/OWNER/signatures.git//", "file:///tmp/a.b_c-d"]
+
+    assert_equal %w[signatures signatures signatures signatures a.b_c-d], urls.map { |url| SharedPlugin.plugin_name(url) }
+  end
+
+  def test_names_no_plugin_for_a_last_part_that_isnt_letters_digits_and_dot_underscore_dash
+    urls = ["https://example.com/OWNER/a b", "https://example.com/OWNER/café", "https://example.com/OWNER/a:b", "https://example.com/OWNER/..",
+      "https://example.com/OWNER/.", "https://example.com/OWNER/.git", "https://example.com/OWNER/a\nb", ""]
+
+    assert_equal [nil] * urls.size, urls.map { |url| SharedPlugin.plugin_name(url) }
+  end
+
+  def test_takes_a_tag_name_or_a_full_sha_as_a_ref
+    refs = ["v1.2.0", "1.2.0", "release/2026.1", "v1.0.0+build.5", "2.0.0-rc.1", "a" * 40, "A1" * 20, "a" * 39, "#{"a" * 41}g"]
+
+    assert_equal [true] * refs.size, refs.map { |ref| SharedPlugin.ref?(ref) }
+  end
+
+  def test_takes_no_ref_with_a_character_git_reads_as_part_of_a_refspec
+    refs = ["", "-v1", ".v1", "a:b", "a*", "a?", "a[", "a^", "a~", "a b", "a\\b", "a\nb", "v1\n", "café"]
+
+    assert_equal [false] * refs.size, refs.map { |ref| SharedPlugin.ref?(ref) }
+  end
+
+  def test_knows_a_full_sha_from_a_tag_that_looks_like_one
+    assert_equal [true, true, false, false, false], ["a" * 40, "0123456789ABCDEFabcdef0123456789ABCDEFab", "a" * 39, "a" * 41, "#{"a" * 39}g"]
+      .map { |ref| SharedPlugin.sha?(ref) }
+    assert_equal [false], ["#{"a" * 40}\n"].map { |ref| SharedPlugin.sha?(ref) }
+  end
+
+  def test_picks_the_tag_with_the_highest_version_by_number_not_by_text
+    assert_equal "v1.10.0", SharedPlugin.newest_tag(%w[v1.2.0 v1.10.0 v1.9.9 v0.99.99])
+    assert_equal "2.0.0", SharedPlugin.newest_tag(%w[v1.10.0 2.0.0 v1.99.99])
+    assert_equal "v1.2.10", SharedPlugin.newest_tag(%w[v1.2.9 v1.2.10 v1.1.99])
+    assert_equal "v10.0.0", SharedPlugin.newest_tag(%w[v9.9.9 v10.0.0])
+  end
+
+  def test_leaves_out_a_tag_that_isnt_three_integers
+    tags = %w[v3.0.0-rc.1 3.0.0-rc.1 v3.0 v3 3.0.0.1 v3.0.0+build vv3.0.0 V3.0.0 latest stable v3.0.0-1 v1.0.x]
+
+    assert_nil SharedPlugin.newest_tag(tags)
+    assert_equal "v1.0.0", SharedPlugin.newest_tag(tags + ["v1.0.0"])
+    assert_nil SharedPlugin.newest_tag([])
+  end
+
+  def test_leaves_out_a_tag_with_text_around_a_version
+    assert_equal "v1.0.0", SharedPlugin.newest_tag(["v1.0.0", "x9.9.9", "9.9.9\n", "release-9.9.9", " 9.9.9", "9.9.9 "])
+  end
+
+  def test_picks_the_tag_the_project_has_among_the_tags_of_the_highest_version
+    tags = %w[1.2.0 v1.2.0 v1.1.0]
+
+    assert_equal ["v1.2.0", "1.2.0", "1.2.0"], [SharedPlugin.newest_tag(tags, keep: "v1.2.0"), SharedPlugin.newest_tag(tags, keep: "1.2.0"),
+      SharedPlugin.newest_tag(tags, keep: "v1.1.0")]
+    assert_equal "1.2.0", SharedPlugin.newest_tag(tags.reverse)
+    assert_equal "1.2.0", SharedPlugin.newest_tag(tags, keep: nil)
+  end
+
+  def test_says_what_is_wrong_with_a_ref
+    assert_equal "ext::x doesn't start with https:// or file://", CrossLint::Core::FetchError.scheme("ext::x", ["https://", "file://"]).message
+    errors = [CrossLint::Core::FetchError.bad_ref("a:b"), CrossLint::Core::FetchError.branch("main"), CrossLint::Core::FetchError.no_tag("v9"),
+      CrossLint::Core::FetchError.no_commit("abc")]
+
+    assert_equal ['"a:b" is neither a tag name nor a full 40-character commit SHA', "main is a branch, and a ref is a tag or a full 40-character commit SHA",
+      "the repository has no tag v9, and a ref is a tag or a full 40-character commit SHA", "the repository has no commit abc"], errors.map(&:message)
+    assert(errors.all? { |error| error.is_a?(StandardError) })
+  end
+end

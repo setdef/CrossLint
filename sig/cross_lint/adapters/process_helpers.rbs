@@ -54,10 +54,10 @@ module CrossLint
       # What starts a helper and holds the processes it starts: a class,
       # as ProcessGroup and JobObject are.
       interface _Tree
-        # Starts the program and file `command` in `root`, with
+        # Starts the program and arguments `command` in `root`, with
         # `environment`'s changes to its environment, with pipes to its
         # standard input, output, and error.
-        def popen3: ([String, String] command, String root, Hash[String, String?] environment) -> [IO, IO, IO, Process::Waiter]
+        def popen3: (Array[String] command, String root, Hash[String, String?] environment) -> [IO, IO, IO, Process::Waiter]
 
         # Closes the pipe `input` to a helper's standard input.
         def close_input: (IO input) -> void

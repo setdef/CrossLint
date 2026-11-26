@@ -29,6 +29,15 @@ require "mutant/minitest/coverage"
 require "fileutils"
 require "stringio"
 require "tmpdir"
+
+# CrossLint keeps what it fetches in the user's cache. A test gives its
+# own folder to every port it makes, and these point the ones it doesn't
+# at a folder that goes with the run, so that a mistake in CrossLint, or a
+# mutation of it, writes nowhere in the user's cache.
+CACHE = Dir.mktmpdir("crosslint-cache")
+ENV["XDG_CACHE_HOME"] = ENV["LOCALAPPDATA"] = CACHE
+Minitest.after_run { FileUtils.rm_rf(CACHE) }
+
 require "cross_lint"
 require "cross_lint/testing"
 

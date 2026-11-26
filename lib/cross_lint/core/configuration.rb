@@ -11,6 +11,8 @@ module CrossLint
 
         :built_in
       end
+
+      def shared?(shared_plugins) = kind == :shared || (kind == :built_in && shared_plugins.accepts?(name))
     end
 
     class PolicySetting < Data.define(:name, :enabled, :severity, :line); end

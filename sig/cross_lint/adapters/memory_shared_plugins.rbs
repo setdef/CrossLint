@@ -1,0 +1,67 @@
+module CrossLint
+  module Adapters
+    # The shared-plugins port in memory, for the use cases' tests: each
+    # repository by its URL, with the folder that holds each of its tags
+    # and commits, and the names of its branches. It writes the lines the
+    # port says to `err`, and keeps each fetch, as a real cache does.
+    #
+    # ```ruby
+    # require "stringio"
+    # repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(
+    #   tags: {"v1.0.0" => "/cache/a/signatures"}, branches: ["main"], commits: {})
+    # port = CrossLint::Adapters::MemorySharedPlugins.new({"https://github.com/OWNER/signatures" => repository}, err: StringIO.new)
+    # port.fetch("https://github.com/OWNER/signatures", "v1.0.0") # => "/cache/a/signatures"
+    # port.fetched # => [["https://github.com/OWNER/signatures", "v1.0.0"]]
+    # ```
+    class MemorySharedPlugins
+      include _SharedPlugins
+
+      # A repository: the folder of each tag by its name, the names of the
+      # branches, and the folder of each commit by its full SHA.
+      class Repository < Data
+        # The folder of each tag.
+        attr_reader tags: Hash[String, String]
+
+        # The names of the branches.
+        attr_reader branches: Array[String]
+
+        # The folder of each commit.
+        attr_reader commits: Hash[String, String]
+
+        # A repository with these fields.
+        def self.new: (tags: Hash[String, String], branches: Array[String], commits: Hash[String, String]) -> instance
+
+        # A repository with these fields.
+        def initialize: (tags: Hash[String, String], branches: Array[String], commits: Hash[String, String]) -> void
+      end
+
+      # Each url and ref fetched, in order, the same one once.
+      attr_reader fetched: Array[[String, String]]
+
+      # A port that holds `repositories`, by URL, accepts URLs that start
+      # with one of `schemes`, and writes its lines to `err`.
+      def initialize: (?Hash[String, Repository] repositories, ?err: CLI::_Output, ?schemes: Array[String]) -> void
+
+      private
+
+      @repositories: Hash[String, Repository]
+
+      @err: CLI::_Output
+
+      @schemes: Array[String]
+
+      # The folder of each url and ref fetched.
+      @saved: Hash[[String, String], String]
+
+      # Raises Core::FetchError unless the port accepts `url`.
+      def check: (String url) -> void
+
+      # The repository at `url`. Raises Core::FetchError when there is none.
+      def repository: (String url) -> Repository
+
+      # The folder of `ref` in `repository`. Raises Core::FetchError when
+      # `ref` names a branch, no tag, or no commit it has.
+      def find: (Repository repository, String ref) -> String
+    end
+  end
+end

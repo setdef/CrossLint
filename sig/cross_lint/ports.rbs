@@ -142,4 +142,33 @@ module CrossLint
     # when the write fails.
     def write: (String root, String path, Core::DebtFile debt) -> void
   end
+
+  # Where the core fetches shared plugins from: Git repositories, and the
+  # user's cache of what it has fetched. Adapters::GitSharedPlugins runs
+  # Git, and Adapters::MemorySharedPlugins holds repositories in memory;
+  # both pass Testing::SharedPluginsContract. Before a request, each
+  # writes a line to standard error that says what it is about to fetch
+  # or list: "crosslint: fetching URL at REF" or "crosslint: listing the
+  # tags of URL".
+  interface _SharedPlugins
+    # Whether `url` is one a configuration may list as a shared plugin:
+    # it starts with a scheme the port accepts, "https://" unless it is
+    # told more.
+    def accepts?: (String url) -> bool
+
+    # The folder in the cache that holds the plugin at `ref` of the
+    # repository at `url`, a tag or a full commit SHA, as files with no
+    # repository. Its name is the plugin's name (Core::SharedPlugin.plugin_name).
+    # The first time, it fetches that commit alone and saves it; after
+    # that it makes no request, even when the tag has moved. Raises
+    # Core::FetchError when `url` isn't accepted, the repository or the ref
+    # can't be reached, the ref names a branch and no tag, the SHA isn't
+    # in the repository, or the fetch takes more than its time limit, and
+    # saves nothing then.
+    def fetch: (String url, String ref) -> String
+
+    # The names of the repository's tags at `url`. Raises Core::FetchError
+    # when the repository can't be reached within the time limit.
+    def tags: (String url) -> Array[String]
+  end
 end

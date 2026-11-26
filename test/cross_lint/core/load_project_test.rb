@@ -72,10 +72,65 @@ class LoadProjectTest < Minitest::Test
     assert_mistake CONFIG, 1, "only a shared plugin takes ref=", plugins: [listing("debt", ref: "v1")], built_in: {"debt" => "#{TOP}c/plugins/debt"}
   end
 
-  def test_stops_at_a_shared_plugin
-    assert_mistake CONFIG, 1, %(shared plugin "https://github.com/o/r" needs ref=, a tag or a full commit SHA),
-      plugins: [listing("https://github.com/o/r")]
-    assert_mistake CONFIG, 1, "CrossLint can't fetch shared plugins yet", plugins: [listing("https://github.com/o/r", ref: "v1.2.0")]
+  URL = "https://example.com/o/signatures"
+
+  def test_stops_at_a_shared_plugin_with_no_ref
+    assert_mistake CONFIG, 1, %(shared plugin "#{URL}" needs ref=, a tag or a full commit SHA), plugins: [listing(URL)]
+  end
+
+  def test_reads_a_shared_plugin_from_the_folder_the_port_fetched
+    shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+    project = load_project(plugins: [listing(URL, ref: "v1.2.0", line: 3)], manifests: {"#{TOP}cache/a1/signatures" => tests_manifest("signatures")},
+      shared_plugins: shared)
+
+    assert_equal [["signatures", "#{TOP}cache/a1/signatures"]], project.plugins.map { |plugin| [plugin.name, plugin.folder] }
+    assert_equal [[URL, "v1.2.0"]], shared.fetched
+  end
+
+  def test_reads_a_shared_plugin_at_a_commit_sha
+    sha = "a" * 40
+    repository = MemorySharedPlugins::Repository.new(tags: {}, branches: [], commits: {sha => "#{TOP}cache/b2/signatures"})
+    shared = MemorySharedPlugins.new({URL => repository}, err: StringIO.new)
+    project = load_project(plugins: [listing(URL, ref: sha)], manifests: {"#{TOP}cache/b2/signatures" => tests_manifest("signatures")}, shared_plugins: shared)
+
+    assert_equal [["signatures", "#{TOP}cache/b2/signatures"]], project.plugins.map { |plugin| [plugin.name, plugin.folder] }
+  end
+
+  def test_reads_a_shared_plugin_at_a_url_the_port_accepts_that_isnt_https
+    url = "file:///tmp/signatures"
+    repository = MemorySharedPlugins::Repository.new(tags: {"v1.0.0" => "#{TOP}cache/c3/signatures"}, branches: [], commits: {})
+    shared = MemorySharedPlugins.new({url => repository}, err: StringIO.new, schemes: ["file://"])
+    project = load_project(plugins: [listing(url, ref: "v1.0.0")], manifests: {"#{TOP}cache/c3/signatures" => tests_manifest("signatures")},
+      shared_plugins: shared)
+
+    assert_equal ["signatures"], project.plugins.map(&:name)
+    assert_mistake CONFIG, 1, %(unknown built-in plugin "file:///tmp/signatures"; this CrossLint has none), plugins: [listing(url)]
+  end
+
+  def test_names_the_plugin_and_the_url_when_a_fetch_fails
+    assert_mistake CONFIG, 2, %(couldn't fetch shared plugin signatures from #{URL} at v9.9.9: the repository has no tag v9.9.9, ) +
+      "and a ref is a tag or a full 40-character commit SHA", plugins: [listing(URL, ref: "v9.9.9", line: 2)],
+      shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+    assert_mistake CONFIG, 1, %(couldn't fetch shared plugin signatures from #{URL} at main: main is a branch, ) +
+      "and a ref is a tag or a full 40-character commit SHA", plugins: [listing(URL, ref: "main")], shared_plugins: shared_plugins({})
+  end
+
+  def test_stops_at_a_shared_plugin_whose_url_names_no_plugin
+    assert_mistake CONFIG, 1, %(can't name a plugin from "https://example.com/o/a b", whose last part has other characters ) +
+      "than letters, digits, and . _ -; a plugin's name is its repository's name", plugins: [listing("https://example.com/o/a b", ref: "v1")]
+  end
+
+  def test_stops_at_a_shared_plugin_with_no_manifest_in_its_root
+    assert_mistake CONFIG, 1, "no plugin.kdl in the root of #{URL} at v1.2.0", plugins: [listing(URL, ref: "v1.2.0")],
+      shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+  end
+
+  def test_stops_at_a_shared_plugin_with_the_name_of_a_local_one
+    plugins = [listing("./rules/signatures"), listing(URL, ref: "v1.2.0", line: 2)]
+    manifests = {"#{APP}/rules/signatures" => tests_manifest("rules/signatures"), "#{TOP}cache/a1/signatures" => tests_manifest("signatures")}
+
+    assert_mistake CONFIG, 2, %(plugins "./rules/signatures" and "#{URL}" are both named "signatures", since a plugin's name is its folder's name),
+      plugins:, manifests:, shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
   end
 
   def test_reads_a_built_in_plugin_from_its_folder
@@ -134,7 +189,8 @@ class LoadProjectTest < Minitest::Test
   def test_has_no_step_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], policies: [], warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}), plugin_ruby: MemoryPluginRuby.new)
+      manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}), plugin_ruby: MemoryPluginRuby.new,
+      shared_plugins: shared_plugins({}))
 
     assert_equal %(unknown step "track-debt"; this CrossLint has none), assert_raises(Mistake) { use_case.call(APP) }.message
   end
@@ -479,7 +535,7 @@ class LoadProjectTest < Minitest::Test
   def test_has_no_built_in_plugins_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("debt")], policies: [], warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), manifests: MemoryPluginManifests.new,
-      plugin_ruby: MemoryPluginRuby.new)
+      plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({}))
     mistake = assert_raises(Mistake) { use_case.call(APP) }
 
     assert_equal %(unknown built-in plugin "debt"; this CrossLint has none), mistake.message
@@ -498,7 +554,9 @@ class LoadProjectTest < Minitest::Test
 
   def test_raises_the_mistakes_the_ports_raise
     configuration = MemoryConfiguration.new({APP => Mistake.new("broken", file: CONFIG, line: 2)})
-    mistake = assert_raises(Mistake) { LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, plugin_ruby: MemoryPluginRuby.new).call(APP) }
+    mistake = assert_raises(Mistake) do
+      LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({})).call(APP)
+    end
 
     assert_equal "#{CONFIG}:2", mistake.location
   end
@@ -508,6 +566,7 @@ class LoadProjectTest < Minitest::Test
   MemoryConfiguration = CrossLint::Adapters::MemoryConfiguration
   MemoryPluginManifests = CrossLint::Adapters::MemoryPluginManifests
   MemoryPluginRuby = CrossLint::Adapters::MemoryPluginRuby
+  MemorySharedPlugins = CrossLint::Adapters::MemorySharedPlugins
 
   # A step that records the settings it is given to read, and raises
   # `mistake` when it reads them.
@@ -530,11 +589,19 @@ class LoadProjectTest < Minitest::Test
     def call(_input) = raise("not called")
   end
 
-  def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {})
+  def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
+    shared_plugins: shared_plugins({}))
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), built_in:, steps:).call(start)
+      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:).call(start)
+  end
+
+  # A port with one repository, at URL, that has these tags and a branch
+  # called main.
+  def shared_plugins(tags)
+    repository = MemorySharedPlugins::Repository.new(tags:, branches: ["main"], commits: {})
+    MemorySharedPlugins.new({URL => repository}, err: StringIO.new)
   end
 
   # A plugin whose artifacts.rb defines Artifacts with `body`, as the

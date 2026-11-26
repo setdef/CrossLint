@@ -156,6 +156,33 @@ class AppTest < Minitest::Test
     assert_output(nil, "crosslint: helper h: said\n") { App.new(debug: true).check(@base) }
   end
 
+  def test_runs_a_shared_plugin_fetched_from_a_repository_and_fetches_it_once
+    url = shared_repository
+    write(@base, ".config/crosslint/config.kdl", %(plugin #{url.dump} ref="v1.0.0"\n))
+    write(@base, "a.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    err = StringIO.new
+    app = -> { App.new(err:, shared_plugins: CrossLint::Adapters::GitSharedPlugins.new(err:, cache: File.join(@base, "cache"), schemes: ["file://"])) }
+    first = app.call.check(@base)
+    FileUtils.rm_rf(File.join(@base, "origin"))
+    second = app.call.check(@base)
+
+    assert_equal [[["a.md", "no c file at a.txt"]]] * 2, [first, second].map { |result| result.violations.map { |violation| [violation.artifact, violation.message] } }
+    assert_equal [[["shared-docs", "p"]]] * 2, [first, second].map { |result| result.violations.map { |violation| [violation.plugin, violation.policy] } }
+    assert_equal ["crosslint: fetching #{url} at v1.0.0"], err.string.lines(chomp: true)
+  end
+
+  def test_stops_at_a_shared_plugin_whose_ref_is_a_branch_naming_the_plugin_and_its_url
+    url = shared_repository
+    write(@base, ".config/crosslint/config.kdl", %(plugin #{url.dump} ref="main"\n))
+    app = App.new(err: StringIO.new, shared_plugins: CrossLint::Adapters::GitSharedPlugins.new(err: StringIO.new, cache: File.join(@base, "cache"),
+      schemes: ["file://"]))
+    mistake = assert_raises(Mistake) { app.check(@base) }
+
+    assert_equal [".config/crosslint/config.kdl:1", "couldn't fetch shared plugin shared-docs from #{url} at main: main is a branch, " \
+      "and a ref is a tag or a full 40-character commit SHA"], [mistake.location, mistake.message]
+  end
+
   def test_runs_helpers_through_the_port_it_is_given
     helpers = CrossLint::Adapters::MemoryHelpers.new
     def helpers.start(*) = raise(CrossLint::Core::Mistake, "asked")
@@ -192,6 +219,19 @@ class AppTest < Minitest::Test
   end
 
   private
+
+  # A repository of a plugin called shared-docs, tagged v1.0.0 on the
+  # branch main, in the test's base. Its file URL.
+  def shared_repository
+    folder = File.join(@base, "origin", "shared-docs")
+    write(folder, "plugin.kdl", MANIFEST)
+    settings = %w[-c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false -c tag.gpgsign=false]
+    [%w[init -q -b main], %w[add -A], %w[commit -q -m one], %w[tag v1.0.0]].each do |arguments|
+      _, error, status = Open3.capture3("git", *settings, *arguments, chdir: folder)
+      raise error unless status.success?
+    end
+    "file://#{"/" unless folder.start_with?("/")}#{folder}"
+  end
 
   # A project at /app whose plugin, local, warns of each a.md with no
   # a.txt beside it.

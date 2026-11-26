@@ -427,5 +427,105 @@ module CrossLint
         assert_equal ["debt.tsv", 3], [mistake.file, mistake.line]
       end
     end
+
+    module SharedPluginsContract
+      TAGS = %w[v1.0.0 v1.2.0 v1.10.0 2.0.0-rc.1 latest].freeze
+
+      def test_accepts_the_urls_of_https_and_no_other_scheme_unless_it_is_told_to
+        port = shared_plugins_port
+        urls = ["https://github.com/OWNER/REPO", "http://github.com/OWNER/REPO", "git@github.com:OWNER/REPO.git", "ext::sh -c id", "/tmp/repo", ""]
+
+        assert_equal [true, false, false, false, false, false], urls.map { |url| port.accepts?(url) }
+      end
+
+      def test_returns_one_folder_for_a_url_and_ref_and_another_for_another_ref
+        port = shared_plugins_port
+        folder = port.fetch(repository_url, "v1.0.0")
+
+        assert_equal folder, port.fetch(repository_url, "v1.0.0")
+        refute_equal folder, port.fetch(repository_url, "v1.2.0")
+      end
+
+      def test_fetches_a_commit_by_its_full_sha
+        port = shared_plugins_port
+        folder = port.fetch(repository_url, commit_sha)
+
+        assert_equal folder, port.fetch(repository_url, commit_sha)
+        refute_equal folder, port.fetch(repository_url, "v1.0.0")
+      end
+
+      def test_says_what_it_fetches_the_first_time_only
+        port = shared_plugins_port
+        2.times { port.fetch(repository_url, "v1.0.0") }
+        port.fetch(repository_url, "v1.2.0")
+
+        assert_equal "crosslint: fetching #{repository_url} at v1.0.0\ncrosslint: fetching #{repository_url} at v1.2.0\n", said
+      end
+
+      def test_makes_no_request_for_a_plugin_it_fetched_even_when_the_repository_is_gone
+        port = shared_plugins_port
+        folder = port.fetch(repository_url, "v1.0.0")
+        remove_repository
+
+        assert_equal folder, port.fetch(repository_url, "v1.0.0")
+        assert_equal ["crosslint: fetching #{repository_url} at v1.0.0"], said.lines(chomp: true)
+      end
+
+      def test_refuses_a_ref_that_names_a_branch_and_no_tag
+        error = assert_raises(Core::FetchError) { shared_plugins_port.fetch(repository_url, "main") }
+
+        assert_equal "main is a branch, and a ref is a tag or a full 40-character commit SHA", error.message
+      end
+
+      def test_refuses_a_ref_that_names_no_tag
+        error = assert_raises(Core::FetchError) { shared_plugins_port.fetch(repository_url, "v9.9.9") }
+
+        assert_equal "the repository has no tag v9.9.9, and a ref is a tag or a full 40-character commit SHA", error.message
+      end
+
+      def test_refuses_a_commit_the_repository_doesnt_have
+        sha = "0" * 39 + "1"
+        error = assert_raises(Core::FetchError) { shared_plugins_port.fetch(repository_url, sha) }
+
+        assert_includes error.message, sha
+      end
+
+      def test_refuses_a_ref_that_is_neither_a_tag_name_nor_a_full_sha
+        port = shared_plugins_port
+        refs = ["", "a:b", "-v1", "main^", "v1 2", "v1.0.0:refs/heads/x"]
+        messages = refs.map { |ref| assert_raises(Core::FetchError) { port.fetch(repository_url, ref) }.message }
+
+        assert_equal(refs.map { |ref| "#{ref.dump} is neither a tag name nor a full 40-character commit SHA" }, messages)
+        assert_empty said
+      end
+
+      def test_refuses_a_repository_that_isnt_there
+        assert_raises(Core::FetchError) { shared_plugins_port.fetch(missing_repository_url, "v1.0.0") }
+        assert_raises(Core::FetchError) { shared_plugins_port.fetch(missing_repository_url, commit_sha) }
+      end
+
+      def test_refuses_a_url_it_doesnt_accept_without_a_request
+        port = shared_plugins_port
+
+        errors = [assert_raises(Core::FetchError) { port.fetch("ext::sh -c id", "v1.0.0") }, assert_raises(Core::FetchError) { port.tags("ext::sh -c id") }]
+
+        assert(errors.all? { |error| error.message.start_with?("ext::sh -c id doesn't start with https://") })
+        assert_empty said
+      end
+
+      def test_lists_the_names_of_the_repositorys_tags
+        assert_equal TAGS.sort, shared_plugins_port.tags(repository_url).sort
+      end
+
+      def test_says_what_it_lists
+        shared_plugins_port.tags(repository_url)
+
+        assert_equal "crosslint: listing the tags of #{repository_url}\n", said
+      end
+
+      def test_refuses_to_list_the_tags_of_a_repository_that_isnt_there
+        assert_raises(Core::FetchError) { shared_plugins_port.tags(missing_repository_url) }
+      end
+    end
   end
 end

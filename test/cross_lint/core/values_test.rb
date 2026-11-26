@@ -95,6 +95,23 @@ class CoreValuesTest < Minitest::Test
     assert_equal %i[local local local shared built_in built_in built_in], kinds
   end
 
+  def test_a_listed_plugin_is_shared_by_its_kind_or_when_the_port_accepts_its_name
+    https = CrossLint::Adapters::MemorySharedPlugins.new(err: StringIO.new)
+    files = CrossLint::Adapters::MemorySharedPlugins.new(err: StringIO.new, schemes: ["file://"])
+    shared = [".config/x", "file:///x", "https://example.com/o/r", "debt"].map do |name|
+      listing = ListedPlugin.new(name:, ref: nil, settings: [], line: 1)
+      [listing.shared?(https), listing.shared?(files)]
+    end
+
+    assert_equal [[false, false], [false, true], [true, true], [false, false]], shared
+  end
+
+  def test_a_local_plugin_is_never_shared_whatever_the_port_accepts
+    everything = CrossLint::Adapters::MemorySharedPlugins.new(err: StringIO.new, schemes: [""])
+
+    assert_equal [false, true], ["./x", "x"].map { |name| ListedPlugin.new(name:, ref: nil, settings: [], line: 1).shared?(everything) }
+  end
+
   def test_the_built_in_rules
     assert_equal [["companion-exists", ["companion"], :error], ["companion-absent", ["companion"], :error]],
       BuiltInRule::ALL.map { |rule| [rule.name, rule.arguments, rule.severity] }

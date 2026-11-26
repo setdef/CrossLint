@@ -10,10 +10,11 @@ module CrossLint
     class LoadProject
       DECLARER = :Artifacts
 
-      def initialize(configuration:, manifests:, plugin_ruby:, built_in: {}, steps: {})
+      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, built_in: {}, steps: {})
         @configuration = configuration
         @manifests = manifests
         @plugin_ruby = plugin_ruby
+        @shared_plugins = shared_plugins
         @built_in = built_in
         @steps = steps
       end
@@ -54,7 +55,7 @@ module CrossLint
         fail_at.call("plugin #{listing.name.dump} is listed twice; the first is on line #{first.line}") if first
 
         base, folder = place(root, listing, fail_at)
-        manifest = @manifests.read(base, folder) || fail_at.call("no #{@manifests.file} in #{folder.empty? ? "the project's root" : folder}")
+        manifest = @manifests.read(base, folder) || fail_at.call("no #{@manifests.file} in #{where(listing, folder)}")
         name = File.basename(File.expand_path(folder, base))
         same = loaded.find { |plugin| plugin.name == name }
         if same
@@ -64,21 +65,38 @@ module CrossLint
         Plugin.new(name:, folder: File.expand_path(folder, base), listing:, manifest:)
       end
 
+      def where(listing, folder)
+        return "the root of #{listing.name} at #{listing.ref}" if listing.shared?(@shared_plugins)
+
+        folder.empty? ? "the project's root" : folder
+      end
+
       def place(root, listing, fail_at)
-        case listing.kind
-        when :shared
-          fail_at.call("shared plugin #{listing.name.dump} needs ref=, a tag or a full commit SHA") unless listing.ref
-          fail_at.call("CrossLint can't fetch shared plugins yet")
-        when :local
-          fail_at.call("only a shared plugin takes ref=") if listing.ref
-          [root, clean(listing.name)]
-        else
-          fail_at.call("only a shared plugin takes ref=") if listing.ref
-          folder = @built_in.fetch(listing.name) do
-            fail_at.call(Spelling.unknown("built-in plugin", listing.name, @built_in.keys, none: "this CrossLint has none"))
-          end
-          [File.dirname(folder), File.basename(folder)]
+        return fetch(listing, fail_at) if listing.shared?(@shared_plugins)
+
+        fail_at.call("only a shared plugin takes ref=") if listing.ref
+        return [root, clean(listing.name)] if listing.kind == :local
+
+        folder = @built_in.fetch(listing.name) do
+          fail_at.call(Spelling.unknown("built-in plugin", listing.name, @built_in.keys, none: "this CrossLint has none"))
         end
+        [File.dirname(folder), File.basename(folder)]
+      end
+
+      # The shared plugin's folder in the user's cache is the base, so that
+      # the plugin's name is the name of that folder, as for any plugin.
+      def fetch(listing, fail_at)
+        url = listing.name
+        ref = listing.ref || fail_at.call("shared plugin #{url.dump} needs ref=, a tag or a full commit SHA")
+        name = SharedPlugin.plugin_name(url) || fail_at.call("can't name a plugin from #{url.dump}, whose last part has other characters " \
+          "than letters, digits, and . _ -; a plugin's name is its repository's name")
+
+        folder = begin
+          @shared_plugins.fetch(url, ref)
+        rescue FetchError => error
+          fail_at.call("couldn't fetch shared plugin #{name} from #{url} at #{ref}: " + error.message)
+        end
+        [folder, ""]
       end
 
       # A name that starts with / is relative to the root too, as the

@@ -5,10 +5,10 @@ module CrossLint
     # `taskkill /T` misses. Closing its last handle, as when CrossLint
     # ends, ends its processes.
     class JobObject
-      # Starts the program and file `command` in `root`, with `environment`'s
+      # Starts the program and arguments `command` in `root`, with `environment`'s
       # changes to its environment, with pipes to its
       # standard input, written in binary mode, and its output and error.
-      def self.popen3: ([String, String] command, String root, Hash[String, String?] environment) -> [IO, IO, IO, Process::Waiter]
+      def self.popen3: (Array[String] command, String root, Hash[String, String?] environment) -> [IO, IO, IO, Process::Waiter]
 
       # Closes `input`, the pipe to a helper's standard input, which
       # raises EPIPE on Windows when the helper has exited; that ends

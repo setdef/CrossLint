@@ -8,9 +8,8 @@ module CrossLint
   module Adapters
     class ProcessGroup
       def self.popen3(command, root, environment)
-        program, file = command
         env = environment #: untyped
-        Open3.popen3(env, program, file, chdir: root, pgroup: true)
+        Open3.popen3(env, *command, chdir: root, pgroup: true)
       end
 
       def self.close_input(input) = input.close

@@ -336,5 +336,86 @@ module CrossLint
       # read raises a mistake naming the file and the line.
       def test_names_the_file_and_line_of_a_mistake: () -> void
     end
+
+    # What a test of a shared-plugins adapter defines.
+    interface _SharedPluginsTest
+      # A port over the repository at `repository_url`. It accepts https
+      # URLs, and the URLs of the test's repositories, and writes what it
+      # fetches and lists where `said` reads.
+      def shared_plugins_port: () -> _SharedPlugins
+
+      # The URL of a repository that has the tags in
+      # SharedPluginsContract::TAGS, each of them a version or not as
+      # its name says, a branch called main, and the commit `commit_sha`.
+      def repository_url: () -> String
+
+      # The full SHA of a commit the repository has.
+      def commit_sha: () -> String
+
+      # A URL the port accepts, of a repository that isn't there.
+      def missing_repository_url: () -> String
+
+      # Removes the repository at `repository_url`, so that no request for
+      # it can succeed.
+      def remove_repository: () -> void
+
+      # What the port wrote to standard error so far.
+      def said: () -> String
+    end
+
+    # The tests every adapter of the shared-plugins port passes.
+    module SharedPluginsContract : _SharedPluginsTest, Minitest::Assertions
+      # The tags the repository of `repository_url` has.
+      TAGS: Array[String]
+
+      # accepts? is true for an https URL, and false for http, an scp-like
+      # address, a transport that runs a command, a path, and nothing.
+      def test_accepts_the_urls_of_https_and_no_other_scheme_unless_it_is_told_to: () -> void
+
+      # fetch gives the same folder for the same URL and ref, and another
+      # for another ref.
+      def test_returns_one_folder_for_a_url_and_ref_and_another_for_another_ref: () -> void
+
+      # fetch takes a full commit SHA as a ref.
+      def test_fetches_a_commit_by_its_full_sha: () -> void
+
+      # fetch says what it fetches the first time it fetches a URL at a
+      # ref, and nothing the next time.
+      def test_says_what_it_fetches_the_first_time_only: () -> void
+
+      # fetch makes no request for a URL and ref it has fetched, even when
+      # the repository is gone.
+      def test_makes_no_request_for_a_plugin_it_fetched_even_when_the_repository_is_gone: () -> void
+
+      # fetch raises Core::FetchError for a branch that is no tag.
+      def test_refuses_a_ref_that_names_a_branch_and_no_tag: () -> void
+
+      # fetch raises Core::FetchError for a tag the repository lacks.
+      def test_refuses_a_ref_that_names_no_tag: () -> void
+
+      # fetch raises Core::FetchError, naming the SHA, for a commit the
+      # repository lacks.
+      def test_refuses_a_commit_the_repository_doesnt_have: () -> void
+
+      # fetch raises Core::FetchError for a ref with a character a tag
+      # name doesn't have here, before any request.
+      def test_refuses_a_ref_that_is_neither_a_tag_name_nor_a_full_sha: () -> void
+
+      # fetch raises Core::FetchError for a repository that isn't there.
+      def test_refuses_a_repository_that_isnt_there: () -> void
+
+      # fetch and tags raise Core::FetchError for a URL the port doesn't
+      # accept, before any request.
+      def test_refuses_a_url_it_doesnt_accept_without_a_request: () -> void
+
+      # tags lists the names of every tag of the repository.
+      def test_lists_the_names_of_the_repositorys_tags: () -> void
+
+      # tags says what it lists.
+      def test_says_what_it_lists: () -> void
+
+      # tags raises Core::FetchError for a repository that isn't there.
+      def test_refuses_to_list_the_tags_of_a_repository_that_isnt_there: () -> void
+    end
   end
 end

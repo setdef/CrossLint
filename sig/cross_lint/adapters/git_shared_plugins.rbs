@@ -1,0 +1,110 @@
+module CrossLint
+  module Adapters
+    # The shared-plugins port with Git: the Git already on the PATH, run as
+    # a program with arguments and never through a shell, with none of
+    # CrossLint's GIT_ variables, and with GIT_TERMINAL_PROMPT set to 0 so
+    # that it never waits for a password. It leaves proxies to Git, which
+    # reads HTTPS_PROXY, HTTP_PROXY, and NO_PROXY from the environment.
+    #
+    # The first time it fetches a plugin, it fetches that commit alone,
+    # with no history, into a folder of its own in the user's cache, and
+    # renames it into place, so that a fetch that stops partway leaves
+    # nothing. The cache is `$XDG_CACHE_HOME/crosslint/plugins`, or
+    # `~/.cache/crosslint/plugins` without XDG_CACHE_HOME, or on Windows
+    # `%LOCALAPPDATA%\crosslint\cache\plugins`. Each fetch is a folder named
+    # by a hash of the URL and the ref, holding the plugin's folder, which
+    # has the plugin's name and no `.git`.
+    #
+    # A fetch, and a listing of tags, ends git and everything it started
+    # when it takes more than the time limit, and raises Core::FetchError.
+    class GitSharedPlugins
+      include _SharedPlugins
+
+      # How long a fetch, or a listing of tags, may take, in seconds.
+      TIME_LIMIT: Integer
+
+      # The schemes a URL may start with: "https://".
+      SCHEMES: Array[String]
+
+      # The arguments before each run of git that fetches, so that a file
+      # has the bytes that were committed on every system.
+      SETTINGS: Array[String]
+
+      # How long a fetch, or a listing of tags, may take, in seconds.
+      attr_reader time_limit: Numeric
+
+      # The folder of CrossLint's cache for a user, given the environment
+      # `env`, whether the system is Windows, and `home`, which gives the
+      # user's home folder, and is called only when that is needed.
+      def self.cache_folder: (environment env, windows: bool, home: ^() -> String) -> String
+
+      # What the port reads of the environment, as ENV or a hash has it.
+      type environment = ProcessHelpers::_Environment & GitEnvironment::_Variables
+
+      # A port that writes the lines it says before a request to `err`,
+      # keeps what it fetches in `cache`, a folder, or in the user's cache
+      # (cache_folder) with none, accepts URLs that start with one of
+      # `schemes`, and ends git after `time_limit` seconds. It runs
+      # `git`, a program or a program and arguments, in `tree`, with the
+      # environment `env`; `windows` and `home` say how the cache is found.
+      def initialize: (err: CLI::_Output, ?cache: String?, ?schemes: Array[String], ?time_limit: Numeric, ?git: String | Array[String],
+                       ?env: environment, ?windows: bool, ?home: ^() -> String, ?tree: ProcessHelpers::_Tree) -> void
+
+      # The folder fetch returns for `ref` of the repository at `url`,
+      # whether or not it exists yet. Raises Core::FetchError when `url`
+      # has no name, or the cache has no folder.
+      def folder: (String url, String ref) -> String
+
+      private
+
+      @err: CLI::_Output
+
+      @cache: String?
+
+      @schemes: Array[String]
+
+      @env: environment
+
+      @windows: bool
+
+      @home: ^() -> String
+
+      @command: GitCommand
+
+      # Raises Core::FetchError unless the port accepts `url`.
+      def check: (String url) -> void
+
+      # The name of the plugin at `url`. Raises Core::FetchError when it
+      # has none.
+      def plugin_name: (String url) -> String
+
+      # The folder that holds the cache's fetched plugins.
+      def plugins: () -> String
+
+      # Fetches the plugin into a folder of its own in the cache, and
+      # renames it to `entry`, in which the plugin's folder is `name`.
+      def download: (String url, String ref, String entry, String name) -> void
+
+      # Renames `files` to `entry`, which is as good as another
+      # CrossLint's copy when that got there first.
+      def save: (String files, String entry) -> void
+
+      # What the block returns, given a deadline `time_limit` seconds from
+      # now. Raises Core::FetchError when the block raises GitCommand::Late.
+      def limited: [T] () { (Numeric deadline) -> T } -> T
+
+      # Fetches the commit of `ref` in `url` into `work`, with the plugin's
+      # files in `work/files/name`.
+      def clone: (String url, String ref, String work, String name, Numeric deadline) -> void
+
+      # The ref to fetch for the tag `ref`. Raises Core::FetchError when
+      # `ref` names a branch, or no tag.
+      def tag: (String url, String ref, String work, Numeric deadline) -> String
+
+      # What git writes to standard output when it runs with `arguments` in
+      # `folder`. Raises Core::FetchError, saying `what` and what git wrote
+      # to standard error, when it fails.
+      def git!: (Array[String] arguments, String folder, Numeric deadline, ?String? what) -> String
+    end
+  end
+end
