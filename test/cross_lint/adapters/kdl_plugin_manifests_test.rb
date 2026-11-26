@@ -254,12 +254,33 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 1, %(command "update" has no help=, its line in --help), %(command "update" help="")
     assert_refuses 1, "command has 0 arguments; write it as command NAME help=TEXT", %(command help="Help")
     assert_refuses 1, %(unknown property "hlp", did you mean "help"?), %(command "update" hlp="Help")
-    assert_refuses 1, %(unknown node "x"; command takes no children), %(command "update" help="Help" { x; })
+    assert_refuses 1, %(unknown node "x"; expected "flag"), %(command "update" help="Help" { x; })
     assert_refuses 1, "help= takes a string, not 1", %(command "update" help=1)
   end
 
+  def test_reads_the_flags_a_command_declares_in_the_usage_specs_syntax
+    manifest = read(%(step "s"\ncommand "update" help="Rewrite it" {\n  flag "-n --dry-run" help="Write nothing"\n  flag "--since <rev>" help="From a revision"\n}\n))
+
+    assert_equal [CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "Write nothing", line: 3),
+      CommandFlag.new(short: nil, long: "since", value: "rev", help: "From a revision", line: 4)], manifest.commands.first.flags
+    assert_empty read(%(command "update" help="Rewrite it" {\n}\n)).commands.first.flags
+  end
+
+  def test_refuses_a_flag_of_a_command_written_wrong
+    inside = ->(flag) { %(command "update" help="Help" {\n  #{flag}\n}\n) }
+
+    assert_refuses 2, %(flag "-n --dry-run" has no help=, its line in --help), inside.call(%(flag "-n --dry-run"))
+    assert_refuses 2, %(flag "-n --dry-run" has no help=, its line in --help), inside.call(%(flag "-n --dry-run" help=""))
+    assert_refuses 2, %(flag "-n" has no long name), inside.call(%(flag "-n" help="x"))
+    assert_refuses 2, %(flag "-n --Dry" has "--Dry", which CrossLint doesn't read), inside.call(%(flag "-n --Dry" help="x"))
+    assert_refuses 2, "flag has 0 arguments; write it as flag NAMES help=TEXT", inside.call(%(flag help="x"))
+    assert_refuses 2, %(unknown property "hlp", did you mean "help"?), inside.call(%(flag "--n" hlp="x"))
+    assert_refuses 2, %(unknown node "x"; flag takes no children), inside.call(%(flag "--n" help="x" { x; }))
+  end
+
   def test_refuses_a_flag_as_a_mistake_that_says_what_to_write_instead
-    message = "flag isn't a node CrossLint reads: a plugin adds commands under its own name, as in command NAME help=TEXT, and no flag to crosslint check"
+    message = "flag isn't a node CrossLint reads outside a command: a plugin adds commands under its own name, as in command NAME help=TEXT, " \
+      "and flags only to its commands, as in flag \"-n --name\" help=TEXT inside one; it adds no flag to crosslint check"
 
     assert_refuses 1, message, %(flag "update-debt")
     assert_refuses 2, message, %(step "s"\nflag "update-debt" help="x"\n)

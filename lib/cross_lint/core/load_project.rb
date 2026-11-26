@@ -18,7 +18,7 @@ module CrossLint
       # so adding the command breaks no plugin.
       RESERVED = %w[version completion config plugin plugins list cache doctor explain fix self].freeze
 
-      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, built_in: {}, steps: {}, reserved: [])
+      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, built_in: {}, steps: {}, reserved: [], reserved_flags: [])
         @configuration = configuration
         @manifests = manifests
         @plugin_ruby = plugin_ruby
@@ -26,6 +26,7 @@ module CrossLint
         @built_in = built_in
         @steps = steps
         @reserved = reserved
+        @reserved_flags = reserved_flags
       end
 
       # The plugins whose manifests are on disk, for a person who asks what
@@ -210,7 +211,10 @@ module CrossLint
         first = manifest.commands.first
         return unless first
 
-        manifest.commands.each { |command| check_command(command, manifest.file) }
+        manifest.commands.each do |command|
+          check_command(command, manifest.file)
+          check_flags(plugin, command)
+        end
         if (@reserved + RESERVED).include?(plugin.name)
           raise Mistake.new("plugin #{plugin.name} in #{plugin.folder} adds commands, and #{plugin.name} is reserved, as a command of CrossLint " \
             "or a name CrossLint keeps for one; rename the plugin's folder, since a plugin's name is its folder's name",
@@ -230,6 +234,23 @@ module CrossLint
 
         raise Mistake.new("command \"help\" is the name of CrossLint's command help, which a plugin can't take; name the command something else",
           file:, line: command.line)
+      end
+
+      # A flag of a command takes no name a global flag has, --help's, or
+      # another flag of the command's, so a name always means one thing.
+      def check_flags(plugin, command)
+        taken = {} #: Hash[String, String]
+        @reserved_flags.each { |name| taken[name] = "a global flag of CrossLint" }
+        taken["-h"] = taken["--help"] = "the flag that prints help"
+        command.flags.each do |flag|
+          flag.names.each do |name|
+            next unless taken.key?(name)
+
+            raise Mistake.new("plugin #{plugin.name} in #{plugin.folder} gives command #{command.name.dump} the flag #{name}, which is " \
+              "#{taken.fetch(name)}; name the flag another way", file: plugin.manifest.file, line: flag.line)
+          end
+          flag.names.each { |name| taken[name] = "the name of another flag of the command" }
+        end
       end
 
       # Each step is one CrossLint has, and reports exactly the policies

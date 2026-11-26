@@ -24,8 +24,12 @@ module CrossLint
 
     attr_reader :words
 
-    def initialize(spec, argv)
+    def initialize(spec, argv, plugin_flags: nil, probing: false)
       @spec = spec
+      @argv = argv
+      @plugin_flags = plugin_flags
+      @probing = probing
+      @declared = {}
       @flags = {}
       @words = []
       # --help and --version set @action, which stops the reading there, so a
@@ -33,7 +37,7 @@ module CrossLint
       read(argv.dup)
       @action ||= :run
       @given = @flags.keys
-      known_flags.each { |flag| @flags[flag.long] ||= flag.default if flag.default }
+      base_flags.each { |flag| @flags[flag.long] ||= flag.default if flag.default }
     end
 
     def value(long)
@@ -45,13 +49,35 @@ module CrossLint
 
     def given?(long) = @given.include?(long)
 
-    def known_flags
-      command = @command
-      flags = command ? command.flags + @spec.global_flags : @spec.flags
-      flags + [HELP, VERSION]
-    end
+    def known_flags = base_flags + declared_flags + [HELP, VERSION]
 
     private
+
+    # The flags the spec gives where the reading is, without those of a
+    # plugin's command, which the project says.
+    def base_flags
+      command = @command
+      command ? command.flags + @spec.global_flags : @spec.flags
+    end
+
+    # The flag a block finds, among the spec's flags first, so the project
+    # is read for a plugin's flags only when a flag isn't one of them.
+    def find_flag(&matches) = (base_flags + [HELP, VERSION]).find(&matches) || declared_flags.find(&matches)
+
+    # The flags that the plugin's command, named by the first two words,
+    # declares, once both are read, which the project's plugins say. Only the
+    # first reading asks, since the one for --project has no plugin_flags.
+    def declared_flags
+      asking = @plugin_flags
+      return [] unless asking && @command.nil? && @words.size >= 2
+
+      @declared[@words.first(2)] ||= asking.call(@words.first(2), project)
+    end
+
+    # The project given with --project, which can come after the flag that
+    # needs it, so the line is read once more, skipping every flag the spec
+    # doesn't give.
+    def project = self.class.new(@spec, @argv, probing: true).value("project")
 
     def read(words)
       until words.empty? || @action
@@ -70,7 +96,8 @@ module CrossLint
 
     def read_long(word, words)
       name, value = word.delete_prefix("--").split("=", 2)
-      flag = known_flags.find { |known| known.long == name }
+      flag = find_flag { |known| known.long == name }
+      return unless flag || !@probing
       raise Error, unknown_flag("--#{name}", known_flags.map { |known| "--#{known.long}" }) unless flag
 
       value ||= words.shift if flag.value
@@ -81,7 +108,8 @@ module CrossLint
       until letters.empty? || @action
         letter = letters[0]
         letters = letters[1..]
-        flag = known_flags.find { |known| known.short == letter }
+        flag = find_flag { |known| known.short == letter }
+        return unless flag || !@probing
         raise Error, unknown_flag("-#{letter}", known_flags.filter_map(&:short).map { |short| "-#{short}" }) unless flag
         next set(flag, nil) unless flag.value
 
@@ -105,9 +133,10 @@ module CrossLint
 
     def flag_value(flag, value)
       raise Error, "--#{flag.long} takes a value, as in #{flag.usage}" unless value
-      return value if flag.choices.nil? || flag.choices.include?(value)
+      choices = flag.choices
+      return value if choices.nil? || choices.include?(value)
 
-      raise Error, "--#{flag.long} takes #{list(flag.choices)}, not #{shown(value)}"
+      raise Error, "--#{flag.long} takes #{list(choices)}, not #{shown(value)}"
     end
 
     # A word that is none of CrossLint's commands may be a plugin's name, or

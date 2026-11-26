@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "../usage_spec"
 require_relative "kdl_document"
 
 module CrossLint
@@ -13,8 +14,8 @@ module CrossLint
 
       SEVERITIES = %w[error warning].freeze
 
-      FLAG_MISTAKE = "flag isn't a node CrossLint reads: a plugin adds commands under its own name, as in command NAME help=TEXT, " \
-        "and no flag to crosslint check"
+      FLAG_MISTAKE = "flag isn't a node CrossLint reads outside a command: a plugin adds commands under its own name, " \
+        "as in command NAME help=TEXT, and flags only to its commands, as in flag \"-n --name\" help=TEXT inside one; it adds no flag to crosslint check"
 
       def file = FILE
 
@@ -167,11 +168,25 @@ module CrossLint
       def command(document, node)
         name = document.string(node, "command NAME help=TEXT")
         document.properties(node, ["help"])
-        no_children(document, node)
+        document.children(node, ["flag"])
         help = document.string_property(node, "help")
         raise document.mistake("command #{name.dump} has no help=, its line in --help", node) if help.nil? || help.empty?
 
-        Core::CommandDeclaration.new(name:, help:, line: node.line)
+        flags = node.children.map { |child| command_flag(document, child) }
+        Core::CommandDeclaration.new(name:, help:, line: node.line, flags:)
+      end
+
+      # A flag in the usage spec's syntax: its names, then help=TEXT.
+      def command_flag(document, node)
+        usage = "flag NAMES help=TEXT"
+        words = document.string(node, usage)
+        document.properties(node, ["help"])
+        no_children(document, node)
+        help = document.string_property(node, "help")
+        raise document.mistake("flag #{words.dump} has no help=, its line in --help", node) if help.nil? || help.empty?
+
+        short, long, value = UsageSpec.flag_names(words, failing: ->(message) { raise document.mistake(message, node) })
+        Core::CommandFlag.new(short:, long:, value:, help:, line: node.line)
       end
 
       def helper(document, node)

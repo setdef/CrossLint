@@ -435,6 +435,16 @@ class CheckTest < Minitest::Test
     check(project(stepped(commands: ["update"]), stepped("other", commands: ["update"])), files: [], command: ["debt", "update"], steps: {"track-debt" => step})
 
     assert_equal [["debt", "update"], ["other", nil]], step.inputs.map { |input| [input.plugin.name, input.command] }
+    assert_equal [{}, {}], step.inputs.map(&:flags)
+  end
+
+  def test_tells_the_step_of_the_plugin_a_command_belongs_to_the_flags_given_and_no_other_step
+    step = ScriptedStep.new
+    check(project(stepped(commands: ["update"]), stepped("other", commands: ["update"])), files: [], command: ["debt", "update"],
+      flags: {"dry-run" => true}, steps: {"track-debt" => step})
+    check(project(stepped(commands: ["update"])), files: [], steps: {"track-debt" => step}, flags: {"dry-run" => true})
+
+    assert_equal [{"dry-run" => true}, {}, {}], step.inputs.map(&:flags)
   end
 
   def test_runs_no_step_of_a_plugin_that_stopped_and_tells_the_others_which_stopped

@@ -22,7 +22,7 @@ module CrossLint
 
     def run
       spec = @spec || UsageSpec.load
-      line = CommandLine.new(spec, @argv)
+      line = CommandLine.new(spec, @argv, plugin_flags: ->(words, project) { declared_flags(spec, words, project) })
       command = line.command
       words = line.words
       running = line.action == :run
@@ -83,6 +83,17 @@ module CrossLint
       Help.new(spec, plugins: help_plugins(listing(spec, line))).render
     end
 
+    # The flags that the command of a plugin the project lists declares, or
+    # none when no plugin or command of the words is listed: the line then
+    # stops at the flag as one CrossLint doesn't have. A project, or a
+    # plugin's manifest, that can't be read stops it with that mistake.
+    def declared_flags(spec, words, project)
+      found = application(spec).listing(project || Dir.pwd)
+      plugin = found.plugins.find { |listed| listed.name == words.fetch(0) }
+      command = plugin&.manifest&.commands&.find { |declared| declared.name == words.fetch(1) }
+      command ? command.flags : []
+    end
+
     # What the plugins the project lists have on disk, or the mistake that
     # stopped the reading, since help never fails for one.
     def listing(spec, line)
@@ -138,7 +149,8 @@ module CrossLint
       plugin, command = commands.find(line.words, project.plugins)
       # Two words or more name a command, which find has found.
       named = command #: Core::CommandDeclaration
-      check_project(app, line, project, [plugin.name, named.name])
+      given = line.flags.slice(*named.flags.map(&:long))
+      check_project(app, line, project, [plugin.name, named.name], given)
     end
 
     # The reader of plugin commands, and what the project lists, once the
@@ -151,16 +163,19 @@ module CrossLint
       [commands, found]
     end
 
-    def application(spec) = @app || App.new(err: @err, debug: debug?, reserved: spec.commands.map(&:name))
+    def application(spec) = @app || App.new(err: @err, debug: debug?, reserved: spec.commands.map(&:name), reserved_flags: App.global_flag_names(spec))
 
-    def check_project(app, line, project, command = nil)
-      given = line.value("warnings") if line.given?("warnings")
+    def check_project(app, line, project, command = nil, flags = {})
+      # A plugin's command has flags of its own, which may be named as
+      # check's are, so only a check reads check's.
+      own = ->(long) { command.nil? && line.flags.key?(long) }
+      given = line.value("warnings") if command.nil? && line.given?("warnings")
       warnings = WARNINGS.fetch(given) if given
       verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?
-      report = app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line), debug: debug?)
+      report = app.report(out: @out, err: @err, json: own.call("json"), color: color?(line), debug: debug?)
       # Steep reads a lambda's one argument, an array of pairs, as one pair,
       # so the argument goes untyped.
-      result = app.check_project(project, warnings:, verbosity:, all: line.flags.key?("all"), command:,
+      result = app.check_project(project, warnings:, verbosity:, all: own.call("all"), command:, flags:,
         started: ->(kinds) { report.start(_ = kinds) })
       report.write(result)
       return 2 unless result.faults.empty?

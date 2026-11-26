@@ -163,6 +163,27 @@ class HelpTest < Minitest::Test
     HELP
   end
 
+  def test_renders_the_flags_of_a_plugins_command_as_it_does_those_of_a_command_of_its_own
+    flags = [CrossLint::Core::CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "Write nothing", line: 2),
+      CrossLint::Core::CommandFlag.new(short: nil, long: "since", value: "rev", help: "From a revision", line: 3)]
+    command = CrossLint::Core::CommandDeclaration.new(name: "update", help: "Rewrite the debt file", line: 1, flags:)
+
+    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).plugin_command("debt", command)
+      Rewrite the debt file
+
+      Usage: tool debt update [FLAGS]
+
+      Flags:
+        -n, --dry-run      Write nothing
+            --since <rev>  From a revision
+
+      Global flags:
+        -v, --verbose  Say more
+        -h, --help     Print help
+        -V, --version  Print version
+    HELP
+  end
+
   def test_has_no_plugin_commands_unless_it_is_given_some
     assert_equal CrossLint::Help::Plugins.new(commands: [], notes: []), CrossLint::Help::Plugins.none
   end

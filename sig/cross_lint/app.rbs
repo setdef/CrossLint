@@ -18,9 +18,16 @@ module CrossLint
     # what it fetches on `err`. `reserved` has the name of each command of
     # CrossLint's, which no plugin that adds commands can be named; with
     # none given, they are the commands of the shipped usage spec.
+    # `reserved_flags` has each way CrossLint's global flags are written,
+    # which no flag of a plugin's command can be written as; with none
+    # given, they are those of the shipped usage spec.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
                      ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String,
-                     ?debt_files: _DebtFiles, ?ng_nudge: _NgNudge, ?javascript: _JavaScript, ?reserved: Array[String]?, ?err: CLI::_Output, ?debug: bool) -> void
+                     ?debt_files: _DebtFiles, ?ng_nudge: _NgNudge, ?javascript: _JavaScript, ?reserved: Array[String]?, ?reserved_flags: Array[String]?, ?err: CLI::_Output, ?debug: bool) -> void
+
+    # How each global flag of `spec`, with --help and --version, is
+    # written on a command line, such as "--quiet" and "-q".
+    def self.global_flag_names: (UsageSpec spec) -> Array[String]
 
     # The project whose root is `start` or the nearest folder above it
     # with a configuration, read and checked (Core::LoadProject).
@@ -28,15 +35,18 @@ module CrossLint
 
     # The result of checking that project, as `check_project` does.
     def check: (String start, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                ?all: bool, ?command: [String, String]?, ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
+                ?all: bool, ?command: [String, String]?, ?flags: Hash[String, String | true],
+                ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
 
     # The result of checking `project` (Core::Check), under the command
     # line's `warnings` and `verbosity`, nil where it gives none, with
     # each passing artifact under `all`, and as the command `command`
-    # names, a plugin and one of its commands, when it is given.
+    # names, a plugin and one of its commands, when it is given, with the
+    # flags of that command the person gave.
     # `started` hears the counts of the artifacts before any rule runs.
     def check_project: (Core::Project project, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                        ?all: bool, ?command: [String, String]?, ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
+                        ?all: bool, ?command: [String, String]?, ?flags: Hash[String, String | true],
+                        ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
 
     # The plugins the project at `start` lists that are on disk, without
     # fetching or running anything (Core::LoadProject#listed).
@@ -77,6 +87,8 @@ module CrossLint
     @configuration: _Configuration
 
     @reserved: Array[String]
+
+    @reserved_flags: Array[String]
 
     @manifests: _PluginManifests
 

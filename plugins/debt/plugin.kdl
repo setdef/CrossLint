@@ -10,5 +10,8 @@ setting "file"
 setting "report-entries"
 
 // Rewrites the debt file to list the current violations: CrossLint runs the
-// check, then tells track-debt the command's name.
-command "update" help="Rewrite the debt file to list the current violations"
+// check, then tells track-debt the command's name and the flags given.
+// With --dry-run, track-debt lists what it would change and writes nothing.
+command "update" help="Rewrite the debt file to list the current violations" {
+  flag "-n --dry-run" help="List the entries update would add and remove, and write nothing"
+}

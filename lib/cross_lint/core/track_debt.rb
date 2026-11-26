@@ -32,6 +32,8 @@ module CrossLint
 
       COMMAND = "update"
 
+      DRY_RUN = "dry-run"
+
       SEVERITIES = %w[error warning none].freeze
 
       REPORT = %w[commented matching].freeze
@@ -93,8 +95,9 @@ module CrossLint
         identities = input.violations.map { |violation| Identity.of(violation) }.uniq
         wrote = [] #: Array[String]
         if input.command == COMMAND
-          wrote << update(project, input, settings, debt, identities)
-          debt = @debt_files.read(project.root, settings.file)
+          dry_run = input.flags.key?(DRY_RUN)
+          wrote.concat(update(project, input, settings, debt, identities, dry_run:))
+          debt = @debt_files.read(project.root, settings.file) unless dry_run
         end
         state(project, input, settings, debt, identities, wrote)
       end
@@ -176,9 +179,13 @@ module CrossLint
         end
       end
 
-      def update(project, input, settings, debt, identities)
+      # Writes the debt file, or with dry_run only lists what it would
+      # change, in the order it writes it; and returns the lines that say so,
+      # the last of them the counts.
+      def update(project, input, settings, debt, identities, dry_run:)
         covered = [] #: Array[Identity]
         written = [] #: Array[DebtEntry]
+        changes = [] #: Array[String]
         removed = 0
         rewritten = 0
         debt.entries.each do |entry|
@@ -194,19 +201,33 @@ module CrossLint
           covered.concat(left)
           if coarse(entry, rule, matched)
             rewritten += 1
-            written.concat(left.sort_by(&:deconstruct).map { |identity| fresh(identity, identities, entry.comment) })
+            replacements = left.sort_by(&:deconstruct).map { |identity| fresh(identity, identities, entry.comment) }
+            changes << "replace #{described(entry)}, line #{entry.line}"
+            changes.concat(replacements.map { |replacement| "add #{described(replacement)}" })
+            written.concat(replacements)
           elsif left.empty?
             removed += 1
+            changes << "remove #{described(entry)}, line #{entry.line}"
           else
             rewritten += 1 unless entry.source
             written << entry
           end
         end
         added = (identities - covered).sort_by(&:deconstruct).map { |identity| fresh(identity, identities, "") }
-        @debt_files.write(project.root, settings.file, debt.with(entries: written + added))
+        changes.concat(added.map { |entry| "add #{described(entry)}" })
+        @debt_files.write(project.root, settings.file, debt.with(entries: written + added)) unless dry_run
         counts = ["#{added.size} #{(added.size == 1) ? "entry" : "entries"} added", "#{removed} removed"]
         counts << "#{rewritten} rewritten" unless rewritten.zero?
-        "wrote #{debt.file}: #{counts.join(", ")}"
+        return ["wrote #{debt.file}: #{counts.join(", ")}"] unless dry_run
+
+        changes.map { |change| "would #{change}" } + ["would write #{debt.file}: #{counts.join(", ")}"]
+      end
+
+      # An entry as a person reads it: its policy, its artifact, and its
+      # detail when it has one.
+      def described(entry)
+        detail = entry.detail.to_s
+        "#{entry.rule} on #{entry.artifact}#{" (#{detail})" unless detail.empty?}"
       end
 
       # An entry for one identity, keyed by its artifact, or by its

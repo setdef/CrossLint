@@ -1,4 +1,35 @@
 module CrossLint
+  # What the help and the command line read of a flag, which a flag of
+  # the usage spec and a flag a plugin's command declares both have.
+  interface _Flag
+    # The flag's one-letter name, or nil for none.
+    def short: () -> String?
+
+    # The flag's long name.
+    def long: () -> String
+
+    # The name of the value the flag takes, or nil for none.
+    def value: () -> String?
+
+    # The flag's line of help.
+    def help: () -> String
+
+    # The flag's longer help, or nil for none.
+    def long_help: () -> String?
+
+    # The values the flag takes, or nil for any.
+    def choices: () -> Array[String]?
+
+    # The value the flag has when it isn't given, or nil for none.
+    def default: () -> String?
+
+    # How the flag is written with its value, such as "--project <dir>".
+    def usage: () -> String
+
+    # Whether `other` is the same flag.
+    def ==: (untyped other) -> bool
+  end
+
   # The command-line interface that crosslint.usage.kdl declares, in the
   # usage spec format (https://usage.jdx.dev): the program's name and
   # version, its texts, flags, commands, examples, and exit statuses.
@@ -9,6 +40,13 @@ module CrossLint
   class UsageSpec
     # The spec CrossLint ships, in the folder above lib/.
     PATH: String
+
+    # The names in a flag's first argument, such as "-C --project <dir>":
+    # its one-letter name, its long name, and the name of its value.
+    # Calls `failing` with what is wrong at a word it doesn't read and at a
+    # flag with no long name; by default that raises Error, and it must
+    # raise.
+    def self.flag_names: (String words, ?failing: ^(String message) -> bot) -> [String?, String, String?]
 
     # A spec that CrossLint can't read, which is a bug in CrossLint.
     class Error < StandardError
@@ -207,10 +245,6 @@ module CrossLint
 
     # Reads a flag, with its settings.
     def flag: (KDL::Node node) -> Flag
-
-    # The names in a flag's first argument, such as "-C --project <dir>":
-    # its one-letter name, its long name, and the name of its value.
-    def flag_names: (String words) -> [String?, String, String?]
 
     # Reads a command, with its arguments, flags, and examples.
     def command: (KDL::Node node) -> Command

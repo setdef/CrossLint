@@ -62,8 +62,12 @@ module CrossLint
       # whose Ruby declares more artifacts.
       def artifacts_ruby: (KDLDocument document) -> Core::ArtifactsRuby?
 
-      # Reads a `command` node.
+      # Reads a `command` node, and the `flag` nodes in its block.
       def command: (KDLDocument document, KDLDocument::Node node) -> Core::CommandDeclaration
+
+      # Reads a `flag` node in a command's block, written in the usage
+      # spec's syntax.
+      def command_flag: (KDLDocument document, KDLDocument::Node node) -> Core::CommandFlag
 
       # Reads a `helper` node.
       def helper: (KDLDocument document, KDLDocument::Node node) -> Core::HelperDeclaration

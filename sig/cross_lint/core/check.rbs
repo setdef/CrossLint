@@ -32,7 +32,7 @@ module CrossLint
       # calls `started` with the counts of the artifacts it will check
       # once it has found them, before any rule runs or any helper starts.
       def call: (Project project, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                 ?all: bool, ?command: [String, String]?, ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> CheckResult
+                 ?all: bool, ?command: [String, String]?, ?flags: Hash[String, String | true], ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> CheckResult
 
       private
 
@@ -78,7 +78,8 @@ module CrossLint
 
       # What each step of each plugin that didn't stop at a fault does with
       # every violation.
-      def run_steps: (Project project, Array[Violation] violations, Array[Fault] faults, [String, String]? command) -> Array[StepResult]
+      def run_steps: (Project project, Array[Violation] violations, Array[Fault] faults, [String, String]? command,
+                       Hash[String, String | true] flags) -> Array[StepResult]
 
       # The result: violations the steps didn't excuse and those they add,
       # stale entries, notices, and passing artifacts, filtered by

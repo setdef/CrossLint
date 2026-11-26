@@ -96,6 +96,9 @@ module CrossLint
       # The command that rewrites the debt file.
       COMMAND: String
 
+      # The flag of that command that lists what it would change, and writes nothing.
+      DRY_RUN: String
+
       # The values of `commented=`.
       SEVERITIES: Array[String]
 
@@ -146,8 +149,14 @@ module CrossLint
 
       # Writes the file `debt` is read from with the entries that still
       # match, those it rewrites, and one for each new identity, and
-      # returns the line that says so.
-      def update: (Project project, StepInput input, Settings settings, DebtFile debt, Array[Identity] identities) -> String
+      # returns the line that says so. With `dry_run` it writes nothing, and
+      # returns a line for each entry it would add, remove, or replace, in
+      # the order it writes them, and then the line that says so.
+      def update: (Project project, StepInput input, Settings settings, DebtFile debt, Array[Identity] identities, dry_run: bool) -> Array[String]
+
+      # `entry` as a line says it: its policy, its artifact, and its detail
+      # when it has one.
+      def described: (DebtEntry entry) -> String
 
       # A new entry for `identity`, with `comment`.
       def fresh: (Identity identity, Array[Identity] identities, String comment) -> DebtEntry

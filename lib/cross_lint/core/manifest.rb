@@ -34,7 +34,20 @@ module CrossLint
 
     class SettingDeclaration < Data.define(:name, :line); end
 
-    class CommandDeclaration < Data.define(:name, :help, :line); end
+    # A flag a command declares, in the usage spec's flag syntax: it has
+    # no long help, choices, or default unless given.
+    class CommandFlag < Data.define(:short, :long, :value, :help, :line, :long_help, :choices, :default)
+      def initialize(long_help: nil, choices: nil, default: nil, **given) = super
+
+      def usage = value ? "--#{long} <#{value}>" : "--#{long}"
+
+      # Every spelling the flag takes, as written on a command line.
+      def names = ["--#{long}", ("-#{short}" if short)].compact
+    end
+
+    class CommandDeclaration < Data.define(:name, :help, :line, :flags)
+      def initialize(flags: [], **declared) = super
+    end
 
     class StepDeclaration < Data.define(:name, :line); end
 

@@ -323,6 +323,43 @@ class LoadProjectTest < Minitest::Test
       manifests: {folder => debt_manifest("rules/check")}, steps: {"track-debt" => RecordingStep.new}
   end
 
+  def test_stops_at_a_flag_of_a_command_named_for_a_global_flag_for_help_or_for_another_flag_of_the_command
+    flag = ->(short, long, line = 9) { CommandFlag.new(short:, long:, value: nil, help: "H", line:) }
+    folder = "#{APP}/rules/tests"
+    stops = lambda do |flags, name, why, line = 9|
+      message = "plugin tests in #{folder} gives command \"update\" the flag #{name}, which is #{why}; name the flag another way"
+      command = CommandDeclaration.new(name: "update", help: "H", line: 8, flags:)
+
+      assert_mistake "rules/tests/plugin.kdl", line, message, steps: {"track-debt" => RecordingStep.new}, reserved_flags: %w[--quiet -q],
+        manifest: debt_manifest("rules/tests").with(commands: [command])
+    end
+
+    stops.call([flag.call("q", "again")], "-q", "a global flag of CrossLint")
+    stops.call([flag.call(nil, "quiet")], "--quiet", "a global flag of CrossLint")
+    stops.call([flag.call("h", "hush")], "-h", "the flag that prints help")
+    stops.call([flag.call(nil, "help")], "--help", "the flag that prints help")
+    stops.call([flag.call("n", "dry-run", 9), flag.call("n", "now", 10)], "-n", "the name of another flag of the command", 10)
+    stops.call([flag.call("n", "dry-run", 9), flag.call("x", "dry-run", 10)], "--dry-run", "the name of another flag of the command", 10)
+  end
+
+  def test_reserves_help_and_takes_any_other_flag_when_given_no_global_flags
+    command = ->(short, long) { CommandDeclaration.new(name: "update", help: "H", line: 8, flags: [CommandFlag.new(short:, long:, value: nil, help: "H", line: 9)]) }
+    message = "plugin tests in #{APP}/rules/tests gives command \"update\" the flag -h, which is the flag that prints help; name the flag another way"
+
+    assert_mistake "rules/tests/plugin.kdl", 9, message, steps: {"track-debt" => RecordingStep.new}, manifest: debt_manifest("rules/tests").with(commands: [command.call("h", "hush")])
+    assert_equal ["q"], load_project(steps: {"track-debt" => RecordingStep.new}, manifest: debt_manifest("rules/tests").with(commands: [command.call("q", "quiet")]))
+      .plugins.first.manifest.commands.first.flags.map(&:short)
+  end
+
+  def test_takes_a_flag_of_a_command_that_has_no_other_ones_name_and_the_same_name_in_another_command
+    flags = [CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "H", line: 9)]
+    commands = %w[update other].map { |name| CommandDeclaration.new(name:, help: "H", line: 8, flags:) }
+    project = load_project(steps: {"track-debt" => RecordingStep.new}, reserved_flags: %w[--quiet -q],
+      manifest: debt_manifest("rules/tests").with(commands:))
+
+    assert_equal [flags, flags], project.plugins.first.manifest.commands.map(&:flags)
+  end
+
   def test_reserves_each_name_crosslint_keeps_for_a_command_it_may_add
     assert_equal %w[version completion config plugin plugins list cache doctor explain fix self], LoadProject::RESERVED
     LoadProject::RESERVED.each do |name|
@@ -812,11 +849,11 @@ class LoadProjectTest < Minitest::Test
   end
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
-    shared_plugins: shared_plugins({}), reserved: nil, listed: false)
+    shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false)
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, **(reserved ? {reserved:} : {}))
+      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, **{reserved:, reserved_flags:}.compact)
     listed ? use_case.listed(start) : use_case.call(start)
   end
 

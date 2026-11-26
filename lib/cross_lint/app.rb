@@ -10,7 +10,7 @@ module CrossLint
     def initialize(configuration: Adapters::KDLConfiguration.new, manifests: Adapters::KDLPluginManifests.new,
       project_files: Adapters::GitProjectFiles.new, plugin_ruby: Adapters::FilePluginRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
       debt_files: Adapters::TSVDebtFiles.new, ng_nudge: Adapters::FileNgNudge.new, javascript: Adapters::NodeJavaScript.new,
-      reserved: nil, err: $stderr, debug: false)
+      reserved: nil, reserved_flags: nil, err: $stderr, debug: false)
       @configuration = configuration
       @manifests = manifests
       @project_files = project_files
@@ -22,16 +22,23 @@ module CrossLint
       @javascript = javascript
       @built_in = built_in_plugins(plugins)
       @reserved = reserved || UsageSpec.load.commands.map(&:name)
+      @reserved_flags = reserved_flags || self.class.global_flag_names(UsageSpec.load)
       @steps = {"track-debt" => Core::TrackDebt.new(debt_files:)} #: Hash[String, Core::_Step]
+    end
+
+    # How each global flag of `spec`, with --help and --version, is
+    # written on a command line, which no flag of a plugin's command takes.
+    def self.global_flag_names(spec)
+      (spec.global_flags + [CommandLine::HELP, CommandLine::VERSION]).flat_map { |flag| ["--#{flag.long}", ("-#{flag.short}" if flag.short)].compact }.uniq
     end
 
     def load_project(start) = loader.call(start)
 
     def check(start, **options) = check_project(load_project(start), **options)
 
-    def check_project(project, warnings: nil, verbosity: nil, all: false, command: nil, started: nil)
+    def check_project(project, warnings: nil, verbosity: nil, all: false, command: nil, flags: {}, started: nil)
       Core::Check.new(project_files: @project_files, plugin_ruby: @plugin_ruby, helpers: @helpers, steps: @steps)
-        .call(project, warnings:, verbosity:, all:, command:, started:)
+        .call(project, warnings:, verbosity:, all:, command:, flags:, started:)
     end
 
     def listing(start) = loader.listed(start)
@@ -65,7 +72,7 @@ module CrossLint
 
     def loader
       Core::LoadProject.new(configuration: @configuration, manifests: @manifests, plugin_ruby: @plugin_ruby, shared_plugins: @shared_plugins,
-        built_in: @built_in, steps: @steps, reserved: @reserved)
+        built_in: @built_in, steps: @steps, reserved: @reserved, reserved_flags: @reserved_flags)
     end
 
     def built_in_plugins(folder)

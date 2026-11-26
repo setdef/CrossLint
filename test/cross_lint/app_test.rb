@@ -30,6 +30,28 @@ class AppTest < Minitest::Test
     assert_equal ["ruby-file"], project.plugins.first.manifest.artifacts.map(&:name)
   end
 
+  def test_a_dry_run_of_a_plugins_command_lists_the_changes_and_writes_nothing
+    write(@base, ".config/crosslint/config.kdl", %(plugin "debt"\nplugin ".config/crosslint/tests"\n))
+    write(@base, ".config/crosslint/tests/plugin.kdl", MANIFEST.sub("{path}.md", "lib/{path}.md"))
+    write(@base, "lib/a.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    dry = App.new.check(@base, command: ["debt", "update"], flags: {"dry-run" => true})
+
+    assert_equal ["would add tests/p on lib/a.md", "would write .config/crosslint/debt.tsv: 1 entry added, 0 removed"], dry.wrote
+    refute_path_exists File.join(@base, ".config/crosslint/debt.tsv")
+  end
+
+  def test_names_each_way_the_global_flags_are_written_and_refuses_a_plugin_command_flag_written_as_one
+    assert_equal %w[--quiet -q --silent -s --no-color --debug --project -C --help -h --version -V], App.global_flag_names(CrossLint::UsageSpec.load)
+    write(@base, "plugins/tool/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "go" help="Goes" {\n  flag "-q --quick" help="Quick"\n}\n))
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "tool"\n))
+    plugins = File.join(@base, "plugins")
+    message = /\Aplugin tool in .* gives command "go" the flag -q, which is a global flag of CrossLint; name the flag another way\z/
+
+    assert_match message, assert_raises(Mistake) { App.new(plugins:).load_project(File.join(@base, "app")) }.message
+    assert_equal ["tool"], App.new(plugins:, reserved_flags: ["-Q"]).load_project(File.join(@base, "app")).plugins.map(&:name)
+  end
+
   def test_finds_the_built_in_plugins_in_crosslints_plugins_folder
     assert_equal File.join(ROOT, "plugins"), App::PLUGINS
     write(@base, "app/.config/crosslint/config.kdl", %(plugin "debt" {\n  file "debt.tsv"\n}\n))

@@ -167,6 +167,15 @@ class UsageSpecTest < Minitest::Test
     assert_equal "Z", Spec.new(%(#{TOP}flag "-Z --z" help="x")).flags.first.short
   end
 
+  def test_gives_what_is_wrong_with_a_flags_names_to_the_one_who_asks_to_stop
+    stop = ->(message) { raise ArgumentError, "stopped: #{message}" }
+
+    assert_equal ["n", "dry", "v"], Spec.flag_names("-n --dry <v>")
+    assert_equal %(stopped: flag "-n" has no long name), assert_raises(ArgumentError) { Spec.flag_names("-n", failing: stop) }.message
+    assert_equal %(stopped: flag "--Dry" has "--Dry", which CrossLint doesn't read), assert_raises(ArgumentError) { Spec.flag_names("--Dry", failing: stop) }.message
+    assert_equal %(flag "--Dry" has "--Dry", which CrossLint doesn't read), assert_raises(Spec::Error) { Spec.flag_names("--Dry") }.message
+  end
+
   def test_refuses_unknown_flags_other_than_error
     assert_refuses %(unknown_flags is "warn", and CrossLint only stops at an unknown flag), %(unknown_flags "warn")
     assert_equal "a", Spec.new(%(#{TOP}unknown_flags "error")).about

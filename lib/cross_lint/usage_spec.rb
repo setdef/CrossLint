@@ -28,6 +28,24 @@ module CrossLint
 
     def self.load(path = PATH) = new(File.read(path))
 
+    # The short name, long name, and value of a flag written as -n --name
+    # <value>. A flag that is written wrong goes to `failing` with what is
+    # wrong, which raises Error unless it is given another way to stop; it
+    # must raise.
+    def self.flag_names(words, failing: ->(message) { raise Error, message })
+      names = words.split.to_h do |word|
+        case word
+        when /\A-([A-Za-z0-9])\z/ then [:short, $1]
+        when /\A--([a-z0-9][a-z0-9-]*)\z/ then [:long, $1]
+        when /\A<([a-z][a-z0-9_-]*)>\z/ then [:value, $1]
+        else failing.call("flag #{words.dump} has #{word.dump}, which CrossLint doesn't read")
+        end
+      end
+      long = names.fetch(:long) { failing.call("flag #{words.dump} has no long name") }
+
+      [names[:short], long, names[:value]]
+    end
+
     def initialize(source)
       @flags = []
       @commands = []
@@ -69,7 +87,7 @@ module CrossLint
     def flag(node)
       words, = arguments(node, 1)
       properties = properties(node, %w[effect global help])
-      short, long, value = flag_names(words)
+      short, long, value = self.class.flag_names(words)
       settings = node.to_h do |child|
         raise Error, unknown(child) unless FLAG_SETTINGS.include?(child.name)
 
@@ -81,21 +99,6 @@ module CrossLint
       default = default_node && text(default_node)
       Flag.new(short:, long:, value:, help: help("flag", words, properties), long_help:, choices:, default:,
         global: properties.fetch("global", false))
-    end
-
-    def flag_names(words)
-      names = words.split.to_h do |word|
-        case word
-        when /\A-([A-Za-z0-9])\z/ then [:short, $1]
-        when /\A--([a-z0-9][a-z0-9-]*)\z/ then [:long, $1]
-        when /\A<([a-z][a-z0-9_-]*)>\z/ then [:value, $1]
-        else raise Error, "flag #{words.dump} has #{word.dump}, which CrossLint doesn't read"
-        end
-      end
-      long = names[:long]
-      raise Error, "flag #{words.dump} has no long name" unless long
-
-      [names[:short], long, names[:value]]
     end
 
     COMMAND_CHILDREN = %w[long_help arg flag example].freeze

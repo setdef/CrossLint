@@ -214,9 +214,55 @@ module CrossLint
       def initialize: (name: String, line: Integer) -> void
     end
 
+    # A flag a command declares, as `flag "-n --dry-run" help=TEXT` inside
+    # its block: scoped to that command, in the usage spec's flag syntax,
+    # with no long help, choices, or default unless given.
+    class CommandFlag < Data
+      # The flag's one-letter name, such as "n", or nil for none.
+      attr_reader short: String?
+
+      # The flag's long name, such as "dry-run".
+      attr_reader long: String
+
+      # The name of the value the flag takes, or nil for none.
+      attr_reader value: String?
+
+      # The flag's line of help.
+      attr_reader help: String
+
+      # The line it is declared on.
+      attr_reader line: Integer
+
+      # The flag's longer help, or nil for none.
+      attr_reader long_help: String?
+
+      # The values the flag takes, or nil for any.
+      attr_reader choices: Array[String]?
+
+      # The value the flag has when it isn't given, or nil for none.
+      attr_reader default: String?
+
+      # A flag with these fields, and no longer help, choices, or default
+      # unless given.
+      def self.new: (short: String?, long: String, value: String?, help: String, line: Integer, ?long_help: String?,
+                     ?choices: Array[String]?, ?default: String?) -> instance
+
+      # A flag with these fields, and no longer help, choices, or default
+      # unless given.
+      def initialize: (short: String?, long: String, value: String?, help: String, line: Integer, ?long_help: String?,
+                       ?choices: Array[String]?, ?default: String?) -> void
+
+      # How the flag is written with its value, such as "--since <rev>".
+      def usage: () -> String
+
+      # Each name the flag is given on a command line, such as "--dry-run"
+      # and "-n".
+      def names: () -> Array[String]
+    end
+
     # A command the plugin adds under its own name, declared as
     # `command NAME help=TEXT`, which a project runs as
-    # `crosslint PLUGIN NAME`.
+    # `crosslint PLUGIN NAME`, with the flags in its block.
     class CommandDeclaration < Data
       # The command's name, such as "update".
       attr_reader name: String
@@ -227,11 +273,14 @@ module CrossLint
       # The line it is declared on.
       attr_reader line: Integer
 
-      # A command declaration with these fields.
-      def self.new: (name: String, help: String, line: Integer) -> instance
+      # The flags the command takes, besides CrossLint's global ones.
+      attr_reader flags: Array[CommandFlag]
 
-      # A command declaration with these fields.
-      def initialize: (name: String, help: String, line: Integer) -> void
+      # A command declaration with these fields, and no flags unless given.
+      def self.new: (name: String, help: String, line: Integer, ?flags: Array[CommandFlag]) -> instance
+
+      # A command declaration with these fields, and no flags unless given.
+      def initialize: (name: String, help: String, line: Integer, ?flags: Array[CommandFlag]) -> void
     end
 
     # A step the plugin runs after every rule has run, declared as

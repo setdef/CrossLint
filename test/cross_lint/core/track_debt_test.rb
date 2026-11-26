@@ -191,6 +191,46 @@ class TrackDebtTest < Minitest::Test
     assert_equal written.sort_by(&:artifact), step(violations.reverse, entries, update: true).then { written.sort_by(&:artifact) }
   end
 
+  def test_a_dry_run_lists_what_an_update_would_add_and_remove_in_the_order_it_writes_them_and_writes_nothing
+    violations = [violation("lib/z.rb"), violation("lib/b.rb", severity: :warning), violation("lib/a.rb", policy: "has-signature"),
+      violation("lib/m.rb", detail: "x")]
+    entries = [entry("tests/has-test", "lib/b.rb", "why"), entry("tests/has-test", "lib/gone.rb", "fixed", line: 3),
+      entry("tests/has-test", "lib/old.rb", "also fixed", line: 4)]
+    dry = step(violations, entries, update: true, dry_run: true)
+    before = written
+    real = step(violations, entries, update: true)
+
+    assert_equal entries, before
+    assert_equal ["would remove tests/has-test on lib/gone.rb, line 3", "would remove tests/has-test on lib/old.rb, line 4",
+      "would add tests/has-signature on lib/a.rb", "would add tests/has-test on lib/m.rb (x)", "would add tests/has-test on lib/z.rb",
+      "would write #{FILE}: 3 entries added, 2 removed"], dry.wrote
+    assert_equal ["wrote #{FILE}: 3 entries added, 2 removed"], real.wrote
+    assert_equal [dry.excused, dry.stale], [[violation("lib/b.rb", severity: :warning)], [stale_at(3), stale_at(4)]]
+  end
+
+  def test_a_dry_run_matches_an_entry_written_with_backslashes_as_one_written_with_slashes
+    dry = step([violation("lib/a/b.rb")], [entry("tests/has-test", "lib\\a\\b.rb", "kept")], update: true, dry_run: true)
+
+    assert_equal [[violation("lib/a/b.rb")], [], ["would write #{FILE}: 0 entries added, 0 removed, 1 rewritten"]], [dry.excused, dry.stale, dry.wrote]
+    assert_equal ["lib\\a\\b.rb"], written.map(&:artifact)
+  end
+
+  def test_a_dry_run_says_which_entry_it_would_replace_with_which
+    violations = [violation("app/card", role: "service"), violation("app/card", role: "component")]
+    dry = step(violations, [entry("tests/has-test", "app/card", "both")], update: true, dry_run: true)
+
+    assert_equal ["would replace tests/has-test on app/card, line 2", "would add tests/has-test on app/card.component",
+      "would add tests/has-test on app/card.service", "would write #{FILE}: 0 entries added, 0 removed, 1 rewritten"], dry.wrote
+    assert_equal [entry("tests/has-test", "app/card", "both")], written
+  end
+
+  def test_a_dry_run_flag_without_the_update_command_changes_nothing
+    result = step([violation("lib/a.rb")], nil, dry_run: true)
+
+    assert_equal [], result.wrote
+    assert_equal [], written
+  end
+
   # ng-nudge reported the state before the update, so a run that just
   # removed a stale entry still said to run --update-debt
   # (lib/verification-task.js:25-39).
@@ -374,6 +414,12 @@ class TrackDebtTest < Minitest::Test
     Violation.new(plugin:, policy:, artifact:, role:, message: "no test", severity:, detail:, key:)
   end
 
+  def stale_at(line)
+    gone = {3 => "lib/gone.rb", 4 => "lib/old.rb"}.fetch(line)
+    Stale.new(plugin: "tests", policy: "has-test", artifact: gone, file: FILE, line:,
+      message: "no violation is left for the debt entry at #{FILE}:#{line}; crosslint debt update removes it")
+  end
+
   def debt_violation(message, severity, line)
     Violation.new(plugin: "debt", policy: "has-debt", artifact: FILE, role: "debt-file", message:, severity:, detail: line)
   end
@@ -395,7 +441,7 @@ class TrackDebtTest < Minitest::Test
     Plugin.new(name:, folder: "#{ROOT}/#{name}", manifest:, listing: ListedPlugin.new(name: "./#{name}", ref: nil, settings: [], line: 1))
   end
 
-  def step(violations, entries, plugins: %w[tests], settings: [], disabled: [], faulted: [], update: false, command: nil, severity: nil, extra: [])
+  def step(violations, entries, plugins: %w[tests], settings: [], disabled: [], faulted: [], update: false, command: nil, severity: nil, extra: [], dry_run: false)
     @files.write(ROOT, FILE, DebtFile.new(file: FILE, entries:, header: nil)) if entries
     debt = plugin("debt", []).then { |found| found.with(listing: found.listing.with(name: "debt", settings:)) }
     listed = {"tests" => %w[has-test has-signature], "other" => %w[has-test names-class]}.slice(*plugins).map { |name, owned| plugin(name, owned) }
@@ -404,6 +450,7 @@ class TrackDebtTest < Minitest::Test
     policies.concat(extra)
     configuration = Configuration.new(file: CONFIG, plugins: [debt, *listed].map(&:listing), policies:, warnings: nil, verbosity: nil)
     project = Project.new(root: ROOT, configuration:, plugins: [debt, *listed])
-    TrackDebt.new(debt_files: @files).call(StepInput.new(project:, plugin: debt, violations:, faulted:, command: update ? "update" : command))
+    TrackDebt.new(debt_files: @files).call(StepInput.new(project:, plugin: debt, violations:, faulted:, command: update ? "update" : command,
+      flags: dry_run ? {"dry-run" => true} : {}))
   end
 end

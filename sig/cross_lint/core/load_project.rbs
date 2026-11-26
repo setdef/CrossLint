@@ -22,9 +22,12 @@ module CrossLint
       # and fetches shared plugins through `shared_plugins`. `built_in` has
       # the folder of each built-in plugin, by name, and `steps` each step
       # CrossLint has, by name. `reserved` has the name of each command of
-      # CrossLint, which no plugin that adds commands can be named.
+      # CrossLint, which no plugin that adds commands can be named, and
+      # `reserved_flags` each way CrossLint's global flags are written,
+      # which no flag of a plugin's command can be.
       def initialize: (configuration: _Configuration, manifests: _PluginManifests, plugin_ruby: _PluginRuby, shared_plugins: _SharedPlugins,
-                       ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String]) -> void
+                       ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
+                       ?reserved_flags: Array[String]) -> void
 
       # The project whose root is `start` or the nearest folder above it
       # with a configuration.
@@ -51,6 +54,8 @@ module CrossLint
       @steps: Hash[String, _Step]
 
       @reserved: Array[String]
+
+      @reserved_flags: Array[String]
 
       # The plugin listed at `index`, with its manifest, checked against
       # the plugins `loaded` before it. A local or shared plugin can't have
@@ -106,6 +111,11 @@ module CrossLint
       # commands' work. Raises Mistake at the first command that breaks
       # one.
       def check_commands: (Plugin plugin) -> void
+
+      # Checks that no flag of the plugin's `command` is written as a
+      # global flag of CrossLint is, or as --help or -h, or as another flag
+      # of the command is. Raises Mistake, naming the plugin, at the first.
+      def check_flags: (Plugin plugin, CommandDeclaration command) -> void
 
       # Checks that `command`, declared in the manifest at `file`, is
       # named by lowercase letters, digits, and -, and isn't "help".

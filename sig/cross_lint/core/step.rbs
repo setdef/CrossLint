@@ -69,13 +69,17 @@ module CrossLint
       # on its own or runs another plugin's command.
       attr_reader command: String?
 
+      # The flags of that command the person gave, by long name: true for
+      # one that takes no value, or its value. Empty when `command` is nil.
+      attr_reader flags: Hash[String, String | true]
+
       # A step's input with these fields.
       def self.new: (project: Project, plugin: Plugin, violations: Array[Violation], faulted: Array[String],
-                     command: String?) -> instance
+                     command: String?, flags: Hash[String, String | true]) -> instance
 
       # A step's input with these fields.
       def initialize: (project: Project, plugin: Plugin, violations: Array[Violation], faulted: Array[String],
-                       command: String?) -> void
+                       command: String?, flags: Hash[String, String | true]) -> void
     end
 
     # What a step did: the violations it excuses, those it adds, the

@@ -13,8 +13,25 @@ class CoreValuesTest < Minitest::Test
   cover "CrossLint::Core::Project*"
   cover "CrossLint::Core::Policy*"
   cover "CrossLint::Core::Plugin*"
+  cover "CrossLint::Core::CommandFlag*"
+  cover "CrossLint::Core::CommandDeclaration*"
 
   include CrossLint::Core
+
+  def test_a_command_flag_is_written_as_the_usage_spec_writes_one_with_each_name_it_takes_and_no_more_than_its_help
+    flag = CommandFlag.new(short: "s", long: "since", value: "rev", help: "H", line: 1)
+    bare = CommandFlag.new(short: nil, long: "dry-run", value: nil, help: "H", line: 2)
+
+    assert_equal [["--since <rev>", ["--since", "-s"]], ["--dry-run", ["--dry-run"]]], [flag, bare].map { |each| [each.usage, each.names] }
+    assert_equal [[nil, nil, nil]] * 2, [flag, bare].map { |each| [each.long_help, each.choices, each.default] }
+    given = CommandFlag.new(short: nil, long: "mode", value: "m", help: "H", line: 3, long_help: "Long", choices: %w[a b], default: "a")
+
+    assert_equal ["Long", %w[a b], "a"], [given.long_help, given.choices, given.default]
+  end
+
+  def test_a_command_declares_no_flag_unless_given
+    assert_equal [], CommandDeclaration.new(name: "update", help: "H", line: 1).flags
+  end
 
   def test_an_artifact_declaration_has_no_key_isnt_optional_and_may_match_dot_named_files_unless_given
     declaration = ArtifactDeclaration.new(name: "doc", files: PathPattern.new(source: "{path}.md"), companions: [], line: 1)

@@ -70,7 +70,7 @@ module CrossLint
 
     # A row for each of `flags`: its names, and the lines that describe
     # it.
-    def flag_rows: (Array[UsageSpec::Flag] flags) -> Array[[String, Array[String]]]
+    def flag_rows: (Array[_Flag] flags) -> Array[[String, Array[String]]]
 
     # The section that lists each exit status.
     def exit_codes: () -> String?

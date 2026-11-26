@@ -171,6 +171,60 @@ class CommandLineTest < Minitest::Test
       CrossLint::CommandLine.new(fixture_spec, ["run"]).known_flags.map(&:long)
   end
 
+  def test_reads_the_flags_a_plugins_command_declares_once_it_has_the_plugins_name_and_the_commands
+    asked = []
+    declared = [CrossLint::Core::CommandFlag.new(short: "s", long: "since", value: "rev", help: "H", line: 1),
+      CrossLint::Core::CommandFlag.new(short: "d", long: "dry", value: nil, help: "H", line: 2)]
+    plugin_flags = ->(words, project) { (asked << [words, project]) && declared }
+    line = ->(*words) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags:) }
+
+    assert_equal({"verbose" => true, "since" => "x", "dry" => true, "color" => "auto"}, line.call("debt", "update", "-v", "--since", "x", "-d").flags)
+    assert_equal({"since" => "y", "color" => "auto"}, line.call("debt", "update", "-sy").flags)
+    assert_equal [%w[debt update], nil], asked.first
+    assert_equal %w[verbose color since dry help version], line.call("debt", "update").known_flags.map(&:long)
+    asked.clear
+    line.call("debt", "update", "extra", "--since", "x")
+
+    assert_equal [[%w[debt update], nil]], asked
+  end
+
+  def test_asks_for_no_plugins_flags_before_two_words_or_after_a_command_of_crosslints_own
+    asked = []
+    declared = [CrossLint::Core::CommandFlag.new(short: "z", long: "zed", value: nil, help: "H", line: 2)]
+    plugin_flags = ->(words, project) { (asked << [words, project]) && declared }
+    ["--zed", "-z"].each do |flag|
+      [[flag], ["debt", flag], ["help", "debt", "update", flag], ["run", flag]].each do |words|
+        assert_raises(CrossLint::CommandLine::Error, words.inspect) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags:) }
+      end
+    end
+
+    assert_empty asked
+  end
+
+  def test_asks_for_a_plugins_flags_once_for_each_pair_of_words_and_with_the_project_given_after_them
+    asked = []
+    plugin_flags = ->(words, project) { (asked << [words, project]) && [] }
+    [["--quiet", "--no-color", "-C", "x", "--dry"], ["-qC", "y", "--dry", "--", "--zzz"], ["--dry", "--project=z"]].each do |after|
+      assert_raises(CrossLint::CommandLine::Error) { CrossLint::CommandLine.new(shipped_spec, ["debt", "update", *after], plugin_flags:) }
+    end
+
+    assert_equal [[%w[debt update], "x"], [%w[debt update], "y"], [%w[debt update], "z"]], asked.uniq
+    assert_equal [], CrossLint::CommandLine.new(shipped_spec, ["debt", "update", "--quiet"], plugin_flags: ->(*) { raise "asked" }).flags.keys - ["quiet"]
+  end
+
+  def test_stops_at_a_flag_the_plugins_command_doesnt_declare_naming_the_nearest_spelling
+    declared = [CrossLint::Core::CommandFlag.new(short: "d", long: "dry-run", value: nil, help: "H", line: 2)]
+    line = ->(*words) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags: ->(_words, _project) { declared }) }
+
+    error = assert_raises(CrossLint::CommandLine::Error) { line.call("debt", "update", "--dry-ran") }
+
+    assert_equal "tool debt update has no flag --dry-ran; did you mean --dry-run?", error.message
+    assert_equal "tool debt update has no flag -x; tool debt update --help lists them",
+      assert_raises(CrossLint::CommandLine::Error) { line.call("debt", "update", "-x") }.message
+    assert_equal "tool debt has no flag --dry-run; tool debt --help lists them",
+      assert_raises(CrossLint::CommandLine::Error) { line.call("debt", "--dry-run", "update") }.message
+  end
+
   def test_quotes_a_word_that_is_not_printable_ascii
     assert_error "tool has no flag \"--v\\u00E9rbose\"; did you mean --verbose?", "--vérbose"
     assert_error 'tool run takes no arguments; remove "x y"', "run", "x y"

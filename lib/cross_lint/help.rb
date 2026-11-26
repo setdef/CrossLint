@@ -31,8 +31,9 @@ module CrossLint
       [
         block(command.help),
         "Usage: #{@spec.bin} #{name} #{command.name} [FLAGS]\n",
+        section("Flags", flag_rows(command.flags)),
         section("Global flags", flag_rows(@spec.global_flags + extra_flags))
-      ].join("\n")
+      ].compact.join("\n")
     end
 
     def short
@@ -89,7 +90,8 @@ module CrossLint
         names = [flag.short ? "-#{flag.short}," : "   ", "--#{flag.long}"]
         names << "<#{flag.value}>" if flag.value
         lines = [flag.long_help || flag.help]
-        lines << "Choices: #{flag.choices.join(", ")}" if flag.choices
+        choices = flag.choices
+        lines << "Choices: #{choices.join(", ")}" if choices
         lines << "Default: #{flag.default}" if flag.default
         [names.join(" "), lines]
       end

@@ -15,7 +15,7 @@ module CrossLint
         @steps = steps
       end
 
-      def call(project, warnings: nil, verbosity: nil, all: false, command: nil, started: nil)
+      def call(project, warnings: nil, verbosity: nil, all: false, command: nil, flags: {}, started: nil)
         warnings ||= project.configuration.warnings
         verbosity ||= project.configuration.verbosity || :normal
         policies = enabled_policies(project)
@@ -36,7 +36,7 @@ module CrossLint
         ensure
           helpers.stop
         end
-        steps = run_steps(project, violations, faults, command)
+        steps = run_steps(project, violations, faults, command, flags)
         report(project, kinds, checked_kinds(project, policies), violations, faults, steps, warnings:, verbosity:, all:, command:)
       end
 
@@ -132,13 +132,13 @@ module CrossLint
       end
 
       # Each step of each plugin that didn't stop, run on every violation.
-      def run_steps(project, violations, faults, command)
+      def run_steps(project, violations, faults, command, flags)
         faulted = faults.map(&:plugin)
         owner, name = command
         project.plugins.reject { |plugin| faulted.include?(plugin.name) }.flat_map do |plugin|
           given = (name if owner == plugin.name)
           plugin.manifest.steps.map do |declaration|
-            @steps.fetch(declaration.name).call(StepInput.new(project:, plugin:, violations:, faulted:, command: given))
+            @steps.fetch(declaration.name).call(StepInput.new(project:, plugin:, violations:, faulted:, command: given, flags: (given ? flags : {})))
           end
         end
       end
