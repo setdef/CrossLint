@@ -27,22 +27,45 @@ class ProcessHelpersTest < Minitest::Test
   SCRIPTS = {
     "echo.sh" => %(while IFS= read -r line; do printf '{"echo":%s}\\n' "$line"; done\n),
     "fails.sh" => "printf '\\n nope\\n\\n' >&2\nexit 3\n",
-    "hangs.sh" => "sleep 30 &\necho $! > hangs.pid\nwait\n",
+    # Every `sleep` outlasts EVENT_LIMIT, so that a process still running
+    # when a test gives up waiting for it is one nobody ended.
+    "hangs.sh" => "sleep 60 &\necho $! > hangs.pid\nwait\n",
     "garbage.sh" => "while read -r line; do echo 'not json, and a line longer than the eighty characters a message shows of it, cut off here'; done\n",
     "signals.sh" => "kill -9 $$\n",
     "short.sh" => "read -r line\necho nope\n",
     "once.sh" => "read -r line\necho '{}'\n",
     "quits.sh" => "exit 0\n",
     "talks.sh" => "while read -r line; do echo heard >&2; echo '{}'; done\n",
-    "leaves.sh" => "read -r line\nsleep 30 &\necho $! > leaves.pid\necho '{}'\n",
-    "stays.sh" => "read -r line\nsleep 30 &\necho $! > stays.pid\necho '{}'\nwait\n",
+    "leaves.sh" => "read -r line\nsleep 60 &\necho $! > leaves.pid\necho '{}'\n",
+    # Says when its input has closed, and then waits to be ended.
+    "stays.sh" => "read -r line\nsleep 60 &\necho $! > stays.pid\necho '{}'\ncat > /dev/null\necho closed > stays.closed\nwait\n",
     "dumps.sh" => "env > env.txt\nread -r line\necho '{}'\n",
-    "lingers.sh" => "read -r line\necho '{}'\nexec 0<&-\nwhile :; do sleep 1; done\n",
-    "escapes.sh" => %(ruby -e 'Process.spawn(RbConfig.ruby, "-e", "sleep 8", pgroup: true)'\nread -r line\necho '{}'\n),
-    "finishes.sh" => "while read -r line; do echo '{}'; done\nsleep 0.3\necho bye > finished.txt\n"
+    "lingers.sh" => "read -r line\necho $$ > lingers.pid\necho '{}'\nexec 0<&-\nwhile :; do sleep 1; done\n",
+    # Says when its input has closed, in a file every helper of the test shares.
+    "listens.sh" => "read -r line\necho '{}'\ncat > /dev/null\necho closed >> listened.txt\nwhile :; do sleep 1; done\n",
+    "escapes.sh" => "read -r line\necho '{}'\n" \
+      "ruby -e 'File.write(\"escaped.pid\", Process.spawn(RbConfig.ruby, \"-e\", \"sleep 60\", pgroup: true))'\n",
+    # Exits only once the test lets it, after its input has closed, and
+    # gives up if the test is over and its folder gone.
+    "finishes.sh" => "while read -r line; do echo '{}'; done\necho eof > finishing.txt\n" \
+      "while [ -f finishing.txt ] && [ ! -f proceed.txt ]; do sleep 0.05; done\necho bye > finished.txt\n"
   }.freeze
 
+  # The longest any test waits for an event, in seconds. A test that waits
+  # for one fails when it hasn't come by then, and nothing else decides how
+  # long a test takes.
+  EVENT_LIMIT = 30
+
+  # Mutant runs the tests with Thread.abort_on_exception on, which raises
+  # the exception of any thread that dies in the main thread, at whatever
+  # moment it is in. A mutation that makes a helper's reader thread or a
+  # stopping thread raise then ends mutant's process with a failure status
+  # when the exception arrives after the test has failed, and mutant counts
+  # that mutation as alive, whichever tests failed. The flag stays off for
+  # the rest of the process, since a thread of an earlier test can die at
+  # any later time.
   def setup
+    Thread.abort_on_exception = false
     @base = Dir.mktmpdir("crosslint")
     SCRIPTS.each { |name, script| write(@base, "tests/#{name}", script) }
   end
@@ -80,28 +103,37 @@ class ProcessHelpersTest < Minitest::Test
     assert_equal "called helper signals, which exited with signal 9 before it answered", error.message
   end
 
+  # The helper starts the process it hangs on before it reads anything, so
+  # this limit, which starts when the request is written, is the room a
+  # loaded computer has to run two lines of sh.
   def test_ends_a_helper_that_doesnt_answer_with_everything_it_started
-    running = start("hangs", time_limit: 0.5)
+    running = start("hangs", time_limit: 2)
     error = assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("hangs"), "hangs", {}) }
 
-    assert_equal "called helper hangs, which didn't answer within 0.5 seconds, so CrossLint ended it and everything it started", error.message
+    assert_equal "called helper hangs, which didn't answer within 2 seconds, so CrossLint ended it and everything it started", error.message
     assert_gone(File.read(wait_for_file(File.join(@base, "hangs.pid"))).strip)
   end
 
   def test_ends_a_helper_that_reads_nothing_however_much_it_is_asked
     running = start("hangs", time_limit: 0.5)
-    error = Timeout.timeout(5) { assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("hangs"), "hangs", {"big" => "x" * 1_000_000}) } }
+    error = Timeout.timeout(EVENT_LIMIT) { assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("hangs"), "hangs", {"big" => "x" * 1_000_000}) } }
 
     assert_equal "called helper hangs, which didn't answer within 0.5 seconds, so CrossLint ended it and everything it started", error.message
   end
 
+  # The process that left the tree outlives EVENT_LIMIT, so a stop that
+  # waits for it doesn't return in time.
   def test_doesnt_wait_for_a_process_that_left_the_helpers_tree_to_close_standard_error
+    skip "Windows has no process groups to leave, and ends every process a helper started" if CrossLint::Adapters::ProcessHelpers::WINDOWS
+
     running = start("escapes", time_limit: 3)
     running.call(plugin_of("escapes"), "escapes", {})
-    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    running.stop
+    wait_for_file(File.join(@base, "escaped.pid"))
+    stopping = stop_in_a_thread(running)
 
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 6
+    assert stopping.join(EVENT_LIMIT), "stop is still waiting for a process that left the tree"
+  ensure
+    end_escaped
   end
 
   def test_reads_a_helpers_standard_error_whatever_becomes_of_crosslints
@@ -114,15 +146,25 @@ class ProcessHelpersTest < Minitest::Test
     assert_equal ["called helper fails, which exited with status 3 before it answered, and wrote:\nnope", [{}, {}]], [error.message, answers]
   end
 
+  # CrossLint's standard error holds its line back until the helper has
+  # exited and been ended, and stop is waiting for the line: a stop that
+  # doesn't wait has returned by then.
   def test_writes_everything_a_helper_wrote_to_standard_error_by_the_time_it_stops
+    allowed = Queue.new
     err = StringIO.new
     err.define_singleton_method(:puts) do |line|
-      sleep 0.3
+      allowed.pop
       super(line)
     end
-    running = start("talks", err:, debug: true)
+    kills = []
+    running = start("talks", err:, debug: true, stop_limit: 100, tree: killing_tree(kills))
     running.call(plugin_of("talks"), "talks", {})
-    running.stop
+    stopping = stop_in_a_thread(running)
+    wait_until("stop to have ended the helper and to wait") { kills.any? && stopping.stop? }
+
+    assert stopping.alive?, "stop returned before CrossLint wrote the helper's standard error"
+    allowed << true
+    stopping.join(EVENT_LIMIT)
 
     assert_equal "crosslint: helper talks: heard\n", err.string
   end
@@ -181,65 +223,95 @@ class ProcessHelpersTest < Minitest::Test
     assert_gone(File.read(File.join(@base, "leaves.pid")).strip)
   end
 
+  # The helper exits when the test lets it, and a stop that ends it
+  # instead has killed it by the time stop is waiting.
   def test_lets_a_helper_finish_once_its_input_closes
-    running = start("finishes")
+    kills = []
+    running = start("finishes", stop_limit: 100, tree: killing_tree(kills))
     running.call(plugin_of("finishes"), "finishes", {})
-    running.stop
+    stopping = stop_in_a_thread(running)
+    wait_for_file(File.join(@base, "finishing.txt"))
+    wait_until("stop to wait for the helper") { stopping.stop? }
+
+    assert_empty kills, "stop ended the helper before it had a chance to exit"
+    write(@base, "proceed.txt", "")
+    stopping.join(EVENT_LIMIT)
 
     assert_equal "bye\n", File.read(File.join(@base, "finished.txt"))
+  ensure
+    running&.kill
   end
 
   def test_ends_a_helper_that_doesnt_exit_once_its_input_closes
     running = start("lingers", stop_limit: 0.5)
     running.call(plugin_of("lingers"), "lingers", {})
-    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    running.stop
+    stopping = stop_in_a_thread(running)
 
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 5
+    assert stopping.join(EVENT_LIMIT), "stop is still waiting for the helper to exit"
+    assert_gone(File.read(File.join(@base, "lingers.pid")).strip)
   end
 
+  # Every helper's input closes while the first is still being waited for,
+  # which no helper's limit can be over for, so one after another can't.
   def test_gives_every_helper_its_time_to_exit_at_once_not_one_after_another
-    helpers = %w[one two three].map { |name| CrossLint::Core::HelperDeclaration.new(name:, command: "sh", file: "lingers.sh", line: 4) }
+    helpers = %w[one two three].map { |name| CrossLint::Core::HelperDeclaration.new(name:, command: "sh", file: "listens.sh", line: 4) }
     plugin = helper_plugin.then { |tests| tests.with(manifest: tests.manifest.with(helpers:)) }
-    running = CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, stop_limit: 1).start(@base, [plugin])
+    running = CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, stop_limit: 100).start(@base, [plugin])
     helpers.each { |helper| running.call(plugin, helper.name, {}) }
-    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    running.stop
+    stopping = stop_in_a_thread(running)
+    listened = File.join(@base, "listened.txt")
+    closed = -> { File.exist?(listened) ? File.read(listened).lines(chomp: true) : [] }
+    wait_until("every helper's input to close") { !stopping.alive? || closed.call.size == 3 }
 
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2.5
+    assert_equal %w[closed] * 3, closed.call
+  ensure
+    running&.kill
+    stopping&.join(EVENT_LIMIT)
   end
 
   def test_ends_every_helper_at_once_when_killed_and_waits_for_none_to_exit
-    running = start("stays", stop_limit: 30)
+    running = start("stays", stop_limit: 100)
     running.call(plugin_of("stays"), "stays", {})
     running.kill
 
     assert_gone(File.read(File.join(@base, "stays.pid")).strip)
-    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    running.stop
+    stopping = stop_in_a_thread(running)
 
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 5
+    assert stopping.join(EVENT_LIMIT), "stop is waiting for a helper that has been ended"
   end
 
+  # The process that left the tree outlives EVENT_LIMIT, as does the
+  # limit, so a stop that waits for its standard error doesn't return.
   def test_doesnt_wait_for_standard_error_once_killed
-    running = start("escapes", time_limit: 5)
-    running.call(plugin_of("escapes"), "escapes", {})
-    running.kill
-    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    running.stop
+    skip "Windows has no process groups to leave, and ends every process a helper started" if CrossLint::Adapters::ProcessHelpers::WINDOWS
 
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 3
+    running = start("escapes", time_limit: 100)
+    running.call(plugin_of("escapes"), "escapes", {})
+    wait_for_file(File.join(@base, "escaped.pid"))
+    running.kill
+    stopping = stop_in_a_thread(running)
+
+    assert stopping.join(EVENT_LIMIT), "stop is waiting for the standard error of a helper that has been ended"
+  ensure
+    end_escaped
   end
 
+  # The thread's own end is what the test checks, so that Ctrl-C has
+  # nowhere to go but the thread: the helper has seen its input close, and
+  # only the ending of its tree is left to wait for.
   def test_ends_every_helper_at_once_when_ctrl_c_comes_while_waiting_for_them_to_exit
-    running = start("stays", stop_limit: 30)
+    running = start("stays", stop_limit: 100)
     running.call(plugin_of("stays"), "stays", {})
-    stopping = Thread.new { running.stop }
+    stopping = Thread.new do
+      running.stop
+    rescue Interrupt => interrupt
+      interrupt
+    end
     stopping.report_on_exception = false
-    Thread.pass until stopping.stop?
+    wait_until("the helper's input to close") { File.exist?(File.join(@base, "stays.closed")) || !stopping.alive? }
     stopping.raise(Interrupt)
 
-    assert_raises(Interrupt) { stopping.join }
+    assert_instance_of Interrupt, stopping.value
     assert_gone(File.read(File.join(@base, "stays.pid")).strip)
   end
 
@@ -256,7 +328,7 @@ class ProcessHelpersTest < Minitest::Test
   def test_ends_a_helper_it_cant_put_in_a_process_tree_that_has_exited_already
     started = []
     tree = unholding_tree(started) do |pid|
-      sleep 0.05 while process_exists?(pid)
+      wait_until("the helper to exit") { !process_exists?(pid) }
     end
     error = assert_raises(CrossLint::Core::PluginError) { start("quits", tree:).call(plugin_of("quits"), "quits", {}) }
 
@@ -388,21 +460,56 @@ class ProcessHelpersTest < Minitest::Test
     $VERBOSE = verbose
   end
 
+  # Waits for what the block says has happened, which a test waits for by
+  # an event and never by a time, and fails after EVENT_LIMIT seconds,
+  # which is far longer than a loaded computer takes.
+  def wait_until(what)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + EVENT_LIMIT
+    sleep 0.01 until (done = yield) || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+
+    assert done, "gave up waiting #{EVENT_LIMIT} seconds for #{what}"
+  end
+
   # The path of `file` once it exists, which a helper's script writes a
   # moment after CrossLint has what it asked for.
   def wait_for_file(file)
-    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
-    sleep 0.05 until File.exist?(file) || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    wait_until("#{File.basename(file)} to exist") { File.exist?(file) }
 
     file
   end
 
   # Asks sh, since on Windows `pid` is MSYS2's number for the process.
   def assert_gone(pid)
-    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
-    alive = system("sh", "-c", "kill -0 #{pid} 2>/dev/null") while alive != false && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
+    wait_until("process #{pid} to end") { !system("sh", "-c", "kill -0 #{pid} 2>/dev/null") }
+  end
 
-    refute alive, "process #{pid} is still running"
+  # Runs `running.stop` in a thread, whose exception, if it has one, is
+  # the one `join` raises.
+  def stop_in_a_thread(running)
+    Thread.new do
+      Thread.current.report_on_exception = false
+      running.stop
+    end
+  end
+
+  # A tree class that adds to `kills` each time it has ended a tree.
+  def killing_tree(kills)
+    Class.new(CrossLint::Adapters::ProcessHelpers::TREE) do
+      define_method(:kill) do
+        super()
+        kills << true
+      end
+    end
+  end
+
+  # Ends the process the escaping helper left outside its tree, which
+  # nothing else does.
+  def end_escaped
+    file = File.join(@base, "escaped.pid")
+    pid = File.exist?(file) ? File.read(file).to_i : 0
+    Process.kill("KILL", pid) if pid.positive?
+  rescue SystemCallError
+    nil
   end
 end
 
