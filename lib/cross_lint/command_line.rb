@@ -29,11 +29,14 @@ module CrossLint
       @argv = argv
       @plugin_flags = plugin_flags
       @probing = probing
+      @helping = helping?(argv)
       @declared = {}
       @flags = {}
       @words = []
       # --help and --version set @action, which stops the reading there, so a
-      # mistake after either one is never read and the help still shows.
+      # mistake after either one is never read and the help still shows. With
+      # --help or -h anywhere on the line, a mistake before it is skipped too,
+      # since help never fails.
       read(argv.dup)
       @action ||= :run
       @given = @flags.keys
@@ -52,6 +55,9 @@ module CrossLint
     def known_flags = base_flags + declared_flags + [HELP, VERSION]
 
     private
+
+    # Whether --help or -h is a flag of the line, not an argument after --.
+    def helping?(argv) = argv.take_while { |word| word != "--" }.any? { |word| ["--help", "-h"].include?(word) }
 
     # The flags the spec gives where the reading is, without those of a
     # plugin's command, which the project says.
@@ -72,6 +78,10 @@ module CrossLint
       return [] unless asking && @command.nil? && @words.size >= 2
 
       @declared[@words.first(2)] ||= asking.call(@words.first(2), project)
+    rescue Core::Mistake
+      raise unless @helping
+
+      []
     end
 
     # The project given with --project, which can come after the flag that
@@ -97,7 +107,7 @@ module CrossLint
     def read_long(word, words)
       name, value = word.delete_prefix("--").split("=", 2)
       flag = find_flag { |known| known.long == name }
-      return unless flag || !@probing
+      return unless flag || !(@probing || @helping)
       raise Error, unknown_flag("--#{name}", known_flags.map { |known| "--#{known.long}" }) unless flag
 
       value ||= words.shift if flag.value
@@ -109,7 +119,7 @@ module CrossLint
         letter = letters[0]
         letters = letters[1..]
         flag = find_flag { |known| known.short == letter }
-        return unless flag || !@probing
+        return unless flag || !(@probing || @helping)
         raise Error, unknown_flag("-#{letter}", known_flags.filter_map(&:short).map { |short| "-#{short}" }) unless flag
         next set(flag, nil) unless flag.value
 
@@ -129,6 +139,8 @@ module CrossLint
 
         @flags[flag.long] = true
       end
+    rescue Error
+      raise unless @helping
     end
 
     def flag_value(flag, value)

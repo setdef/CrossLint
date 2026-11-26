@@ -413,6 +413,33 @@ class CLITest < Minitest::Test
     assert_includes page, "Usage: crosslint debt update [FLAGS]\n"
   end
 
+  def test_help_shows_whatever_other_flags_the_line_has_in_either_order
+    manifest = app(debt: true).load_project("#{WORK}/app").plugins.first.manifest
+    page = CrossLint::Help.new(shipped_spec).plugin_command("debt", manifest.commands.first)
+
+    ["-n", "--dry-run", "--bogus", "-x", "--silent"].each do |flag|
+      assert_equal [page, "", 0], helping("debt", "update", flag, "--help", app: app(debt: true)), flag
+      assert_equal [page, "", 0], helping("debt", "update", "-h", flag, app: app(debt: true)), flag
+    end
+    assert_equal [CrossLint::Help.new(shipped_spec).render(shipped_spec.commands.first), "", 0],
+      helping("check", "--warnings", "banana", "--help", app: app(debt: true))
+  end
+
+  def test_help_with_a_flag_before_it_in_a_project_that_cant_be_read_prints_the_programs_help_as_help_alone_does
+    mistake = CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl")
+    broken = app(broken: mistake)
+    alone = helping("debt", "update", "--help", app: broken)
+
+    assert_equal [["", 0], true], [alone.values_at(1, 2), alone[0].include?("Plugin commands:\n  Not shown, because")]
+    assert_equal alone, helping("debt", "update", "-n", "--help", app: broken)
+    assert_equal alone, helping("debt", "update", "-n", "-h", app: broken)
+    assert_equal alone, helping("debt", "update", "--help", "-n", app: broken)
+  end
+
+  def test_a_flag_after_two_dashes_isnt_help
+    assert_equal ["", "crosslint: crosslint check takes no arguments; remove --help\n", 2], helping("check", "--", "--help", app: app(debt: true))
+  end
+
   def test_help_for_a_word_that_names_no_plugin_or_command_stops_with_2
     assert_equal ["", "crosslint: crosslint debt has no command updat; did you mean update?\n", 2], helping("debt", "updat", "--help", app: app(debt: true))
     assert_equal ["", "crosslint: debt update is a command of the debt plugin, which .config/crosslint/config.kdl doesn't list\n", 2],

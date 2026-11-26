@@ -78,6 +78,8 @@ module CrossLint
     # spec doesn't give.
     @probing: bool
 
+    @helping: bool
+
     @declared: Hash[Array[String], Array[Core::CommandFlag]]
 
     # The flags the spec gives where the reading is, without --help and
@@ -94,6 +96,8 @@ module CrossLint
 
     # The project given with --project anywhere on the line, or nil, found
     # by reading the line once more without plugin flags.
+    def helping?: (Array[String] argv) -> bool
+
     def project: () -> String?
 
     @spec: UsageSpec
