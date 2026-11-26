@@ -1,0 +1,8 @@
+# frozen_string_literal: true
+
+# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
+# SPDX-License-Identifier: MIT
+
+source "https://rubygems.org"
+
+gem "fledge", git: "https://github.com/setdef/Fledge", tag: "v0.17.0"

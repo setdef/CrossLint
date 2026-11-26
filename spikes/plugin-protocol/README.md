@@ -165,6 +165,27 @@ What the cases show:
 - **Not modeled:** severity (`prefer-css-over-scss` is a warning in ng-nudge), `withComment` caps, d3-dsv quoting in the TSV, and which policy is listed for an artifact in a printed report.
 - **Host changes:** a plugin with no files for an artifact is no longer started (before, it got an empty check), and `run.sh`'s check for a project with no `typescript` now uses a project that has a component.
 
+## Inside a Fledge app
+
+`fledge/` builds the host (`host/crosslint.rb`, copied to `app/main.rb`) into a Fledge v0.17.0 console app, `crosslint-spike`, the way [fledge-tree-sitter](../fledge-tree-sitter/README.md) does, with no gems beyond Fledge and no Tree-sitter. `fledge/scripts/check.sh` builds it for the computer it runs on, installs the archive through mise into an empty data folder (a `file://` URL, `strip_components = 1`, `bin_path = "."`, as in [setdef/Fledge#123](https://github.com/setdef/Fledge/issues/123)), with Node 22 and `jq` 1.7 from mise beside it and every Ruby dropped from `PATH`, and then runs the whole of `run.sh` with `CROSSLINT=crosslint-spike`, so every check goes through the installed app. The Ruby plugins' manifests say `"command": "{host_ruby}"`, so they run on the Ruby the app carries.
+
+| | macOS 27, arm64 | Linux x86_64 (Ubuntu 24.04) |
+| --- | --- | --- |
+| Built | yes | yes |
+| Archive, installed | 26 MB `.tar.gz`, 85,464 KiB | 35 MB `.tar.gz`, 105,688 KiB |
+| Ruby on `PATH` under `mise x`, outside the app | `/usr/bin/ruby` (the system's) | none |
+| `{host_ruby}` | `.../bin/ruby` inside the install | `.../bin/ruby` inside the install |
+| Start, first run then mean of 10 | 1.32 s, 0.12 s | 0.08 s, 0.07 s |
+| `run.sh` against the app | every check passes | every check passes |
+
+What this shows:
+
+- **All three plugins run, and the Ruby plugins run on the app's Ruby.** The Ruby plugin got no Ruby from `PATH` on Linux, and on macOS the system's `/usr/bin/ruby` is on `PATH` and was not used. The two policy plugins, the process-group check and the error paths behave as they do with plain Ruby.
+- **Inside the app, `PATH` already has the app's `bin/` first,** so `ruby` there is the app's Ruby too (`--info` prints it). The host's environment (`RUBYOPT`, `BUNDLE_GEMFILE`) is passed on to plugins; the Ruby plugins use only the standard library and ran with it. A Ruby plugin that needs a gem the app lacks has the problem the [fledge-tree-sitter](../fledge-tree-sitter/README.md#project-local-ruby-rules) spike measured.
+- **Node, `jq` and `typescript` still come from outside the app.** The check installs them; the app does not carry them.
+- **Install time:** `mise install` of the app, Node and `jq` together took 54 s on both, almost all of it Node.
+- **Fledge:** nothing new broke on these two. `fledge build` took 7 to 9 s in a workspace that already had Fledge's runtime; a build from nothing was not timed. The first attempt of `check.sh` failed because its `ls` of a `.zip` found nothing on these systems and stopped the script (fixed).
+
 ## Cost per plugin call
 
 Measured on macOS 27 (arm64) with Ruby 4.0.10, Node 26.12.1 and `jq` through mise's shims, by `--timing`. "Start" is spawn plus handshake, and includes the `--version` call that `min_version` triggers for the Ruby and Node plugins. Ranges are two to four runs.

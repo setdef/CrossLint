@@ -1,0 +1,4 @@
+dist/
+build/.bundle/
+build/Gemfile.lock
+build/vendor/

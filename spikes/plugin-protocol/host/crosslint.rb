@@ -28,10 +28,13 @@ module Spike
 
   def self.windows? = Gem.win_platform?
 
+  # Finds an executable on PATH. On Windows a bare name also matches each PATHEXT extension (node -> node.exe).
   def self.which(command)
-    return (File.executable?(command) ? command : nil) if command.include?("/")
+    exts = windows? ? ENV.fetch("PATHEXT", ".EXE;.CMD;.BAT").split(";") + [""] : [""]
+    found = ->(path) { exts.map { path + _1 }.find { File.file?(_1) && File.executable?(_1) } }
+    return found.(command) if command.include?("/") || command.include?("\\")
 
-    ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).map { File.join(_1, command) }.find { File.file?(_1) && File.executable?(_1) }
+    ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).filter_map { found.(File.join(_1, command)) }.first
   end
 
   # Processes the host started and has not yet reaped, so that an exit or a signal can end them.
@@ -229,6 +232,10 @@ end
 
 options = { root: Dir.pwd, provision: false, timing: false, repeat: 1, lifetime: nil, config: {} }
 OptionParser.new do |o|
+  o.on("--info") do
+    puts "ruby #{RUBY_VERSION} #{RUBY_PLATFORM}", "host_ruby #{RbConfig.ruby}", "ruby on PATH #{Spike.which("ruby") || "none"}"
+    exit
+  end
   o.on("--root DIR") { options[:root] = File.expand_path(_1) }
   o.on("--config FILE") { options[:config] = JSON.parse(File.read(_1)) }
   o.on("--provision") { options[:provision] = true }

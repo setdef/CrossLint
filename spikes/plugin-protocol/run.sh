@@ -4,7 +4,9 @@
 # Exits 0 when every result matches. Pass TIMING=1 to print per-plugin timings.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-host=("ruby" "$here/host/crosslint.rb" "--root" "$here/fixture")
+# CROSSLINT names a built host (the Fledge app); without it the checks run host/crosslint.rb with the Ruby on PATH.
+if [ -n "${CROSSLINT:-}" ]; then host_cmd=("$CROSSLINT"); else host_cmd=(ruby "$here/host/crosslint.rb"); fi
+host=("${host_cmd[@]}" "--root" "$here/fixture")
 [ -n "${TIMING:-}" ] && host+=("--timing")
 failed=0
 mkdir -p "$here/.scratch"
@@ -20,6 +22,16 @@ bad() { echo "FAIL $1"; failed=1; }
 status=0
 "${host[@]}" "$here/plugins/spec-per-component-rb" "$here/plugins/template-per-component-sh" "$here/plugins/component-io-js" >"$here/.scratch/out.txt" || status=$?
 if [ "$status" = 1 ] && diff -u "$here/expected/violations.txt" "$here/.scratch/out.txt"; then ok "three plugins give the expected violations (exit 1)"; else bad "three plugins (status $status)"; fi
+
+# 1a. The PowerShell plugin, where PowerShell is on PATH (Windows PowerShell 5.1 or later): the same
+# template lines as the shell plugin gives.
+if command -v powershell >/dev/null 2>&1 || command -v powershell.exe >/dev/null 2>&1; then
+  status=0
+  "${host[@]}" "$here/plugins/template-per-component-ps1" >"$here/.scratch/ps1.txt" || status=$?
+  if [ "$status" = 1 ] && grep '\[template-per-component/' "$here/expected/violations.txt" | diff -u - "$here/.scratch/ps1.txt"; then ok "PowerShell plugin gives the shell plugin's violations"; else bad "PowerShell plugin (status $status)"; fi
+else
+  echo "skip PowerShell plugin: no powershell on PATH"
+fi
 
 # 1b. Policies as data: ng-nudge's five built-in policies, from the manifest of a Ruby plugin that also
 # sends one rule to a JavaScript plugin. The host decides which rules run on which artifact.
@@ -71,13 +83,13 @@ mkdir -p "$here/.scratch/no-ts/src/app/a"
 : >"$here/.scratch/no-ts/src/app/a/a.component.ts"
 : >"$here/.scratch/no-ts/src/app/a/a.component.i.d.ts"
 status=0
-err="$(ruby "$here/host/crosslint.rb" --root "$here/.scratch/no-ts" "$here/plugins/component-io-js" 2>&1 >/dev/null)" || status=$?
+err="$("${host_cmd[@]}" --root "$here/.scratch/no-ts" "$here/plugins/component-io-js" 2>&1 >/dev/null)" || status=$?
 if [ "$status" = 2 ] && [[ "$err" == *"component-io: dependency-missing"* ]]; then ok "component-io: dependency-missing"; else bad "component-io without typescript: $status $err"; fi
 
 # 3. Missing runtime, found by name while the other plugins still run: PATH has ruby and the system tools, no node.
-ruby_dir="$(dirname "$(command -v ruby)")"
+ruby_dir="$(dirname "$(command -v "${host_cmd[0]}")")"
 status=0
-err="$(env PATH="$ruby_dir:/usr/bin:/bin" ruby "$here/host/crosslint.rb" --root "$here/fixture" "$here/plugins/component-io-js" "$here/plugins/spec-per-component-rb" 2>&1 >/dev/null)" || status=$?
+err="$(env PATH="$ruby_dir:/usr/bin:/bin" "${host_cmd[@]}" --root "$here/fixture" "$here/plugins/component-io-js" "$here/plugins/spec-per-component-rb" 2>&1 >/dev/null)" || status=$?
 if ! PATH="$ruby_dir:/usr/bin:/bin" command -v node >/dev/null 2>&1; then
   if [ "$status" = 2 ] && [[ "$err" == *"component-io: runtime-missing: needs node on PATH"* ]]; then ok "no node on PATH: named, exit 2, other plugin still ran"; else bad "no node on PATH: $status $err"; fi
 else
