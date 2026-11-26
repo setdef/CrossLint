@@ -80,7 +80,8 @@ class AppTest < Minitest::Test
     url = "https://example.test/OWNER/signatures"
     write(@base, ".config/crosslint/config.kdl", %(plugin "debt"\nplugin #{url.dump} ref="v1.0.0"\n))
     err = StringIO.new
-    listing = App.new(err:).listing(@base)
+    shared_plugins = CrossLint::Adapters::GitSharedPlugins.new(err:, cache: File.join(@base, "cache"))
+    listing = App.new(err:, shared_plugins:).listing(@base)
 
     assert_equal [".config/crosslint/config.kdl", ["debt"], [url]], [listing.file, listing.plugins.map(&:name), listing.unfetched.map(&:name)]
     assert_empty err.string
