@@ -41,6 +41,11 @@ env:
   MISE_RUBY_COMPILE: "false"
   # Install exactly what Gemfile.lock locks, or fail.
   BUNDLE_FROZEN: "true"
+  # mise's own timeouts, 20 s to fetch the list of remote versions and 30 s
+  # for a request, cut off the Ruby download on a slow runner ("timed out
+  # after 20.00s"); the job's timeout-minutes did not end it.
+  MISE_HTTP_TIMEOUT: 120s
+  MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 120s
 
 jobs:
   check:
