@@ -85,6 +85,8 @@ CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't
 
 ## Documentation
 
+[The documentation's map](docs/README.md) says where to start for what you're doing.
+
 - In the terminal: `crosslint --help` lists every command with examples, and `crosslint check --help` explains one.
 - [Getting started](docs/getting-started.md): add CrossLint to a project, write a rule for it, and keep the check passing with debt.
 - [Plugin reference](docs/reference/plugin.md): everything a `plugin.kdl` can declare, including rules written in Ruby.
