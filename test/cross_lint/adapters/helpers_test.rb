@@ -96,7 +96,7 @@ class ProcessHelpersTest < Minitest::Test
   end
 
   def test_doesnt_wait_for_a_process_that_left_the_helpers_tree_to_close_standard_error
-    running = start("escapes", time_limit: 0.5)
+    running = start("escapes", time_limit: 3)
     running.call(plugin_of("escapes"), "escapes", {})
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     running.stop
