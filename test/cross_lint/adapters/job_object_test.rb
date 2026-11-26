@@ -30,6 +30,18 @@ class JobObjectTest < Minitest::Test
     assert_match(/\Acouldn't be put in a job object: OpenProcess failed with Windows error \d+\z/, error.message)
   end
 
+  # Windows answers error 87, invalid parameter, to the pid of a process
+  # that has exited and been reaped.
+  def test_has_nothing_to_hold_of_a_process_that_has_exited
+    _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", "-c", "exit 0"], @base, {})
+    wait.join
+    sleep 0.3
+    job = CrossLint::Adapters::JobObject.new(wait.pid)
+    job.kill
+
+    assert_equal 0, wait.value.exitstatus
+  end
+
   def test_stops_at_each_call_windows_refuses_and_closes_what_it_made
     script = write(@base, "sleeps.sh", "sleep 30\n")
     _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})

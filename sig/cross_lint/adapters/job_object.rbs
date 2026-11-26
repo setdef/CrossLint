@@ -30,10 +30,14 @@ module CrossLint
       # PROCESS_SET_QUOTA and PROCESS_TERMINATE.
       ASSIGN: Integer
 
+      # What OpenProcess answers for a pid no process has.
+      INVALID_PARAMETER: Integer
+
       # A job object that holds the process `pid`. Raises
       # Core::PluginError, saying which Windows call failed with which
       # error, and closes the job, when Windows doesn't create the job,
-      # set its limits, or put the process in it.
+      # set its limits, or put the process in it. A process that has
+      # exited and been reaped has nothing to hold, and raises nothing.
       def initialize: (Integer pid) -> void
 
       # Ends every process in the job and closes the job, the first time;
@@ -46,14 +50,18 @@ module CrossLint
 
       @job: untyped
 
-      # Puts the process `pid` in the job. Raises Core::PluginError when
-      # Windows doesn't open the process or put it in.
+      # Puts the process `pid` in the job, or does nothing when no process
+      # has that pid, as one that has exited. Raises Core::PluginError when
+      # Windows doesn't open the process for another reason, or put it in.
       def hold: (Integer pid) -> void
 
       # What kernel32's function `name`, of `arguments` and `result`
       # Fiddle types, returns for `values`. Raises Core::PluginError, as
       # every call that fails by returning zero does.
       def checked: (String name, Array[Integer] arguments, Integer result, *untyped values) -> untyped
+
+      # The error for the call `name` that returned zero.
+      def failed: (String name) -> Core::PluginError
 
       # Calls kernel32's function `name`, of `arguments` and `result`
       # Fiddle types, with `values`.

@@ -335,6 +335,23 @@ class ProcessHelpersTest < Minitest::Test
     assert_equal "called helper quits, which couldn't be put in a tree, so CrossLint ended it", error.message
   end
 
+  # A helper that has exited and been reaped before it is put in a tree has
+  # nothing to hold, and ended as any helper that exits does. Windows
+  # answers error 87 to a process that is gone.
+  def test_reads_how_a_helper_ended_that_exited_before_it_was_put_in_a_tree
+    exists = method(:process_exists?)
+    tree = Class.new(CrossLint::Adapters::ProcessHelpers::TREE) do
+      define_method(:initialize) do |pid|
+        sleep 0.05 while exists.call(pid)
+        sleep 0.3
+        super(pid)
+      end
+    end
+    error = assert_raises(CrossLint::Core::PluginError) { start("quits", tree:).call(plugin_of("quits"), "quits", {}) }
+
+    assert_equal "called helper quits, which exited with status 0 before it answered", error.message
+  end
+
   def test_fails_a_helper_that_isnt_in_a_process_group_of_its_own
     skip "Windows has job objects, not process groups" if CrossLint::Adapters::ProcessHelpers::WINDOWS
 

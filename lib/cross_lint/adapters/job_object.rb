@@ -25,6 +25,10 @@ module CrossLint
       # AssignProcessToJobObject needs of the process's handle.
       ASSIGN = 0x0101
 
+      # What OpenProcess answers for a pid no process has, as a process that
+      # has exited and been reaped.
+      INVALID_PARAMETER = 87
+
       def initialize(pid)
         # Ruby 4.1 has fiddle as a bundled gem, which the Gemfile asks for
         # on Windows.
@@ -74,7 +78,14 @@ module CrossLint
       def hold(pid)
         pointer = Fiddle::TYPE_VOIDP
         int = Fiddle::TYPE_INT
-        process = checked("OpenProcess", [int, int, int], pointer, ASSIGN, 0, pid)
+        process = call("OpenProcess", [int, int, int], pointer, ASSIGN, 0, pid)
+        if process.to_i.zero?
+          # A process that has exited has nothing to hold, and its output
+          # and status are read as for any process that has finished.
+          return if pid.positive? && Fiddle.win32_last_error.to_i == INVALID_PARAMETER
+
+          raise failed("OpenProcess")
+        end
         begin
           checked("AssignProcessToJobObject", [pointer, pointer], int, @job, process)
         ensure
@@ -86,10 +97,12 @@ module CrossLint
       # zero, which is how each of these calls fails.
       def checked(name, arguments, result, *values)
         value = call(name, arguments, result, *values)
-        raise Core::PluginError, "couldn't be put in a job object: #{name} failed with Windows error #{Fiddle.win32_last_error.to_i}" if value.to_i.zero?
+        raise failed(name) if value.to_i.zero?
 
         value
       end
+
+      def failed(name) = Core::PluginError.new("couldn't be put in a job object: #{name} failed with Windows error #{Fiddle.win32_last_error.to_i}")
 
       def call(name, arguments, result, *values) = Fiddle::Function.new(@kernel32[name], arguments, result).call(*values)
     end
