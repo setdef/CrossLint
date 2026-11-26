@@ -10,7 +10,7 @@ unless defined?(Mutant)
     root File.expand_path("..", __dir__)
     enable_coverage :branch
     track_files "lib/**/*.rb"
-    add_filter %r{\A/(test|vendor)/}
+    add_filter %r{\A/(test|tasks|vendor)/}
     minimum_coverage line: 100, branch: 100
   end
   # Minitest 6 loads no plugin it isn't asked to, SimpleCov's included,

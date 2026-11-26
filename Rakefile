@@ -37,6 +37,11 @@ namespace :rbs do
   end
 end
 
+desc "Run every Ruby example in the documentation, and check the results it shows"
+task :doctest do
+  ruby "-Ilib", "tasks/doctest.rb"
+end
+
 desc "Check lib/ against sig/ with Steep (Steepfile)"
 task :steep do
   sh "steep", "check"
@@ -76,7 +81,7 @@ task :reuse do
 end
 
 desc "Run every check CI runs"
-task check: ["rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :mutant, "usage:lint", "usage:reference", :reuse]
+task check: ["rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :mutant, "usage:lint", "usage:reference", :reuse]
 
 task default: :check
 
