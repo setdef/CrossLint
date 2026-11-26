@@ -49,7 +49,7 @@ module CrossLint
         unless setting.arguments.size == 1 && path.is_a?(String) && setting.properties.empty?
           raise Mistake.new("file takes one path and nothing else, as in file #{FILE.dump}", file:, line: setting.line)
         end
-        return path unless path.empty? || File.absolute_path?(path) || path.split(%r{[/\\]}).include?("..")
+        return path unless path.empty? || path.match?(%r{\A(?:[/\\]|[A-Za-z]:)}) || path.split(%r{[/\\]}).include?("..")
 
         raise Mistake.new("file takes a path relative to the project's root, not #{path.dump}", file:, line: setting.line)
       end

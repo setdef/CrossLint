@@ -278,6 +278,8 @@ class TrackDebtTest < Minitest::Test
       [setting("file", "a", x: "y")] => %(file takes one path and nothing else, as in file "#{FILE}"),
       [setting("file", "")] => %(file takes a path relative to the project's root, not ""),
       [setting("file", "/tmp/debt.tsv")] => %(file takes a path relative to the project's root, not "/tmp/debt.tsv"),
+      [setting("file", "C:/abs.tsv")] => %(file takes a path relative to the project's root, not "C:/abs.tsv"),
+      [setting("file", "\\abs.tsv")] => %(file takes a path relative to the project's root, not "\\\\abs.tsv"),
       [setting("file", "../debt.tsv")] => %(file takes a path relative to the project's root, not "../debt.tsv"),
       [setting("file", "a/../../debt.tsv")] => %(file takes a path relative to the project's root, not "a/../../debt.tsv"),
       [setting("file", "a\\..\\debt.tsv")] => %(file takes a path relative to the project's root, not "a\\\\..\\\\debt.tsv"),
