@@ -6,7 +6,9 @@ module CrossLint
   module Adapters
     class MemoryPluginRuby
       def initialize(files = {})
-        @files = files
+        # Windows puts a drive letter on the expanded path a file is
+        # looked up by, so the paths it is given must be expanded too.
+        @files = files.transform_keys { |path| File.expand_path(path) }
       end
 
       def load(plugin, file, line, namespace)

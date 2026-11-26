@@ -1,7 +1,7 @@
 module CrossLint
   module Adapters
     # The plugin-Ruby port in memory, for the use cases' tests: each
-    # file is a proc, by its absolute path, that defines the file's
+    # file is a proc, by its path, that defines the file's
     # constants in the namespace it is given.
     #
     # ```ruby
@@ -16,7 +16,8 @@ module CrossLint
     class MemoryPluginRuby
       include _PluginRuby
 
-      # A port that holds `files`, each a proc by its absolute path.
+      # A port that holds `files`, each a proc by its path, which the port
+      # expands (on Windows, with a drive letter).
       def initialize: (?Hash[String, ^(Module namespace) -> void] files) -> void
 
       private

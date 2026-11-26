@@ -58,6 +58,17 @@ class MemoryPluginRubyTest < Minitest::Test
 
   def plugin_base = File.expand_path("/memory/plugins")
 
+  # On Windows, File.expand_path puts a drive letter before a path that
+  # starts with a slash, so a path the port is given must be expanded as
+  # the path it looks up is. A path with .. is the same on every system.
+  def test_finds_a_file_given_by_a_path_that_is_not_expanded
+    files = {File.join(plugin_base, "extra", "..", "a.rb") => ->(namespace) { namespace.const_set(:A, 1) }}
+    namespace = Module.new
+    CrossLint::Adapters::MemoryPluginRuby.new(files).load(ruby_plugin("tests"), "../a.rb", 1, namespace)
+
+    assert_equal 1, namespace::A
+  end
+
   def test_holds_no_file_unless_it_is_given_some
     assert_raises(CrossLint::Core::Mistake) { CrossLint::Adapters::MemoryPluginRuby.new.load(ruby_plugin("tests"), "a.rb", 1, Module.new) }
   end
