@@ -1,0 +1,67 @@
+module CrossLint
+  module Core
+    # What `crosslint init --from-ng-nudge` converts from ng-nudge 0.3.0's
+    # configuration.
+    module NgNudge
+      # A node-glob pattern from ng-nudge's rc.json, as the path pattern
+      # that finds the same files, converted only where the two were
+      # compared and found the same on the same tree:
+      #
+      # * literal folder names, and at most one folder that is a whole `*`,
+      #   which becomes `{name}`;
+      # * then `**/*S`, which becomes `{path}S`, or `*S`, which becomes
+      #   `{name}S`, where the suffix S starts with `.` and ends with
+      #   `.ts`, has no `/`, and no wildcard or other special character;
+      # * or a file name that ends with `.ts`.
+      #
+      # `./` and `//` are taken out first, and so is each folder name
+      # that a `..` follows.
+      #
+      # ```ruby
+      # CrossLint::Core::NgNudge::Glob.convert("**/*.component.ts") # => "{path}.component.ts"
+      # CrossLint::Core::NgNudge::Glob.convert("./app//*/**/*.store.ts") # => "app/{name}/{path}.store.ts"
+      # ```
+      class Glob
+        # The reason a pattern isn't converted.
+        class Unsupported < ArgumentError
+        end
+
+        # What makes a segment more than a name.
+        SPECIAL: Regexp
+
+        # The path pattern that finds the files `source` finds. Raises
+        # Unsupported, with the reason as its message, for every other form.
+        def self.convert: (String source) -> String
+
+        # A conversion of `source`.
+        def initialize: (String source) -> void
+
+        # The path pattern. Raises Unsupported for a form it doesn't
+        # convert.
+        def converted: () -> String
+
+        private
+
+        @source: String
+
+        # Raises Unsupported with `message`.
+        def refuse: (String message) -> bot
+
+        # The segments of the pattern, with each `./`, `//`, and `x/..`
+        # taken out.
+        def cleaned: () -> Array[String]
+
+        # The path pattern for the last segment, and how many `{name}` it
+        # has; takes a `**` before it out of `segments`.
+        def tail: (String last, Array[String] segments) -> [String, Integer]
+
+        # The path pattern for a folder.
+        def folder: (String segment) -> String
+
+        # Raises Unsupported when `segment` has a character that makes it
+        # more than a name.
+        def reject_special: (String segment) -> void
+      end
+    end
+  end
+end
