@@ -25,8 +25,25 @@ class CLITest < Minitest::Test
     help = CrossLint::Help.new(fixture_spec)
 
     assert_equal [help.render, "", 0], run_cli("--help")
-    assert_equal [help.render, "", 0], run_cli
     assert_equal [help.render(fixture_spec.commands.first), "", 0], run_cli("run", "--help")
+  end
+
+  def test_prints_a_short_help_with_no_command
+    short = <<~HELP
+      Does things
+
+      Examples:
+        Run it:
+          Runs the thing once.
+          $ tool run
+
+          $ tool stop
+
+      Run tool --help to list every command.
+    HELP
+
+    assert_equal [short, "", 0], run_cli
+    assert_equal [short, "", 0], run_cli("--color", "never")
   end
 
   def test_help_prints_what_help_flags_print

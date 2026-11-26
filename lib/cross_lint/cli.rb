@@ -33,7 +33,16 @@ module CrossLint
         return say("#{spec.bin} #{command.name} doesn't work yet")
       end
 
-      @out.write((line.action == :version) ? "#{spec.bin} #{spec.version}\n" : Help.new(spec).render(command))
+      help = Help.new(spec)
+      @out.write(
+        if line.action == :version
+          "#{spec.bin} #{spec.version}\n"
+        elsif line.action == :run
+          help.short
+        else
+          help.render(command)
+        end
+      )
       0
     rescue CommandLine::Error => error
       say(error.message)

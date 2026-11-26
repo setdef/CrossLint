@@ -15,6 +15,10 @@ module CrossLint
     # The help for `command`, or for the program when it is nil.
     def render: (?UsageSpec::Command? command) -> String
 
+    # The short help of the program: what it does, its first two examples,
+    # and a line saying --help lists every command.
+    def short: () -> String
+
     private
 
     @spec: UsageSpec

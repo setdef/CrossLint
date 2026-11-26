@@ -13,6 +13,14 @@ module CrossLint
       sections.compact.join("\n")
     end
 
+    def short
+      [
+        block(@spec.about),
+        examples(@spec.examples.first(2)),
+        "Run #{@spec.bin} --help to list every command.\n"
+      ].join("\n")
+    end
+
     private
 
     def program_sections

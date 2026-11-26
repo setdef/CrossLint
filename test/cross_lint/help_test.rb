@@ -5,6 +5,29 @@ require "test_helper"
 class HelpTest < Minitest::Test
   cover "CrossLint::Help*"
 
+  def test_renders_the_short_help
+    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).short
+      Does things
+
+      Examples:
+        Run it:
+          Runs the thing once.
+          $ tool run
+
+          $ tool stop
+
+      Run tool --help to list every command.
+    HELP
+  end
+
+  def test_renders_only_the_first_two_examples_in_the_short_help
+    source = File.read(File.join(__dir__, "..", "fixtures", "tool.usage.kdl"))
+    spec = CrossLint::UsageSpec.new(source.sub(%(example "tool stop"\n), %(example "tool stop"\nexample "tool go"\n)))
+
+    refute_includes CrossLint::Help.new(spec).short, "tool go"
+    assert_includes CrossLint::Help.new(spec).render, "tool go"
+  end
+
   def test_renders_the_programs_help
     assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).render
       Tool 1.2.3

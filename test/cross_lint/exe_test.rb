@@ -21,6 +21,7 @@ class ExeTest < Minitest::Test
     assert_equal [CrossLint::Help.new(shipped_spec).render(shipped_spec.commands.first), "", 0], crosslint("help", "check")
     assert_equal crosslint("check", "--help"), crosslint("help", "check")
     assert_equal crosslint("--help"), crosslint("help")
+    assert_equal [CrossLint::Help.new(shipped_spec).short, "", 0], crosslint
   end
 
   def test_help_exits_with_2_at_a_command_it_does_not_have
