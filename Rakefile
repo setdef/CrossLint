@@ -10,6 +10,21 @@ Minitest::TestTask.create(:test) do |task|
   task.warning = true
 end
 
+# The same tests under RBS's runtime type checker, which raises at every
+# call into CrossLint whose arguments, block, or result differ from
+# sig/.
+Minitest::TestTask.create("test:rbs") do |task|
+  task.test_globs = ["test/**/*_test.rb"]
+  task.warning = true
+  task.test_prelude = [
+    'ENV["RBS_TEST_TARGET"] = "CrossLint::*"',
+    'ENV["RBS_TEST_OPT"] = "-I sig"',
+    'ENV["RBS_TEST_RAISE"] = "true"',
+    'ENV["RBS_TEST_LOGLEVEL"] = "error"',
+    'require "rbs/test/setup"'
+  ].join("; ")
+end
+
 namespace :rbs do
   desc "Validate the signatures in sig/"
   task :validate do
@@ -61,7 +76,7 @@ task :reuse do
 end
 
 desc "Run every check CI runs"
-task check: ["rbs:validate", "rbs:comments", :steep, :test, :mutant, "usage:lint", "usage:reference", :reuse]
+task check: ["rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :mutant, "usage:lint", "usage:reference", :reuse]
 
 task default: :check
 

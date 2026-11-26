@@ -1,7 +1,8 @@
 # Every push to trunk, and every pull request: on Linux, the whole gate,
 # rake check (rbs validate, the comment on every public part of sig/,
-# Steep, the tests with their coverage, mutation testing, usage lint, the
-# check that docs/reference/cli.md is what usage generates, and REUSE);
+# Steep, the tests with their coverage, the tests under RBS's runtime
+# type checker, mutation testing, usage lint, the check that
+# docs/reference/cli.md is what usage generates, and REUSE);
 # and the tests on macOS and Windows, each with the Ruby and tools
 # mise.toml pins. The macOS and Windows jobs leave out the Gemfile's check
 # group, which only rake check uses.
