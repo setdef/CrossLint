@@ -28,7 +28,7 @@ class CheckCiPassedTest < Minitest::Test
   def test_asks_gh_for_the_status_and_conclusion_of_each_push_to_trunk_run_of_ci_on_the_commit
     run_script("completed success\n")
 
-    assert_equal %(run list --commit #{COMMIT} --workflow CI --event push --branch trunk --limit 100 --json status,conclusion --jq .[] | "\\(.status) \\(.conclusion)"\n),
+    assert_equal %(run list --commit #{COMMIT} --workflow ci.yml --event push --branch trunk --limit 100 --json status,conclusion --jq .[] | "\\(.status) \\(.conclusion)"\n),
       File.read(File.join(@folder, "call"))
   end
 
