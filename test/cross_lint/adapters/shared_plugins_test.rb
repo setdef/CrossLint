@@ -599,6 +599,14 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal "CrossLint keeps what it fetches in a cache folder, and found no home folder for it (couldn't find HOME); set XDG_CACHE_HOME", error.message
   end
 
+  def test_gives_no_folder_for_a_plugin_when_there_is_no_home_folder_for_the_cache_and_when_the_url_names_no_plugin
+    nothing = Adapters::GitSharedPlugins.new(err: @err, env: {}, windows: false, home: -> { raise ArgumentError, "couldn't find HOME" })
+
+    assert_nil nothing.cached("https://example.com/OWNER/signatures", "v1.0.0")
+    assert_nil port.cached("https://example.com/OWNER/a b", "v1.0.0")
+    assert_empty said
+  end
+
   def test_unsets_each_git_variable_and_no_other
     assert_equal({"GIT_DIR" => nil, "GIT_INDEX_FILE" => nil}, Adapters::GitEnvironment.cleared({"GIT_DIR" => "x", "PATH" => "y", "GIT_INDEX_FILE" => "z", "XGIT_A" => "b"}))
     assert_equal ENV.keys.grep(/\AGIT_/).sort, Adapters::GitEnvironment.cleared.keys.sort
