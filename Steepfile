@@ -7,7 +7,7 @@ target :lib do
   signature "sig"
   check "lib"
 
-  library "did_you_mean", "minitest", "pathname"
+  library "did_you_mean", "minitest", "open3", "pathname"
 
   configure_code_diagnostics(D::Ruby.default)
 end

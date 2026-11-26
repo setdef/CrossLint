@@ -4,8 +4,8 @@ require "test_helper"
 require "open3"
 require "rbconfig"
 
-# The crosslint program, run as a person runs it. These and
-# ArchitectureTest are the only tests that start a process.
+# The crosslint program, run as a person runs it. These, ArchitectureTest,
+# and GitProjectFilesTest are the only tests that start a process.
 class ExeTest < Minitest::Test
   EXE = File.join(ROOT, "exe", "crosslint")
 

@@ -1,0 +1,34 @@
+module CrossLint
+  module Adapters
+    # The project-files port for a project in a Git working tree: Git
+    # lists its files, run as a program with arguments, and the filesystem
+    # says whether a path exists. A tracked file deleted from the working
+    # tree, and a folder Git lists, such as a submodule, aren't among the
+    # files.
+    class GitProjectFiles
+      include _ProjectFiles
+
+      # The arguments that list the working tree's files: tracked, and
+      # untracked but not ignored, each ended by a NUL.
+      LIST: Array[String]
+
+      # A port that runs `git`, the command found on the PATH unless it
+      # names another. Raises Core::Mistake from `files` when the command
+      # isn't there.
+      def initialize: (?git: String) -> void
+
+      # The message for a project whose root, `root`, isn't in a Git
+      # working tree.
+      def self.outside: (String root) -> String
+
+      private
+
+      @git: String
+
+      @entries: Hash[String, Array[String]]
+
+      # The names in `folder`, or none when it isn't a folder, read once.
+      def entries: (String folder) -> Array[String]
+    end
+  end
+end

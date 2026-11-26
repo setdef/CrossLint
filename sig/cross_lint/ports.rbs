@@ -32,4 +32,23 @@ module CrossLint
     # file and the line, at a mistake in it.
     def read: (String root, String folder) -> Core::Manifest?
   end
+
+  # Where the core finds a project's files, as Git sees its working tree,
+  # and asks whether a path exists. Adapters::GitProjectFiles asks Git and
+  # the filesystem, and Adapters::MemoryProjectFiles holds the files in
+  # memory; both pass Testing::ProjectFilesContract.
+  interface _ProjectFiles
+    # The files of the project whose root is `root`, as Git sees its
+    # working tree: tracked files, and untracked files Git doesn't ignore,
+    # with nothing under `.git/`. Each is a path relative to `root`, with
+    # `/` between folders, in no particular order. Raises Core::Mistake
+    # when `root` isn't in a Git working tree.
+    def files: (String root) -> Array[String]
+
+    # Whether a file or folder exists at `path`, relative to `root` with
+    # `/` between folders, by its exact name: a name that differs only in
+    # case doesn't count, even on a filesystem that ignores case. A file
+    # Git ignores counts.
+    def exist?: (String root, String path) -> bool
+  end
 end

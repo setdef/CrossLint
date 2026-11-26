@@ -166,5 +166,29 @@ module CrossLint
       # Lines differ between adapters, so conditions are compared without them.
       def without_lines(condition) = condition.inspect.gsub(/,? line=\d+/, "")
     end
+
+    module ProjectFilesContract
+      def test_lists_every_file_git_sees_and_none_it_ignores
+        listed = ["README.md", "lib/app.rb", "lib/app/deep/one.rb", ".hidden"]
+        port = project_files_port(listed:, ignored: ["coverage/index.html", "lib/app.rb.orig"])
+
+        assert_equal listed.sort, port.files(project_root).sort
+      end
+
+      def test_says_whether_a_path_exists_by_its_exact_name
+        port = project_files_port(listed: ["lib/app/one.rb"], ignored: ["tmp/cache.bin"])
+        found = ["lib/app/one.rb", "lib/app", "tmp/cache.bin", "lib/app/One.rb", "Lib/app/one.rb", "lib/app/two.rb", "lib/app/one"]
+
+        assert_equal [true, true, true, false, false, false, false], found.map { |path| port.exist?(project_root, path) }
+      end
+
+      def test_stops_at_a_root_outside_a_git_working_tree
+        root = outside_root
+        mistake = assert_raises(Core::Mistake) { project_files_port(listed: []).files(root) }
+
+        assert_equal "#{root} isn't in a Git working tree, and CrossLint lists a project's files with Git; " \
+          "run git init in the project's root", mistake.message
+      end
+    end
   end
 end

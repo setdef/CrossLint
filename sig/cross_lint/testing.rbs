@@ -142,5 +142,32 @@ module CrossLint
       # The condition's inspection without its lines.
       def without_lines: (untyped condition) -> String
     end
+
+    # What a test of a project-files adapter defines.
+    interface _ProjectFilesTest
+      # A port for the project at project_root, whose files are `listed`,
+      # which Git lists, some tracked and some not, and `ignored`, which
+      # exist but Git ignores. Each is a path relative to the root, with `/`.
+      def project_files_port: (listed: Array[String], ?ignored: Array[String]) -> _ProjectFiles
+
+      # The absolute path of the project's root.
+      def project_root: () -> String
+
+      # The absolute path of a folder that isn't in a Git working tree.
+      def outside_root: () -> String
+    end
+
+    # The tests every adapter of the project-files port passes.
+    module ProjectFilesContract : _ProjectFilesTest, Minitest::Assertions
+      # files lists what Git lists, and nothing it ignores.
+      def test_lists_every_file_git_sees_and_none_it_ignores: () -> void
+
+      # exist? finds files and folders, ignored ones included, by their
+      # exact names.
+      def test_says_whether_a_path_exists_by_its_exact_name: () -> void
+
+      # files raises a mistake for a root outside a Git working tree.
+      def test_stops_at_a_root_outside_a_git_working_tree: () -> void
+    end
   end
 end
