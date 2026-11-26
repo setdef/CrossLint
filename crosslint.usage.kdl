@@ -28,7 +28,7 @@ example "crosslint init --from-ng-nudge" header="Move a project from ng-nudge"
 
 exit_code 0 "Every check passed, or the command did what it was asked."
 exit_code 1 "A check failed: there is a violation that fails it, or a stale entry in the debt file."
-exit_code 2 "CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start."
+exit_code 2 "CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault."
 exit_code 130 "You interrupted CrossLint with Ctrl-C."
 
 flag "-q --quiet" global=#true help="Print only what fails the check, with no summary"

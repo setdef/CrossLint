@@ -12,14 +12,16 @@ What loading and running a plugin must guarantee, and the traps known so far. Th
 
 - A rule written in Ruby runs on the Ruby CrossLint carries, so a project needs no Ruby. It can require Ruby's standard library and files in its plugin's folder.
 - **A gem CrossLint wasn't built with can't be loaded,** and requiring one stops the plugin with a message naming the gem, not a Ruby `LoadError`. `bundler/inline` would install a gem into CrossLint's install folder at run time, so CrossLint must not offer it.
-- A rule that raises an exception is reported as a fault in its plugin, naming the plugin, the rule, and the artifact, with the trace under `--debug`. The other plugins still run.
+- A rule that raises an exception is reported as a fault in its plugin, naming the plugin, the rule, and the artifact, with the trace under `--debug`. The other plugins still run, and the check exits with 2.
+- **Files a rule requires load into one Ruby,** so two plugins whose required files define the same top-level constant collide. A rule keeps its constants inside its class.
 
 ## Helpers
 
 - A helper runs on the project's runtime for its language, found on the `PATH`, and its plugin declares which command it needs. A command not on the `PATH` stops CrossLint with exit status 2 before any check starts, naming the plugin and the command.
 - **On Windows, find the command with each extension in `PATHEXT`,** since `node` is `node.exe` or `node.cmd` there.
 - Requests and responses are JSON on the helper's standard input and output, one per line. Its standard error goes to CrossLint's standard error under `--debug`, and to its message when it fails.
-- **A helper that hangs is ended after a time limit, with everything it started.** Ending only the helper's process leaves its children running: on macOS and Linux, start it in a new process group and end the group; on Windows, put it in a job object. On Windows, `taskkill /T` alone leaves an MSYS2 child running.
+- **A helper that gives no answer for 60 seconds is ended, with everything it started.** Ending only the helper's process leaves its children running: on macOS and Linux, start it in a new process group and end the group; on Windows, put it in a job object. On Windows, `taskkill /T` alone leaves an MSYS2 child running.
+- **A helper runs with the environment CrossLint was started with,** not the one the app sets up for the Ruby it carries, so `RUBYOPT`, `BUNDLE_*`, and the app's folders on `PATH` never reach it; a helper that runs `ruby` gets the project's Ruby, not CrossLint's.
 - **On Windows, write to a helper in binary mode,** or Ruby turns each `\n` into `\r\n`; and a helper that has already exited makes closing its input raise `EPIPE`, which is not an error of the check.
 - The Angular plugin's helper asks the project's `typescript` package, from its `node_modules`, so its answers match the project's compiler version.
 

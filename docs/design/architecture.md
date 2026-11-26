@@ -6,7 +6,7 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 
 | Part | Where | Holds | Requires |
 | --- | --- | --- | --- |
-| Core | `lib/cross_lint/core/` | The domain's value objects, and one use case per command | Ruby's core and standard library |
+| Core | `lib/cross_lint/core/` | The domain's value objects, one use case per command, and `CrossLint::Rule`, the class a rule in Ruby inherits from | Ruby's core and standard library |
 | Ports | `sig/cross_lint/ports.rbs` | One RBS interface for each thing outside the core | Nothing; Ruby never loads them |
 | Adapters | `lib/cross_lint/adapters/` | One implementation of a port per format or system, and an in-memory one of each | The core, and gems |
 | Contract tests | `lib/cross_lint/testing.rb` | For each port, the Minitest tests every adapter of it passes | The core, and Minitest |
@@ -16,7 +16,7 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 
 - **The domain:** artifact, companion, policy, rule result, violation with its identity, and debt entry, by the [glossary](../glossary.md)'s words. Each is immutable, and defined as `class Violation < Data.define(...)`: RBS's runtime checker misses a class defined with a block passed to `Data.define`.
 - **The use cases:** check, update the debt, initialize a configuration, update shared plugins. A use case takes its ports as keyword arguments and returns a value; it never prints, reads a file, or exits.
-- **The ports:** project files (which files exist, as Git sees the working tree), configuration, plugin manifests, debt file, Ruby rules, helpers, and report. Each one's contract is its RBS interface plus its contract tests: change the tests first, then the interface, then the adapters.
+- **The ports:** project files (which files exist, as Git sees the working tree), configuration, plugin manifests, debt file, plugins' Ruby, helpers, and report. Each one's contract is its RBS interface plus its contract tests: change the tests first, then the interface, then the adapters.
 
 ## Rules
 

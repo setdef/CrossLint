@@ -55,7 +55,7 @@ crosslint init --from-ng-nudge
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
 | `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
-| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start. |
+| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
 ## `crosslint check`
@@ -85,7 +85,7 @@ Violations listed in the debt file don't fail the check. An entry that no violat
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
 | `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
-| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start. |
+| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
 ### Examples
@@ -132,7 +132,7 @@ With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a confi
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
 | `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
-| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start. |
+| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
 ### Examples
@@ -163,7 +163,7 @@ Moves each shared plugin the configuration lists, a Git repository with a ref, t
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
 | `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
-| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start. |
+| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
 ### Examples
@@ -194,7 +194,7 @@ With a command, explains it, as crosslint COMMAND --help does. Without one, list
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
 | `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
-| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start. |
+| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
 ### Examples

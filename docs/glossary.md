@@ -17,6 +17,7 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **condition** | What a policy's `when` says must hold for an artifact before the policy applies to it, such as `companion-exists "stub"`. | filter, predicate |
 | **rule** | One check of one artifact, such as "the companion exists" or "the stub declares every input the component has". A rule runs only where a policy applies it. | lint, assertion, test |
 | **violation** | What a rule reports when an artifact fails it: the plugin and policy that ran the rule, the artifact with its role, a message, a severity, and a detail where one artifact can fail the rule in several ways, such as a missing member's name. | error (an error is one severity), offense, problem |
+| **fault** | What stops a plugin: an exception its Ruby raises, a gem it requires that CrossLint wasn't built with, or a helper that fails. The plugin reports nothing else, and `crosslint check` exits with 2. | crash, plugin error |
 | **notice** | A warning CrossLint gives about a plugin rather than an artifact, such as an artifact whose `files` pattern matches no file. A notice has no policy, and debt can't record it. | violation (a violation is about an artifact) |
 | **built-in rule** | A rule that ships inside CrossLint, such as `companion-exists`, which any plugin's policy can run without code. | core rule, standard rule |
 | **severity** | `error`, which fails the check, or `warning`, which is reported and fails the check only with `--warnings=error`. | level |

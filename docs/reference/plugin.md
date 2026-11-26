@@ -105,7 +105,21 @@ policy "signature-matches" {
 }
 ```
 
-The rule's file runs on the Ruby that CrossLint carries, so a project needs no Ruby installed. It can use Ruby's standard library and other files in the plugin's folder. A gem that CrossLint wasn't built with can't be loaded.
+The artifact a rule gets has these methods:
+
+| Method | Returns |
+| --- | --- |
+| `path` | The primary file's path, relative to the project's root. |
+| `role` | The artifact's name, such as `ruby-file`. |
+| `match` | What each placeholder matched, by name: `artifact.match["path"]`. |
+| `read` | The primary file's contents. |
+| `companion(NAME)` | The companion of that name, with `name`, `path`, `exist?`, and `read`. |
+
+`violation(artifact, message, detail: TEXT)` makes a violation with a detail, for a rule that can find several things wrong with one artifact, such as each missing member by name. Debt records each detail as a separate entry.
+
+CrossLint makes one instance of the class per check, with no arguments, and calls `check` once for each artifact a policy applies the rule to. A policy's `rule` line gives a rule written in Ruby no arguments; a line that does is a mistake.
+
+The rule's file runs on the Ruby that CrossLint carries, so a project needs no Ruby installed. It can use Ruby's standard library and other files in the plugin's folder. Requiring a gem CrossLint wasn't built with, or `bundler/inline`, stops the plugin with a message naming it. Anything the file or `check` raises is a fault: the plugin reports nothing else, the other plugins still run, and `crosslint check` exits with 2. `--debug` shows where it was raised.
 
 ### Helpers
 
@@ -114,5 +128,7 @@ A plugin that reads files of another language can carry a helper in that languag
 ```kdl
 helper "members" command="node" file="helpers/members.mjs"
 ```
+
+CrossLint starts a helper at the first call, as `COMMAND FILE` in the project's root, and ends it, with everything it started, when the check ends. Each request and each answer is one line of JSON. The helper's standard error appears under `--debug`. A helper that exits, answers with a line that isn't JSON, or doesn't answer within 60 seconds is a fault, and the message includes what it wrote to standard error.
 
 A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, and a message naming the plugin and the command it needs.

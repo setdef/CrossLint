@@ -17,9 +17,9 @@ What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/RE
 
 `bundle exec rake check` runs every check CI runs, and a change passes all of them before it's pushed:
 
-- the test suite, covering every line and branch of `lib/`;
+- the test suite, covering every line and branch of `lib/` but the other system's process tree (`job_object.rb` off Windows, `process_group.rb` on it);
 - the same suite under RBS's runtime type checker, which compares every call into CrossLint with `sig/`;
-- mutation testing with mutant, which a test must catch every change of;
+- mutation testing with mutant, `JobObject` aside, which a test must catch every change of;
 - Steep, checking `lib/` against `sig/`, `rbs validate`, and the check that every public declaration in `sig/` has a comment;
 - Standard, for style, set to Ruby 3.3's syntax, which mutant reads;
 - every Ruby example in the documentation, run and checked against the results it shows;
@@ -41,4 +41,4 @@ Code or prose taken from [ng-nudge](https://github.com/OverTheTopMarketing/ng-nu
 
 ## Releases
 
-Releases are tags and GitHub releases, cut whenever `trunk` is ready. To cut one, tag a commit CI passed as `v` and the version in `crosslint.usage.kdl`, such as `v0.1.0`, and push the tag: the Release workflow builds each platform's archive from a clean checkout, runs each with no Ruby installed, and publishes the archives with a `SHA256SUMS` file. It refuses a tag that doesn't match the spec's version. Every version is `0.X.Y`, three plain integers, with no prerelease form such as `-rc.1` and no build metadata, and the version stays below 1.0.0. Nothing is published to a registry outside GitHub.
+Releases are tags and GitHub releases, cut whenever `trunk` is ready. To cut one, tag a commit CI passed as `v` and the version in `crosslint.usage.kdl`, such as `v0.1.0`, and push the tag: the Release workflow builds each platform's archive from a clean checkout, runs each with no Ruby to fall back on (on Linux in a container with no Ruby, and on macOS and Windows with an empty `PATH`), and publishes the archives with a `SHA256SUMS` file. It refuses a tag that doesn't match the spec's version. Every version is `0.X.Y`, three plain integers, with no prerelease form such as `-rc.1` and no build metadata, and the version stays below 1.0.0. Nothing is published to a registry outside GitHub.
