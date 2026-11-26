@@ -1,0 +1,28 @@
+module CrossLint
+  # The composition root: builds the adapters, and hands them to a use
+  # case.
+  class App
+    # The folder of CrossLint's built-in plugins, one folder each.
+    PLUGINS: String
+
+    # An app that reads the configuration through `configuration` and the
+    # manifests through `manifests`, with the built-in plugins in
+    # `plugins`.
+    def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?plugins: String) -> void
+
+    # The project whose root is `start` or the nearest folder above it
+    # with a configuration, read and checked (Core::LoadProject).
+    def load_project: (String start) -> Core::Project
+
+    private
+
+    @configuration: _Configuration
+
+    @manifests: _PluginManifests
+
+    @built_in: Hash[String, String]
+
+    # The folder of each built-in plugin in `folder`, by name.
+    def built_in_plugins: (String folder) -> Hash[String, String]
+  end
+end

@@ -10,6 +10,7 @@ class CoreValuesTest < Minitest::Test
   cover "CrossLint::Core::ArtifactDeclaration*"
   cover "CrossLint::Core::ListedPlugin*"
   cover "CrossLint::Core::BuiltInRule*"
+  cover "CrossLint::Core::Project*"
 
   include CrossLint::Core
 
@@ -64,5 +65,25 @@ class CoreValuesTest < Minitest::Test
       BuiltInRule::ALL.map { |rule| [rule.name, rule.arguments, rule.severity] }
     assert_equal BuiltInRule::ALL.last, BuiltInRule.named("companion-absent")
     assert_nil BuiltInRule.named("companion")
+  end
+
+  def test_a_project_lists_the_ruby_rules_no_policy_of_their_plugin_runs
+    used = RuleDeclaration.new(name: "used", ruby: "a.rb", line: 1)
+    unused = RuleDeclaration.new(name: "unused", ruby: "b.rb", line: 2)
+    policy = Policy.new(name: "p", applies_to: AppliesTo.new(artifact: "a", line: 4), condition: nil,
+      rules: [PolicyRule.new(name: "used", arguments: {}, severity: nil, line: 5)], line: 3)
+    one = plugin("one", Manifest.new(file: "one/plugin.kdl", artifacts: [], policies: [policy], rules: [used, unused], helpers: []))
+    two = plugin("two", Manifest.new(file: "two/plugin.kdl", artifacts: [], policies: [], rules: [used], helpers: []))
+    configuration = Configuration.new(file: ".config/crosslint.kdl", plugins: [one.listing, two.listing], policies: [],
+      warnings: nil, verbosity: nil)
+    project = Project.new(root: "/app", configuration:, plugins: [one, two])
+
+    assert_equal [[one, unused], [two, used]], project.unused_rules
+  end
+
+  private
+
+  def plugin(name, manifest)
+    Plugin.new(name:, folder: "/app/#{name}", listing: ListedPlugin.new(name: "./#{name}", ref: nil, settings: [], line: 1), manifest:)
   end
 end

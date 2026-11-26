@@ -1,0 +1,66 @@
+module CrossLint
+  module Core
+    # Finds a project's root, reads its configuration and the manifest of
+    # every plugin it lists, and checks them against each other, all before
+    # CrossLint looks at any other file. It raises Mistake at the first
+    # mistake, naming the file and the line, and the nearest valid
+    # spelling where one is close.
+    class LoadProject
+      # A use case that reads through `configuration` and `manifests`.
+      # `built_in` has the folder of each built-in plugin, by name.
+      def initialize: (configuration: _Configuration, manifests: _PluginManifests, ?built_in: Hash[String, String]) -> void
+
+      # The project whose root is `start` or the nearest folder above it
+      # with a configuration.
+      def call: (String start) -> Project
+
+      private
+
+      @configuration: _Configuration
+
+      @manifests: _PluginManifests
+
+      @built_in: Hash[String, String]
+
+      # The plugin listed at `index`, with its manifest, checked against
+      # the plugins `loaded` before it.
+      def plugin: (String root, Configuration configuration, Integer index, Array[Plugin] loaded) -> Plugin
+
+      # The folder the listed plugin is in, as a base folder and a path
+      # relative to it.
+      def place: (String root, ListedPlugin listing, ^(String message, ?Integer line) -> bot fail_at) -> [String, String]
+
+      # A local plugin's path with no `.`, no `..` that can go, and no
+      # empty segment, such as "x" for "./a/../x/".
+      def clean: (String name) -> String
+
+      # Checks that a plugin's manifest declares each name once, and
+      # agrees with itself and with the other plugins.
+      def check_manifest: (Plugin plugin, Array[Plugin] plugins) -> void
+
+      # Checks that each of an artifact's companions has its name once
+      # and only placeholders its files pattern has.
+      def check_artifact: (ArtifactDeclaration artifact, String file) -> void
+
+      # Checks that no two of `declarations` have the same name.
+      def once: (Array[ArtifactDeclaration | CompanionDeclaration | RuleDeclaration | HelperDeclaration | Policy] declarations,
+                 String kind, String file) -> void
+
+      # Checks a policy's artifact, condition, and rules.
+      def check_policy: (Plugin plugin, Policy policy, Array[Plugin] plugins) -> void
+
+      # The artifact a policy applies to.
+      def target: (Plugin plugin, AppliesTo applies_to, Array[Plugin] plugins) -> ArtifactDeclaration
+
+      # Checks that a policy's rule exists and has the arguments it takes.
+      def check_rule: (Plugin plugin, ArtifactDeclaration artifact, PolicyRule rule) -> void
+
+      # Checks that `artifact` has a companion called `name`.
+      def companion: (ArtifactDeclaration artifact, String name, String file, Integer line) -> void
+
+      # Checks that each policy the configuration changes is a listed
+      # plugin's, and is changed once.
+      def check_policy_settings: (Configuration configuration, Array[Plugin] plugins) -> void
+    end
+  end
+end

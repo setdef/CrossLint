@@ -29,9 +29,10 @@ module CrossLint
 
     # `argv` is the command line's words, `out` and `err` standard output
     # and standard error, and `env` the environment. `spec` is the usage
-    # spec, which is read from UsageSpec::PATH when it is nil.
+    # spec, which is read from UsageSpec::PATH when it is nil; and `app` is
+    # the composition root, an App when it is nil.
     def initialize: (Array[String] argv, out: _Output, err: _Output, env: _Environment,
-                     ?spec: UsageSpec?) -> void
+                     ?spec: UsageSpec?, ?app: App?) -> void
 
     # Runs the command line, and returns the exit status.
     def run: () -> Integer
@@ -47,6 +48,13 @@ module CrossLint
     @env: _Environment
 
     @spec: UsageSpec?
+
+    @app: App?
+
+    # Runs crosslint check: reads the project's configuration and plugins,
+    # reports each rule no policy runs, and stops, since checking files
+    # doesn't work yet.
+    def check: (CommandLine line) -> Integer
 
     # Writes `message` to standard error, and returns exit status 2.
     def say: (String message) -> Integer

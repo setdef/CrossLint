@@ -40,6 +40,12 @@ class CommandLineTest < Minitest::Test
     assert_equal({"dry-run" => true, "out" => "x"}, read("run", "-no", "x").flags)
   end
 
+  def test_gives_the_value_of_a_flag_that_takes_one
+    line = read("--verbose", "run", "-o", "x")
+
+    assert_equal ["x", nil, nil, "auto"], [line.value("out"), line.value("verbose"), line.value("mode"), read.value("color")]
+  end
+
   def test_a_value_given_wins_over_the_default
     assert_equal({"color" => "never"}, read("--color", "never").flags)
   end

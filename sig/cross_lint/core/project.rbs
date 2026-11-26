@@ -1,0 +1,47 @@
+module CrossLint
+  module Core
+    # A plugin the configuration lists, with its manifest read.
+    class Plugin < Data
+      # The plugin's name: its folder's name, which its violations carry.
+      attr_reader name: String
+
+      # The plugin's folder, as an absolute path.
+      attr_reader folder: String
+
+      # The plugin as the configuration lists it.
+      attr_reader listing: ListedPlugin
+
+      # What the plugin declares.
+      attr_reader manifest: Manifest
+
+      # A plugin with these fields.
+      def self.new: (name: String, folder: String, listing: ListedPlugin, manifest: Manifest) -> instance
+
+      # A plugin with these fields.
+      def initialize: (name: String, folder: String, listing: ListedPlugin, manifest: Manifest) -> void
+    end
+
+    # A project whose configuration and plugins CrossLint has read and
+    # checked against each other.
+    class Project < Data
+      # The project's root, as an absolute path.
+      attr_reader root: String
+
+      # The project's configuration.
+      attr_reader configuration: Configuration
+
+      # The listed plugins, in the order they are listed.
+      attr_reader plugins: Array[Plugin]
+
+      # A project with these fields.
+      def self.new: (root: String, configuration: Configuration, plugins: Array[Plugin]) -> instance
+
+      # A project with these fields.
+      def initialize: (root: String, configuration: Configuration, plugins: Array[Plugin]) -> void
+
+      # Each rule written in Ruby that no policy of its plugin runs, with
+      # its plugin, so it is reported and never loaded.
+      def unused_rules: () -> Array[[Plugin, RuleDeclaration]]
+    end
+  end
+end

@@ -34,6 +34,10 @@ module CrossLint
     # Reads `argv` by `spec`, and raises Error at a mistake.
     def initialize: (UsageSpec spec, Array[String] argv) -> void
 
+    # The value given for the flag `long`, or its default, or nil for a
+    # flag that takes no value or has none.
+    def value: (String long) -> String?
+
     # The flags known where the reading is: the top-level flags before a
     # command, and the command's and the global ones after it, with
     # --help and --version.

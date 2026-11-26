@@ -1,0 +1,3 @@
+// CrossLint's own configuration: the plugin that checks each file under
+// lib/ has its signature under sig/.
+plugin ".config/crosslint/signatures"

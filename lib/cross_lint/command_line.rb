@@ -26,6 +26,13 @@ module CrossLint
       known_flags.each { |flag| @flags[flag.long] ||= flag.default if flag.default }
     end
 
+    def value(long)
+      value = flags[long]
+      case value
+      when String then value
+      end
+    end
+
     def known_flags
       command = @command
       flags = command ? command.flags + @spec.global_flags : @spec.flags
