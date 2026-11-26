@@ -135,7 +135,7 @@ task :build do
 end
 
 desc "Run the built app with nothing on PATH, and check its --version and --help, its rules in Ruby and helpers, the environment of a helper, " \
-  "and its built-in plugins"
+  "its built-in plugins, and a shared plugin"
 task "build:check" do
   require_relative "lib/cross_lint"
   app = Dir["build/dist/*/crosslint{,.exe}"].first || abort("rake build:check: no app in build/dist; run rake build")
@@ -156,6 +156,52 @@ task "build:check" do
   Rake::Task["build:check:environment"].invoke(app)
   Rake::Task["build:check:debt"].invoke(app)
   Rake::Task["build:check:angular"].invoke(app)
+  Rake::Task["build:check:shared"].invoke(app)
+end
+
+# A project that lists a shared plugin at an https URL, which a Git
+# setting in a home folder of the task's own sends to a repository in a
+# temporary folder, so that no request leaves the computer. The app
+# fetches it into a cache folder of the task's own, uses it, and then,
+# with the repository gone, uses the copy without a fetch. PATH holds only
+# Git's folder.
+task "build:check:shared", [:app] do |_, arguments|
+  app = File.expand_path(arguments.fetch(:app))
+  url = "https://example.test/OWNER/signatures"
+  plugin = %(artifact "doc" {\n  files "{path}.md"\n  companion "note" "{path}.txt"\n}\n) +
+    %(policy "has-note" {\n  applies-to "doc"\n  rule "companion-exists" companion="note"\n}\n)
+  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  git = File.dirname(finder.find("git") || abort("rake build:check: no git on the PATH"))
+  fetching = "crosslint: fetching #{url} at v1.0.0"
+  violation = "a.md: no note file at a.txt (signatures/has-note)"
+  Dir.mktmpdir do |base|
+    origin = File.join(base, "origin", "signatures")
+    files = {File.join(origin, "plugin.kdl") => plugin, File.join(base, "home", ".gitconfig") => %([url "file:///#{origin.delete_prefix("/")}"]\n\tinsteadOf = #{url}\n),
+             File.join(base, "project", ".config/crosslint/config.kdl") => %(plugin "#{url}" ref="v1.0.0"\n), File.join(base, "project", "a.md") => ""}
+    files.each do |file, text|
+      FileUtils.mkdir_p(File.dirname(file))
+      File.binwrite(file, text)
+    end
+    Bundler.with_unbundled_env do
+      settings = %w[-c user.name=CrossLint -c user.email=crosslint@example.test -c commit.gpgsign=false -c tag.gpgsign=false]
+      [%w[init -q -b main], %w[add -A], %w[commit -q -m one], %w[tag v1.0.0]].each do |command|
+        system("git", *settings, *command, chdir: origin) || abort("rake build:check: git #{command.first} failed")
+      end
+      system("git", "init", "-q", chdir: File.join(base, "project")) || abort("rake build:check: git init failed")
+      home = File.join(base, "home")
+      cache = File.join(base, "cache")
+      env = {"PATH" => git, "HOME" => home, "USERPROFILE" => home, "XDG_CACHE_HOME" => cache, "LOCALAPPDATA" => cache}
+      [[true, "fetches a shared plugin"], [false, "uses the copy of a shared plugin, with no fetch"]].each do |fetches, what|
+        FileUtils.rm_rf(File.join(base, "origin")) unless fetches
+        actual = IO.popen(env, [app, "check", "-C", File.join(base, "project")], err: %i[child out], &:read)
+        lines = actual.lines(chomp: true)
+        abort "rake build:check: #{app} check exited with #{$?.exitstatus}, not 1:\n#{actual}" unless $?.exitstatus == 1
+        abort "rake build:check: #{app} check printed:\n#{actual}" unless lines.include?(violation) && lines.include?(fetching) == fetches
+
+        puts "#{app} check: #{what}"
+      end
+    end
+  end
 end
 
 # A project that lists the built-in Angular plugin, which the app
