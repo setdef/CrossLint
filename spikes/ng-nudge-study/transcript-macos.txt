@@ -542,3 +542,49 @@ $ ng-nudge
 No artifacts require verification.
 [exit 0]
 
+=== 22-warnings-error-quiet
+$ ng-nudge --warnings=error
+✓ db
+⚠ api:
+   ⚠ spec file missing
+
+Checked 2 artifact(s).
+[exit 1]
+$ ng-nudge --warnings=error --quiet
+[exit 1]
+
+=== 23-violation-without-rule
+$ ng-nudge 
+✗ api:
+   ✗ note missing
+
+Checked 1 artifact(s).
+[exit 1]
+$ ng-nudge --update-debt
+Debt entry 1 has an empty or missing rule
+[exit 1]
+$ ls .config/ng-nudge
+policies
+$ ng-nudge 
+Cannot match a violation without a ruleName: app/api — note missing
+[exit 1]
+
+=== 24-disabled-rule-update-drops-comment
+$ cat .config/ng-nudge/debt.tsv
+Rule	Artifact	Comment
+spec-exists	app/api/api	legacy, refactor planned
+$ ng-nudge --update-debt
+✓ api
+
+Checked 1 artifact(s).
+
+★  Debt paid off:
+   app/api/api no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+
+Updated $PROJECT/.config/ng-nudge/debt (0 entries)
+[exit 1]
+$ cat .config/ng-nudge/debt.tsv
+
+
