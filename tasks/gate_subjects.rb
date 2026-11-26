@@ -19,10 +19,12 @@ module GateSubjects
   end
 
   # The name a test file's path gives to the classes it covers, or nil for
-  # a file that isn't named like a test of one.
+  # a file that isn't named like a test of one. Case doesn't count, and
+  # nor do underscores, so cli_test.rb covers CrossLint::CLI, and kdl
+  # covers KDL: the prefix is lowercase, to match against lowercased names.
   def class_prefix(path)
     stem = path[%r{\Atest/(.+)_test\.rb\z}, 1]
-    stem&.split("/")&.map { |part| part.split("_").map(&:capitalize).join }&.join("::")
+    stem&.split("/")&.map { |part| part.delete("_").downcase }&.join("::")
   end
 
   def plugin_name(path)
@@ -47,7 +49,7 @@ module GateSubjects
           expressions = plugin_expressions(configured, plugin)
           expressions.empty? ? [] : list.call(expressions)
         elsif (prefix = class_prefix(file))
-          all.select { |name| name.start_with?(prefix) }
+          all.select { |name| name.downcase.start_with?(prefix) }
         else
           []
         end
