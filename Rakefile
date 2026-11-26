@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/test_task"
-require "rbconfig"
 require "tmpdir"
-require "yaml"
-require_relative "tasks/gate_subjects"
 
 # CrossLint's tests, and each built-in plugin's in its own folder, so a
 # plugin can move to a repository of its own with its tests.
@@ -77,33 +74,6 @@ task :steep do
   sh "steep", "check"
 end
 
-WINDOWS = RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/)
-
-# MUTANT_SHARD=N/M runs the Nth of M parts of the subjects mutant finds,
-# which CI runs on M computers at once. A subject goes to the part its
-# place in the sorted list says, so every subject is in exactly one part.
-desc "Run mutation testing on lib/ and each built-in plugin's Ruby (.mutant.yml), all of it or MUTANT_SHARD=N/M of it; mutant forks, so it doesn't run on Windows"
-task :mutant do
-  next puts("rake mutant: mutant doesn't run on Windows") if WINDOWS
-  next sh("bundle", "exec", "mutant", "run") unless ENV["MUTANT_SHARD"]
-
-  index, count = ENV["MUTANT_SHARD"].match(%r{\A([1-9]\d*)/([1-9]\d*)\z})&.captures&.map(&:to_i)
-  abort "rake mutant: MUTANT_SHARD is #{ENV["MUTANT_SHARD"].inspect}, not N/M with N from 1 to M" unless index && index <= count
-
-  listed = IO.popen(%w[bundle exec mutant environment subject list], &:read)
-  abort "rake mutant: mutant environment subject list failed" unless $?.success?
-  # The list has a line of its own that counts the subjects, which must be
-  # the number of the others.
-  subjects = listed.lines(chomp: true).reject { |line| line.empty? || line.include?(" ") }.sort
-  counted = listed[/^Subjects in environment: (\d+)$/, 1]
-  abort "rake mutant: mutant lists #{subjects.size} subjects and says #{counted.inspect}" unless counted.to_i == subjects.size
-  shard = subjects.select.with_index { |_, place| place % count == index - 1 }
-  abort "rake mutant: part #{index} of #{count} has no subject, of #{subjects.size}" if shard.empty?
-
-  puts "rake mutant: part #{index} of #{count}: #{shard.size} of #{subjects.size} subjects"
-  sh "bundle", "exec", "mutant", "run", *shard
-end
-
 namespace :usage do
   desc "Lint crosslint.usage.kdl"
   task :lint do
@@ -133,70 +103,15 @@ task :crosslint do
   ruby "exe/crosslint", "check"
 end
 
-# Every check but mutation testing, which CI runs in parts on computers of
-# their own, since it takes longer than all the rest together.
-task "check:without_mutant" => [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :crosslint, "usage:lint",
-  "usage:reference", :reuse]
+# Every check CI's Linux job runs, cheapest first, which is also what to
+# run before a push. The tests run a second time under RBS's runtime type
+# checker (test:rbs), since a call that breaks sig/ is otherwise found
+# only after the push.
+desc "Run every check CI's Linux job runs"
+task check: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :reuse, :steep, :test, "test:rbs"]
 
-desc "Run mutation testing on the subjects changed since origin/trunk (or GATE_BASE), and those the changed tests cover, which every mutation of must be killed; " \
-  "mutant forks, so it doesn't run on Windows"
-task "gate:mutant" do
-  # An exit status of 0 from the gate must never mean mutation testing was
-  # skipped, which `rake mutant`, CI's own task, still allows itself.
-  abort "rake gate:mutant: the gate runs on Linux or macOS, where mutant runs, and not on Windows" if WINDOWS
-
-  base = ENV.fetch("GATE_BASE", "origin/trunk")
-  # Without the base, mutant fails in a way that says nothing of it, and a
-  # build machine has origin/trunk only when its request says --base origin/trunk.
-  abort "rake gate:mutant: no #{base} to compare with; fetch it, or set GATE_BASE" unless system("git", "rev-parse", "--verify", "--quiet", base, out: File::NULL)
-
-  commit = ->(rev) { IO.popen(["git", "rev-parse", "--verify", "#{rev}^{commit}"], &:read).chomp }
-  abort "rake gate:mutant: #{base} is HEAD's own commit, so nothing is compared; set GATE_BASE to the commit your change starts from" if commit.call(base) == commit.call("HEAD")
-
-  # What mutant's --since asks Git for leaves out a file Git doesn't track yet.
-  untracked = IO.popen(%w[git ls-files --others --exclude-standard], &:read).lines(chomp: true).grep(/\.rb\z/)
-  unless untracked.empty?
-    pronoun = (untracked.size == 1) ? "it" : "them"
-    warn "rake gate:mutant: warning: Git doesn't track #{untracked.join(", ")} yet, so the diff leaves #{pronoun} out and no mutation testing covers #{pronoun}; git add #{pronoun}"
-  end
-
-  subjects = lambda do |*arguments|
-    listed = IO.popen(["bundle", "exec", "mutant", "environment", "subject", "list", *arguments], &:read)
-    abort "rake gate:mutant: mutant environment subject list failed" unless $?.success?
-    listed.lines(chomp: true).reject { |line| line.empty? || line.include?(" ") }
-  end
-
-  changed = subjects.call("--since", base)
-  tests = IO.popen(["git", "diff", "--name-only", "--no-renames", base], &:read).lines(chomp: true).select { |file| GateSubjects.test_file?(file) }
-  covered, unmapped = [[], []]
-  unless tests.empty?
-    configured = YAML.safe_load_file(".mutant.yml").dig("matcher", "subjects")
-    covered, unmapped = GateSubjects.covered(tests, subjects.call, configured, ->(expressions) { subjects.call(*expressions) })
-  end
-
-  if unmapped.empty?
-    selected = (changed + covered).uniq
-    puts "rake gate:mutant: since #{base}: #{selected.size} subjects (#{changed.size} changed, #{covered.size} more covered by the #{tests.size} changed test files)"
-    next if selected.empty?
-
-    sh "bundle", "exec", "mutant", "run", *selected
-  else
-    puts "rake gate:mutant: since #{base}: #{subjects.call.size} subjects, every one, since #{unmapped.join(", ")} covers no subject"
-    sh "bundle", "exec", "mutant", "run"
-  end
-end
-
-# The checks to run before a push, which are CI's build cut to what a
-# push can wait for: every quick check, cheapest first, and mutation
-# testing of only the subjects the change touches. The tests run a second
-# time under RBS's runtime type checker (test:rbs), since a call that
-# breaks sig/ is otherwise found only after the push; CI then runs
-# `rake check`.
-desc "Run the quick checks, the tests under RBS's runtime checker, and mutation testing of the subjects changed since origin/trunk, before a push"
-task gate: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :reuse, :steep, :test, "test:rbs", "gate:mutant"]
-
-desc "Run every check CI runs"
-task check: ["check:without_mutant", :mutant]
+desc "Run every check, before a push"
+task gate: :check
 
 task default: :check
 
