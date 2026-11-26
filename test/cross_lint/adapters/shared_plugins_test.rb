@@ -452,10 +452,12 @@ class GitSharedPluginsTest < Minitest::Test
   # Windows can't put a process that has exited and been reaped in a job
   # object, and answers error 87.
   def test_reads_what_git_wrote_when_it_exited_before_it_was_put_in_a_tree
-    test = self
+    started = []
     tree = Class.new(Adapters::ProcessHelpers::TREE) do
+      define_singleton_method(:popen3) { |*arguments| super(*arguments, &nil).tap { |by_it| started.concat(by_it) } }
       define_method(:initialize) do |pid|
-        sleep 0.05 while test.send(:process_exists?, pid)
+        # The waiter ends once Ruby has reaped the process.
+        started.last.join
         sleep 0.3
         super(pid)
       end

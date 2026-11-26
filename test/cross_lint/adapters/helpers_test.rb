@@ -339,10 +339,12 @@ class ProcessHelpersTest < Minitest::Test
   # nothing to hold, and ended as any helper that exits does. Windows
   # answers error 87 to a process that is gone.
   def test_reads_how_a_helper_ended_that_exited_before_it_was_put_in_a_tree
-    exists = method(:process_exists?)
+    started = []
     tree = Class.new(CrossLint::Adapters::ProcessHelpers::TREE) do
+      define_singleton_method(:popen3) { |*arguments| super(*arguments, &nil).tap { |by_it| started.concat(by_it) } }
       define_method(:initialize) do |pid|
-        sleep 0.05 while exists.call(pid)
+        # The waiter ends once Ruby has reaped the process.
+        started.last.join
         sleep 0.3
         super(pid)
       end
