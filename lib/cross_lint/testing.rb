@@ -182,6 +182,16 @@ module CrossLint
         assert_equal [true, true, true, false, false, false, false], found.map { |path| port.exist?(project_root, path) }
       end
 
+      def test_reads_a_file_by_its_exact_name
+        port = project_files_port(listed: ["lib/app.rb"], ignored: ["tmp/cache.txt"])
+        text = port.read(project_root, "lib/app.rb")
+
+        assert_equal ["lib/app.rb\n", Encoding::UTF_8, "tmp/cache.txt\n"], [text, text.encoding, port.read(project_root, "tmp/cache.txt")]
+        missing = ["lib/App.rb", "lib/other.rb"].map { |path| assert_raises(Errno::ENOENT) { port.read(project_root, path) }.message }
+
+        assert_equal ["No such file or directory - lib/App.rb", "No such file or directory - lib/other.rb"], missing
+      end
+
       def test_stops_at_a_root_outside_a_git_working_tree
         root = outside_root
         mistake = assert_raises(Core::Mistake) { project_files_port(listed: []).files(root) }

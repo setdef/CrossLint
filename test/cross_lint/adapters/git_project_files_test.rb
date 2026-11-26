@@ -136,6 +136,13 @@ class GitProjectFilesTest < Minitest::Test
     assert CrossLint::Adapters::GitProjectFiles.new.exist?(project_root, "lib/b.rb")
   end
 
+  def test_reads_a_file_with_its_line_endings_as_they_are
+    port = project_files_port(listed: ["a.txt"])
+    write(project_root, "a.txt", "one\r\ntwo\n")
+
+    assert_equal "one\r\ntwo\n", port.read(project_root, "a.txt")
+  end
+
   def test_finds_nothing_under_a_file
     port = project_files_port(listed: ["lib/a.rb"])
 

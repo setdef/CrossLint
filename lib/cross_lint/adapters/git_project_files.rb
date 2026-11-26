@@ -40,6 +40,13 @@ module CrossLint
         end
       end
 
+      # Binary, since Ruby on Windows turns CRLF into LF when it reads text.
+      def read(root, path)
+        raise Errno::ENOENT, path unless exist?(root, path)
+
+        File.binread(File.join(root, path)).force_encoding(Encoding::UTF_8)
+      end
+
       def self.outside(root)
         "#{root} isn't in a Git working tree, and CrossLint lists a project's files with Git; run git init in the project's root"
       end

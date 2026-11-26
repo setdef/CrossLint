@@ -50,6 +50,11 @@ module CrossLint
     # case doesn't count, even on a filesystem that ignores case. A file
     # Git ignores counts.
     def exist?: (String root, String path) -> bool
+
+    # The bytes of the file at `path`, relative to `root` with `/` between
+    # folders, as a UTF-8 string, line endings as they are. Raises
+    # Errno::ENOENT when no file exists at `path` by its exact name.
+    def read: (String root, String path) -> String
   end
 
   # Where a check's result goes: a format, such as lines of text or JSON,

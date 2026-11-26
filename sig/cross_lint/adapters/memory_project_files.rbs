@@ -2,27 +2,32 @@ module CrossLint
   module Adapters
     # The project-files port in memory, for the use cases' tests: the
     # files Git lists in each project, by its root, and the files that
-    # exist there but Git ignores. A root it holds no files for isn't in a
-    # Git working tree.
+    # exist there but Git ignores, with the text of each file it can read.
+    # A root it holds no files for isn't in a Git working tree.
     #
     # ```ruby
     # port = CrossLint::Adapters::MemoryProjectFiles.new({"/app" => ["lib/a.rb"]}, ignored: {"/app" => ["tmp/x"]})
     # port.files("/app") # => ["lib/a.rb"]
     # port.exist?("/app", "tmp") # => true
     # port.exist?("/app", "lib/A.rb") # => false
+    # CrossLint::Adapters::MemoryProjectFiles.new(contents: {"/app" => {"a.md" => "# A\n"}}).read("/app", "a.md") # => "# A\n"
     # ```
     class MemoryProjectFiles
       include _ProjectFiles
 
-      # A port that holds `projects`, the files Git lists by root, and
-      # `ignored`, the files Git ignores by root.
-      def initialize: (?Hash[String, Array[String]] projects, ?ignored: Hash[String, Array[String]]) -> void
+      # A port that holds `projects`, the files Git lists by root,
+      # `ignored`, the files Git ignores by root, and `contents`, the text
+      # of each file `read` returns, by root and path.
+      def initialize: (?Hash[String, Array[String]] projects, ?ignored: Hash[String, Array[String]],
+                       ?contents: Hash[String, Hash[String, String]]) -> void
 
       private
 
       @projects: Hash[String, Array[String]]
 
       @ignored: Hash[String, Array[String]]
+
+      @contents: Hash[String, Hash[String, String]]
     end
   end
 end
