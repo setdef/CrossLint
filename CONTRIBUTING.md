@@ -25,7 +25,7 @@ What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/RE
 - every Ruby example in the documentation, run and checked against the results it shows;
 - `usage lint`, the check that `docs/reference/cli.md` matches the spec, and `reuse lint`.
 
-Every public class, module, method, and constant has an RDoc comment, in Markdown. How the code divides, and why, is in [Architecture](docs/design/architecture.md).
+Every public class, module, method, and constant is documented in its RBS signature under `sig/`, in Markdown. A `.rb` file has a comment only where the code needs a reason: why it's written this way, or what makes it tricky. How the code divides, and why, is in [Architecture](docs/design/architecture.md).
 
 ## Landing a change
 
