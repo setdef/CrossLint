@@ -1,6 +1,8 @@
-# Standard (rake standard) checks the style of every Ruby file, for
-# Ruby 3.3's syntax: mutant's parser reads no later syntax, and every
-# change is mutation-tested (docs/design/architecture.md).
+# Standard (rake standard) checks the style of every Ruby file, as Ruby
+# 3.3. The code was kept to 3.3's syntax for mutant, which is gone (#23);
+# targeting the Ruby that mise.toml pins finds offenses of newer style,
+# such as blocks that could use `it`, so the target moves when they're
+# fixed.
 ruby_version: 3.3
 ignore:
   - ".scratch/**/*"
