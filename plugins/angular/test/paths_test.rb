@@ -157,6 +157,22 @@ class AngularPathsTest < Minitest::Test
       result.notices.map(&:message)
   end
 
+  # The tsconfig setting names the file the plugin's TypeScript checks
+  # read, and a project with no TypeScript package stops there, before any
+  # helper reads a file.
+  def test_reads_typescript_with_the_file_the_tsconfig_setting_names
+    write(@root, "src/a/a.component.ts", "")
+    %w[spec stub].each { |kind| write(@root, "src/a/a.component.#{kind}.ts", "") }
+    write(@root, "src/a/a.component.i.d.ts", "")
+    write(@root, "tsconfig.json", "{}\n")
+    missing = check(%(tsconfig "./config/tsconfig.app.json")).faults.map(&:message).uniq
+    write(@root, "config/tsconfig.app.json", "{}\n")
+    found = check(%(tsconfig "./config/tsconfig.app.json")).faults.map(&:message).uniq
+
+    assert_equal ["raised RuntimeError: reads TypeScript with config/tsconfig.app.json, the tsconfig setting's file, which doesn't exist"], missing
+    assert_equal ["raised RuntimeError: found no typescript package for config/tsconfig.app.json; install the project's packages, as with npm ci"], found
+  end
+
   def test_stops_at_a_setting_it_cant_use_naming_the_line
     {
       %(src-dir "src"\n  src-dir "app") => [3, "src-dir is set twice; the first is on line 2"],
