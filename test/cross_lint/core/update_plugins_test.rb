@@ -107,7 +107,7 @@ class UpdatePluginsTest < Minitest::Test
     configuration, shared = project([listing(ONE, "v1.0.0"), listing(url, "v1.0.0", 3)], ONE => %w[v1.1.0])
     mistake = assert_raises(Core::Mistake) { Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP) }
 
-    assert_equal [FILE, 3, "the URL of a shared plugin has a user name or password, which would be in the configuration and on standard error; " \
+    assert_equal [FILE, 3, "a plugin's URL has a user name or password, which would be in the configuration and on standard error; " \
       "remove it, and give Git the credentials with a Git credential helper (git help credentials)"], [mistake.file, mistake.line, mistake.message]
     refute_includes mistake.message, "secret"
     assert_empty @err.string

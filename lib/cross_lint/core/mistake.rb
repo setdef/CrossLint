@@ -16,7 +16,7 @@ module CrossLint
       end
 
       def self.credentials(file, line)
-        new("the URL of a shared plugin has a user name or password, which would be in the configuration and on standard error; " \
+        new("a plugin's URL has a user name or password, which would be in the configuration and on standard error; " \
           "remove it, and give Git the credentials with a Git credential helper (git help credentials)", file:, line:)
       end
 

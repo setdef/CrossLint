@@ -78,7 +78,7 @@ class LoadProjectTest < Minitest::Test
     assert_mistake CONFIG, 1, %(shared plugin "#{URL}" needs ref=, a tag or a full commit SHA), plugins: [listing(URL)]
   end
 
-  CREDENTIALS = "the URL of a shared plugin has a user name or password, which would be in the configuration and on standard error; " \
+  CREDENTIALS = "a plugin's URL has a user name or password, which would be in the configuration and on standard error; " \
     "remove it, and give Git the credentials with a Git credential helper (git help credentials)"
 
   def test_stops_at_the_url_of_a_shared_plugin_that_has_a_user_name_or_password_and_doesnt_print_it

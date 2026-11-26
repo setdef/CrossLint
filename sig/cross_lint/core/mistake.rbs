@@ -22,7 +22,7 @@ module CrossLint
       # or any folder above it.
       def self.no_configuration: (String file, String start) -> Mistake
 
-      # The mistake for a shared plugin's URL, listed in `file` on `line`,
+      # The mistake for a plugin's URL, listed in `file` on `line`,
       # that has a user name or password. Its message names no part of
       # the URL, so that no secret reaches standard error.
       def self.credentials: (String file, Integer line) -> Mistake
