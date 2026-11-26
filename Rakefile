@@ -225,7 +225,7 @@ task :build do
 end
 
 desc "Run the built app with nothing on PATH, and check its --version and --help, its rules in Ruby and helpers, the environment of a helper, " \
-  "its built-in plugins, and a shared plugin"
+  "its built-in plugins and their commands, and a shared plugin"
 task "build:check" do
   require_relative "lib/cross_lint"
   app = Dir["build/dist/*/crosslint{,.exe}"].first || abort("rake build:check: no app in build/dist; run rake build")
@@ -337,8 +337,9 @@ task "build:check:angular", [:app] => :fixtures do |_, arguments|
 end
 
 # A project that lists the built-in debt plugin, which the app carries,
-# and whose debt file accepts its one violation. PATH holds only Git's
-# folder.
+# and whose debt file accepts its one violation; then a second violation,
+# which the plugin's command, crosslint debt update, writes to the debt
+# file. PATH holds only Git's folder.
 task "build:check:debt", [:app] do |_, arguments|
   app = File.expand_path(arguments.fetch(:app))
   files = {
@@ -363,6 +364,18 @@ task "build:check:debt", [:app] do |_, arguments|
       abort "rake build:check: #{app} check printed:\n#{actual}" unless actual == expected
 
       puts "#{app} check: runs the built-in debt plugin"
+      File.binwrite(File.join(project, "b.md"), "")
+      [
+        [["check"], 1, "b.md: no note file at b.txt (docs/has-note)\ncrosslint: checked 2 doc artifacts: 1 error, 1 accepted as debt\n", "fails for a violation the debt file lacks"],
+        [["debt", "update"], 0, "crosslint: wrote .config/crosslint/debt.tsv: 1 entry added, 0 removed\ncrosslint: checked 2 doc artifacts: 2 accepted as debt\n", "writes the debt file"],
+        [["check"], 0, "crosslint: checked 2 doc artifacts: 2 accepted as debt\n", "passes with the debt file it wrote"]
+      ].each do |words, status, output, what|
+        actual = IO.popen({"PATH" => git}, [app, *words, "-C", project], err: %i[child out], &:read)
+        abort "rake build:check: #{app} #{words.join(" ")} exited with #{$?.exitstatus}, not #{status}:\n#{actual}" unless $?.exitstatus == status
+        abort "rake build:check: #{app} #{words.join(" ")} printed:\n#{actual}" unless actual == output
+
+        puts "#{app} #{words.join(" ")}: #{what}"
+      end
     end
   end
 end
