@@ -1,7 +1,7 @@
 ---
 status: proposed
 date: 2026-11-27
-deciders: setdef's maintainer chose that a plugin adds commands under the plugin's name, in #20; the agent acting as CrossLint's architect chose the rest of the surface, within ADR 0001
+deciders: @Kerrick chose that a plugin adds commands under the plugin's name, in #20; the agent acting as CrossLint's architect chose the rest of the surface, within ADR 0001
 ---
 
 # A plugin reaches the engine only through what its manifest declares, and adds commands under the plugin's name
@@ -32,7 +32,7 @@ Option 2 lost because `check`'s flags would change with the configuration, a sha
 
 How a plugin declares each of these, and what CrossLint prints for plugin commands, is in `docs/design/plugins.md` and `docs/reference/plugin.md`.
 
-Confidence: the debt plugin and the Angular plugin are built on steps, settings, artifacts declared in Ruby, and keys, and their tests pass. Commands under a plugin's name aren't built yet (#20); `crosslint check --update-debt` is what the code still runs. No comparison of the options was recorded beyond the reasons here.
+Confidence: the debt plugin and the Angular plugin are built on steps, settings, artifacts declared in Ruby, and keys, and `crosslint debt update` is a command under the debt plugin's name; their tests pass, and the built app runs `crosslint debt update` in `rake build:check`. No comparison of the options was recorded beyond the reasons here.
 
 ### Consequences
 
@@ -45,7 +45,7 @@ Confidence: the debt plugin and the Angular plugin are built on steps, settings,
 
 ### Confirmation
 
-Nothing enforces plugin commands yet. When #20 lands, tests show that a plugin's command runs only as `crosslint PLUGIN COMMAND`, that `check` refuses a flag the usage spec doesn't give it, and that a manifest with a `flag` line is a mistake. Today, the manifest tests refuse any line and any setting a plugin doesn't declare, and an architecture test shows nothing outside `plugins/angular/` refers to anything inside it.
+Tests fail when the code departs from it: `test/cross_lint/cli_test.rb` shows a plugin's command runs as `crosslint PLUGIN COMMAND` and takes no flag of its own (`test_a_plugins_command_runs_the_check_and_tells_the_plugins_step_its_name`, `test_a_plugins_command_takes_no_other_flags`), and that `check` refuses a flag the usage spec doesn't give it (`test_check_takes_only_the_flags_the_usage_spec_gives_it`); `test/cross_lint/adapters/kdl_plugin_manifests_test.rb` shows a `flag` line is a mistake (`test_refuses_a_flag_as_a_mistake_that_says_what_to_write_instead`); and `test/cross_lint/core/load_project_test.rb` shows CrossLint stops at a plugin with commands named for a command of CrossLint's or a reserved name, and at a local or shared plugin with a built-in plugin's name. The manifest tests show CrossLint stops at any line and any setting a plugin doesn't declare, and an architecture test shows nothing outside `plugins/angular/` refers to anything inside it.
 
 ## More Information
 
