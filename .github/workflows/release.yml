@@ -6,8 +6,8 @@
 # The Linux archive runs in an Ubuntu 24.04 container that has no Ruby.
 # VERSION is the version in crosslint.usage.kdl. On a tag, once every
 # archive passes, the last job checks that the tag is `v` plus that
-# version, and creates the GitHub release with the archives and a
-# SHA256SUMS file. Only that job can write to the repository.
+# version and that CI has a passing run for the tagged commit, and creates
+# the GitHub release with the archives and a SHA256SUMS file. Only that job can write to the repository.
 #
 # The Linux archive is built on Ubuntu 24.04, not a newer one: two gems
 # with C extensions compile on the build computer, and a newer glibc there
@@ -143,6 +143,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
+      actions: read
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -151,6 +152,12 @@ jobs:
 
       - name: Check the tag against crosslint.usage.kdl
         run: .github/scripts/check-release-tag.sh "$GITHUB_REF_NAME"
+
+      - name: Check that CI passed for the tagged commit
+        run: .github/scripts/check-ci-passed.sh "$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
