@@ -17,7 +17,7 @@ What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/RE
 
 `bundle exec rake check` runs every check CI runs, and a change passes all of them before it's pushed:
 
-- the test suite, covering every line and branch of `lib/` but the other system's process tree (`job_object.rb` off Windows, `process_group.rb` on it);
+- the test suite, covering every line and branch of `lib/` but the other system's process tree (`job_object.rb` off Windows, `process_group.rb` on it), with each built-in plugin's tests in its folder under `plugins/`; the Angular plugin's tests need the Node that `mise.toml` pins, and `rake fixtures`, which the test tasks run first, installs their fixtures' packages with `npm ci`;
 - the same suite under RBS's runtime type checker, which compares every call into CrossLint with `sig/`;
 - mutation testing with mutant, `JobObject` aside, which a test must catch every change of;
 - Steep, checking `lib/` against `sig/`, `rbs validate`, and the check that every public declaration in `sig/` has a comment;

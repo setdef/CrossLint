@@ -10,6 +10,7 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | --- | --- | --- |
 | **artifact** | A set of files that belong together, such as a component with its template, its test, and its stub. An artifact's declaration gives the pattern that finds its primary files, and the path of each companion. | group, unit, module |
 | **primary file** | The file an artifact is found by, such as `card.component.ts` for a component. | main file, source |
+| **key** | A second name an artifact's declaration gives each of its artifacts, which a debt entry can hold in place of the primary file's path, such as ng-nudge's base path `app/card/card` for `src/app/card/card.component.ts`. | alias, id |
 | **companion** | A file that belongs with an artifact's primary file, at a path the artifact gives, such as its test or its signature file. A companion may or may not exist; checking that is a rule's work. | sibling, related file, partner |
 | **path pattern** | A path with a placeholder in braces, such as `lib/{path}.rb`. In an artifact's `files`, `{path}` matches a file name and the folders before it, if any; in a companion's path, it stands for what it matched. | glob (a path pattern is not a glob), template |
 | **placeholder** | A name in braces in a path pattern, `{path}` or `{name}`, which stands for part of a path. | variable, wildcard |

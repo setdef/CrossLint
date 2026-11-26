@@ -5,7 +5,7 @@ What loading and running a plugin must guarantee, and the traps known so far. Th
 ## The engine and its plugins
 
 - **The engine has no role, language, or policy built in.** It loads the configuration and the plugins, finds each artifact's files, applies policies, runs rules, applies each policy's severity and the configuration's settings, prints the report, and sets the exit status. Angular and debt tracking are plugins like any other, and a project that lists neither runs without them.
-- **What debt tracking needs, any plugin can have:** a step after every rule has run that sees every violation and can excuse some, add others, and report stale entries; a flag (`--update-debt`); and settings under its name in the configuration. No plugin reaches the engine any other way.
+- **What debt tracking needs, any plugin can have:** a step after every rule has run that sees every violation and can excuse some, add others, and report stale entries; a flag (`--update-debt`); and settings under its name in the configuration. What the Angular plugin needs, any plugin can have too: Ruby that declares its artifacts from its settings, and a key for each artifact that debt entries can name. No plugin reaches the engine any other way.
 - **A local plugin, a shared plugin, and a built-in one are loaded the same way,** from a folder with a `plugin.kdl`. A built-in plugin's folder ships inside CrossLint. The Angular plugin lives in this repository in one folder, and nothing outside that folder depends on its contents, so it can move to a separate repository later.
 
 ## Ruby rules

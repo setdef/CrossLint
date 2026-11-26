@@ -46,7 +46,7 @@ A path pattern is a path with placeholders in braces. In `files`, `{path}` match
 
 | Child | Meaning |
 | --- | --- |
-| `applies-to ARTIFACT` | The artifact the policy covers, by name: one of this plugin's, or another listed plugin's as `PLUGIN/ARTIFACT`. Required, once. |
+| `applies-to ARTIFACT` | The artifact the policy covers, by name: one of this plugin's, or another listed plugin's as `PLUGIN/ARTIFACT`. At most once. Without it, the policy covers each of its plugin's artifacts that has every companion its `when` and its rules name; a policy that would then cover none stops CrossLint with exit status 2, unless the plugin declares its artifacts in Ruby. |
 | `when CONDITION` | Apply the policy only to artifacts the condition holds for. Optional; without it, the policy applies to every artifact of the kind in `applies-to`. |
 | `rule RULE ...` | A rule the policy runs on each artifact it applies to, with the rule's arguments as properties. At least one. |
 
@@ -150,7 +150,40 @@ flag "update-debt"
 
 | Line | Meaning |
 | --- | --- |
-| `step NAME` | Runs a step built into CrossLint after every rule of every plugin has run. The step sees every violation, whatever `--warnings` or `--quiet` hides, and can excuse some, add others, and report stale entries. CrossLint has one step, `track-debt`. |
+| `step NAME` | A step built into CrossLint, for CrossLint to run after every rule of every plugin has run. The step sees every violation, whatever `--warnings` or `--quiet` hides, and can excuse some, add others, and report stale entries. CrossLint has one step, `track-debt`. |
 | `policy NAME` with no block | A policy no rule runs, whose violations the plugin's step reports, such as `has-debt`. The configuration disables it or changes its severity like any other policy. |
 | `setting NAME` | A setting the plugin takes in its block in the configuration. A setting the plugin doesn't declare stops CrossLint with exit status 2. |
 | `flag NAME` | A flag of `crosslint check`, written without its dashes, that the plugin's steps get. A flag no listed plugin declares stops CrossLint with exit status 2. |
+
+## Artifacts declared in Ruby
+
+A plugin whose artifacts depend on its settings, such as a folder the project chooses, declares them in Ruby with `artifacts ruby=FILE`, in place of or beside its `artifact` lines. The Angular plugin does this, so `src-dir` and `role` change where it finds each role's files. A plugin that keeps Ruby files in a folder its project chooses could have:
+
+```kdl
+setting "lib-dir"
+
+artifacts ruby="artifacts.rb"
+```
+
+`FILE`, relative to the plugin's folder, defines a class `Artifacts` inheriting from `CrossLint::Artifacts`, whose `declare` method takes the plugin's settings and returns an array of artifacts:
+
+```ruby
+# .config/crosslint/signatures/artifacts.rb
+class Artifacts < CrossLint::Artifacts
+  def declare(settings)
+    given = settings.find { |setting| setting.name == "lib-dir" }
+    raise mistake("lib-dir takes one folder, as in lib-dir \"lib\"", given) if given && given.arguments.size != 1
+
+    lib = given ? given.arguments.first : "lib"
+    [artifact("ruby-file", files: "#{lib}/{path}.rb", companions: {"signature" => "sig/{path}.rbs"})]
+  end
+end
+```
+
+| Method | Meaning |
+| --- | --- |
+| `declare(settings)` | Called once per check, before any rule runs. Each setting has `name`, `arguments`, `properties`, `children`, and `line`, as the configuration gives them. |
+| `artifact(NAME, files:, companions: {}, key: nil, optional: false)` | Declares an artifact as an `artifact` line does, with `files` and each companion's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `files` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. |
+| `mistake(MESSAGE, SETTING)` | A mistake in the configuration at that setting's line, for `declare` to raise. It stops CrossLint with exit status 2, as any mistake does. |
+
+Anything else `declare` raises stops CrossLint with exit status 2, naming the plugin, since no check can run without its artifacts.

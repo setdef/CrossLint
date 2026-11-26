@@ -33,13 +33,13 @@ The block holds the settings the plugin's `plugin.kdl` declares, and can be left
 
 ### `angular`
 
-ng-nudge's checks for Angular projects: a spec for every component, directive, pipe, service, guard, resolver, and interceptor; a stub and an interface for a component that has either, with the same inputs and outputs as the component; and a warning for a `.scss` stylesheet with no `.css`. It reads TypeScript with a helper that runs on [Node](https://nodejs.org/) and the project's `typescript` package. Its policies have the names of ng-nudge's rules: `spec-exists`, `stub-exists`, `interface-exists`, `stub-matches-component`, `interface-matches-component`, and `prefer-css-over-scss`.
+ng-nudge's checks for Angular projects: a spec for every component, directive, pipe, service, guard, resolver, and interceptor; a stub and an interface for a component that has either, with the same inputs and outputs as the component; and a warning for a `.scss` stylesheet with no `.css`. It reads TypeScript with a helper that runs on [Node](https://nodejs.org/) and the project's `typescript` package. Its six policies have the names of ng-nudge's rules: `spec-exists`, `stub-exists`, `interface-exists`, `stub-matches-component`, `interface-matches-component`, and `prefer-css-over-scss`. It compares a component's inputs and outputs with its stub's and its interface's by their public names, aliases included, and reads TypeScript only for a component that has a stub or an interface.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `src-dir PATH` | The folder the plugin's artifacts are found in, relative to the project's root. | `src` |
-| `tsconfig PATH` | The `tsconfig.json` its TypeScript checks read. | `tsconfig.json` |
-| `role NAME files=PATTERN { expects COMPANION ... }` | Find a role's files by this [path pattern](plugin.md#artifact), relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. `expects` lists the companions the role must have, such as `spec`. | |
+| `tsconfig PATH` | The `tsconfig.json` the helper reads, relative to the project's root, once a component has a stub or an interface. | `tsconfig.json` |
+| `role NAME files=PATTERN { expects COMPANION ... }` | Find a role's files by this [path pattern](plugin.md#artifact), which ends in `.ts`, relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. Each companion is at the primary file's path with `.ts` replaced, such as `.spec.ts`. `expects` takes only `spec`; without a block, the role expects a spec. | |
 
 ### `debt`
 
