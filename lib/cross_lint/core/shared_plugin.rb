@@ -26,9 +26,14 @@ module CrossLint
 
       # `keep` stands in for the other tags of its version, so that v1.2.0
       # and 1.2.0 on one commit don't send a project from one to the other.
+      # A `keep` of a higher version than any tag stays, so that no update
+      # moves a project to a lower version.
       def self.newest_tag(tags, keep: nil)
         versions = tags.filter_map { |tag| (found = VERSION.match(tag)) && [tag, found.captures.map(&:to_i)] } #: Array[[String, Array[Integer]]]
         highest = versions.map(&:last).max
+        kept = VERSION.match(keep)
+        return keep if kept && (kept.captures.map(&:to_i) <=> highest) == 1
+
         tied = versions.select { |_, version| version == highest }.map(&:first).sort
         tied.include?(keep) ? keep : tied.first
       end

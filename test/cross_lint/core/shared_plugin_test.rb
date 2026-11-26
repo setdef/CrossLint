@@ -68,6 +68,13 @@ class SharedPluginTest < Minitest::Test
     assert_equal "1.2.0", SharedPlugin.newest_tag(tags, keep: nil)
   end
 
+  def test_never_moves_to_a_lower_version_than_the_one_the_project_has
+    assert_equal ["v2.0.0", "2.1.0", "v1.10.0", "v1.2.0"], [SharedPlugin.newest_tag(%w[v1.9.0 v1.10.0], keep: "v2.0.0"), SharedPlugin.newest_tag(%w[v1.9.0], keep: "2.1.0"),
+      SharedPlugin.newest_tag(%w[v1.9.0 v1.10.0], keep: "v1.1.0"), SharedPlugin.newest_tag(%w[v1.2.0], keep: "v1.2.0")]
+    assert_equal "v1.0.0", SharedPlugin.newest_tag(%w[v1.0.0], keep: "release-9.9.9")
+    assert_nil SharedPlugin.newest_tag(%w[latest], keep: "v9.0.0")
+  end
+
   def test_says_what_is_wrong_with_a_ref
     assert_equal "ext::x doesn't start with https:// or file://", CrossLint::Core::FetchError.scheme("ext::x", ["https://", "file://"]).message
     errors = [CrossLint::Core::FetchError.bad_ref("a:b"), CrossLint::Core::FetchError.branch("main"), CrossLint::Core::FetchError.no_tag("v9"),
