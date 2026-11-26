@@ -11,7 +11,7 @@ $ usage lint crosslint.usage.kdl
 $ usage generate markdown --file crosslint.usage.kdl --out-file docs/reference/cli.md
 ```
 
-Architecture decisions are in [`docs/decisions/`](docs/decisions/). To change one, write a new record with the next number and delete the old one.
+What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/README.md), and each requirement there becomes a test that fails when the requirement is broken. Architecture decisions are in [`docs/decisions/`](docs/decisions/). To change one, write a new record with the next number and delete the old one.
 
 ## Landing a change
 
