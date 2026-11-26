@@ -398,8 +398,8 @@ class CheckTest < Minitest::Test
 
   def test_orders_stale_entries_by_artifact_then_plugin_then_policy_then_message
     entry = ->(artifact, plugin, policy, message) { Stale.new(plugin:, policy:, artifact:, file: "debt.tsv", line: 2, message:) }
-    ordered = [entry.("a", "p1", "x", "m1"), entry.("a", "p1", "x", "m2"), entry.("a", "p1", "y", "m1"),
-      entry.("a", "p2", "x", "m1"), entry.("b", "p1", "x", "m1")]
+    ordered = [entry.call("a", "p1", "x", "m1"), entry.call("a", "p1", "x", "m2"), entry.call("a", "p1", "y", "m1"),
+      entry.call("a", "p2", "x", "m1"), entry.call("b", "p1", "x", "m1")]
     step = ScriptedStep.new(stale: ordered.reverse)
 
     assert_equal ordered, check(project(stepped), files: [], steps: {"track-debt" => step}).findings
