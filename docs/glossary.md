@@ -31,8 +31,8 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **ref** | The tag or full commit SHA at which a project lists a shared plugin, as `ref="v1.2.0"`. Never a branch. | version, pin |
 | **built-in plugin** | A plugin that ships inside CrossLint, such as `angular` and `debt`. It runs only when the configuration lists it, like any other. | core plugin, default plugin |
 | **manifest** | A plugin's `plugin.kdl`, which declares the plugin's artifacts, policies, rules, and helpers. | plugin config, descriptor |
-| **project root** | The folder that holds a project's `.config/crosslint.kdl`. Every path in a plugin, a configuration, and the report is relative to it. | base dir, workspace |
-| **configuration** | `.config/crosslint.kdl` in a project's root. It lists the plugins CrossLint runs, and settings for their rules. | config file, rc file, settings (a setting is one value in it) |
+| **project root** | The folder that holds a project's `.config/crosslint/config.kdl`. Every path in a plugin, a configuration, and the report is relative to it. | base dir, workspace |
+| **configuration** | `.config/crosslint/config.kdl` in a project's root, beside the debt file and any local plugins the project keeps in `.config/crosslint/`. It lists the plugins CrossLint runs, and settings for their rules. | config file, rc file, settings (a setting is one value in it) |
 | **setting** | One value in the configuration, such as a plugin's `src-dir` or a policy's `severity`. | option (an option is on the command line), preference |
 | **mistake** | Something in the configuration or a manifest that CrossLint can't use, such as a node it doesn't know. A mistake stops CrossLint with exit status 2 before it checks anything, naming the file and the line. | error (an error is a severity), invalid config |
 | **helper** | A program in another language that a plugin carries to read files of that language, such as the Angular plugin's JavaScript that asks the project's TypeScript compiler for a component's inputs. It runs on the runtime for that language that the project already has. | adapter, bridge, sidecar |

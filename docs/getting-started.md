@@ -24,10 +24,10 @@ From the project's root, ask CrossLint for a configuration:
 
 ```console
 $ crosslint init
-crosslint: wrote .config/crosslint.kdl, with the recommended plugins: debt
+crosslint: wrote .config/crosslint/config.kdl, with the recommended plugins: debt
 ```
 
-`.config/crosslint.kdl` is the project's **configuration**. It lists the **plugins** CrossLint runs, and no plugin runs until it's listed there. So far it lists one, `debt`, which we'll use at the end.
+`.config/crosslint/config.kdl` is the project's **configuration**. It lists the **plugins** CrossLint runs, and no plugin runs until it's listed there. So far it lists one, `debt`, which we'll use at the end.
 
 ## Declare the rule
 
@@ -51,7 +51,7 @@ This declares all three kinds of thing CrossLint works with:
 - The **policy** `has-test` says when to check: every `ruby-file`.
 - The **rule** `companion-exists` does the checking: it reports a `ruby-file` whose `test` doesn't exist.
 
-The rule is built into CrossLint, so the plugin needs no code. Now list the plugin in `.config/crosslint.kdl`, below `debt`:
+The rule is built into CrossLint, so the plugin needs no code. Now list the plugin in `.config/crosslint/config.kdl`, below `debt`:
 
 ```kdl
 plugin "debt"
@@ -111,7 +111,7 @@ $ echo $?
 0
 ```
 
-Commit `.config/crosslint.kdl`, the plugin, and the debt file.
+Commit `.config/crosslint/config.kdl`, the plugin, and the debt file.
 
 Now the check passes while no violation is new. Add a Ruby file under `lib/` with no test, and it fails again. Write the test for `currency.rb`, and it fails too: its entry has become a **stale entry**, and `crosslint check --update-debt` removes it, so the debt file only ever shrinks as the work gets done.
 

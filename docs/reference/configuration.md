@@ -1,6 +1,6 @@
 # Configuration reference
 
-A project's configuration is `.config/crosslint.kdl` in its root, in [KDL](https://kdl.dev/). It lists the plugins CrossLint runs, and settings for their policies. `crosslint init` writes one with the recommended plugins; this page lists everything it can hold.
+A project's configuration is `.config/crosslint/config.kdl` in its root, in [KDL](https://kdl.dev/). It lists the plugins CrossLint runs, and settings for their policies. `crosslint init` writes one with the recommended plugins; this page lists everything it can hold.
 
 An Angular project that tracks debt and keeps one local plugin might have:
 

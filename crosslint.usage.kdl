@@ -11,7 +11,7 @@ repository "https://github.com/setdef/CrossLint"
 
 about "Check the rules that span files: every source file has its test, every component has its template"
 long_about #"""
-CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint.kdl, lists the plugins it runs.
+CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint/config.kdl, lists the plugins it runs.
 
 Findings go to standard output, one per line. The lines CrossLint prints about itself go to standard error, and each begins with "crosslint:".
 """#
@@ -35,7 +35,7 @@ flag "-q --quiet" global=#true help="Print only what fails the check, with no su
 flag "-s --silent" global=#true help="Print nothing but errors that stop CrossLint; only the exit status gives the result"
 flag "--no-color" global=#true help="Print no color, as when NO_COLOR is set or the output isn't a terminal"
 flag "--debug" global=#true help="Print what CrossLint does at each step, to standard error, as when DEBUG is set"
-flag "-C --project <dir>" global=#true help="Use the project whose root, the folder with .config/crosslint.kdl, contains this folder"
+flag "-C --project <dir>" global=#true help="Use the project whose root, the folder with .config/crosslint/config.kdl, contains this folder"
 
 cmd "check" effect="read" help="Check the project, and exit with 1 if a check fails" {
   long_help #"""
@@ -60,7 +60,7 @@ Violations listed in the debt file don't fail the check. An entry that no violat
 
 cmd "init" effect="write" help="Write a configuration for this project, with the recommended plugins" {
   long_help #"""
-Writes .config/crosslint.kdl in the current folder, listing the recommended plugins. If the file exists, changes nothing unless you pass --force.
+Writes .config/crosslint/config.kdl in the current folder, listing the recommended plugins. If the file exists, changes nothing unless you pass --force.
 
 With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a configuration with the Angular plugin, the debt plugin, and every setting rc.json had. Moves ng-nudge's debt file to .config/crosslint/debt.tsv with every entry and comment kept. Lists every change before it makes any.
 """#
@@ -72,7 +72,7 @@ With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a confi
 }
 
 cmd "update" effect="write" help="Move each shared plugin in the configuration to its newest tag" {
-  long_help "Moves each shared plugin the configuration lists, a Git repository with a ref, to the repository's newest tag, and rewrites the ref in .config/crosslint.kdl. Lists each change it makes. Local and built-in plugins are left as they are."
+  long_help "Moves each shared plugin the configuration lists, a Git repository with a ref, to the repository's newest tag, and rewrites the ref in .config/crosslint/config.kdl. Lists each change it makes. Local and built-in plugins are left as they are."
   flag "-n --dry-run" help="List the changes, and make none"
   example "crosslint update"
   example "crosslint update --dry-run" header="See which plugins have a newer tag"

@@ -4,7 +4,7 @@ What `crosslint check` must guarantee, and the traps known so far. Its interface
 
 ## Finding the project and its files
 
-- The project's root is the nearest folder, from the current one or `-C`'s upward, that has `.config/crosslint.kdl`. With none, stop with exit status 2 and say how to write one; never guess.
+- The project's root is the nearest folder, from the current one or `-C`'s upward, that has `.config/crosslint/config.kdl`. With none, stop with exit status 2 and say how to write one; never guess.
 - **Files come from the working tree, minus what Git ignores.** A file Git ignores never matches a pattern, and neither does anything under `.git/`. Whether a companion exists is asked of the filesystem, never of another tool's idea of the project, such as the files a `tsconfig.json` includes.
 - **Run Git with no `GIT_*` variables from CrossLint's environment.** Inside a Git hook, Git sets `GIT_DIR`, `GIT_INDEX_FILE`, and others, and a Git command that inherits them reads that repository instead of the project, as when a pre-push hook in a linked worktree runs `crosslint check`.
 - **A pattern is matched case-sensitively, with `/` on every system,** and reported paths use `/` too, so output and debt keys agree between macOS, Linux, and Windows. macOS and Windows filesystems ignore case, so check a companion's existence by its exact name, not by asking whether a path exists.
@@ -24,6 +24,7 @@ What `crosslint check` must guarantee, and the traps known so far. Its interface
 - An artifact's findings are written together, in an order that doesn't depend on the order the filesystem lists files in.
 - Print a line within 100 ms on a terminal, before reading any TypeScript, so a large project never sits silent.
 - `--quiet` prints everything that fails the check, a warning under `--warnings=error` included, and drops the summary; `--silent` prints only errors that stop CrossLint.
-- Output is ASCII. Color is used only for severity, only on a terminal, and never when `NO_COLOR` is set to a value that isn't empty, `TERM` is `dumb`, or `--no-color` is given; `FORCE_COLOR` turns it on even off a terminal.
+- **The words and punctuation CrossLint writes are ASCII; paths and other text taken from the project print as they are, in UTF-8.** Writing `lib/café.rb` as `lib/caf?.rb` would leave a path no editor can open and no debt entry matches. JSON output escapes every character that isn't ASCII.
+- Color is used only for severity, only on a terminal, and never when `NO_COLOR` is set to a value that isn't empty, `TERM` is `dumb`, or `--no-color` is given; `FORCE_COLOR` turns it on even off a terminal.
 - Exit 0 when the check passes, 1 when a violation fails it or an entry is stale, 2 when CrossLint can't check, and 130 on Ctrl-C. An expected error, such as a missing file or a bad configuration, prints a message with the fix and no stack trace; an unexpected one says it is a bug in CrossLint and where to report it, and `--debug` shows the trace.
 - On Ctrl-C, stop at once. Nothing a check writes needs cleaning up.

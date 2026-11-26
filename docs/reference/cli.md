@@ -5,7 +5,7 @@
 - **License:** MIT
 - **Repository:** https://github.com/setdef/CrossLint
 
-CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint.kdl, lists the plugins it runs.
+CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint/config.kdl, lists the plugins it runs.
 
 Findings go to standard output, one per line. The lines CrossLint prints about itself go to standard error, and each begins with "crosslint:".
 
@@ -47,7 +47,7 @@ crosslint init --from-ng-nudge
 - **`-s --silent`** — Print nothing but errors that stop CrossLint; only the exit status gives the result
 - **`--no-color`** — Print no color, as when NO_COLOR is set or the output isn't a terminal
 - **`--debug`** — Print what CrossLint does at each step, to standard error, as when DEBUG is set
-- **`-C --project <dir>`** — Use the project whose root, the folder with .config/crosslint.kdl, contains this folder
+- **`-C --project <dir>`** — Use the project whose root, the folder with .config/crosslint/config.kdl, contains this folder
 
 ## Exit Status
 
@@ -117,7 +117,7 @@ crosslint check --update-debt
 - **Usage:** `crosslint init [FLAGS]`
 - **Effect:** modifies state
 
-Writes .config/crosslint.kdl in the current folder, listing the recommended plugins. If the file exists, changes nothing unless you pass --force.
+Writes .config/crosslint/config.kdl in the current folder, listing the recommended plugins. If the file exists, changes nothing unless you pass --force.
 
 With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a configuration with the Angular plugin, the debt plugin, and every setting rc.json had. Moves ng-nudge's debt file to .config/crosslint/debt.tsv with every entry and comment kept. Lists every change before it makes any.
 
@@ -152,7 +152,7 @@ crosslint init --from-ng-nudge --dry-run
 - **Usage:** `crosslint update [-n --dry-run]`
 - **Effect:** modifies state
 
-Moves each shared plugin the configuration lists, a Git repository with a ref, to the repository's newest tag, and rewrites the ref in .config/crosslint.kdl. Lists each change it makes. Local and built-in plugins are left as they are.
+Moves each shared plugin the configuration lists, a Git repository with a ref, to the repository's newest tag, and rewrites the ref in .config/crosslint/config.kdl. Lists each change it makes. Local and built-in plugins are left as they are.
 
 ### Flags
 - **`-n --dry-run`** — List the changes, and make none

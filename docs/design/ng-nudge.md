@@ -4,7 +4,7 @@ What CrossLint must keep from [ng-nudge](https://github.com/OverTheTopMarketing/
 
 ## What must carry over
 
-- **A project moves in 30 minutes or less.** `crosslint init --from-ng-nudge` carries every key of `.config/ng-nudge/rc.json` into `.config/crosslint.kdl`, and moves the debt file with every entry and comment. A key it can't carry stops it before it changes anything, naming the key.
+- **A project moves in 30 minutes or less.** `crosslint init --from-ng-nudge` carries every key of `.config/ng-nudge/rc.json` into `.config/crosslint/config.kdl`, and moves the debt file with every entry and comment. A key it can't carry stops it before it changes anything, naming the key.
 - **Every check.** The Angular plugin finds the seven roles ng-nudge finds (`component`, `directive`, `pipe`, `service`, `guard`, `resolver`, `interceptor`) by the same patterns inside `src-dir`, and its policies keep ng-nudge's rule names, since projects' configurations and debt files hold them: `spec-exists`, `stub-exists`, `interface-exists`, `stub-matches-component`, `interface-matches-component`, `prefer-css-over-scss`.
 - **The conditions.** A stub and an interface are optional: a missing one is reported only when the other exists. A component is checked against its stub and its interface by member name, one way: extra members in the stub or the interface aren't reported, and types aren't compared.
 - **Every setting.** Each `rc.json` key keeps its meaning: `srcDir`, `tsConfig`, `artifacts.<role>.pattern` and `expects`, `rules.<name>.enabled` and `severity`, `rules.has-debt.withComment` in all five of its forms, `options.warnings`, and `options.verbosity`.

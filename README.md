@@ -36,7 +36,7 @@ policy "has-signature" {
 The artifact covers every Ruby file under `lib/`, each with the path of the signature file that belongs beside it. The policy applies CrossLint's `companion-exists` rule to every one of them. Fledge's configuration lists the plugin:
 
 ```kdl
-// .config/crosslint.kdl
+// .config/crosslint/config.kdl
 plugin ".config/crosslint/signatures"
 ```
 
@@ -76,15 +76,15 @@ To uninstall CrossLint, delete the unpacked folder.
 
 ## Usage
 
-1. **Write a configuration.** In the project's root, `crosslint init` writes `.config/crosslint.kdl`, which lists the plugins CrossLint runs, with the recommended ones already in it. No plugin runs until the configuration lists it.
-2. **Declare the project's rules** in a local plugin: a folder in the repository with a `plugin.kdl` that declares its artifacts, policies, and rules, as in [A first example](#a-first-example). List the folder in `.config/crosslint.kdl`.
+1. **Write a configuration.** In the project's root, `crosslint init` writes `.config/crosslint/config.kdl`, which lists the plugins CrossLint runs, with the recommended ones already in it. No plugin runs until the configuration lists it.
+2. **Declare the project's rules** in a local plugin: a folder in the repository with a `plugin.kdl` that declares its artifacts, policies, and rules, as in [A first example](#a-first-example). List the folder in `.config/crosslint/config.kdl`.
 3. **Run the checks** with `crosslint check` from anywhere in the project. It exits with 0 when every check passes, 1 when there are violations, and 2 when CrossLint can't run, such as for a mistake in the configuration.
 4. **Accept what you can't fix yet** with `crosslint check --update-debt`, which writes every current violation to `.config/crosslint/debt.tsv`. Add a comment to each line saying why it's there. From then on, `crosslint check` passes as long as no violation is new, and fails when a recorded one is fixed, until `--update-debt` removes it from the file.
 5. **Run it in CI** as you run the project's tests, so a pull request with a new violation fails.
 
 ### Moving from ng-nudge
 
-In the project's root, `crosslint init --from-ng-nudge` writes `.config/crosslint.kdl` from `.config/ng-nudge/rc.json`, with the Angular plugin and the debt plugin listed, and moves the debt file to `.config/crosslint/debt.tsv` with every comment kept. With `--dry-run`, it lists the changes and makes none. Then replace ng-nudge's dev dependency and each `npx ng-nudge` in the project's scripts and CI with `crosslint check`.
+In the project's root, `crosslint init --from-ng-nudge` writes `.config/crosslint/config.kdl` from `.config/ng-nudge/rc.json`, with the Angular plugin and the debt plugin listed, and moves the debt file to `.config/crosslint/debt.tsv` with every comment kept. With `--dry-run`, it lists the changes and makes none. Then replace ng-nudge's dev dependency and each `npx ng-nudge` in the project's scripts and CI with `crosslint check`.
 
 CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't read and stylesheets it looks for in the wrong folder. Run `crosslint check --update-debt` once after moving, so the next check passes, and work through the entries it adds as you would any other debt.
 
@@ -95,7 +95,7 @@ CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't
 - In the terminal: `crosslint --help` lists every command with examples, and `crosslint check --help` explains one.
 - [Getting started](docs/getting-started.md): add CrossLint to a project, write a rule for it, and keep the check passing with debt.
 - [Plugin reference](docs/reference/plugin.md): everything a `plugin.kdl` can declare, including rules written in Ruby.
-- [Configuration reference](docs/reference/configuration.md): everything `.config/crosslint.kdl` can hold, including the settings of the Angular and debt plugins.
+- [Configuration reference](docs/reference/configuration.md): everything `.config/crosslint/config.kdl` can hold, including the settings of the Angular and debt plugins.
 - [Command reference](docs/reference/cli.md): every command, flag, and exit status.
 - [Glossary](docs/glossary.md): the word CrossLint uses for each idea, and the words it avoids.
 
