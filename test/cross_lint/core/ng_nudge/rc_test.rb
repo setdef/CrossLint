@@ -173,8 +173,7 @@ class NgNudgeRcTest < Minitest::Test
 
     assert_equal [["angular/spec-exists", false, nil], ["angular/stub-exists", nil, :warning], ["angular/interface-exists", false, :error],
       ["angular/prefer-css-over-scss", nil, :error]], result.configuration.policies.map { |policy| [policy.name, policy.enabled, policy.severity] }
-    assert_equal [%(set policy "angular/spec-exists" enabled=#false), %(set policy "angular/stub-exists" severity="warning"),
-      %(set policy "angular/interface-exists" enabled=#false severity="error"), %(set policy "angular/prefer-css-over-scss" severity="error")], result.changes
+    assert_empty result.changes
   end
 
   def test_gives_a_rule_with_no_severity_none_so_the_plugins_declared_severity_applies
@@ -187,7 +186,7 @@ class NgNudgeRcTest < Minitest::Test
     result = convert({"rules" => {"has-debt" => {"severity" => "warning", "enabled" => false}}})
 
     assert_equal [["debt/has-debt", false, :warning]], result.configuration.policies.map { |policy| [policy.name, policy.enabled, policy.severity] }
-    assert_equal [%(set policy "debt/has-debt" enabled=#false severity="warning")], result.changes
+    assert_empty result.changes
   end
 
   def test_refuses_a_rule_it_cannot_carry
@@ -210,13 +209,12 @@ class NgNudgeRcTest < Minitest::Test
   end
 
   def test_reads_with_comment_as_a_ceiling_on_the_severity_of_an_entry_with_a_comment
-    {false => ["", {}], "error" => ["", {}], true => [%( commented="warning"), {"commented" => "warning"}], "none" => [%( commented="none"), {"commented" => "none"}],
-     "warning" => [%( commented="warning"), {"commented" => "warning"}]}.each do |given, (said, properties)|
+    {false => {}, "error" => {}, true => {"commented" => "warning"}, "none" => {"commented" => "none"}, "warning" => {"commented" => "warning"}}.each do |given, properties|
       result = convert({"rules" => {"has-debt" => {"withComment" => given}}})
 
       assert_equal [["angular", []], ["debt", [["report-entries", [], properties, []]]]], shape(result), given.inspect
       assert_nil result.matching
-      assert_equal ["set report-entries#{said} in the debt plugin"], result.changes, given.inspect
+      assert_empty result.changes, given.inspect
     end
   end
 
@@ -232,8 +230,7 @@ class NgNudgeRcTest < Minitest::Test
     result = convert({"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "warning", "matching" => "^TODO"}}}})
 
     assert_equal [["angular", []], ["debt", [["report-entries", [], {"commented" => "warning", "matching" => '\ATODO'}, []]]]], shape(result)
-    assert_equal [%(convert rules.has-debt.withComment.matching "^TODO" to matching "\\\\ATODO"),
-      %(set report-entries commented="warning" matching="\\\\ATODO" in the debt plugin)], result.changes
+    assert_equal [%(convert rules.has-debt.withComment.matching "^TODO" to matching "\\\\ATODO")], result.changes
     assert_equal [Core::NgNudge::Matching.new(key: "rules.has-debt.withComment.matching", source: "^TODO", translated: '\ATODO')], [result.matching]
   end
 
@@ -241,7 +238,7 @@ class NgNudgeRcTest < Minitest::Test
     result = convert({"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "none", "matching" => "ticket-\\d+"}}}})
 
     assert_equal [["angular", []], ["debt", [["report-entries", [], {"commented" => "none", "matching" => 'ticket-\d+'}, []]]]], shape(result)
-    assert_equal [%(set report-entries commented="none" matching="ticket-\\\\d+" in the debt plugin)], result.changes
+    assert_empty result.changes
     assert_equal "ticket-\\d+", result.matching&.source
   end
 
@@ -249,7 +246,7 @@ class NgNudgeRcTest < Minitest::Test
     result = convert({"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "error", "matching" => "(?i)x"}}}})
 
     assert_equal [["angular", []], ["debt", [["report-entries", [], {}, []]]]], shape(result)
-    assert_equal ['drop rules.has-debt.withComment.matching, which changes nothing with a maxSeverity of "error"', "set report-entries in the debt plugin"], result.changes
+    assert_equal ['drop rules.has-debt.withComment.matching, which changes nothing with a maxSeverity of "error"'], result.changes
     assert_nil result.matching
   end
 
@@ -258,7 +255,7 @@ class NgNudgeRcTest < Minitest::Test
 
     assert_equal [["angular", []], ["debt", [["report-entries", [], {"commented" => "none"}, []]]]], shape(result)
     assert_nil result.matching
-    assert_equal [%(set report-entries commented="none" in the debt plugin)], result.changes
+    assert_empty result.changes
   end
 
   def test_refuses_a_with_comment_it_cannot_carry

@@ -58,7 +58,7 @@ module CrossLint
 
           converted = found #: Rc::Result
           debt = read #: DebtFile
-          changes = [*assumed(text), *moved(replaced, converted, moves, debt, replaces), *converted.changes, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
+          changes = [*assumed(text), *moved(replaced, converted, moves, debt, replaces), *converted.changes, *settings(converted.configuration), *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
           notes = compare(root, converted)
           planned&.call(changes, notes)
           unless dry_run
@@ -122,6 +122,31 @@ module CrossLint
               "(docs/reference/plugin.md), then move the file out of .config/ng-nudge", file: path)
           end
         end
+
+        # A line for each setting the configuration holds, in the order the
+        # file holds them: the settings of each plugin, and of a role in it,
+        # then the policy lines, then the modes.
+        def settings(configuration)
+          plugins = configuration.plugins.flat_map { |plugin| plugin.settings.flat_map { |each| setting_lines(each, "the #{plugin.name} plugin") } }
+          policies = configuration.policies.map do |policy|
+            properties = {"enabled" => policy.enabled, "severity" => policy.severity&.to_s}.compact
+            ["set policy #{policy.name.dump}", *properties.map { |name, value| "#{name}=#{kdl(value)}" }].join(" ")
+          end
+          modes = {"warnings" => configuration.warnings, "verbosity" => configuration.verbosity}.filter_map { |name, mode| "set #{name} #{mode.to_s.dump}" if mode }
+          [*plugins, *policies, *modes]
+        end
+
+        # The line for a setting, and for each setting inside it, saying
+        # where it is.
+        def setting_lines(setting, within)
+          words = [setting.name, *setting.arguments.map { |each| kdl(each) }, *setting.properties.map { |name, value| "#{name}=#{kdl(value)}" }]
+          inside = "#{setting.name} #{kdl(setting.arguments.first)} of #{within}"
+          ["set #{words.join(" ")} in #{within}", *setting.children.flat_map { |child| setting_lines(child, inside) }]
+        end
+
+        # A value as KDL writes it: the only boolean the configuration
+        # gets is #false.
+        def kdl(value) = (value == false) ? "#false" : value.to_s.dump
 
         def moved(replaced, converted, moves, debt, replaces)
           plugins = converted.configuration.plugins.map(&:name)

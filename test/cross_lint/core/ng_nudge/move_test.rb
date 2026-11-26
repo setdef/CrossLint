@@ -22,7 +22,7 @@ class NgNudgeMoveTest < Minitest::Test
     result = world.move
 
     assert_equal ["write #{CONFIG}, with the plugins angular and debt", "move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry",
-      %(convert srcDir "./app/" to src-dir "app")], result.changes
+      %(convert srcDir "./app/" to src-dir "app"), %(set src-dir "app" in the angular plugin)], result.changes
     assert_equal [false], [result.dry_run]
     assert_equal ["angular", "debt"], world.configuration.read(APP).plugins.map(&:name)
     assert_equal [["spec-exists", "app/card", "later"]], world.debt_files.read(APP, DEBT).entries.map { |entry| [entry.rule, entry.artifact, entry.comment] }
@@ -34,8 +34,46 @@ class NgNudgeMoveTest < Minitest::Test
     result = world(json, comments: []).move
 
     assert_equal ["write #{CONFIG}, with the plugins angular and debt", "move #{NG_DEBT} to #{DEBT}, byte for byte, with 0 entries",
-      %(set policy "angular/spec-exists" enabled=#false severity="warning"), %(set report-entries commented="warning" in the debt plugin),
+      %(set report-entries commented="warning" in the debt plugin), %(set policy "angular/spec-exists" enabled=#false severity="warning"),
       %(set policy "debt/has-debt" severity="warning")], result.changes
+  end
+
+  EVERY_KEY = {
+    "$schema" => "x", "srcDir" => "./app/", "tsConfig" => "tsconfig.app.json",
+    "artifacts" => {"store" => {"pattern" => "app/**/*.store.ts", "expects" => ["spec"]}, "page" => {"expects" => []}},
+    "rules" => {"spec-exists" => {"enabled" => false, "severity" => "warning"}, "has-debt" => {"severity" => "error", "withComment" => {"maxSeverity" => "warning", "matching" => "^T-"}}},
+    "options" => {"warnings" => "none", "verbosity" => "quiet"}
+  }.freeze
+
+  # The settings the written file holds, each as the line that names it:
+  # the file is read back, so that the list is held to what was written.
+  def test_lists_each_setting_of_the_written_file_in_its_order_and_nothing_else
+    Dir.mktmpdir("crosslint") do |root|
+      move = Core::NgNudge::Move.new(configuration: CrossLint::Adapters::KDLConfiguration.new, ng_nudge: Memory::MemoryNgNudge.new({root => {RC => JSON.generate(EVERY_KEY)}}),
+        debt_files: Memory::MemoryDebtFiles.new({}), javascript: Memory::MemoryJavaScript.new({"^T-" => ->(_) { true }}), project_files: Memory::MemoryProjectFiles.new({root => []}))
+      listed = move.call(root).changes.grep(/\Aset /)
+      document = CrossLint::Adapters::KDLDocument.load(File.join(root, CONFIG), CONFIG)
+      held = document.nodes.flat_map { |node| (node.name == "plugin") ? node.children.flat_map { |child| [child, *child.children] } : [node] }
+
+      assert_equal [%(set src-dir "app" in the angular plugin), %(set tsconfig "tsconfig.app.json" in the angular plugin),
+        %(set role "store" files="app/{path}.store.ts" in the angular plugin), %(set expects "spec" in role "store" of the angular plugin),
+        %(set role "page" in the angular plugin), %(set expects in role "page" of the angular plugin),
+        %(set report-entries commented="warning" matching="\\\\AT-" in the debt plugin),
+        %(set policy "angular/spec-exists" enabled=#false severity="warning"), %(set policy "debt/has-debt" severity="error"),
+        %(set warnings "none"), %(set verbosity "quiet")], listed
+      assert_equal held.map(&:name), listed.map { |line| line.split.fetch(1) }
+    end
+  end
+
+  def test_lists_every_setting_with_dry_run_too
+    [false, true].each do |dry_run|
+      world = world(EVERY_KEY, expressions: {"^T-" => ->(_) { true }}, comments: [])
+      listed = world.move(dry_run:).changes.grep(/\Aset /)
+
+      assert_equal 11, listed.size, dry_run.inspect
+      assert_includes listed, %(set warnings "none")
+      assert_equal dry_run, !world.configuration.exist?(APP)
+    end
   end
 
   def test_says_how_many_entries_it_moves

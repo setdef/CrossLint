@@ -91,6 +91,17 @@ module CrossLint
         # which change what ng-nudge checks.
         def code_files: (Array[String] paths) -> Array[Mistake]
 
+        # A line for each setting the configuration holds, in the order the
+        # file holds them: the settings of each plugin, and of a role in it,
+        # then the policy lines, then the modes.
+        def settings: (Configuration configuration) -> Array[String]
+
+        # The line for a setting, and for each setting inside it, saying
+        # where it is.
+        def setting_lines: (Setting setting, String within) -> Array[String]
+
+        def kdl: (untyped value) -> String
+
         # The lines for the configuration written, and the debt file
         # moved, if there is one.
         def moved: (bool replaced, Rc::Result converted, bool moves, DebtFile debt, bool replaces) -> Array[String]

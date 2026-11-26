@@ -684,7 +684,8 @@ class CLITest < Minitest::Test
     app, configuration, debt_files = ng_nudge_app({"srcDir" => "./app/"})
     lines = ["crosslint: will write .config/crosslint/config.kdl, with the plugins angular and debt\n",
       "crosslint: will move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 0 entries\n",
-      %(crosslint: will convert srcDir "./app/" to src-dir "app"\n), "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n"]
+      %(crosslint: will convert srcDir "./app/" to src-dir "app"\n),
+      %(crosslint: will set src-dir "app" in the angular plugin\n), "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n"]
 
     assert_equal ["", lines.join, 0], init("init", "--from-ng-nudge", app:)
     assert_equal [%w[angular debt], false], [configuration.read("#{WORK}/app").plugins.map(&:name), debt_files.exist?("#{WORK}/app", ".config/ng-nudge/debt.tsv")]

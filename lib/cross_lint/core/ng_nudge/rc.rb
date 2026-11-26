@@ -255,10 +255,7 @@ module CrossLint
           problem("#{key}.severity", "is #{JSON.generate(severity)}, and it takes \"error\" or \"warning\"") unless severity_ok
           return if !enabled_ok || !severity_ok || (enabled && severity.nil?)
 
-          made = PolicySetting.new(name: "#{(name == DEBT_RULE) ? "debt" : "angular"}/#{name}", enabled: (false unless enabled), severity: severity&.to_sym, line: LINE)
-          properties = [("enabled=#false" unless enabled), (%(severity=#{severity.dump}) if severity)].compact
-          @changes << "set policy #{made.name.dump} #{properties.join(" ")}"
-          made
+          PolicySetting.new(name: "#{(name == DEBT_RULE) ? "debt" : "angular"}/#{name}", enabled: (false unless enabled), severity: severity&.to_sym, line: LINE)
         end
 
         # What withComment says, as report-entries: ng-nudge reads it as a
@@ -297,7 +294,6 @@ module CrossLint
           properties = {} #: Hash[String, String]
           properties["commented"] = ceiling unless ceiling == "error"
           properties["matching"] = matching.translated if matching
-          @changes << ["set report-entries", *properties.map { |name, value| "#{name}=#{value.dump}" }, "in the debt plugin"].join(" ")
           Report.new(setting: setting("report-entries", [], properties), matching:)
         end
 
