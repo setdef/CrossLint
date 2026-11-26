@@ -604,6 +604,25 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal ENV.keys.grep(/\AGIT_/).sort, Adapters::GitEnvironment.cleared.keys.sort
   end
 
+  def test_unsets_a_git_variable_whatever_its_case_on_windows_and_only_there
+    env = {"Git_Dir" => "x", "git_index_file" => "y", "PATH" => "p", "XGIT_A" => "b", "GIT_WORK_TREE" => "z"}
+
+    assert_equal({"Git_Dir" => nil, "git_index_file" => nil, "GIT_WORK_TREE" => nil}, Adapters::GitEnvironment.cleared(env, windows: true))
+    assert_equal({"GIT_WORK_TREE" => nil}, Adapters::GitEnvironment.cleared(env, windows: false))
+  end
+
+  # Ruby keeps the case a variable was set in, and Windows names ignore
+  # case, so a GIT_DIR in lower case reaches Git unless it is named as set.
+  def test_gives_a_child_no_git_variable_of_any_case_where_the_system_ignores_case
+    ENV.update("git_dir" => "x", "Git_Index_File" => "y")
+    out, = Open3.capture2(Adapters::GitEnvironment.cleared, RbConfig.ruby, "-e", 'print ENV.keys.grep(/\Agit_/i).sort.join(",")')
+
+    assert_equal(WINDOWS ? "" : "Git_Index_File,git_dir", out)
+  ensure
+    ENV.delete("git_dir")
+    ENV.delete("Git_Index_File")
+  end
+
   private
 
   # The folder the cache keeps the fetch of `ref` of `url` in, worked out

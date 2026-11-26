@@ -4,8 +4,9 @@ module CrossLint
     # CrossLint's environment.
     module GitEnvironment
       # Each GIT_ variable in `env`, set to nil so that the Git run has
-      # none.
-      def self.cleared: (?_Variables env) -> Hash[String, String?]
+      # none. When `windows` is true, a name matches in any case, as
+      # Windows reads it; the default is whether this is Windows.
+      def self.cleared: (?_Variables env, ?windows: bool) -> Hash[String, String?]
 
       # What the module reads of the environment, as ENV or a hash has it.
       interface _Variables
