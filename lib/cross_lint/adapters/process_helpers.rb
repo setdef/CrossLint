@@ -12,17 +12,20 @@ module CrossLint
     class ProcessHelpers
       TIME_LIMIT = 60
 
+      STOP_LIMIT = 2
+
       WINDOWS = RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/)
 
       # A table, not a branch, since each system runs only its own.
       TREE = {true => JobObject, false => ProcessGroup}.fetch(WINDOWS)
 
-      attr_reader :time_limit
+      attr_reader :time_limit, :stop_limit
 
-      def initialize(err:, debug:, time_limit: TIME_LIMIT, env: ENV)
+      def initialize(err:, debug:, time_limit: TIME_LIMIT, stop_limit: STOP_LIMIT, env: ENV)
         @err = err
         @debug = debug
         @time_limit = time_limit
+        @stop_limit = stop_limit
         @env = env
       end
 
@@ -32,7 +35,7 @@ module CrossLint
             [[plugin.name, helper.name], command(plugin, helper)] #: [[String, String], [String, String]]
           end
         end
-        Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit)
+        Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit)
       end
 
       # On Windows, node is node.exe or node.cmd, and a file with no
@@ -63,28 +66,40 @@ module CrossLint
       end
 
       class Running
-        def initialize(root, commands, err:, debug:, time_limit:)
+        def initialize(root, commands, err:, debug:, time_limit:, stop_limit:)
           @root = root
           @commands = commands
           @err = err
           @debug = debug
           @time_limit = time_limit
+          @stop_limit = stop_limit
           @processes = {}
         end
 
         def call(plugin, name, input)
           key = [plugin.name, name] #: [String, String]
-          process = @processes[key] ||= HelperProcess.new(name, @commands.fetch(key), root: @root, err: @err, debug: @debug, time_limit: @time_limit)
+          process = @processes[key] ||= HelperProcess.new(name, @commands.fetch(key), root: @root, err: @err, debug: @debug, time_limit: @time_limit,
+            stop_limit: @stop_limit)
           process.call(input)
         end
 
-        def stop = @processes.each_value(&:stop)
+        # Each helper ends in a thread of its own, so that the waits for
+        # several helpers overlap. Ctrl-C ends every tree at once.
+        def stop
+          @processes.each_value.map { |process| Thread.new { process.stop } }.each(&:join)
+        rescue Interrupt
+          kill
+          raise
+        end
+
+        def kill = @processes.each_value(&:kill)
       end
 
       class HelperProcess
-        def initialize(name, command, root:, err:, debug:, time_limit:)
+        def initialize(name, command, root:, err:, debug:, time_limit:, stop_limit:)
           @name = name
           @time_limit = time_limit
+          @stop_limit = stop_limit
           @stdin, @stdout, stderr, @wait = TREE.popen3(command, root)
           # Before the first request, so that every process the helper
           # starts to answer one is in the tree.
@@ -112,8 +127,15 @@ module CrossLint
 
         def stop
           TREE.close_input(@stdin)
-          @wait.join(@time_limit)
+          @wait.join(@stop_limit)
           finish
+        end
+
+        # Nothing is left to read after the tree is killed, and Ctrl-C
+        # means CrossLint is ending.
+        def kill
+          @killed = true
+          @tree.kill
         end
 
         private
@@ -144,7 +166,7 @@ module CrossLint
           status = @wait.value
           # A process that left the tree keeps standard error open, so the
           # reader is waited for as long as an answer is, and no longer.
-          @reader.join(@time_limit)
+          @reader.join(@time_limit) unless @killed
           [status, @written]
         end
 

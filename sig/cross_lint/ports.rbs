@@ -94,8 +94,14 @@ module CrossLint
     # or doesn't answer within a time limit.
     def call: (Core::Plugin plugin, String name, untyped input) -> untyped
 
-    # Ends each helper and everything it started.
+    # Closes each helper's input, waits for the helpers to exit, all at
+    # once, up to a time limit each, and ends each one that is still
+    # running and everything it started.
     def stop: () -> void
+
+    # Ends each helper and everything it started at once, without
+    # waiting for any of them: what Ctrl-C does.
+    def kill: () -> void
   end
 
   # Where a check's result goes: a format, such as lines of text or JSON,

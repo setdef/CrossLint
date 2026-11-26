@@ -34,6 +34,9 @@ module CrossLint
         # Whether stop was called.
         attr_reader stopped: bool
 
+        # Whether kill was called.
+        attr_reader killed: bool
+
         # Helpers started in `root` that answer with `helpers`.
         def initialize: (String root, Hash[String, ^(untyped input) -> untyped] helpers) -> void
 

@@ -24,6 +24,10 @@ module CrossLint
         helpers = @helpers.start(project.root, project.plugins)
         begin
           violations, faults = run_plugins(project, policies, kinds, helpers)
+        rescue Interrupt
+          # Before stop, which waits for each helper to finish.
+          helpers.kill
+          raise
         ensure
           helpers.stop
         end

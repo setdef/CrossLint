@@ -19,18 +19,23 @@ module CrossLint
       end
 
       class Running
-        attr_reader :root, :stopped
+        attr_reader :root, :stopped, :killed
 
         def initialize(root, helpers)
           @root = root
           @helpers = helpers
           @stopped = false
+          @killed = false
         end
 
         def call(plugin, name, input) = @helpers.fetch("#{plugin.name}/#{name}").call(input)
 
         def stop
           @stopped = true
+        end
+
+        def kill
+          @killed = true
         end
       end
     end

@@ -258,6 +258,31 @@ class RubyRuleTest < Minitest::Test
     assert_equal ".config/tests/plugin.kdl:9", mistake.location
   end
 
+  def test_ends_every_helper_at_once_on_ctrl_c_before_waiting_for_any_to_stop
+    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { raise Interrupt }}, commands: ["node"])
+    events = []
+    port.define_singleton_method(:start) do |root, plugins|
+      super(root, plugins).tap do |running|
+        running.define_singleton_method(:kill) { events << :kill and super() }
+        running.define_singleton_method(:stop) { events << :stop and super() }
+      end
+    end
+
+    assert_raises(Interrupt) { check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port) }
+    assert_equal [:kill, :stop], events
+  end
+
+  def test_ends_no_helper_at_once_unless_ctrl_c_comes
+    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { [] }}, commands: ["node"])
+    events = []
+    port.define_singleton_method(:start) do |root, plugins|
+      super(root, plugins).tap { |running| running.define_singleton_method(:kill) { events << :kill and super() } }
+    end
+    check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port)
+
+    assert_empty events
+  end
+
   def test_names_a_rules_class_in_camel_case
     assert_equal %w[SignatureNamesClass NamesClass X Html5Check AB], %w[signature-names-class names_class x html5-check a--b].map { RubyRule.class_name(_1) }
   end
