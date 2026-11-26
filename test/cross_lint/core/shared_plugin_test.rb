@@ -89,10 +89,17 @@ class SharedPluginTest < Minitest::Test
   def test_picks_the_tag_the_project_has_among_the_tags_of_the_highest_version
     tags = %w[1.2.0 v1.2.0 v1.1.0]
 
-    assert_equal ["v1.2.0", "1.2.0", "1.2.0"], [SharedPlugin.newest_tag(tags, keep: "v1.2.0"), SharedPlugin.newest_tag(tags, keep: "1.2.0"),
-      SharedPlugin.newest_tag(tags, keep: "v1.1.0")]
+    assert_equal ["v1.2.0", "1.2.0"], [SharedPlugin.newest_tag(tags, keep: "v1.2.0"), SharedPlugin.newest_tag(tags, keep: "1.2.0")]
     assert_equal "1.2.0", SharedPlugin.newest_tag(tags.reverse)
     assert_equal "1.2.0", SharedPlugin.newest_tag(tags, keep: nil)
+  end
+
+  def test_moves_to_the_tag_with_the_form_of_the_ref_it_replaces_when_two_tags_tie
+    tags = %w[1.2.0 v1.2.0 v1.1.0 1.1.0]
+
+    assert_equal ["v1.2.0", "1.2.0", "1.2.0"], [SharedPlugin.newest_tag(tags, keep: "v1.1.0"), SharedPlugin.newest_tag(tags, keep: "1.1.0"),
+      SharedPlugin.newest_tag(%w[1.2.0 v1.2.0], keep: "release-1.1.0")]
+    assert_equal "v1.2.0", SharedPlugin.newest_tag(%w[v1.2.0], keep: "1.1.0")
   end
 
   def test_never_moves_to_a_lower_version_than_the_one_the_project_has
