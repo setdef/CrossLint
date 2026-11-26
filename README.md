@@ -91,7 +91,7 @@ In the project's root, run `crosslint init --from-ng-nudge --dry-run` first: it 
 - leaves `rc.json` and the rule files in `.config/ng-nudge/rules/`, which ng-nudge never ran, where they are;
 - lists each file that ng-nudge's patterns and CrossLint's would find differently, using the glob package in the project's `node_modules`.
 
-It checks everything before it changes anything. A setting it can't carry with the same meaning, such as a pattern with braces, stops it with exit status 2, naming the setting and what to write instead. So does a file in `.config/ng-nudge/artifacts/` or `policies/`, whose code CrossLint can't run, and an existing configuration or debt file, which `--force` replaces. Then replace ng-nudge's dev dependency and each `npx ng-nudge` in the project's scripts and CI with `crosslint check`.
+It checks everything before it changes anything. A setting it can't carry with the same meaning, such as a pattern with braces, stops it with exit status 2, naming the setting and what to write instead, and one run lists every such problem, not only the first. So does a file in `.config/ng-nudge/artifacts/` or `policies/`, whose code CrossLint can't run, and an existing configuration or debt file, which `--force` replaces. Then replace ng-nudge's dev dependency and each `npx ng-nudge` in the project's scripts and CI with `crosslint check`.
 
 CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't read and stylesheets it looks for in the wrong folder. Run `crosslint debt update` once after moving, and work through the entries it adds as you would any other debt. The next check then passes, unless `rc.json` had ng-nudge report debt entries as errors, which CrossLint keeps doing.
 

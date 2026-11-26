@@ -102,7 +102,7 @@ crosslint check --json
 
 Writes .config/crosslint/config.kdl in the current folder, listing the recommended plugins. If the file exists, changes nothing unless you pass --force.
 
-With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a configuration with the Angular plugin, the debt plugin, and every setting rc.json had. Moves ng-nudge's debt file to .config/crosslint/debt.tsv with every entry and comment kept. Lists every change before it makes any.
+With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a configuration with the Angular plugin, the debt plugin, and every setting rc.json had. With no rc.json, uses ng-nudge's defaults, as if rc.json held {}. Moves ng-nudge's debt file to .config/crosslint/debt.tsv with every entry and comment kept. Lists every change before it makes any. When a setting, pattern, or expression can't be carried with the same meaning, lists every such problem and stops with exit status 2, changing nothing.
 
 ### Flags
 - **`--from-ng-nudge`** — Write the configuration from this project's ng-nudge setup, and move its debt file
