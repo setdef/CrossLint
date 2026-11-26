@@ -17,6 +17,12 @@ unless defined?(Mutant)
     # A helper's process tree is a job object on Windows and a process
     # group elsewhere, and each system runs only its own.
     add_filter(RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/) ? "lib/cross_lint/adapters/process_group.rb" : "lib/cross_lint/adapters/job_object.rb")
+    # One process runs every test, so there is nothing to merge. SimpleCov
+    # would merge in the result of any run in the same folder within the
+    # last ten minutes, such as one of a few tests, or of other code, and
+    # that run's branches, at lines that have since moved, would count as
+    # branches no test reached.
+    use_merging false
     minimum_coverage line: 100, branch: 100
   end
   # Minitest 6 loads no plugin it isn't asked to, SimpleCov's included,
