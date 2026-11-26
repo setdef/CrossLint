@@ -95,6 +95,25 @@ class CommandLineTest < Minitest::Test
     assert_error "tool run takes no arguments; remove extra", "run", "extra"
   end
 
+  def test_help_takes_the_command_to_explain
+    assert_nil read("help").topic
+    assert_nil read("run").topic
+    assert_equal ["help", "run"], [read("help", "run").command.name, read("help", "run").topic.name]
+    assert_equal "stop", read("--verbose", "help", "-v", "stop").topic.name
+    assert_equal "run", read("help", "--", "run").topic.name
+  end
+
+  def test_help_refuses_a_command_it_does_not_have
+    assert_error "tool has no command runn; did you mean run?", "help", "runn"
+    assert_error "tool has no command zzzzzz; tool --help lists them", "help", "zzzzzz"
+    assert_error 'tool has no command "x y"; tool --help lists them', "help", "x y"
+  end
+
+  def test_help_takes_one_command_at_most
+    assert_error "tool help takes one command at most; remove stop", "help", "run", "stop"
+    assert_error 'tool help takes one command at most; remove "x y"', "help", "run", "x y"
+  end
+
   def test_refuses_a_command_it_does_not_have
     assert_error "tool has no command runn; did you mean run?", "runn"
     assert_error "tool has no command -; tool --help lists them", "-"

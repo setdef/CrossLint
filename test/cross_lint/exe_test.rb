@@ -17,6 +17,16 @@ class ExeTest < Minitest::Test
     assert_equal [CrossLint::Help.new(shipped_spec).render, "", 0], crosslint("--help")
   end
 
+  def test_help_prints_the_help_of_a_command_as_help_does
+    assert_equal [CrossLint::Help.new(shipped_spec).render(shipped_spec.commands.first), "", 0], crosslint("help", "check")
+    assert_equal crosslint("check", "--help"), crosslint("help", "check")
+    assert_equal crosslint("--help"), crosslint("help")
+  end
+
+  def test_help_exits_with_2_at_a_command_it_does_not_have
+    assert_equal ["", "crosslint: crosslint has no command chekc; did you mean check?\n", 2], crosslint("help", "chekc")
+  end
+
   def test_exits_with_2_at_a_mistake
     assert_equal ["", "crosslint: crosslint has no flag --quite; did you mean --quiet?\n", 2], crosslint("--quite")
   end

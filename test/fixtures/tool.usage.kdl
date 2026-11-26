@@ -42,3 +42,7 @@ cmd "stop" help="Stop the thing"
 cmd "show" help="Show a thing" {
   arg "[thing]" help="The thing to show"
 }
+
+cmd "help" help="Explain a command" {
+  arg "[command]" help="The command to explain"
+}

@@ -17,6 +17,8 @@ module CrossLint
 
     attr_reader :flags
 
+    attr_reader :topic
+
     def initialize(spec, argv)
       @spec = spec
       @flags = {}
@@ -103,19 +105,32 @@ module CrossLint
     end
 
     def read_argument(word)
+      return read_topic(word) if @command&.name == "help"
       raise Error, "#{scope} takes no arguments; remove #{shown(word)}" if @command
 
-      @command = @spec.commands.find { |command| command.name == word }
-      raise Error, suggest("#{scope} has no command #{shown(word)}", word, @spec.commands.map(&:name)) unless @command
+      @command = find_command(word, scope)
     end
 
-    def unknown_flag(name, names) = suggest("#{scope} has no flag #{shown(name)}", name, names)
+    def read_topic(word)
+      raise Error, "#{scope} takes one command at most; remove #{shown(word)}" if @topic
 
-    def suggest(message, typed, names)
+      # The command help explains is one of the program's, so the program's
+      # --help is what lists the commands, not help's own.
+      @topic = find_command(word, @spec.bin)
+    end
+
+    def find_command(word, where)
+      @spec.commands.find { |command| command.name == word } ||
+        raise(Error, suggest("#{where} has no command #{shown(word)}", word, @spec.commands.map(&:name), where))
+    end
+
+    def unknown_flag(name, names) = suggest("#{scope} has no flag #{shown(name)}", name, names, scope)
+
+    def suggest(message, typed, names, where)
       guess = DidYouMean::SpellChecker.new(dictionary: names).correct(typed).first
       return "#{message}; did you mean #{guess}?" if guess
 
-      "#{message}; #{scope} --help lists them"
+      "#{message}; #{where} --help lists them"
     end
 
     def scope = [@spec.bin, @command&.name].compact.join(" ")

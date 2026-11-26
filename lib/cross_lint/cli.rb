@@ -28,6 +28,7 @@ module CrossLint
       if line.action == :run && command
         return check(line, command) if command.name == "check"
         return update(line) if command.name == "update"
+        return explain(spec, line.topic) if command.name == "help"
 
         return say("#{spec.bin} #{command.name} doesn't work yet")
       end
@@ -45,6 +46,11 @@ module CrossLint
     end
 
     private
+
+    def explain(spec, topic)
+      @out.write(Help.new(spec).render(topic))
+      0
+    end
 
     def check(line, command)
       app = @app || App.new(err: @err, debug: debug?)

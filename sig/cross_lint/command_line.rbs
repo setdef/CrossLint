@@ -27,6 +27,10 @@ module CrossLint
     # The command given, or nil for none.
     attr_reader command: UsageSpec::Command?
 
+    # The command that the help command is asked to explain, or nil for
+    # none, and for every other command.
+    attr_reader topic: UsageSpec::Command?
+
     # Each flag's value by its long name: true for a flag that takes no
     # value, or the value given or the default.
     attr_reader flags: Hash[String, String | true]
@@ -71,15 +75,25 @@ module CrossLint
     # `value`, checked against what `flag` takes.
     def flag_value: (UsageSpec::Flag flag, String? value) -> String
 
-    # Reads `word` as the command, or refuses it after one.
+    # Reads `word` as the command, as what the help command explains, or
+    # refuses it after any other command.
     def read_argument: (String word) -> void
+
+    # Reads `word` as the command that the help command explains, or
+    # refuses it as a second one.
+    def read_topic: (String word) -> void
+
+    # The command named `word`, or a raise of Error that names the nearest
+    # one, with `where` as the program or command that has no such command.
+    def find_command: (String word, String where) -> UsageSpec::Command
 
     # The message for a flag named `name` that isn't among `names`.
     def unknown_flag: (String name, Array[String] names) -> String
 
     # `message`, with the name among `names` that the person most likely
-    # meant by `typed`, or where to see them all.
-    def suggest: (String message, String typed, Array[String] names) -> String
+    # meant by `typed`, or where to see them all: `where` --help, with
+    # `where` the program or command, as "crosslint check".
+    def suggest: (String message, String typed, Array[String] names, String where) -> String
 
     # The program's name, and the command's when there is one, as
     # "crosslint check".

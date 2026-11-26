@@ -64,6 +64,10 @@ module CrossLint
 
     @app: App?
 
+    # Runs crosslint help: writes the help of the command `topic`, or of
+    # the program when it is nil, as --help does, and returns 0.
+    def explain: (UsageSpec spec, UsageSpec::Command? topic) -> Integer
+
     # Runs crosslint check, `command`: checks the project with the
     # plugins' flags given, writes the report, and returns 1 when the
     # check failed and 0 when it passed.

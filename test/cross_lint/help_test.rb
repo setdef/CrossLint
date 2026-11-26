@@ -17,6 +17,7 @@ class HelpTest < Minitest::Test
         run   Run the thing
         stop  Stop the thing
         show  Show a thing
+        help  Explain a command
 
       Flags:
         -v, --verbose       Say more
@@ -86,7 +87,7 @@ class HelpTest < Minitest::Test
   end
 
   def test_shows_the_arguments_of_a_command
-    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).render(fixture_spec.commands.last)
+    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).render(fixture_spec.commands[2])
       Show a thing
 
       Usage: tool show [FLAGS] [thing]

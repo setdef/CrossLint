@@ -29,6 +29,19 @@ class CLITest < Minitest::Test
     assert_equal [help.render(fixture_spec.commands.first), "", 0], run_cli("run", "--help")
   end
 
+  def test_help_prints_what_help_flags_print
+    help = CrossLint::Help.new(fixture_spec)
+
+    assert_equal run_cli("--help"), run_cli("help")
+    assert_equal [help.render(fixture_spec.commands.first), "", 0], run_cli("help", "run")
+    assert_equal run_cli("run", "--help"), run_cli("help", "run")
+    assert_equal [help.render(fixture_spec.commands.last), "", 0], run_cli("help", "--help")
+  end
+
+  def test_help_says_when_it_has_no_such_command
+    assert_equal ["", "crosslint: tool has no command runn; did you mean run?\n", 2], run_cli("help", "runn")
+  end
+
   def test_says_a_command_does_not_work_yet
     assert_equal ["", "crosslint: tool run doesn't work yet\n", 2], run_cli("run")
   end
