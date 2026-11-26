@@ -12,7 +12,9 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **primary file** | The file an artifact is found by, such as `card.component.ts` for a component. | main file, source |
 | **companion** | A file that belongs with an artifact's primary file, at a path the artifact gives, such as its test or its signature file. A companion may or may not exist; checking that is a rule's work. | sibling, related file, partner |
 | **path pattern** | A path with a placeholder in braces, such as `lib/{path}.rb`. In an artifact's `files`, `{path}` matches a file name and the folders before it, if any; in a companion's path, it stands for what it matched. | glob (a path pattern is not a glob), template |
+| **placeholder** | A name in braces in a path pattern, `{path}` or `{name}`, which stands for part of a path. | variable, wildcard |
 | **policy** | A declaration of when rules apply: to which artifacts, and under what condition, such as "every component whose stub exists". | check, linter config |
+| **condition** | What a policy's `when` says must hold for an artifact before the policy applies to it, such as `companion-exists "stub"`. | filter, predicate |
 | **rule** | One check of one artifact, such as "the companion exists" or "the stub declares every input the component has". A rule runs only where a policy applies it. | lint, assertion, test |
 | **violation** | What a rule reports when an artifact fails it: the rule, the artifact, a message, and a severity. | error (an error is one severity), offense, problem |
 | **built-in rule** | A rule that ships inside CrossLint, such as `companion-exists`, which any plugin's policy can run without code. | core rule, standard rule |
@@ -25,9 +27,11 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **plugin** | A folder of artifacts, policies, and rules, with a `plugin.kdl` that declares them. A project uses a plugin by listing it in its configuration. | extension, package, preset |
 | **local plugin** | A plugin kept in the project's repository, for that project's rules. It is a plugin in every way; only where it lives differs. | custom rules, project rules |
 | **shared plugin** | A plugin kept in a separate Git repository, which projects list by its URL and a tag or commit. CrossLint fetches it into the user's cache. | remote plugin, package |
+| **ref** | The tag or full commit SHA at which a project lists a shared plugin, as `ref="v1.2.0"`. Never a branch. | version, pin |
 | **built-in plugin** | A plugin that ships inside CrossLint, such as `angular` and `debt`. It runs only when the configuration lists it, like any other. | core plugin, default plugin |
 | **manifest** | A plugin's `plugin.kdl`, which declares the plugin's artifacts, policies, rules, and helpers. | plugin config, descriptor |
-| **configuration** | `.config/crosslint.kdl` in a project's root. It lists the plugins CrossLint runs, and settings for their rules. | config file, rc file, settings |
+| **project root** | The folder that holds a project's `.config/crosslint.kdl`. Every path in a plugin, a configuration, and the report is relative to it. | base dir, workspace |
+| **configuration** | `.config/crosslint.kdl` in a project's root. It lists the plugins CrossLint runs, and settings for their rules. | config file, rc file, settings (a setting is one value in it) |
 | **setting** | One value in the configuration, such as a plugin's `src-dir` or a policy's `severity`. | option (an option is on the command line), preference |
 | **mistake** | Something in the configuration or a manifest that CrossLint can't use, such as a node it doesn't know. A mistake stops CrossLint with exit status 2 before it checks anything, naming the file and the line. | error (an error is a severity), invalid config |
 | **helper** | A program in another language that a plugin carries to read files of that language, such as the Angular plugin's JavaScript that asks the project's TypeScript compiler for a component's inputs. It runs on the runtime for that language that the project already has. | adapter, bridge, sidecar |
