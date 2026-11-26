@@ -16,7 +16,7 @@
 require "cross_lint"
 
 module Doctest
-  PENDING = {"CrossLint::Rule" => "https://github.com/setdef/CrossLint/issues/12"}.freeze
+  PENDING = {}.freeze
 
   Example = Data.define(:file, :line, :code)
 

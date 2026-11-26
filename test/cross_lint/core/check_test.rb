@@ -204,11 +204,6 @@ class CheckTest < Minitest::Test
     assert_equal [[Artifact, "zed"], [Violation, "ruby-file"]], findings.map { |finding| [finding.class, finding.role] }
   end
 
-  def test_fetches_a_built_in_rule_by_name
-    assert_equal "companion-absent", BuiltInRule.fetch("companion-absent").name
-    assert_equal %(no built-in rule "nope"), assert_raises(KeyError) { BuiltInRule.fetch("nope") }.message
-  end
-
   def test_applies_a_policy_to_another_plugins_artifact
     other = plugin("other", artifacts: [], policies: [policy("has-test", applies_to: "tests/ruby-file", rules: [rule])])
     result = check(project(tests_plugin(policies: []), other), files: ["lib/a.rb"])
@@ -265,24 +260,16 @@ class CheckTest < Minitest::Test
     refute check(project(tests_plugin), files:, warnings: :error).failed
   end
 
-  def test_stops_at_a_policy_that_runs_a_rule_written_in_ruby
-    plugin = tests_plugin(rules: [rule, rule("names-class", line: 12)], ruby: ["names-class"])
-    mistake = assert_raises(Mistake) { check(project(plugin), files: []) }
-
-    assert_equal [".config/tests/plugin.kdl:12", %(rule "names-class" is written in Ruby, and CrossLint can't run rules written in Ruby yet)],
-      [mistake.location, mistake.message]
-    assert_empty check(project(plugin, policies: [setting("tests/has-test", enabled: false)]), files: []).findings
-  end
-
   def test_stops_at_a_root_outside_a_git_working_tree
-    assert_raises(Mistake) { Check.new(project_files: CrossLint::Adapters::MemoryProjectFiles.new).call(project(tests_plugin)) }
+    port = CrossLint::Adapters::MemoryProjectFiles.new
+    assert_raises(Mistake) { Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new).call(project(tests_plugin)) }
   end
 
   private
 
   def check(project, files:, ignored: [], **options)
     port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files}, ignored: {ROOT => ignored})
-    Check.new(project_files: port).call(project, **options)
+    Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new).call(project, **options)
   end
 
   def declaration(name, files, line: 1, **companions)

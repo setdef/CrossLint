@@ -1,0 +1,3 @@
+# The bundler/inline a rule file finds, ahead of Bundler's: requiring it
+# raises CrossLint::Core::PluginError, so a rule can't install gems into
+# CrossLint's folder. It declares nothing.

@@ -201,6 +201,49 @@ module CrossLint
       end
     end
 
+    module PluginRubyContract
+      def test_puts_a_files_constants_in_the_namespace_it_is_given
+        namespace = Module.new
+        plugin_ruby_port({"tests/rules/a.rb" => "class NamesClass < CrossLint::Rule\nend\n"}).load(ruby_plugin("tests"), "rules/a.rb", 3, namespace)
+
+        assert_operator namespace.const_get(:NamesClass, false), :<, CrossLint::Rule
+        refute Object.const_defined?(:NamesClass, false)
+      end
+
+      def test_keeps_two_plugins_classes_of_one_name_apart
+        files = {"one/a.rb" => "class Same < CrossLint::Rule\n  def name = 1\nend\n", "two/a.rb" => "class Same < CrossLint::Rule\n  def name = 2\nend\n"}
+        port = plugin_ruby_port(files)
+        found = %w[one two].map do |plugin|
+          namespace = Module.new
+          port.load(ruby_plugin(plugin), "a.rb", 3, namespace)
+          namespace.const_get(:Same, false).new.name
+        end
+
+        assert_equal [1, 2], found
+      end
+
+      def test_stops_at_a_file_the_plugins_folder_lacks
+        mistake = assert_raises(Core::Mistake) { plugin_ruby_port({}).load(ruby_plugin("tests"), "rules/missing.rb", 7, Module.new) }
+
+        assert_equal ["tests/plugin.kdl:7", %(no file "rules/missing.rb" in the plugin's folder)], [mistake.location, mistake.message]
+      end
+
+      def test_raises_what_the_file_raises
+        port = plugin_ruby_port({"tests/a.rb" => "raise ArgumentError, \"boom\"\n"})
+        error = assert_raises(ArgumentError) { port.load(ruby_plugin("tests"), "a.rb", 3, Module.new) }
+
+        assert_equal "boom", error.message
+      end
+
+      private
+
+      def ruby_plugin(name)
+        manifest = Core::Manifest.new(file: "#{name}/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [])
+        listing = Core::ListedPlugin.new(name: "./#{name}", ref: nil, settings: [], line: 1)
+        Core::Plugin.new(name:, folder: File.join(plugin_base, name), listing:, manifest:)
+      end
+    end
+
     module ReportContract
       def test_reports_each_violation_in_order
         port = report_port
@@ -238,7 +281,19 @@ module CrossLint
 
         assert_empty reported.fetch(:findings)
         assert_empty reported.fetch(:notices)
+        assert_empty reported.fetch(:faults)
         assert_nil reported.fetch(:summary)
+      end
+
+      def test_reports_each_fault_even_when_silent
+        faults = [Core::Fault.new(plugin: "tests", rule: "names-class", artifact: "lib/a.rb", message: "raised RuntimeError: boom", trace: ["a.rb:1"]),
+          Core::Fault.new(plugin: "other", rule: "uses-gem", artifact: nil, message: "requires rainbow", trace: [])]
+        port = report_port
+        port.write(result([], verbosity: :silent, faults:))
+
+        assert_equal [["tests", "names-class", "lib/a.rb", "raised RuntimeError: boom"], ["other", "uses-gem", nil, "requires rainbow"]],
+          reported.fetch(:faults)
+        assert_empty reported.fetch(:findings)
       end
 
       private
@@ -247,9 +302,9 @@ module CrossLint
         Core::Violation.new(plugin: "tests", policy: "has-test", artifact: path, role: "ruby-file", message:, severity:, detail: nil)
       end
 
-      def result(findings, notices: [], verbosity: :normal)
-        summary = Core::Summary.new(kinds: [["ruby-file", 2]], errors: 0, warnings: 0, warnings_shown: true)
-        Core::CheckResult.new(notices:, findings:, summary:, verbosity:, failed: false)
+      def result(findings, notices: [], verbosity: :normal, faults: [])
+        summary = Core::Summary.new(kinds: [["ruby-file", 2]], faults: 0, errors: 0, warnings: 0, warnings_shown: true)
+        Core::CheckResult.new(notices:, findings:, summary:, verbosity:, failed: false, faults:)
       end
     end
   end

@@ -136,9 +136,10 @@ module CrossLint
         built_in = BuiltInRule.named(rule.name)
         unless built_in
           declared = plugin.manifest.rules.map(&:name)
-          return if declared.include?(rule.name)
+          fail_at.call(Spelling.unknown("rule", rule.name, BuiltInRule::ALL.map(&:name) + declared)) unless declared.include?(rule.name)
+          return if rule.arguments.empty?
 
-          fail_at.call(Spelling.unknown("rule", rule.name, BuiltInRule::ALL.map(&:name) + declared))
+          fail_at.call("rule #{rule.name.dump} is written in Ruby, and takes no #{rule.arguments.keys.first}=")
         end
 
         unknown = rule.arguments.keys - built_in.arguments

@@ -2,26 +2,35 @@
 
 require_relative "artifact"
 require_relative "check_result"
+require_relative "ruby_rule"
 
 module CrossLint
   module Core
     class Check
-      def initialize(project_files:)
+      def initialize(project_files:, plugin_ruby:)
         @project_files = project_files
+        @plugin_ruby = plugin_ruby
       end
 
       def call(project, warnings: nil, verbosity: nil, all: false)
         warnings ||= project.configuration.warnings
         verbosity ||= project.configuration.verbosity || :normal
         policies = enabled_policies(project)
-        policies.each { |plugin, policy| refuse_ruby_rules(plugin, policy) }
         files = @project_files.files(project.root)
+        rules, faults = load_rules(policies)
         kinds = project.plugins.to_h do |plugin|
           [plugin.name, plugin.manifest.artifacts.to_h { |declaration| [declaration.name, find(project, plugin, declaration, files)] }]
         end
         checked = checked_kinds(project, policies)
-        violations = policies.flat_map { |plugin, policy| run(project, plugin, policy, kinds) }
-        report(project, kinds, checked, violations, warnings:, verbosity:, all:)
+        read = ->(path) { @project_files.read(project.root, path) }
+        stopped = faults.map(&:plugin)
+        violations = project.plugins.reject { |plugin| stopped.include?(plugin.name) }.flat_map do |plugin|
+          policies.select { |owner, _| owner == plugin }.flat_map { |_, policy| run(project, plugin, policy, kinds, rules, read) }
+        rescue RubyRule::Stopped => error
+          faults << error.fault
+          []
+        end
+        report(project, kinds, checked, violations, faults, warnings:, verbosity:, all:)
       end
 
       private
@@ -38,12 +47,20 @@ module CrossLint
         project.configuration.policies.find { |setting| setting.name == "#{plugin.name}/#{policy.name}" }
       end
 
-      def refuse_ruby_rules(plugin, policy)
-        rule = policy.rules.find { |each| BuiltInRule.named(each.name).nil? }
-        return unless rule
-
-        raise Mistake.new("rule #{rule.name.dump} is written in Ruby, and CrossLint can't run rules written in Ruby yet",
-          file: plugin.manifest.file, line: rule.line)
+      # Each plugin's files run in a namespace of the plugin's own, and a
+      # plugin stops at its first fault.
+      def load_rules(policies)
+        loaded = {} #: Hash[[String, String], RubyRule]
+        faults = [] #: Array[Fault]
+        policies.group_by(&:first).each do |plugin, owned|
+          namespace = Module.new
+          declarations = plugin.manifest.rules.to_h { |rule| [rule.name, rule] }
+          names = owned.flat_map { |_, policy| policy.rules.map(&:name) }.uniq.reject { |name| BuiltInRule.named(name) }
+          names.each { |name| loaded[[plugin.name, name]] = RubyRule.load(@plugin_ruby, plugin, declarations.fetch(name), namespace) }
+        rescue RubyRule::Stopped => error
+          faults << error.fault
+        end
+        [loaded, faults]
       end
 
       def find(project, plugin, declaration, files)
@@ -76,23 +93,23 @@ module CrossLint
         kinds.select { |kind| targets.include?(kind) }
       end
 
-      def run(project, plugin, policy, kinds)
+      def run(project, plugin, policy, kinds, rules, read)
         owner, name = target(plugin, policy)
         override = setting(project, plugin, policy)&.severity
         kinds.fetch(owner).fetch(name).flat_map do |artifact|
           next [] unless policy.condition.nil? || policy.condition.holds?(artifact)
 
           policy.rules.flat_map do |rule|
-            built_in = BuiltInRule.fetch(rule.name)
-            built_in.messages(artifact, rule.arguments).map do |message|
-              Violation.new(plugin: plugin.name, policy: policy.name, artifact: artifact.path, role: artifact.role, message:,
-                severity: override || rule.severity || built_in.severity, detail: nil)
+            checker = BuiltInRule.named(rule.name) || rules.fetch([plugin.name, rule.name])
+            checker.results(artifact, rule.arguments, read).map do |result|
+              Violation.new(plugin: plugin.name, policy: policy.name, artifact: result.path, role: result.role, message: result.message,
+                severity: override || rule.severity || checker.severity, detail: result.detail)
             end
           end
         end
       end
 
-      def report(project, kinds, checked, violations, warnings:, verbosity:, all:)
+      def report(project, kinds, checked, violations, faults, warnings:, verbosity:, all:)
         hidden = warnings == :none
         shown = violations.select { |violation| !hidden || violation.severity == :error }
         notices = notices(project, kinds)
@@ -104,7 +121,7 @@ module CrossLint
         # fails the check.
         shows_notices = !hidden && (verbosity == :normal || (verbosity == :quiet && warnings == :error))
         CheckResult.new(notices: notices.select { shows_notices }, findings: sort(findings.reject { verbosity == :silent }),
-          summary: summary(kinds, checked, shown, hidden), verbosity:, failed:)
+          summary: summary(kinds, checked, shown, hidden, faults.size), verbosity:, failed:, faults:)
       end
 
       def notices(project, kinds)
@@ -123,12 +140,12 @@ module CrossLint
         checked.flat_map { |owner, name| kinds.fetch(owner).fetch(name) }.reject { |artifact| failed.include?([artifact.path, artifact.role]) }
       end
 
-      def summary(kinds, checked, shown, hidden)
+      def summary(kinds, checked, shown, hidden, faults)
         names = checked.map(&:last)
         counted = checked.map do |owner, name|
           [(names.count(name) > 1) ? "#{owner}/#{name}" : name, kinds.fetch(owner).fetch(name).size] #: [String, Integer]
         end
-        Summary.new(kinds: counted, errors: shown.count { |violation| violation.severity == :error },
+        Summary.new(kinds: counted, faults:, errors: shown.count { |violation| violation.severity == :error },
           warnings: shown.count { |violation| violation.severity == :warning }, warnings_shown: !hidden)
       end
 
