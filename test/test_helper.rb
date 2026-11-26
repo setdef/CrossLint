@@ -59,6 +59,18 @@ require_relative "plugin_ruby"
 module TestHelper
   ROOT = File.expand_path("..", __dir__)
 
+  # Mutant runs the tests with Thread.abort_on_exception on, which raises
+  # the exception of any thread that dies in the main thread, at whatever
+  # moment it is in. A mutation that makes a thread raise then ends
+  # mutant's process with a failure status when the exception arrives
+  # after the test has failed, and mutant counts that mutation as alive,
+  # whichever tests failed. The flag is turned off before every test, since
+  # a thread of an earlier test can die at any later time.
+  def before_setup
+    Thread.abort_on_exception = false
+    super
+  end
+
   def fixture_spec = CrossLint::UsageSpec.load(File.join(__dir__, "fixtures", "tool.usage.kdl"))
 
   def shipped_spec = CrossLint::UsageSpec.load

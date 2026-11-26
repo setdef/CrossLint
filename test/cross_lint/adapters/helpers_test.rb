@@ -56,16 +56,7 @@ class ProcessHelpersTest < Minitest::Test
   # long a test takes.
   EVENT_LIMIT = 30
 
-  # Mutant runs the tests with Thread.abort_on_exception on, which raises
-  # the exception of any thread that dies in the main thread, at whatever
-  # moment it is in. A mutation that makes a helper's reader thread or a
-  # stopping thread raise then ends mutant's process with a failure status
-  # when the exception arrives after the test has failed, and mutant counts
-  # that mutation as alive, whichever tests failed. The flag stays off for
-  # the rest of the process, since a thread of an earlier test can die at
-  # any later time.
   def setup
-    Thread.abort_on_exception = false
     @base = Dir.mktmpdir("crosslint")
     SCRIPTS.each { |name, script| write(@base, "tests/#{name}", script) }
   end
