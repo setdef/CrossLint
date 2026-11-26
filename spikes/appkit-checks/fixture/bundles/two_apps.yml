@@ -1,0 +1,10 @@
+bundle:
+  name: demo
+resources:
+  apps:
+    web:
+      user_api_scopes:
+        - genie
+    reports:
+      user_api_scopes:
+        - sql

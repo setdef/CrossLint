@@ -1,0 +1,6 @@
+bundle:
+  name: demo
+resources:
+  apps:
+    app:
+      user_api_scopes: [sql, genie]

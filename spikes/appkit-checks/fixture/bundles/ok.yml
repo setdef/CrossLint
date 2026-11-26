@@ -1,0 +1,8 @@
+bundle:
+  name: demo
+resources:
+  apps:
+    app:
+      name: demo
+      user_api_scopes:
+        - sql

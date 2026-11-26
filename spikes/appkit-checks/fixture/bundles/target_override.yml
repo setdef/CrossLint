@@ -1,0 +1,13 @@
+bundle:
+  name: demo
+resources:
+  apps:
+    app:
+      name: demo
+targets:
+  prod:
+    resources:
+      apps:
+        app:
+          user_api_scopes:
+            - sql

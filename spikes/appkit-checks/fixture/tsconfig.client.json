@@ -1,0 +1,7 @@
+{
+  // paths as the template sets them
+  "compilerOptions": {
+    "paths": { "@/*": ["./client/src/*"] }
+  },
+  "include": ["client/src", "shared/appkit-types"]
+}

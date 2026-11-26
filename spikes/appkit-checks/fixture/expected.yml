@@ -1,0 +1,47 @@
+# What check.rb should report for this fixture. Keys are paths under config/queries/ and files under bundles/.
+# used        a call or JSX attribute that syntax resolves passes the key to AppKit
+# loose       no such use, but the key appears as a string literal outside comments (a wrapper component, a parameter)
+# unused      neither
+# unreachable AppKit cannot serve the file at all
+queries:
+  alias_const.sql: used
+  barrel_const.sql: used
+  bad.key.sql: unreachable
+  both_lane.obo.sql: used
+  both_lane.sql: used
+  chart_const.sql: used
+  chart_prop.sql: used
+  chart_prop_expr.sql: used
+  dynamic_prefix_x.sql: unused   # really used, through `${prefix}_x`: syntax cannot tell
+  dynamic_ternary_a.sql: used
+  dynamic_ternary_b.sql: used
+  hook_aliased.sql: used
+  hook_const_imported.sql: used
+  hook_const_local.sql: used
+  hook_const_member.sql: used
+  hook_generic.sql: used
+  hook_literal.sql: used
+  hook_template.sql: used
+  ns_import.sql: used
+  obo_unused.obo.sql: unused
+  obo_used.obo.sql: used
+  only_in_comment.sql: unused
+  only_in_test.sql: unused       # only a test file passes it
+  sub/nested.sql: unreachable
+  table_prop.sql: used
+  unused.sql: unused
+  use_chart_data.sql: used
+  via_param.sql: loose           # really used, through a parameter of a local helper
+  wrapper_prop.sql: loose        # really used, through a project component's own prop
+bundles:
+  commented_out.yml: missing
+  deprecated_scope.yml: ok_deprecated_name
+  flow_style.yml: ok
+  include_root.yml: ok
+  missing.yml: missing
+  narrow_scope.yml: narrow_scope_needs_review
+  ok.yml: ok
+  other_scopes.yml: missing
+  quoted_and_other.yml: ok
+  target_override.yml: ok
+  two_apps.yml: ok

@@ -1,0 +1,9 @@
+bundle:
+  name: demo
+resources:
+  apps:
+    app:
+      # Uncomment to enable on behalf of user API scopes.
+      # user_api_scopes:
+      #   - sql
+      name: demo
