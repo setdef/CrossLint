@@ -142,10 +142,9 @@ module CrossLint
       # no tag is refused, since a branch moves.
       def tag(url, ref, work, deadline)
         listed = git!(["ls-remote", url, "refs/tags/#{ref}", "refs/heads/#{ref}"], work, deadline)
-        names = listed.lines.map { |line| line.chomp.split("\t", 2).last }
-        return "refs/tags/#{ref}" if names.include?("refs/tags/#{ref}")
+        return "refs/tags/#{ref}" if listed.match?(%r{\trefs/tags/#{Regexp.escape(ref)}$})
 
-        raise(names.include?("refs/heads/#{ref}") ? Core::FetchError.branch(ref) : Core::FetchError.no_tag(ref))
+        raise(listed.match?(%r{\trefs/heads/#{Regexp.escape(ref)}$}) ? Core::FetchError.branch(ref) : Core::FetchError.no_tag(ref))
       end
 
       # What git writes to standard output, or Core::FetchError with what

@@ -66,7 +66,7 @@ module CrossLint
 
       # The tree of git's process. Ends git, and raises Core::FetchError,
       # when it can't be put in one.
-      def contain: (Process::Waiter wait, Array[IO] pipes) -> ProcessHelpers::_TreeProcesses
+      def contain: (Process::Waiter wait) -> ProcessHelpers::_TreeProcesses
     end
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "digest"
 require "open3"
 
 class AppTest < Minitest::Test
@@ -210,7 +211,8 @@ class AppTest < Minitest::Test
 
     assert_equal ["a.md"], result.violations.map(&:artifact)
     assert_equal ["crosslint: fetching #{url} at v1.0.0"], err.string.lines(chomp: true)
-    assert_equal 1, Dir.glob(File.join(CACHE, "**", "plugins", "*", "shared-docs", "plugin.kdl")).count { |file| File.binread(file) == MANIFEST }
+    key = Digest::SHA256.hexdigest("#{url}\0v1.0.0")[0, 32]
+    assert_equal [MANIFEST], Dir.glob(File.join(CACHE, "**", "plugins", key, "shared-docs", "plugin.kdl")).map { |file| File.binread(file) }
   end
 
   def test_runs_helpers_through_the_port_it_is_given

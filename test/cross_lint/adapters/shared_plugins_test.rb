@@ -406,6 +406,33 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal "caf\u00e9 \uFFFD", assert_raises(Core::FetchError) { port(git: printing).tags(repository_url) }.message
   end
 
+  def test_reads_all_of_what_git_writes_however_much_and_closes_its_input
+    chatty = fake("chatty.rb", "$stdin.read\n$stdout.write(\"x\" * 100_000)\n$stderr.write(\"y\" * 50_000)\n")
+    command = Adapters::GitCommand.new(git: chatty, tree: Adapters::ProcessHelpers::TREE, environment: {})
+    output = command.run([], @base, Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30)
+
+    assert_equal [100_000, 50_000, true], [output.out.size, output.err.size, output.success]
+  end
+
+  def test_waits_a_little_for_what_a_process_that_left_gits_tree_still_writes
+    skip "a process leaves its job object only on macOS and Linux" if WINDOWS
+
+    late = fake("late.rb", "Process.spawn(RbConfig.ruby, \"--disable=rubyopt\", \"-e\", \"sleep 0.4; $stdout.write('late')\", pgroup: true)\n")
+    command = Adapters::GitCommand.new(git: late, tree: Adapters::ProcessHelpers::TREE, environment: {}, pipe_limit: 5)
+    output = command.run([], @base, Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30)
+
+    assert_equal "late", output.out
+  end
+
+  def test_fetches_each_time_in_a_folder_of_its_own_in_the_cache
+    port(git: fake("logs.rb", LOGS)).fetch(repository_url, "v1.0.0")
+    port(git: fake("logs.rb", LOGS)).fetch(repository_url, "v1.2.0")
+    work = logged.map { |entry| entry.fetch("argv") }.select { |argv| argv.first == "--git-dir" }.map { |argv| File.dirname(argv.fetch(1)) }.uniq
+
+    assert_equal 2, work.size
+    assert(work.all? { |folder| File.basename(folder).match?(/\A\.fetching-\h{32}\z/) })
+  end
+
   def test_doesnt_wait_for_a_process_that_left_gits_tree_to_close_its_output
     skip "a process leaves its job object only on macOS and Linux" if WINDOWS
 

@@ -33,7 +33,7 @@ module CrossLint
         tree = nil #: ProcessHelpers::_TreeProcesses?
         begin
           stdin.close
-          tree = contain(wait, [stdout, stderr])
+          tree = contain(wait)
           texts = read(stdout, stderr, wait, tree, deadline)
           Output.new(out: texts.first, err: texts.last, success: wait.value.exitstatus == 0)
         ensure
@@ -71,7 +71,7 @@ module CrossLint
 
       # The tree git is in. Git is ended when it can't be put in one, since
       # CrossLint couldn't end what it starts.
-      def contain(wait, pipes)
+      def contain(wait)
         @tree_class.new(wait.pid)
       rescue Core::PluginError => error
         begin
@@ -80,7 +80,6 @@ module CrossLint
           # It has exited already.
         end
         wait.join
-        pipes.each(&:close)
         raise Core::FetchError, "git #{error.message}, so CrossLint ended it"
       end
     end
