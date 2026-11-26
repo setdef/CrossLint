@@ -140,15 +140,15 @@ class GitProjectFilesTest < Minitest::Test
   def test_looks_for_a_name_in_its_folders_listing_on_a_filesystem_that_ignores_case
     port = project_files_port(listed: ["lib/one.rb"])
     exist = File.method(:exist?)
-    File.define_singleton_method(:exist?) { |*| true }
+    quietly { File.define_singleton_method(:exist?) { |*| true } }
     found = ["lib/one.rb", "lib/One.rb", "Lib/one.rb"].map { |path| port.exist?(project_root, path) }
     missing = assert_raises(Errno::ENOENT) { port.read(project_root, "lib/One.rb") }
-    File.define_singleton_method(:exist?, exist)
+    quietly { File.define_singleton_method(:exist?, exist) }
 
     assert_equal [true, false, false], found
     assert_equal "No such file or directory - lib/One.rb", missing.message
   ensure
-    File.define_singleton_method(:exist?, exist)
+    quietly { File.define_singleton_method(:exist?, exist) }
   end
 
   def test_reads_each_folder_once
