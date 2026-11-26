@@ -151,7 +151,7 @@ The host reports the plugin and the runtime by name, fails with a status that di
 | Warm: `mise install node@22`, already installed | 29 ms |
 | Start and handshake through `mise x` | 52 to 58 ms |
 
-The check results were the same as with Node on `PATH`. The cold install also happened in the Linux run, where the build machine installed Ruby, `jq` and Node through mise in 47 s before `run.sh` started; that was setup for the run, not the host's provisioning.
+The check results were the same as with Node on `PATH`. The Linux x86_64 run also installed Ruby, `jq` and Node through mise before `run.sh` started, in 47 s; that was setup for the run, not the host's provisioning.
 
 Two things changed in the host because of the first attempt:
 
@@ -165,14 +165,14 @@ The project's `typescript` is still read from the project's `node_modules`, so p
 | Platform | Result |
 | --- | --- |
 | macOS 27.2.1, arm64 | `run.sh` passes. Provisioning run here. |
-| Linux x86_64 (a build machine; Ruby 4.0.10, Node 22.23.5, `jq` 1.7 from mise) | `run.sh` passes, including the no-Node check. |
+| Linux x86_64 (Ruby 4.0.10, Node 22.23.5, `jq` 1.7 from mise) | `run.sh` passes, including the no-Node check. |
 | In a Fledge-built app | Not run. It needs a Fledge build of the host (the [fledge-tree-sitter](../fledge-tree-sitter/README.md) spike's script is the starting point). |
 | Windows | Not run. |
 
 ## What broke
 
 - **The provisioning timeout and the user's mise configuration,** above.
-- **The host kills only the process it started.** The `hang` plugin is `sh` running `sleep 30`; after the host's `KILL`, the `sleep` kept running until the build machine's run ended it ("ended 1 process the command left running"). A plugin that starts children needs the host to kill the process group, which the spike does not do.
+- **The host killed only the process it started.** The `hang` plugin is `sh` running `sleep 30`; after the host's `KILL` on timeout, the `sleep` kept running (on Linux until the run's end; on macOS the rerun found it alive after the host exited). The host now starts each plugin in a separate process group (`pgroup: true`) and, on a timeout, sends `KILL` to the whole group (`Process.kill("KILL", -pid)`). It also sweeps the group after every plugin exit and at host exit, so a plugin that exits and leaves a child behind is covered too. `run.sh` has the `hang` plugin write its child's pid to a file and checks that the child is gone after the timeout. On Windows the equivalent is `taskkill /T /F /PID`, see [Windows](#windows).
 - **A test for "no node" on this Mac passed for the wrong reason at first,** because Homebrew's directory was on the `PATH` I built, and it holds a `node`. `run.sh` now builds the `PATH` from Ruby's folder plus `/usr/bin:/bin` and skips the check when those hold a `node`.
 - **Shell and JSON.** The shell plugin needs `jq`, which the manifest lists in `also`. Without a JSON tool, a shell plugin would have to parse the host's line by hand.
 

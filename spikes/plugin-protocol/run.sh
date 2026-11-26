@@ -34,7 +34,22 @@ expect_failure crash "crashes: exited: status 3 before answering. stderr: boom"
 expect_failure garbage "prints-garbage: bad-json"
 expect_failure wrong-protocol "speaks-protocol-2: protocol-mismatch"
 expect_failure error-reply "replies-with-an-error: dependency-missing"
+export HANG_PIDFILE="$here/.scratch/hang.pid"
+rm -f "$HANG_PIDFILE"
 expect_failure hang "hangs: timeout: no answer to handshake in 2 s"
+
+# The hung plugin started a child (sleep 30). After the timeout the host must have ended it too.
+child="$(cat "$HANG_PIDFILE" 2>/dev/null || true)"
+left=yes
+if [ -n "$child" ]; then
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 "$child" 2>/dev/null || { left=no; break; }
+    sleep 0.2
+  done
+fi
+if [ -z "$child" ]; then bad "hang: the plugin did not record its child's pid"
+elif [ "$left" = no ]; then ok "hang: the plugin's child (pid $child) is gone after the timeout"
+else bad "hang: the plugin's child (pid $child) is still running"; kill "$child" 2>/dev/null || true; fi
 
 # A real plugin reporting an error: the project it runs in has no typescript.
 status=0

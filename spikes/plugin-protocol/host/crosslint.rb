@@ -31,6 +31,23 @@ module Spike
     ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).map { File.join(_1, command) }.find { File.file?(_1) && File.executable?(_1) }
   end
 
+  # Processes the host started and has not yet reaped, so that an exit or a signal can end them.
+  LIVE = {}
+  at_exit { LIVE.each_key { kill_tree(_1) } }
+
+  # Ends a plugin and everything it started: the process group on Unix, the process tree on Windows.
+  def self.kill_tree(pid)
+    if Gem.win_platform?
+      system("taskkill", "/T", "/F", "/PID", pid.to_s, out: File::NULL, err: File::NULL)
+    else
+      begin
+        Process.kill("KILL", -pid)
+      rescue Errno::ESRCH, Errno::EPERM
+        nil
+      end
+    end
+  end
+
   class Plugin
     attr_reader :name, :manifest, :timings
 
@@ -92,10 +109,12 @@ module Spike
       t0 = now
       argv_ = argv
       begin
-        @stdin, @stdout, stderr, @wait = Open3.popen3(@env || {}, *argv_, chdir: @root)
+        # pgroup: true puts the plugin in a group of its own, so the host can end it and its children together.
+        @stdin, @stdout, stderr, @wait = Open3.popen3(@env || {}, *argv_, chdir: @root, pgroup: true)
       rescue Errno::ENOENT, Errno::EACCES => e
         fail!("runtime-missing", "could not start #{argv_.first}: #{e.message}")
       end
+      LIVE[@wait.pid] = true
       @stderr_reader = Thread.new { stderr.read }
       @id = 0
       hello = call("handshake", { "protocol" => PROTOCOL, "host" => "crosslint-spike" })
@@ -113,13 +132,23 @@ module Spike
     end
 
     def stop
+      return unless @wait
+
       @stdin.close unless @stdin.closed?
-      @wait.join(5) || Process.kill("KILL", @wait.pid)
+      @wait.join(5) || Spike.kill_tree(@wait.pid)
+      reap
+      @wait = nil
     end
 
     private
 
     def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    # Ends whatever the plugin left in its group, and forgets the process.
+    def reap
+      Spike.kill_tree(@wait.pid) unless Gem.win_platform?
+      LIVE.delete(@wait.pid)
+    end
 
     def check_version(cmd, minimum)
       out, = Open3.capture2e(cmd, "--version")
@@ -149,13 +178,15 @@ module Spike
       end
       msg.fetch("result") { fail!("bad-response", "neither result nor error") }
     rescue Timeout::Error
-      Process.kill("KILL", @wait.pid)
+      Spike.kill_tree(@wait.pid)
+      reap
       fail!("timeout", "no answer to #{method} in #{@manifest.fetch("timeout", 60)} s")
     end
 
     def died
       @stdin.close unless @stdin.closed?
       status = @wait.value
+      reap
       fail!("exited", "status #{status.exitstatus.inspect} before answering. stderr: #{@stderr_reader.value.strip[0, 300]}")
     end
   end
@@ -177,10 +208,13 @@ ARGV.each do |dir|
   plugin.start if plugin.per_run?
   plugin.artifacts.each do |artifact|
     items = plugin.items(artifact)
-    plugin.start unless plugin.per_run?
-    results = Array.new(options[:repeat]) { plugin.check(artifact, items) }
-    violations.concat(results.first)
-    plugin.stop unless plugin.per_run?
+    begin
+      plugin.start unless plugin.per_run?
+      results = Array.new(options[:repeat]) { plugin.check(artifact, items) }
+      violations.concat(results.first)
+    ensure
+      plugin.stop unless plugin.per_run?
+    end
   end
   plugin.stop if plugin.per_run?
   if options[:timing]

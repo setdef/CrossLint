@@ -10,5 +10,6 @@ case "$1" in
                    *) echo '{"id":2,"error":{"code":"dependency-missing","message":"the project has no installed typescript"}}' ;;
                  esac
                done ;;
-  hang)       read -r line; sleep 30 ;;
+  # A plugin that starts a child and hangs. The child's pid goes to $HANG_PIDFILE so run.sh can check it is gone.
+  hang)       read -r line; sleep 30 & echo $! > "$HANG_PIDFILE"; wait ;;
 esac
