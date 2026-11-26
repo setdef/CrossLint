@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
+# SPDX-License-Identifier: MIT
+
+name: tsspike
+kind: console
+version: "0.0.1"
+publisher: setdef
+description: Spike, reads TypeScript with ruby_tree_sitter
