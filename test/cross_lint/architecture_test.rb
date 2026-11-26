@@ -30,6 +30,14 @@ class ArchitectureTest < Minitest::Test
     assert_empty code.select { |file| File.binread(File.join(ROOT, file)).include?(folder) }
   end
 
+  # A plugin's test fixtures, node_modules among them, would grow the app.
+  def test_the_app_ships_no_plugins_tests_or_their_fixtures
+    shipped = Gem::Specification.load(File.join(ROOT, "cross_lint.gemspec")).files
+
+    assert_includes shipped, "plugins/debt/plugin.kdl"
+    assert_empty shipped.grep(%r{\Aplugins/[^/]+/test(/|\z)})
+  end
+
   def test_every_file_under_lib_has_a_signature_at_the_matching_path_under_sig
     missing = Dir.glob("lib/**/*.rb", base: ROOT).map { |file| file.sub(%r{\Alib/(.*)\.rb\z}, 'sig/\1.rbs') }
       .reject { |signature| File.file?(File.join(ROOT, signature)) }

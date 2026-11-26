@@ -9,8 +9,8 @@ module CrossLint
     class Summary < Data.define(:kinds, :faults, :errors, :warnings, :warnings_shown, :stale, :steps)
       def initialize(stale: 0, steps: [], **counts) = super
 
-      # A kind with no artifact is left out when another has some, as the
-      # Angular plugin's pipes are in a project with none.
+      # A kind with no artifact is left out when another has some, so a
+      # plugin with many kinds that a project may lack reads short.
       def self.count(kinds)
         found = kinds.reject { |_, count| count.zero? }
         each = (found.empty? ? kinds : found).map { |name, count| "#{count} #{name}" }
