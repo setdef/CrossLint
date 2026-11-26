@@ -105,6 +105,12 @@ module CrossLint
       # renames it to `entry`, in which the plugin's folder is `name`.
       def download: (String url, String ref, String entry, String name) -> void
 
+      # What the block returns, given a new `.fetching-` folder in the
+      # cache, which Git runs start in so that no project's local Git
+      # configuration applies. The folder is deleted after. Raises
+      # Core::FetchError when the cache can't be written.
+      def in_work: [T] () { (String work) -> T } -> T
+
       # Removes each `.fetching-` folder of the cache that is at least
       # STALE seconds old, which a killed fetch left. Fails no fetch.
       def prune: () -> void

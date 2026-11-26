@@ -171,7 +171,7 @@ class GitSharedPluginsTest < Minitest::Test
   LOGS = <<~RUBY
     require "json"
     interesting = %w[HTTPS_PROXY HTTP_PROXY NO_PROXY GIT_DIR GIT_INDEX_FILE GIT_TERMINAL_PROMPT]
-    File.open(File.join(__dir__, "log.jsonl"), "a") { |log| log.puts(JSON.generate({"argv" => ARGV, "env" => ENV.to_h.slice(*interesting)})) }
+    File.open(File.join(__dir__, "log.jsonl"), "a") { |log| log.puts(JSON.generate({"argv" => ARGV, "env" => ENV.to_h.slice(*interesting), "pwd" => Dir.pwd})) }
     exec("git", *ARGV)
   RUBY
 
@@ -301,6 +301,23 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal [["ls-remote", "--tags", "--refs", repository_url]], logged_arguments
   end
 
+  # The project's repository is the folder CrossLint runs in, and its local
+  # Git configuration applies to a Git run there.
+  def test_runs_every_git_in_a_folder_of_its_own_in_the_cache_and_removes_it_after_listing_tags_too
+    project = File.join(@base, "project")
+    FileUtils.mkdir_p(project)
+    Dir.chdir(project) do
+      port(git: fake("logs.rb", LOGS)).tags(repository_url)
+      port(git: fake("logs.rb", LOGS)).fetch(repository_url, "v1.0.0")
+    end
+    folders = logged.map { |entry| File.dirname(entry.fetch("pwd")) }.uniq
+    names = logged.map { |entry| File.basename(entry.fetch("pwd")) }
+
+    assert_equal [File.join(File.realpath(@base), "cache", "plugins")], folders
+    assert(names.all? { |name| name.start_with?(".fetching-") })
+    assert_empty Dir.children(File.join(@base, "cache", "plugins")).grep(/\A\.fetching-/)
+  end
+
   def test_gives_git_the_proxies_and_never_a_password_prompt_or_a_git_variable_of_crosslints
     names = %w[HTTPS_PROXY HTTP_PROXY NO_PROXY GIT_DIR GIT_TERMINAL_PROMPT GIT_INDEX_FILE]
     before = ENV.values_at(*names)
@@ -317,14 +334,14 @@ class GitSharedPluginsTest < Minitest::Test
   def test_says_what_it_fetches_before_it_makes_a_request
     port(git: fake("logs.rb", LOGS), err: logging).fetch(repository_url, "v1.0.0")
 
-    assert_equal [["said"], %w[argv env], %w[argv env], %w[argv env], %w[argv env]], logged.map(&:keys)
+    assert_equal [["said"], %w[argv env pwd], %w[argv env pwd], %w[argv env pwd], %w[argv env pwd]], logged.map(&:keys)
     assert_equal "crosslint: fetching #{repository_url} at v1.0.0", logged.first.fetch("said")
   end
 
   def test_says_what_it_lists_before_it_makes_a_request
     port(git: fake("logs.rb", LOGS), err: logging).tags(repository_url)
 
-    assert_equal [["said"], %w[argv env]], logged.map(&:keys)
+    assert_equal [["said"], %w[argv env pwd]], logged.map(&:keys)
     assert_equal "crosslint: listing the tags of #{repository_url}", logged.first.fetch("said")
   end
 

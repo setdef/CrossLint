@@ -83,7 +83,7 @@ module CrossLint
       def tags(url)
         check(url)
         @err.puts("crosslint: listing the tags of #{url}")
-        listed = limited { |deadline| git!(["ls-remote", "--tags", "--refs", url], Dir.pwd, deadline) }
+        listed = in_work { |work| limited { |deadline| git!(["ls-remote", "--tags", "--refs", url], work, deadline) } }
         listed.lines.map { |line| line.chomp.split("\t", 2).last.delete_prefix("refs/tags/") }
       end
 
@@ -110,13 +110,24 @@ module CrossLint
       # Fetches into a folder of its own and renames it to `entry`, so that
       # a fetch that stops partway leaves no entry.
       def download(url, ref, entry, name)
-        prune
-        work = File.join(plugins, ".fetching-#{SecureRandom.hex}")
-        begin
+        in_work do |work|
           files = File.join(work, "files")
           FileUtils.mkdir_p(File.join(files, name))
           limited { |deadline| clone(url, ref, work, name, deadline) }
           save(files, entry)
+        end
+      end
+
+      # Runs the block with a folder of its own, deleted after, for each
+      # Git run to start in. Git reads the local configuration of the
+      # repository it starts in, and the folder CrossLint was started in is
+      # the project's.
+      def in_work
+        prune
+        work = File.join(plugins, ".fetching-#{SecureRandom.hex}")
+        begin
+          FileUtils.mkdir_p(work)
+          yield work
         rescue SystemCallError => error
           raise Core::FetchError, "couldn't write in #{plugins}: #{error.message}"
         ensure
