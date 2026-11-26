@@ -77,3 +77,9 @@ cmd "update" effect="write" help="Move each shared plugin in the configuration t
   example "crosslint update"
   example "crosslint update --dry-run" header="See which plugins have a newer tag"
 }
+
+cmd "help" effect="read" help="Explain one command, or list every command" {
+  long_help "With a command, explains it, as crosslint COMMAND --help does. Without one, lists every command, as crosslint --help does."
+  arg "[command]" help="The command to explain"
+  example "crosslint help check"
+}

@@ -12,7 +12,9 @@ module CrossLint
       def usage = value ? "--#{long} <#{value}>" : "--#{long}"
     end
 
-    class Command < Data.define(:name, :help, :long_help, :flags, :examples); end
+    class Argument < Data.define(:name, :help); end
+
+    class Command < Data.define(:name, :help, :long_help, :arguments, :flags, :examples); end
 
     class Example < Data.define(:code, :header, :help); end
 
@@ -96,15 +98,26 @@ module CrossLint
       [names[:short], long, names[:value]]
     end
 
-    COMMAND_CHILDREN = %w[long_help flag example].freeze
+    COMMAND_CHILDREN = %w[long_help arg flag example].freeze
 
     def command(node)
       name, = arguments(node, 1)
       properties = properties(node, %w[effect help])
       node.each { |child| raise Error, unknown(child) unless COMMAND_CHILDREN.include?(child.name) }
       Command.new(name:, help: help("cmd", name, properties), long_help: node.select { |child| child.name == "long_help" }.map { |child| text(child) }.last,
+        arguments: node.select { |child| child.name == "arg" }.map { |child| argument(child) },
         flags: node.select { |child| child.name == "flag" }.map { |child| flag(child) },
         examples: node.select { |child| child.name == "example" }.map { |child| example(child) })
+    end
+
+    def argument(node)
+      written, = arguments(node, 1)
+      properties = properties(node, %w[help])
+      no_children(node)
+      name = written[/\A\[([a-z][a-z0-9-]*)\]\z/, 1]
+      raise Error, "arg #{written.dump} is not written as [name], the only form CrossLint reads" unless name
+
+      Argument.new(name:, help: help("arg", written, properties))
     end
 
     def help(kind, name, properties)

@@ -38,3 +38,7 @@ Then stops.
 }
 
 cmd "stop" help="Stop the thing"
+
+cmd "show" help="Show a thing" {
+  arg "[thing]" help="The thing to show"
+}

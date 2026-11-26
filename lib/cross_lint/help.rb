@@ -32,7 +32,8 @@ module CrossLint
     def command_sections(command)
       [
         block(command.long_help || command.help),
-        "Usage: #{@spec.bin} #{command.name} [FLAGS]\n",
+        "Usage: #{[@spec.bin, command.name, "[FLAGS]", *command.arguments.map { |argument| "[#{argument.name}]" }].join(" ")}\n",
+        section("Arguments", command.arguments.map { |argument| ["[#{argument.name}]", [argument.help]] }),
         section("Flags", flag_rows(command.flags)),
         section("Global flags", flag_rows(@spec.global_flags + extra_flags)),
         examples(command.examples),

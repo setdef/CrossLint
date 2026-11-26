@@ -16,6 +16,7 @@ class HelpTest < Minitest::Test
       Commands:
         run   Run the thing
         stop  Stop the thing
+        show  Show a thing
 
       Flags:
         -v, --verbose       Say more
@@ -68,10 +69,30 @@ class HelpTest < Minitest::Test
   end
 
   def test_leaves_out_what_a_command_does_not_have
-    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).render(fixture_spec.commands.last)
+    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).render(fixture_spec.commands[1])
       Stop the thing
 
       Usage: tool stop [FLAGS]
+
+      Global flags:
+        -v, --verbose  Say more
+        -h, --help     Print help
+        -V, --version  Print version
+
+      Exit status:
+        0   It worked.
+        64  The command line has a mistake.
+    HELP
+  end
+
+  def test_shows_the_arguments_of_a_command
+    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).render(fixture_spec.commands.last)
+      Show a thing
+
+      Usage: tool show [FLAGS] [thing]
+
+      Arguments:
+        [thing]  The thing to show
 
       Global flags:
         -v, --verbose  Say more
@@ -170,6 +191,7 @@ class HelpTest < Minitest::Test
     texts = [spec.long_about, spec.after_long_help, *spec.commands.flat_map { |command| [command.help, command.long_help] },
       *(spec.flags + spec.commands.flat_map(&:flags)).flat_map { |flag| [flag.long_help || flag.help, *flag.choices] },
       *(spec.examples + spec.commands.flat_map(&:examples)).flat_map { |example| [example.code, example.header, example.help] },
+      *spec.commands.flat_map(&:arguments).flat_map { |argument| [argument.name, argument.help] },
       *spec.exit_codes.map(&:meaning)].compact
 
     texts.each { |text| assert_includes squeeze(pages.join), squeeze(text) }

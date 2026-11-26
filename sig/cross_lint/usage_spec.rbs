@@ -55,7 +55,24 @@ module CrossLint
       def usage: () -> String
     end
 
-    # A command, such as check, with its flags and examples.
+    # An optional argument of a command, such as the command that help
+    # explains.
+    class Argument < Data
+      # The argument's name, such as "command", written [command] in the
+      # spec.
+      attr_reader name: String
+
+      # The argument's line of help.
+      attr_reader help: String
+
+      # An argument with these fields.
+      def self.new: (name: String, help: String) -> instance
+
+      # An argument with these fields.
+      def initialize: (name: String, help: String) -> void
+    end
+
+    # A command, such as check, with its arguments, flags, and examples.
     class Command < Data
       # The command's name, such as "check".
       attr_reader name: String
@@ -66,6 +83,9 @@ module CrossLint
       # The command's longer help, or nil for none.
       attr_reader long_help: String?
 
+      # The arguments the command takes, in order.
+      attr_reader arguments: Array[Argument]
+
       # The flags the command takes, besides the global ones.
       attr_reader flags: Array[Flag]
 
@@ -73,12 +93,12 @@ module CrossLint
       attr_reader examples: Array[Example]
 
       # A command with these fields.
-      def self.new: (name: String, help: String, long_help: String?, flags: Array[Flag],
-                     examples: Array[Example]) -> instance
+      def self.new: (name: String, help: String, long_help: String?, arguments: Array[Argument],
+                     flags: Array[Flag], examples: Array[Example]) -> instance
 
       # A command with these fields.
-      def initialize: (name: String, help: String, long_help: String?, flags: Array[Flag],
-                       examples: Array[Example]) -> void
+      def initialize: (name: String, help: String, long_help: String?, arguments: Array[Argument],
+                       flags: Array[Flag], examples: Array[Example]) -> void
     end
 
     # A command line to show, with a heading and a line of help.
@@ -192,8 +212,11 @@ module CrossLint
     # its one-letter name, its long name, and the name of its value.
     def flag_names: (String words) -> [String?, String, String?]
 
-    # Reads a command, with its flags and examples.
+    # Reads a command, with its arguments, flags, and examples.
     def command: (KDL::Node node) -> Command
+
+    # Reads an argument, which is written [name].
+    def argument: (KDL::Node node) -> Argument
 
     # The help= of a flag or command, the `kind` of node named `name`,
     # which every flag and command has.

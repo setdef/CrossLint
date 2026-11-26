@@ -177,3 +177,28 @@ crosslint update
 ```
 crosslint update --dry-run
 ```
+
+## `crosslint help`
+
+- **Usage:** `crosslint help [command]`
+- **Effect:** read-only
+
+With a command, explains it, as crosslint COMMAND --help does. Without one, lists every command, as crosslint --help does.
+
+### Arguments
+- **`[command]`** — The command to explain
+
+### Exit Status
+
+| Code | Meaning |
+| ---- | ------- |
+| `0` | Every check passed, or the command did what it was asked. |
+| `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
+| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start. |
+| `130` | You interrupted CrossLint with Ctrl-C. |
+
+### Examples
+
+```
+crosslint help check
+```

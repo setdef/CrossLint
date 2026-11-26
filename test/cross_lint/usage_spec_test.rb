@@ -33,10 +33,10 @@ class UsageSpecTest < Minitest::Test
   end
 
   def test_reads_commands_with_their_flags_and_examples
-    run, stop = fixture_spec.commands
+    run, stop, show = fixture_spec.commands
 
     assert_equal Spec::Command.new(name: "run", help: "Run the thing", long_help: "Runs the thing.\n\nThen stops.",
-      flags: [
+      arguments: [], flags: [
         Spec::Flag.new(short: "n", long: "dry-run", value: nil, help: "Do nothing", long_help: nil, choices: nil,
           default: nil, global: false),
         Spec::Flag.new(short: "o", long: "out", value: "file", help: "Write here",
@@ -45,7 +45,8 @@ class UsageSpecTest < Minitest::Test
           choices: ["only"], default: nil, global: false)
       ],
       examples: [Spec::Example.new(code: "tool run -n", header: "Try it", help: nil)]), run
-    assert_equal Spec::Command.new(name: "stop", help: "Stop the thing", long_help: nil, flags: [], examples: []), stop
+    assert_equal Spec::Command.new(name: "stop", help: "Stop the thing", long_help: nil, arguments: [], flags: [], examples: []), stop
+    assert_equal [Spec::Argument.new(name: "thing", help: "The thing to show")], show.arguments
   end
 
   def test_reads_examples_and_exit_codes
@@ -72,7 +73,7 @@ class UsageSpecTest < Minitest::Test
     spec = Spec.new(%(#{TOP}cmd "a" help="A"\nflag "--b" help="B"))
 
     assert_nil spec.min_usage_version
-    assert_equal Spec::Command.new(name: "a", help: "A", long_help: nil, flags: [], examples: []), spec.commands.first
+    assert_equal Spec::Command.new(name: "a", help: "A", long_help: nil, arguments: [], flags: [], examples: []), spec.commands.first
     assert_equal Spec::Flag.new(short: nil, long: "b", value: nil, help: "B", long_help: nil, choices: nil,
       default: nil, global: false), spec.flags.first
   end
@@ -88,6 +89,15 @@ class UsageSpecTest < Minitest::Test
     assert_refuses %(cmd "a" has no help=, which the help shows), %(#{TOP}cmd "a")
     assert_refuses %(flag "-b --b" has no help=, which the help shows), %(#{TOP}flag "-b --b")
     assert_refuses %(flag "--c" has no help=, which the help shows), %(#{TOP}cmd "a" help="A" { flag "--c"; })
+  end
+
+  def test_refuses_an_argument_it_cannot_read
+    assert_refuses %(arg "<a" is not written as [name], the only form CrossLint reads), %(#{TOP}cmd "c" help="C" { arg "<a" help="A"; })
+    assert_refuses %(arg "<a>" is not written as [name], the only form CrossLint reads), %(#{TOP}cmd "c" help="C" { arg "<a>" help="A"; })
+    assert_refuses %(arg "[a]" has no help=, which the help shows), %(#{TOP}cmd "c" help="C" { arg "[a]"; })
+    assert_refuses "arg has 2 arguments, and CrossLint reads 1", %(#{TOP}cmd "c" help="C" { arg "[a]" "[b]" help="A"; })
+    assert_refuses "arg has hide=, which CrossLint doesn't read", %(#{TOP}cmd "c" help="C" { arg "[a]" help="A" hide=#true; })
+    assert_refuses "hidden is a node CrossLint doesn't read", %(#{TOP}cmd "c" help="C" { arg "[a]" help="A" { hidden #true; }; })
   end
 
   def test_a_flag_shows_how_it_is_written
@@ -106,10 +116,11 @@ class UsageSpecTest < Minitest::Test
     assert_equal Gem::Specification.load(File.join(ROOT, "cross_lint.gemspec")).version.to_s, shipped_spec.version
   end
 
-  def test_the_shipped_spec_has_three_commands_and_global_flags
+  def test_the_shipped_spec_has_four_commands_and_global_flags
     spec = shipped_spec
 
-    assert_equal %w[check init update], spec.commands.map(&:name)
+    assert_equal %w[check init update help], spec.commands.map(&:name)
+    assert_equal ["command"], spec.commands.last.arguments.map(&:name)
     assert_equal %w[quiet silent no-color debug project], spec.global_flags.map(&:long)
     assert_equal [0, 1, 2, 130], spec.exit_codes.map(&:code)
   end
