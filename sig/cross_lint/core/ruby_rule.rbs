@@ -12,6 +12,16 @@ module CrossLint
         def initialize: (Fault fault) -> void
       end
 
+      # How long a rule may run on one artifact, in seconds.
+      TIME_LIMIT: Integer
+
+      # What ends a rule that runs past its time limit.
+      class Overran < Exception
+      end
+
+      # What a rule raises that is a fault in its plugin, and stops it.
+      FAULTS: Array[singleton(Exception)]
+
       # What a class name looks like.
       CLASS_NAME: Regexp
 
@@ -39,8 +49,9 @@ module CrossLint
       # none, or when it doesn't inherit from CrossLint::Rule.
       def self.find: (RuleDeclaration declaration, Module namespace) -> singleton(Rule)
 
-      # The rule `name` of `plugin`, checked by `rule`.
-      def initialize: (plugin: Plugin, name: String, rule: Rule) -> void
+      # The rule `name` of `plugin`, checked by `rule`, which may run
+      # `time_limit` seconds on one artifact.
+      def initialize: (plugin: Plugin, name: String, rule: Rule, ?time_limit: Numeric) -> void
 
       # The severity of the rule's violations unless its policy line or
       # the configuration gives one: `:error`.
@@ -48,10 +59,13 @@ module CrossLint
 
       # What the rule reports on `artifact`, reading files with `read`; a
       # Ruby rule takes no `arguments`. Raises Stopped when the rule
-      # raises, or returns anything but violations of that artifact.
+      # raises, runs for more than the time limit, or returns anything but
+      # violations of that artifact.
       def results: (Artifact artifact, Hash[String, untyped] arguments, ^(String path) -> String read) -> Array[RuleResult]
 
       private
+
+      @time_limit: Numeric
 
       @plugin: Plugin
 

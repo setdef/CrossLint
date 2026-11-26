@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "timeout"
+
 require_relative "artifact"
 require_relative "fault"
 require_relative "rule"
@@ -17,18 +19,29 @@ module CrossLint
         end
       end
 
+      TIME_LIMIT = 60
+
+      # An Exception, not a StandardError, so that a rule's own
+      # `rescue => error` doesn't swallow it and run on.
+      class Overran < Exception # standard:disable Lint/InheritException
+      end
+
+      FAULTS = [StandardError, ScriptError, SystemExit, SystemStackError].freeze
+
       CLASS_NAME = /\A[A-Z][A-Za-z0-9_]*\z/
 
       def self.class_name(name) = name.split(/[-_]/).map { |part| part.sub(/\A[a-z]/, &:upcase) }.join
 
       # SystemExit too, since a rule that calls exit would otherwise end
-      # the check with a status that says nothing of the rule.
+      # the check with a status that says nothing of the rule, and
+      # SystemStackError, which a rule that recurses without end raises
+      # and which is no StandardError.
       def self.load(plugin_ruby, plugin, declaration, namespace, helpers)
         plugin_ruby.load(plugin, declaration.ruby, declaration.line, namespace)
         new(plugin:, name: declaration.name, rule: make(find(declaration, namespace), helpers))
       rescue Mistake
         raise
-      rescue StandardError, ScriptError, SystemExit => error
+      rescue *FAULTS => error
         raise Stopped, Fault.of(error, plugin:, rule: declaration.name)
       end
 
@@ -50,7 +63,8 @@ module CrossLint
         found
       end
 
-      def initialize(plugin:, name:, rule:)
+      def initialize(plugin:, name:, rule:, time_limit: TIME_LIMIT)
+        @time_limit = time_limit
         @plugin = plugin
         @name = name
         @rule = rule
@@ -59,7 +73,7 @@ module CrossLint
       def severity = :error
 
       def results(artifact, _arguments, read)
-        results = @rule.check(Rule::Artifact.new(artifact, read))
+        results = Timeout.timeout(@time_limit, Overran) { @rule.check(Rule::Artifact.new(artifact, read)) }
         raise PluginError, "returned #{results.class} from check, where check returns an array of violations" unless results.instance_of?(Array)
 
         results.each do |result|
@@ -68,7 +82,10 @@ module CrossLint
 
           raise PluginError, "returned a violation of #{result.path}, which isn't the artifact it checked"
         end
-      rescue StandardError, ScriptError, SystemExit => error
+      rescue Overran
+        error = PluginError.new("didn't finish within #{@time_limit} seconds, so CrossLint stopped it")
+        raise Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.path)
+      rescue *FAULTS => error
         raise Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.path)
       end
     end

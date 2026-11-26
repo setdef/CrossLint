@@ -154,6 +154,40 @@ class RubyRuleTest < Minitest::Test
     assert_equal ["raised SystemExit: exit"], faults.map(&:message)
   end
 
+  def test_stops_a_rule_that_recurses_without_end_in_its_plugin_not_the_check
+    recurses = "class NamesClass < CrossLint::Rule\n  def check(artifact) = check(artifact)\nend\n"
+    at_load = "def self.forever = forever\nforever\n"
+    ran = check(code: {"names_class.rb" => recurses}, files: {"lib/a.rb" => ""}, others: true)
+    loading = check(code: {"names_class.rb" => at_load}, files: {"lib/a.rb" => ""})
+
+    assert_equal [["tests", "rule names-class on lib/a.rb raised SystemStackError: stack level too deep"]],
+      ran.faults.map { |fault| [fault.plugin, fault.line.delete_prefix("fault in plugin tests: ")] }
+    assert_equal ["raised SystemStackError: stack level too deep"], loading.faults.map(&:message)
+    assert_equal ["lib/a.rb"], ran.findings.map(&:artifact)
+  end
+
+  def test_gives_a_rule_a_minute_on_each_artifact_unless_told_otherwise
+    assert_equal 60, RubyRule::TIME_LIMIT
+    tests = plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []))
+    rule = RubyRule.make(Class.new(CrossLint::Rule), ->(_name, _input) {})
+
+    assert_equal 60, RubyRule.new(plugin: tests, name: "n", rule:).instance_variable_get(:@time_limit)
+  end
+
+  def test_stops_a_rule_that_runs_past_its_time_limit_even_one_that_rescues_every_error
+    rules = ["loop {}", "begin\n      loop {}\n    rescue\n      []\n    end"].map do |body|
+      Class.new(CrossLint::Rule) { class_eval "def check(_artifact)\n    #{body}\n  end", __FILE__, __LINE__ }
+    end
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, companions: [])
+    tests = plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []))
+    faults = rules.map do |rule_class|
+      rule = RubyRule.new(plugin: tests, name: "slow", rule: RubyRule.make(rule_class, ->(_name, _input) {}), time_limit: 0.2)
+      assert_raises(RubyRule::Stopped) { rule.results(artifact, {}, ->(_) { "" }) }.fault
+    end
+
+    assert_equal ["fault in plugin tests: rule slow on lib/a.rb didn't finish within 0.2 seconds, so CrossLint stopped it"] * 2, faults.map(&:line)
+  end
+
   def test_names_the_gem_a_rule_requires_that_crosslint_wasnt_built_with
     message = "requires crosslint_no_such_gem, which is neither in Ruby's standard library nor in the plugin's folder, " \
       "and CrossLint can load no gem it wasn't built with"
