@@ -16,6 +16,9 @@ module CrossLint
 
       # Whether it is a terminal.
       def tty?: () -> bool
+
+      # Writes out what it holds.
+      def flush: () -> untyped
     end
 
     # The environment: `ENV`, or a Hash in the tests.

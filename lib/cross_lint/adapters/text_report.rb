@@ -20,6 +20,10 @@ module CrossLint
       def write(result)
         result.notices.each { |notice| say("#{notice.file}:#{notice.line}: warning: #{notice.message}") }
         write_findings(result)
+        # Ruby holds standard output to a pipe until it exits, so where
+        # both streams go to one log, as in CI, the summary would come
+        # before the findings.
+        @out.flush
         say(result.summary.line) if result.verbosity == :normal
       end
 

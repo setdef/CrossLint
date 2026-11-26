@@ -83,6 +83,35 @@ class TextReportTest < Minitest::Test
     assert_equal "crosslint: ?.kdl:1: warning: ?\n", @err.string.lines.first
   end
 
+  # A stream that holds its lines until it is flushed, as Ruby holds
+  # standard output to a pipe, into a log both streams share.
+  class Held
+    def initialize(log)
+      @log = log
+      @held = []
+    end
+
+    def puts(line) = @held << line
+
+    def flush = @log.concat(@held.slice!(0..))
+
+    def write(text) = puts(text)
+
+    def tty? = false
+  end
+
+  # A stream that writes each line at once, as standard error does.
+  class Unheld < Held
+    def puts(line) = @log << line
+  end
+
+  def test_writes_out_the_findings_before_the_summary
+    log = []
+    CrossLint::Adapters::TextReport.new(out: Held.new(log), err: Unheld.new(log)).write(result_of([violation_of("lib/a.rb", "no test")]))
+
+    assert_equal ["lib/a.rb: no test (tests/has-test)", "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning"], log
+  end
+
   def test_writes_a_byte_that_isnt_utf_8_as_a_question_mark
     report_port.write(result_of([violation_of("lib/a\xFF.rb".dup.force_encoding("UTF-8"), "no test")]))
 
