@@ -65,6 +65,12 @@ class PluginCommandsTest < Minitest::Test
     assert_refused "crosslint has no command chec, and the configuration lists no plugin of that name; did you mean check or chec2?", %w[chec], plugins: [both]
   end
 
+  def test_names_a_nearest_word_once_when_a_command_of_crosslint_and_a_plugin_are_spelled_alike
+    same = plugin("update", "x" => "X")
+
+    assert_refused "crosslint has no command updat, and the configuration lists no plugin of that name; did you mean update?", %w[updat], plugins: [same]
+  end
+
   def test_names_the_nearest_command_of_crosslint_for_a_word_when_the_project_cant_be_read
     refusal = @commands.refusal("chek")
 

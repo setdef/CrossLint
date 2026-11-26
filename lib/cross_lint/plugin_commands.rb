@@ -8,9 +8,8 @@ module CrossLint
 
     def find(words, plugins, file, built_in)
       name = words.fetch(0)
-      word = words[1]
-      plugin = plugins.find { |listed| listed.name == name }
-      return unlisted(name, word, plugins, file, built_in) unless plugin
+      word = words.fetch(1, nil)
+      plugin = plugins.find { |listed| listed.name == name } || unlisted(name, word, plugins, file, built_in)
 
       commands = plugin.manifest.commands
       raise error("#{name} is a plugin the configuration lists, and it adds no commands") if commands.empty?
@@ -49,7 +48,7 @@ module CrossLint
 
     def nearest(word, known) = Core::Spelling.nearest(word, known)
 
-    def scope(*words) = [@spec.bin, *words].join(" ")
+    def scope(*words) = [@spec.bin, words].join(" ")
 
     def shown(word) = CommandLine.shown(word)
 

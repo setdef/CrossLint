@@ -24,7 +24,7 @@ module CrossLint
         "Usage: #{@spec.bin} #{name} COMMAND [FLAGS]\n",
         section("Commands", commands.map { |command| [command.name, [command.help]] }),
         section("Global flags", flag_rows(@spec.global_flags + extra_flags))
-      ].compact.join("\n")
+      ].join("\n")
     end
 
     def plugin_command(name, command)
@@ -32,7 +32,7 @@ module CrossLint
         block(command.help),
         "Usage: #{@spec.bin} #{name} #{command.name} [FLAGS]\n",
         section("Global flags", flag_rows(@spec.global_flags + extra_flags))
-      ].compact.join("\n")
+      ].join("\n")
     end
 
     def short

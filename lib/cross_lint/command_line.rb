@@ -144,7 +144,7 @@ module CrossLint
 
     def scope
       command = @command
-      [@spec.bin, *(command ? [command.name] : @words)].join(" ")
+      (command ? [@spec.bin, command.name] : [@spec.bin, *@words]).join(" ")
     end
 
     def shown(word) = self.class.shown(word)

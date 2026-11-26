@@ -111,6 +111,16 @@ class HelpTest < Minitest::Test
     HELP
   end
 
+  def test_lists_the_commands_of_plugins_alone_when_there_is_no_note
+    assert_includes CrossLint::Help.new(fixture_spec, plugins: plugins).render, <<~HELP
+      Plugin commands:
+        debt update               Rewrite the debt file
+        debt prune-stale-entries  Drop each entry no violation matches
+
+      Flags:
+    HELP
+  end
+
   def test_lists_only_the_notes_when_no_plugin_adds_a_command_and_wraps_them
     note = "#{"a" * 60} #{"b" * 60}"
 

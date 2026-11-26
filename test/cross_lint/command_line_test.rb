@@ -108,6 +108,7 @@ class CommandLineTest < Minitest::Test
 
     assert_equal [["debt", "update"], nil, "help"], [line.words, line.topic, line.command.name]
     assert_equal [["zzzzzz"], nil], [read("help", "zzzzzz").words, read("help", "zzzzzz").topic]
+    assert_equal [["debt", "run"], nil], [read("help", "debt", "run").words, read("help", "debt", "run").topic]
     assert_empty read("help", "run").words
     assert_empty read("help").words
     assert_equal ["x y"], read("help", "x y").words
