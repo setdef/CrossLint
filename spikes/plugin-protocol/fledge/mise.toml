@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # The tools the build needs: the Ruby that Fledge v0.17.0 runs on, 4.1.0-preview1.
 # This follows the mise.toml of setdef/Fledge at v0.17.0 (macOS and Linux: jdx/ruby's
 # precompiled Ruby; Windows: RubyInstaller's head build, MSYS2's compiler, and two

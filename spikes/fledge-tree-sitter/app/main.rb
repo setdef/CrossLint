@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # Spike: parse TypeScript and TSX with ruby_tree_sitter, print each class and
 # its decorated members, then load the Ruby rule files of a project.
 #

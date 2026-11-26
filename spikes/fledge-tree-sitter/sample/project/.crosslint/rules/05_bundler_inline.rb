@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # A rule file that asks Bundler to install its gem when it loads.
 require "bundler/inline"
 

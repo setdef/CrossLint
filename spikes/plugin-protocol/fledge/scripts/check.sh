@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
 
 # Build the app for this computer, then install it through mise and run
 # run.sh against it. See build.sh and install-check.sh.

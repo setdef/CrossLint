@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # Compile the TypeScript and TSX grammars into app/parsers/ for the computer
 # this runs on. The source is tree-sitter-typescript's tagged release, checked
 # against a SHA-256. Needs a C compiler. Run with any Ruby:

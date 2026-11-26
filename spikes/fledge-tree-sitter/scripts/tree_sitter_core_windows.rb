@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # Windows only. ruby_tree_sitter 2.1.1 cannot build its own copy of
 # tree-sitter there (its extconf.rb shells out to Unix commands) and has no
 # dlfcn.h to load a grammar with. This builds libtree-sitter.a from the

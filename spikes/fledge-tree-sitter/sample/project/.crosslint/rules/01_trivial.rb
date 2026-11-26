@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # A trivial project-local rule: a class with an @Input() member must itself
 # carry a decorator.
 TsSpike.rule("input-needs-decorated-class") do |facts|

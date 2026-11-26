@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # Windows only. Copies app/ to build/app-windows/ and swaps its ruby_tree_sitter
 # for a copy of 2.1.1 with the two changes its C needs to compile and run on
 # 64-bit Windows:

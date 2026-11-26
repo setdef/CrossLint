@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
 
 # Build the host (../host/crosslint.rb) into a Fledge console app for the
 # computer this runs on. Leaves the archive in dist/. Needs mise; mise installs

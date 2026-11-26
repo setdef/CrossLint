@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # A rule that reads a helper beside it, and a file of the project's own.
 require_relative "helpers/names"
 

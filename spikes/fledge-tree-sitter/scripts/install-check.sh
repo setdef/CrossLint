@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
 
 # Install the built app through mise, as setdef/Fledge#123 describes, into an
 # empty mise data folder, then run it from a sample project with mise's tools

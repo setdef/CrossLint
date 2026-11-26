@@ -1,6 +1,3 @@
-/* SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com> */
-/* SPDX-License-Identifier: MIT */
-
 /* The four dlfcn.h functions ruby_tree_sitter 2.1.1's language.c calls,
    over Windows' LoadLibrary, because MinGW has no dlfcn.h. */
 #ifndef TSSPIKE_DLFCN_H

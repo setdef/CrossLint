@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-# SPDX-License-Identifier: MIT
-
 # A rule file whose project has a Gemfile of its own (here, written to a
 # temporary folder): the app installs those gems with the Bundler that came
 # with its Ruby, in a subprocess, then loads one from there.
