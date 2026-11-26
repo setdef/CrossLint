@@ -80,7 +80,7 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_every_example_in_the_plugin_reference
-    first, ruby_rule, helper = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
+    first, ruby_rule, helper, steps = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
 
     assert_equal [["ruby-file", ["signature", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.companions.map(&:name)] }
     assert_equal [["has-signature", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
@@ -88,6 +88,8 @@ class KDLPluginManifestsTest < Minitest::Test
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
     assert_equal Condition::CompanionExists.new(companion: "signature", line: 5), ruby_rule.policies.first.condition
     assert_equal [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 1)], helper.helpers
+    assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update-debt"]],
+      [steps.steps, steps.step_policies, steps.settings, steps.flags].map { |list| list.map(&:name) }
   end
 
   def test_reads_the_plugins_in_the_readme_and_the_tutorial

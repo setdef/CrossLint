@@ -30,6 +30,7 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **local plugin** | A plugin kept in the project's repository, for that project's rules. It is a plugin in every way; only where it lives differs. | custom rules, project rules |
 | **shared plugin** | A plugin kept in a separate Git repository, which projects list by its URL and a tag or commit. CrossLint fetches it into the user's cache. | remote plugin, package |
 | **ref** | The tag or full commit SHA at which a project lists a shared plugin, as `ref="v1.2.0"`. Never a branch. | version, pin |
+| **step** | Code a plugin runs once, after every rule of every plugin has run. It sees every violation and can excuse some, add others, and report stale entries, as the debt plugin's `track-debt` does. | hook, post-processor |
 | **built-in plugin** | A plugin that ships inside CrossLint, such as `angular` and `debt`. It runs only when the configuration lists it, like any other. | core plugin, default plugin |
 | **manifest** | A plugin's `plugin.kdl`, which declares the plugin's artifacts, policies, rules, and helpers. | plugin config, descriptor |
 | **project root** | The folder that holds a project's `.config/crosslint/config.kdl`. Every path in a plugin, a configuration, and the report is relative to it. | base dir, workspace |

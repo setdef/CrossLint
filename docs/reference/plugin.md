@@ -132,3 +132,25 @@ helper "members" command="node" file="helpers/members.mjs"
 CrossLint starts a helper at the first call, as `COMMAND FILE` in the project's root, with the environment CrossLint was started with. When the check ends, CrossLint closes the input of every helper at once, gives each 2 seconds to exit, and then ends it with everything it started; on Ctrl-C, it ends them without waiting. A helper CrossLint can't put in its process group or job object is ended at once, and is a fault. Each request and each answer is one line of JSON. The helper's standard error appears under `--debug`. A helper that exits, answers with a line that isn't JSON, or doesn't answer within 60 seconds is a fault, and the message includes what it wrote to standard error.
 
 A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, and a message naming the plugin and the command it needs.
+
+## Steps, settings, and flags
+
+A plugin can also declare a step, the settings it takes, and flags of `crosslint check`. The debt plugin's `plugin.kdl`, which ships inside CrossLint, declares all four kinds of line:
+
+```kdl
+step "track-debt"
+
+policy "has-debt"
+
+setting "file"
+setting "report-entries"
+
+flag "update-debt"
+```
+
+| Line | Meaning |
+| --- | --- |
+| `step NAME` | Runs a step built into CrossLint after every rule of every plugin has run. The step sees every violation, whatever `--warnings` or `--quiet` hides, and can excuse some, add others, and report stale entries. CrossLint has one step, `track-debt`. |
+| `policy NAME` with no block | A policy no rule runs, whose violations the plugin's step reports, such as `has-debt`. The configuration disables it or changes its severity like any other policy. |
+| `setting NAME` | A setting the plugin takes in its block in the configuration. A setting the plugin doesn't declare stops CrossLint with exit status 2. |
+| `flag NAME` | A flag of `crosslint check`, written without its dashes, that the plugin's steps get. A flag no listed plugin declares stops CrossLint with exit status 2. |

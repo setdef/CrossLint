@@ -15,7 +15,7 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 | Built-in plugins | `plugins/angular/`, `plugins/debt/` | Each a folder with a `plugin.kdl`, its Ruby rules, and its helpers | Only what any plugin can reach |
 
 - **The domain:** artifact, companion, policy, rule result, violation with its identity, and debt entry, by the [glossary](../glossary.md)'s words. Each is immutable, and defined as `class Violation < Data.define(...)`: RBS's runtime checker misses a class defined with a block passed to `Data.define`.
-- **The use cases:** check, update the debt, initialize a configuration, update shared plugins. A use case takes its ports as keyword arguments and returns a value; it never prints, reads a file, or exits.
+- **The use cases:** check, initialize a configuration, update shared plugins. Updating the debt is part of the check: the debt plugin's step does it when `--update-debt` is given. A use case takes its ports as keyword arguments and returns a value; it never prints, reads a file, or exits.
 - **The ports:** project files (which files exist, as Git sees the working tree), configuration, plugin manifests, debt file, plugins' Ruby, helpers, and report. Each one's contract is its RBS interface plus its contract tests: change the tests first, then the interface, then the adapters.
 
 ## Rules

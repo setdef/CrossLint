@@ -29,7 +29,7 @@ CrossLint finds the configuration by looking in the current folder and then in e
 - A name that starts with `https://` is a shared plugin: a Git repository, at the tag or full commit SHA its `ref` property gives, such as `plugin "https://github.com/OWNER/REPO" ref="v1.2.0"`. A branch is refused, so a plugin's version changes only when the configuration does. The first time `crosslint check` needs a shared plugin, it prints a line on standard error, fetches it into the user's cache, and uses that copy from then on. `crosslint update` moves each shared plugin's `ref` to its newest tag.
 - Any other name is a built-in plugin: `angular` or `debt`.
 
-The block holds the plugin's settings, and can be left out when there are none.
+The block holds the settings the plugin's `plugin.kdl` declares, and can be left out when there are none. A setting the plugin doesn't declare stops CrossLint with exit status 2, naming it.
 
 ### `angular`
 
@@ -48,7 +48,9 @@ Debt tracking: violations listed in the debt file don't fail the check, and an e
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `file PATH` | The debt file, relative to the project's root. | `.config/crosslint/debt.tsv` |
-| `report-entries commented=SEVERITY matching=REGEX` | Also report each entry as a violation of `debt/has-debt`: an entry with a comment at `commented` (`error`, `warning`, or `none`), and one without at the policy's severity. With `matching`, only a comment the regular expression matches counts as one. | entries aren't reported |
+| `report-entries commented=SEVERITY matching=REGEX` | Also report each entry as a finding on the debt file, `line N lists PLUGIN/POLICY on ARTIFACT as debt: COMMENT`, from the policy `debt/has-debt`: an entry with a comment at `commented` (`error`, `warning`, or `none`; without it, the policy's severity), and one without at the policy's severity. With `matching`, only a comment the regular expression matches counts as one. | entries aren't reported |
+
+An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is: it is neither stale nor reported, and `--update-debt` keeps it with its comment.
 
 ## `policy`
 

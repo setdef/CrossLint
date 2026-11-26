@@ -16,7 +16,7 @@ If you get stuck, [open an issue](https://github.com/setdef/CrossLint/issues) wi
 
 You don't need Ruby installed; CrossLint carries the Ruby it runs on.
 
-<!-- Placeholder: replace the output of crosslint init with that of a real run once init works (#11), and the output of the steps in "Accept the rest as debt" once the debt plugin works (#10). -->
+<!-- Placeholder: replace the output of crosslint init with that of a real run once init works (#11). -->
 
 ## Write a configuration
 
@@ -102,7 +102,7 @@ crosslint: wrote .config/crosslint/debt.tsv: 2 entries added, 0 removed
 crosslint: checked 9 ruby-file artifacts: 2 accepted as debt
 ```
 
-Open `.config/crosslint/debt.tsv`. Each line is an **entry**: the policy, the artifact, and an empty comment at the end. Write in each comment why the violation is still there, such as `PDF export is being rewritten`, so whoever reads the file later knows. Then check again:
+Open `.config/crosslint/debt.tsv`. Each line after the header is an **entry**: the plugin and policy, the artifact, and an empty comment at the end. Write in each comment why the violation is still there, such as `PDF export is being rewritten`, so whoever reads the file later knows. Then check again:
 
 ```console
 $ crosslint check
