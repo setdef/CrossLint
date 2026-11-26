@@ -81,5 +81,7 @@ rm -rf "$work/plugin-protocol/fledge"
 cd "$work/plugin-protocol" || exit 1
 echo "== run.sh with CROSSLINT=crosslint-spike"
 mise x -- env CROSSLINT=crosslint-spike bash run.sh 2>&1
-echo "== run.sh exit: $?"
+status=$?
+echo "== run.sh exit: $status"
 echo "== work folder: $work"
+exit "$status"

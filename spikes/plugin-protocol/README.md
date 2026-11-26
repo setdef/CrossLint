@@ -14,7 +14,7 @@ The prior art on #4 (protoc plugins, go-plugin, Danger's `--process`, LSP, pre-c
 
 Policies fit in a manifest as data: ng-nudge's five built-in policies run from 14 lines of JSON that the host applies, and the host sends rules to plugins in two languages from one policy. The parts that stay code are the rules that read inside files, and ng-nudge's debt filtering. See [Policies as data](#policies-as-data).
 
-It works for path-relation rules and for a rule that reads TypeScript, with three plugins in three languages (Ruby, JavaScript, shell with `jq`) against one fixture project. The same results came out on macOS (arm64) and Linux (x86_64). The host reports a missing runtime by plugin and runtime name, exits 2, and still runs the other plugins. Provisioning a plugin's runtime with `mise` worked; a cold install of Node took 47 s here. A Fledge-built app and Windows were not run.
+It works for path-relation rules and for a rule that reads TypeScript, with three plugins in three languages (Ruby, JavaScript, shell with `jq`) against one fixture project. The same results came out on macOS (arm64), Linux (x86_64) and Windows 11 (x64), as plain Ruby and inside a Fledge console app installed through mise with no Ruby on `PATH`, where the Ruby plugins ran on the Ruby the app carries (`{host_ruby}`). The host reports a missing runtime by plugin and runtime name, exits 2, and still runs the other plugins. On a timeout it ends the plugin's whole process group (a job object on Windows), and `run.sh` checks that the plugin's child is gone. Provisioning a plugin's runtime with `mise` worked; a cold install of Node took 47 s here. See [Inside a Fledge app](#inside-a-fledge-app) and [Windows](#windows) for what broke on the way.
 
 ## Rerun
 
@@ -22,7 +22,7 @@ It works for path-relation rules and for a rule that reads TypeScript, with thre
 $ bash run.sh
 ```
 
-Needs Ruby 3.2 or later, Node 20 or later, `jq`, and network access on the first run (it installs `typescript` 6.0.3 into `fixture/`). It prints `ok` or `FAIL` per check and exits 0 when every result matches `expected/violations.txt` and every error path gives its expected message. `TIMING=1 bash run.sh` also prints per-plugin timings. Run the host by hand:
+Needs Ruby 3.2 or later, Node 20 or later, `jq`, and network access on the first run (it installs `typescript` 6.0.3 into `fixture/`). It prints `ok` or `FAIL` per check and exits 0 when every result matches `expected/violations.txt` and every error path gives its expected message. `TIMING=1 bash run.sh` also prints per-plugin timings. To build the host as a Fledge app, install it through mise and run the same checks against it, run `bash fledge/scripts/check.sh` (needs mise and network access). Run the host by hand:
 
 ```console
 $ ruby host/crosslint.rb --root fixture --timing plugins/spec-per-component-rb plugins/template-per-component-sh plugins/component-io-js
@@ -178,6 +178,8 @@ What the cases show:
 | Start, first run then mean of 10 | 1.32 s, 0.12 s | 0.08 s, 0.07 s |
 | `run.sh` against the app | every check passes | every check passes |
 
+On Windows 11 x64 the app built and installed the same way (74,842 KiB installed, 0.31 s for the first run and 0.23 s for later ones, Ruby on `PATH`: none), and `run.sh` passes against it, after one change: Ruby 4.1 no longer loads `fiddle` from the standard library, so the host's job object code (see [Windows](#windows)) raised a `LoadError`, fell back to `taskkill`, and the hung plugin's child survived. Adding `gem "fiddle", platforms: [:windows]` to the app's `Gemfile` fixed it, and the gem installed without a compiler error.
+
 What this shows:
 
 - **All three plugins run, and the Ruby plugins run on the app's Ruby.** The Ruby plugin got no Ruby from `PATH` on Linux, and on macOS the system's `/usr/bin/ruby` is on `PATH` and was not used. The two policy plugins, the process-group check and the error paths behave as they do with plain Ruby.
@@ -199,6 +201,7 @@ Run on Windows 11 x64, as plain Ruby: Ruby 4.0.10 (RubyInstaller, `x64-mingw-ucr
 | `taskkill /T /F /PID` ended the `sh` that the host started and left its `sleep` child running. The `sleep` is an MSYS2 process, and the process tree that `taskkill` follows did not link it to the `sh`. | A job object: the host makes one for each plugin with `Fiddle` calls to `CreateJobObjectW`, `SetInformationJobObject` (kill on close), `OpenProcess` and `AssignProcessToJobObject`, and ends it with `TerminateJobObject` on timeout, after the plugin exits, and (through kill on close) when the host exits. With the job, `run.sh`'s check passes. `taskkill` is the fallback when Fiddle cannot load. About 20 lines. |
 | `Spike.which` found no `node` or `sh`: Windows executables have an extension. | The host tries each `PATHEXT` extension. |
 
+- **As a Fledge app on Windows,** every check passes too: see [Inside a Fledge app](#inside-a-fledge-app). The app needs the `fiddle` gem for the job object.
 - **A shell plugin on Windows needs `sh` and `jq`.** MSYS2's `sh` was on `PATH` for these runs. For a Windows with neither, `plugins/template-per-component-ps1/` does the shell plugin's job in PowerShell with `ConvertFrom-Json` (about 20 lines, the `powershell` command), and `run.sh` checks that it gives the shell plugin's two violations when `powershell` is on `PATH`. It passed on Windows. It is skipped on the other systems here.
 - **Starting Node:** `node.exe` started without trouble. A `.cmd` shim (some mise setups on Windows put one on `PATH`) was not met; `npm` is one, and only `run.sh` calls it.
 - **Not run:** Windows ARM64; a Windows with no MSYS2 (where the shell plugin is skipped, PowerShell stands in); paths with spaces or non-ASCII characters; the host running with `--provision` on Windows.
@@ -254,8 +257,8 @@ The project's `typescript` is still read from the project's `node_modules`, so p
 | --- | --- |
 | macOS 27.2.1, arm64 | `run.sh` passes. Provisioning run here. |
 | Linux x86_64 (Ruby 4.0.10, Node 22.23.5, `jq` 1.7 from mise) | `run.sh` passes, including the no-Node check. |
-| In a Fledge-built app | Not run. It needs a Fledge build of the host (the [fledge-tree-sitter](../fledge-tree-sitter/README.md) spike's script is the starting point). |
-| Windows | Not run. |
+| Windows 11 x64 (Ruby 4.0.10, Node 22.23.5, `jq` 1.7 from mise; MSYS2's `bash` and `sh`) | `run.sh` passes, including the PowerShell plugin and the no-Node check. |
+| macOS arm64, Linux x86_64 and Windows x64, in a Fledge app | `fledge/scripts/check.sh` passes on each: built, installed through mise, `run.sh` against the app. |
 
 ## What broke
 
@@ -269,8 +272,9 @@ The project's `typescript` is still read from the project's `node_modules`, so p
 - **Policies that need code, and debt's filtering,** as above: an `applies` that tests more than paths, companions, line counts and config; and a step that filters other plugins' violations.
 - **Severity,** and the rest of ng-nudge's per-rule configuration, as above.
 - **Rules that need facts about other artifacts or other files.** The plugin gets paths and which companions exist. A plugin that needs more reads the files itself, as the JavaScript plugin does; whether the host should pass file contents, or answer queries during a check, was not tried.
-- **Whether a Fledge app carries the Ruby that `{host_ruby}` points to, and what a Ruby plugin's `ruby` finds there.** In a Fledge app no Ruby is on `PATH`, so a manifest with `"command": "ruby"` would find a project's Ruby or none. `{host_ruby}` is implemented but never run inside an app.
-- **Windows.** Starting `sh`, `.cmd` shims for Node and path separators in the manifests were not tried.
+- **A Ruby plugin that needs a gem the app lacks,** in an app. The plugins here use only the standard library; the [fledge-tree-sitter](../fledge-tree-sitter/README.md#project-local-ruby-rules) spike has the measurements for loading gems.
+- **Windows beyond what ran:** a machine with no MSYS2 (the PowerShell plugin stands in for the shell plugin there, and it ran only from MSYS2's `bash`), `.cmd` shims for Node, paths with spaces, and ARM64.
+- **Fledge apps on other platforms:** Linux `aarch64` and musl, Windows ARM64, and an app installed from a GitHub release over the network (mise installed from a `file://` URL).
 - **Plugin distribution and trust.** The spike runs plugin folders passed on the command line. How plugins reach a project (a gem, an npm package, a folder in the repository, a download) is not part of it, and a plugin is arbitrary code that runs with the user's rights.
 - **A long-running plugin that keeps state.** `per-run` reuses a process, but no plugin caches its TypeScript program between checks, so the saving a persistent JavaScript plugin could give beyond Node's warm-up is unmeasured.
 - **Runs in parallel, output size and streaming.** Plugins run one after another. Each request and response is one line; the largest here is a few hundred bytes. A plugin that writes to stdout outside the protocol breaks the line reading.
