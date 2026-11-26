@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/crosslint"
+
+exit CrossLint::CLI.new(ARGV, out: $stdout, err: $stderr, env: ENV).run

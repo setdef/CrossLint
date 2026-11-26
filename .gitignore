@@ -1,0 +1,11 @@
+# Scratch files, and the bundle and Bundler settings of a checkout.
+/.scratch/
+/.bundle/
+/vendor/
+/build/.bundle/
+/build/vendor/
+
+# What the tests, mutant, and the Fledge build write.
+/coverage/
+/.mutant/
+/build/dist/

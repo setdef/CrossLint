@@ -1,0 +1,40 @@
+// A small usage spec with one of each thing CrossLint reads, for the tests.
+min_usage_version "2.0.0"
+name "Tool"
+bin "tool"
+version "1.2.3"
+author "Someone"
+license "MIT"
+repository "https://example.com/tool"
+about "Does things"
+unknown_flags "error"
+
+example "tool run" header="Run it" help="Runs the thing once."
+example "tool stop"
+
+exit_code 0 "It worked."
+exit_code 64 "The command line has a mistake."
+
+flag "-v --verbose" global=#true help="Say more"
+flag "--color <when>" help="Color the output" {
+  choices "auto" "never"
+  default "auto"
+}
+
+cmd "run" effect="read" help="Run the thing" {
+  long_help #"""
+Runs the thing.
+
+Then stops.
+"""#
+  flag "-n --dry-run" help="Do nothing"
+  flag "-o --out <file>" effect="write" help="Write here" {
+    long_help "Writes the output to this file"
+  }
+  flag "--mode <mode>" help="Pick a mode" {
+    choices "only"
+  }
+  example "tool run -n" header="Try it"
+}
+
+cmd "stop" help="Stop the thing"

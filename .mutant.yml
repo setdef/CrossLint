@@ -1,0 +1,14 @@
+# Mutation testing (rake mutant): mutant changes lib/ in one place at a
+# time, and a test must fail for each change. Mutant is free for open-source
+# projects, which CrossLint is.
+usage: opensource
+integration:
+  name: minitest
+includes:
+  - lib
+  - test
+requires:
+  - crosslint
+matcher:
+  subjects:
+    - CrossLint*
