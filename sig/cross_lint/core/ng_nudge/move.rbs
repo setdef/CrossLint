@@ -81,7 +81,7 @@ module CrossLint
 
         # The lines for the configuration written, and the debt file
         # moved, if there is one.
-        def moved: (bool replaced, Rc::Result converted, bool moves, DebtFile debt) -> Array[String]
+        def moved: (bool replaced, Rc::Result converted, bool moves, DebtFile debt, bool replaces) -> Array[String]
 
         # Raises a Mistake when JavaScript and the translation of
         # `matching` don't agree on a comment of `debt`.

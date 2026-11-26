@@ -93,9 +93,16 @@ class NgNudgeMoveTest < Minitest::Test
     world = world({}, existing: true, own_debt: true)
     result = world.move(force: true)
 
-    assert_equal "replace #{CONFIG}, with the plugins angular and debt", result.changes.first
+    assert_equal ["replace #{CONFIG}, with the plugins angular and debt",
+      "move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry, and replace the debt file that is there"], result.changes.first(2)
     assert_equal ["angular", "debt"], world.configuration.read(APP).plugins.map(&:name)
     assert_equal ["app/card"], world.debt_files.read(APP, DEBT).entries.map(&:artifact)
+  end
+
+  def test_says_it_replaces_a_debt_file_only_when_one_is_there
+    result = world({}, existing: true).move(force: true)
+
+    assert_equal "move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry", result.changes[1]
   end
 
   def test_refuses_to_replace_a_debt_file_unless_forced_and_changes_nothing

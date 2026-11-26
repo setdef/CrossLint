@@ -46,9 +46,10 @@ module CrossLint
           refuse_code(paths)
           debt = @debt_files.read(root, DEBT_FILE)
           moves = @debt_files.exist?(root, DEBT_FILE)
-          refuse_existing(TrackDebt::FILE, "the debt file") if moves && !force && @debt_files.exist?(root, TrackDebt::FILE)
+          replaces = moves && @debt_files.exist?(root, TrackDebt::FILE)
+          refuse_existing(TrackDebt::FILE, "the debt file") if replaces && !force
           agree(converted.matching, debt) if converted.matching
-          changes = [*moved(replaced, converted, moves, debt), *converted.changes, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
+          changes = [*moved(replaced, converted, moves, debt, replaces), *converted.changes, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
           notes = compare(root, converted)
           planned&.call(changes, notes)
           unless dry_run
@@ -92,13 +93,14 @@ module CrossLint
             "(docs/reference/plugin.md), then move the file out of .config/ng-nudge", file: path)
         end
 
-        def moved(replaced, converted, moves, debt)
+        def moved(replaced, converted, moves, debt, replaces)
           plugins = converted.configuration.plugins.map(&:name)
           lines = ["#{replaced ? "replace" : "write"} #{@configuration.file}, with the plugins #{plugins.join(" and ")}"]
           return lines unless moves
 
           entries = debt.entries.size
-          lines << "move #{DEBT_FILE} to #{TrackDebt::FILE}, byte for byte, with #{entries} #{(entries == 1) ? "entry" : "entries"}"
+          lines << "move #{DEBT_FILE} to #{TrackDebt::FILE}, byte for byte, with #{entries} #{(entries == 1) ? "entry" : "entries"}" \
+            "#{", and replace the debt file that is there" if replaces}"
         end
 
         # ng-nudge tests `withComment.matching` on each comment with
