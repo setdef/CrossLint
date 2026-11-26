@@ -191,6 +191,18 @@ class CLITest < Minitest::Test
     assert_equal ["", "", 1], check("check", app: app(verbosity: :silent))
   end
 
+  def test_check_lists_no_passing_artifact_with_all_and_quiet
+    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", "--all", "--quiet", app: app)
+    assert_equal ["", "", 0], check("check", "--all", "-q", app: app(files: ["lib/a.rb", "test/a_test.rb"]))
+  end
+
+  def test_check_exits_with_1_when_silent_and_a_warning_fails_it
+    warned = app(severity: :warning)
+
+    assert_equal ["", "", 1], check("check", "--silent", "--warnings=error", app: warned)
+    assert_equal ["", "", 0], check("check", "--silent", app: warned)
+  end
+
   def test_check_lists_passing_artifacts_with_all
     assert_equal "lib/a.rb: ruby-file passes\nlib/b.rb: no test file at test/b_test.rb (tests/has-test)\n",
       check("check", "-a", app: app)[0]
@@ -274,6 +286,26 @@ class CLITest < Minitest::Test
 
       assert_equal ["", "crosslint: checked 1 a artifact: no violations\n", 0], check("check", "-C", project)
       assert_equal "crosslint: helper h: said\n", check("check", "-C", project, "--debug")[1].lines.first
+    end
+  end
+
+  def test_check_writes_no_file
+    Dir.mktmpdir("crosslint") do |project|
+      write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
+      write(project, "plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n  companion "b" "{path}.txt"\n}\n) +
+        %(policy "p" {\n  applies-to "a"\n  rule "companion-exists" companion="b"\n}\n))
+      write(project, "a.md", "")
+      Open3.capture3("git", "init", "-q", chdir: project)
+      snapshot = lambda do
+        Dir.glob("**/*", File::FNM_DOTMATCH, base: project).sort.map do |path|
+          full = File.join(project, path)
+          [path, File.file?(full) ? [File.binread(full), File.mtime(full)] : nil]
+        end
+      end
+      before = snapshot.call
+
+      assert_equal 1, check("check", "-C", project, "--all")[2]
+      assert_equal before, snapshot.call
     end
   end
 
