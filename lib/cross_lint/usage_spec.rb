@@ -3,55 +3,39 @@
 require "kdl"
 
 module CrossLint
-  # The command-line interface that crosslint.usage.kdl declares, in the
-  # usage spec format (https://usage.jdx.dev): the program's name and
-  # version, its texts, flags, commands, examples, and exit statuses.
-  #
-  # It reads every node and property the spec has, and raises
-  # UsageSpec::Error at one it doesn't know, so a line added to the spec
-  # can't be left out of the help without a test failing.
   class UsageSpec
-    # The spec CrossLint ships, in the folder above lib/.
-    PATH = File.expand_path("../../crosslint.usage.kdl", __dir__)
+    PATH = File.expand_path("../../../crosslint.usage.kdl", __FILE__)
 
-    # A spec that CrossLint can't read, which is a bug in CrossLint.
     class Error < StandardError; end
 
-    # A flag: its one-letter name, its long name, the name of the value it
-    # takes (nil for none), its help, and for a flag with a value, the
-    # values it takes (nil for any) and its default.
-    Flag = Data.define(:short, :long, :value, :help, :long_help, :choices, :default, :global) do
-      # How the flag is written with its value, such as "--project <dir>".
+    class Flag < Data.define(:short, :long, :value, :help, :long_help, :choices, :default, :global)
       def usage = value ? "--#{long} <#{value}>" : "--#{long}"
     end
 
-    # A command, such as check, with its flags and examples.
-    Command = Data.define(:name, :help, :long_help, :flags, :examples)
+    class Command < Data.define(:name, :help, :long_help, :flags, :examples); end
 
-    # A command line to show, with a heading and a line of help.
-    Example = Data.define(:code, :header, :help)
+    class Example < Data.define(:code, :header, :help); end
 
-    # An exit status, and what it means.
-    ExitCode = Data.define(:code, :meaning)
+    class ExitCode < Data.define(:code, :meaning); end
 
-    # The nodes at the top of the spec that hold one string.
     TEXTS = %w[min_usage_version name bin version author license repository about long_about after_long_help].freeze
+
+    REQUIRED = %w[name bin version about].freeze
 
     attr_reader(*TEXTS.map(&:to_sym), :flags, :commands, :examples, :exit_codes)
 
-    # Reads the spec at +path+.
     def self.load(path = PATH) = new(File.read(path))
 
-    # Reads a spec from its KDL +source+.
     def initialize(source)
       @flags = []
       @commands = []
       @examples = []
       @exit_codes = []
       KDL.parse(source).each { |node| read_top(node) }
+      missing = REQUIRED.find { |name| instance_variable_get(:"@#{name}").nil? }
+      raise Error, "the spec has no #{missing}, which the help shows" if missing
     end
 
-    # The flags that every command takes as well.
     def global_flags = flags.select(&:global)
 
     private
@@ -78,52 +62,53 @@ module CrossLint
       raise Error, "unknown_flags is #{setting.dump}, and CrossLint only stops at an unknown flag" unless setting == "error"
     end
 
-    # The children a flag may have.
     FLAG_SETTINGS = %w[choices default long_help].freeze
 
     def flag(node)
       words, = arguments(node, 1)
       properties = properties(node, %w[effect global help])
       short, long, value = flag_names(words)
-      settings = {}
-      node.each do |child|
+      settings = node.to_h do |child|
         raise Error, unknown(child) unless FLAG_SETTINGS.include?(child.name)
 
-        settings[child.name] = (child.name == "choices") ? only(child) : text(child)
+        [child.name, child]
       end
-      Flag.new(short:, long:, value:, help: properties["help"], long_help: settings["long_help"],
-        choices: settings["choices"], default: settings["default"], global: properties.fetch("global", false))
+      long_help_node, choices_node, default_node = settings.values_at("long_help", "choices", "default")
+      long_help = long_help_node && text(long_help_node)
+      choices = choices_node && only(choices_node)
+      default = default_node && text(default_node)
+      Flag.new(short:, long:, value:, help: help("flag", words, properties), long_help:, choices:, default:,
+        global: properties.fetch("global", false))
     end
 
-    # The names in a flag's first argument, such as "-C --project <dir>".
     def flag_names(words)
-      names = words.split.each_with_object({}) do |word, found|
+      names = words.split.to_h do |word|
         case word
-        when /\A-([A-Za-z0-9])\z/ then found[:short] = $1
-        when /\A--([a-z0-9][a-z0-9-]*)\z/ then found[:long] = $1
-        when /\A<([a-z][a-z0-9_-]*)>\z/ then found[:value] = $1
+        when /\A-([A-Za-z0-9])\z/ then [:short, $1]
+        when /\A--([a-z0-9][a-z0-9-]*)\z/ then [:long, $1]
+        when /\A<([a-z][a-z0-9_-]*)>\z/ then [:value, $1]
         else raise Error, "flag #{words.dump} has #{word.dump}, which CrossLint doesn't read"
         end
       end
-      long = names.fetch(:long) { raise Error, "flag #{words.dump} has no long name" }
+      long = names[:long]
+      raise Error, "flag #{words.dump} has no long name" unless long
+
       [names[:short], long, names[:value]]
     end
+
+    COMMAND_CHILDREN = %w[long_help flag example].freeze
 
     def command(node)
       name, = arguments(node, 1)
       properties = properties(node, %w[effect help])
-      long_help = nil
-      flags = []
-      examples = []
-      node.each do |child|
-        case child.name
-        when "long_help" then long_help = text(child)
-        when "flag" then flags << flag(child)
-        when "example" then examples << example(child)
-        else raise Error, unknown(child)
-        end
-      end
-      Command.new(name:, help: properties["help"], long_help:, flags:, examples:)
+      node.each { |child| raise Error, unknown(child) unless COMMAND_CHILDREN.include?(child.name) }
+      Command.new(name:, help: help("cmd", name, properties), long_help: node.select { |child| child.name == "long_help" }.map { |child| text(child) }.last,
+        flags: node.select { |child| child.name == "flag" }.map { |child| flag(child) },
+        examples: node.select { |child| child.name == "example" }.map { |child| example(child) })
+    end
+
+    def help(kind, name, properties)
+      properties.fetch("help") { raise Error, "#{kind} #{name.dump} has no help=, which the help shows" }
     end
 
     def example(node)
@@ -138,18 +123,14 @@ module CrossLint
       ExitCode.new(code:, meaning:)
     end
 
-    # The one argument of a node that holds only a string.
     def text(node) = only(node, 1).first
 
-    # The arguments of a node that has no properties and no children.
     def only(node, count = nil)
       properties(node, [])
       no_children(node)
       arguments(node, count)
     end
 
-    # The values of a node's arguments, of which there must be +count+
-    # when it is given.
     def arguments(node, count)
       values = node.arguments.map(&:value)
       return values if count.nil? || values.size == count
@@ -157,7 +138,6 @@ module CrossLint
       raise Error, "#{node.name} has #{values.size} arguments, and CrossLint reads #{count}"
     end
 
-    # The values of a node's properties, each of which must be +allowed+.
     def properties(node, allowed)
       values = node.properties.transform_values(&:value)
       unknown = values.keys - allowed

@@ -1,8 +1,10 @@
 # Every push to trunk, and every pull request: on Linux, the whole gate,
-# rake check (the tests with their coverage, mutation testing, usage lint,
-# the check that docs/reference/cli.md is what usage generates, and REUSE);
+# rake check (rbs validate, the comment on every public part of sig/,
+# Steep, the tests with their coverage, mutation testing, usage lint, the
+# check that docs/reference/cli.md is what usage generates, and REUSE);
 # and the tests on macOS and Windows, each with the Ruby and tools
-# mise.toml pins.
+# mise.toml pins. The macOS and Windows jobs leave out the Gemfile's check
+# group, which only rake check uses.
 
 name: CI
 
@@ -69,6 +71,8 @@ jobs:
     name: Tests (macOS)
     runs-on: macos-15
     timeout-minutes: 20
+    env:
+      BUNDLE_WITHOUT: check
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -103,6 +107,8 @@ jobs:
     name: Tests (Windows)
     runs-on: windows-2025
     timeout-minutes: 30
+    env:
+      BUNDLE_WITHOUT: check
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -22,4 +22,14 @@ group :test do
   # a version no gem server has, so its lockfile entry could have no
   # checksum.
   gem "erb", "~> 6.0.7"
+  # rbs validate, and RBS's runtime type checker (rake test:rbs).
+  gem "rbs", "~> 4.2"
+end
+
+# The checks that only CI's Linux job runs, so the macOS and Windows jobs,
+# which run the tests, leave this group out (BUNDLE_WITHOUT). Steep needs
+# ffi, which has no build for Ruby 4.1 and compiles on install.
+group :check do
+  # Steep checks lib/ against sig/ (rake steep).
+  gem "steep", "~> 2.1"
 end

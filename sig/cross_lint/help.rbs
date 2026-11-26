@@ -1,0 +1,53 @@
+module CrossLint
+  # The help crosslint --help prints, made from the usage spec: for the
+  # program, or for one of its commands.
+  #
+  # Texts keep their line breaks from the spec. A line longer than WIDTH
+  # columns is wrapped between words, with the indent of the column it is
+  # in.
+  class Help
+    # The widest a line gets, unless one word is wider.
+    WIDTH: Integer
+
+    # The help made from `spec`.
+    def initialize: (UsageSpec spec) -> void
+
+    # The help for `command`, or for the program when it is nil.
+    def render: (?UsageSpec::Command? command) -> String
+
+    private
+
+    @spec: UsageSpec
+
+    # The sections of the program's help, nil for one it doesn't have.
+    def program_sections: () -> Array[String?]
+
+    # The sections of `command`'s help, nil for one it doesn't have.
+    def command_sections: (UsageSpec::Command command) -> Array[String?]
+
+    # --help and --version, which every program has.
+    def extra_flags: () -> Array[UsageSpec::Flag]
+
+    # A row for each of `flags`: its names, and the lines that describe
+    # it.
+    def flag_rows: (Array[UsageSpec::Flag] flags) -> Array[[String, Array[String]]]
+
+    # The section that lists each exit status.
+    def exit_codes: () -> String?
+
+    # The section that shows `examples`, or nil for none.
+    def examples: (Array[UsageSpec::Example] examples) -> String?
+
+    # A heading, and a row for each of `rows`: a name, and the lines that
+    # describe it, which start in the same column in every row. Nil when
+    # there are no rows.
+    def section: (String heading, Array[[String, Array[String]]] rows) -> String?
+
+    # `text`, wrapped, ending with a line break.
+    def block: (String text) -> String
+
+    # The lines of `text`, each starting with `indent` and wrapped to
+    # WIDTH, with no space at the end.
+    def wrap: (String text, String indent) -> Array[String]
+  end
+end

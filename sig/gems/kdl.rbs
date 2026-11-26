@@ -1,0 +1,40 @@
+# The parts of the kdl gem (https://github.com/danini-the-panini/kdl-rb)
+# that CrossLint uses. The gem ships no signatures.
+module KDL
+  def self.parse: (String input, ?version: Integer?, ?output_version: Integer?, ?filename: String?,
+                   **untyped) -> Document
+
+  class Document
+    include Enumerable[Node]
+
+    attr_accessor nodes: Array[Node]
+
+    def each: () { (Node node) -> void } -> void
+  end
+
+  class Node
+    include Enumerable[Node]
+
+    attr_accessor name: String
+    attr_accessor arguments: Array[Value]
+    attr_accessor properties: Hash[String, Value]
+    attr_accessor children: Array[Node]
+    attr_accessor type: String?
+
+    def each: () { (Node node) -> void } -> void
+  end
+
+  class Value
+    attr_reader value: untyped
+    attr_reader type: String?
+  end
+
+  class Error < StandardError
+    attr_reader filename: String?
+    attr_reader line: Integer?
+    attr_reader column: Integer?
+  end
+
+  class ParseError < Error
+  end
+end

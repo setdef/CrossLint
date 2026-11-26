@@ -1,0 +1,62 @@
+module CrossLint
+  # The crosslint command: reads its command line, does what the person
+  # asked for, and returns the exit status.
+  #
+  # What the person asked for goes to `out`. Everything CrossLint says
+  # about itself goes to `err`, each line beginning with "crosslint:".
+  class CLI
+    # Where CrossLint writes: standard output or standard error, or a
+    # `StringIO` in the tests.
+    interface _Output
+      # Writes `text` as it is.
+      def write: (String text) -> untyped
+
+      # Writes `line`, and a line break.
+      def puts: (String line) -> untyped
+    end
+
+    # The environment: `ENV`, or a Hash in the tests.
+    interface _Environment
+      # The value of the variable `name`, or `default` when it isn't set.
+      def fetch: (String name, String default) -> String
+    end
+
+    # What begins each line CrossLint writes about itself.
+    PREFIX: String
+
+    # Where to report a bug.
+    ISSUES: String
+
+    # `argv` is the command line's words, `out` and `err` standard output
+    # and standard error, and `env` the environment. `spec` is the usage
+    # spec, which is read from UsageSpec::PATH when it is nil.
+    def initialize: (Array[String] argv, out: _Output, err: _Output, env: _Environment,
+                     ?spec: UsageSpec?) -> void
+
+    # Runs the command line, and returns the exit status.
+    def run: () -> Integer
+
+    private
+
+    @argv: Array[String]
+
+    @out: _Output
+
+    @err: _Output
+
+    @env: _Environment
+
+    @spec: UsageSpec?
+
+    # Writes `message` to standard error, and returns exit status 2.
+    def say: (String message) -> Integer
+
+    # Says that `error` is a bug in CrossLint and where to report it, with
+    # where it stopped under --debug, and returns exit status 2.
+    def bug: (Exception error) -> Integer
+
+    # Whether --debug is on the command line or DEBUG is set to a value
+    # that isn't empty.
+    def debug?: () -> bool
+  end
+end

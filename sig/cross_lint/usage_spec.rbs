@@ -1,0 +1,227 @@
+module CrossLint
+  # The command-line interface that crosslint.usage.kdl declares, in the
+  # usage spec format (https://usage.jdx.dev): the program's name and
+  # version, its texts, flags, commands, examples, and exit statuses.
+  #
+  # It reads every node and property the spec has, and raises
+  # UsageSpec::Error at one it doesn't know, so a line added to the spec
+  # can't be left out of the help without a test failing.
+  class UsageSpec
+    # The spec CrossLint ships, in the folder above lib/.
+    PATH: String
+
+    # A spec that CrossLint can't read, which is a bug in CrossLint.
+    class Error < StandardError
+    end
+
+    # A flag: its one-letter name, its long name, the name of the value it
+    # takes (nil for none), its help, and for a flag with a value, the
+    # values it takes (nil for any) and its default.
+    class Flag < Data
+      # The flag's one-letter name, such as "q", or nil for none.
+      attr_reader short: String?
+
+      # The flag's long name, such as "quiet".
+      attr_reader long: String
+
+      # The name of the value the flag takes, such as "dir", or nil for
+      # none.
+      attr_reader value: String?
+
+      # The flag's line of help.
+      attr_reader help: String
+
+      # The flag's longer help, or nil for none.
+      attr_reader long_help: String?
+
+      # The values the flag takes, or nil for any.
+      attr_reader choices: Array[String]?
+
+      # The value the flag has when it isn't given, or nil for none.
+      attr_reader default: String?
+
+      # Whether every command takes the flag as well.
+      attr_reader global: bool
+
+      # A flag with these fields.
+      def self.new: (short: String?, long: String, value: String?, help: String, long_help: String?,
+                     choices: Array[String]?, default: String?, global: bool) -> instance
+
+      # A flag with these fields.
+      def initialize: (short: String?, long: String, value: String?, help: String, long_help: String?,
+                       choices: Array[String]?, default: String?, global: bool) -> void
+
+      # How the flag is written with its value, such as "--project <dir>".
+      def usage: () -> String
+    end
+
+    # A command, such as check, with its flags and examples.
+    class Command < Data
+      # The command's name, such as "check".
+      attr_reader name: String
+
+      # The command's line of help.
+      attr_reader help: String
+
+      # The command's longer help, or nil for none.
+      attr_reader long_help: String?
+
+      # The flags the command takes, besides the global ones.
+      attr_reader flags: Array[Flag]
+
+      # The command's examples.
+      attr_reader examples: Array[Example]
+
+      # A command with these fields.
+      def self.new: (name: String, help: String, long_help: String?, flags: Array[Flag],
+                     examples: Array[Example]) -> instance
+
+      # A command with these fields.
+      def initialize: (name: String, help: String, long_help: String?, flags: Array[Flag],
+                       examples: Array[Example]) -> void
+    end
+
+    # A command line to show, with a heading and a line of help.
+    class Example < Data
+      # The command line, such as "crosslint check".
+      attr_reader code: String
+
+      # The example's heading, or nil for none.
+      attr_reader header: String?
+
+      # What the example does, or nil when the heading says it.
+      attr_reader help: String?
+
+      # An example with these fields.
+      def self.new: (code: String, header: String?, help: String?) -> instance
+
+      # An example with these fields.
+      def initialize: (code: String, header: String?, help: String?) -> void
+    end
+
+    # An exit status, and what it means.
+    class ExitCode < Data
+      # The exit status, such as 2.
+      attr_reader code: Integer
+
+      # What the exit status means.
+      attr_reader meaning: String
+
+      # An exit status with these fields.
+      def self.new: (code: Integer, meaning: String) -> instance
+
+      # An exit status with these fields.
+      def initialize: (code: Integer, meaning: String) -> void
+    end
+
+    # The nodes at the top of the spec that hold one string.
+    TEXTS: Array[String]
+
+    # The texts every spec has, since the help shows each.
+    REQUIRED: Array[String]
+
+    # The children a flag may have.
+    FLAG_SETTINGS: Array[String]
+
+    # The children a command may have.
+    COMMAND_CHILDREN: Array[String]
+
+    # The oldest usage that reads the spec.
+    attr_reader min_usage_version: String?
+
+    # The program's name, such as "CrossLint".
+    attr_reader name: String
+
+    # The program's command, such as "crosslint".
+    attr_reader bin: String
+
+    # The program's version, such as "0.1.0".
+    attr_reader version: String
+
+    # Who wrote the program.
+    attr_reader author: String?
+
+    # The program's license, such as "MIT".
+    attr_reader license: String?
+
+    # The URL of the program's repository.
+    attr_reader repository: String?
+
+    # The program's line of help.
+    attr_reader about: String
+
+    # The program's longer help, or nil for none.
+    attr_reader long_about: String?
+
+    # The text at the end of the program's help, or nil for none.
+    attr_reader after_long_help: String?
+
+    # The flags the program takes before a command.
+    attr_reader flags: Array[Flag]
+
+    # The program's commands.
+    attr_reader commands: Array[Command]
+
+    # The program's examples.
+    attr_reader examples: Array[Example]
+
+    # The program's exit statuses, and what each means.
+    attr_reader exit_codes: Array[ExitCode]
+
+    # Reads the spec at `path`.
+    def self.load: (?String path) -> UsageSpec
+
+    # Reads a spec from its KDL `source`.
+    def initialize: (String source) -> void
+
+    # The flags that every command takes as well.
+    def global_flags: () -> Array[Flag]
+
+    private
+
+    # Reads one node at the top of the spec.
+    def read_top: (KDL::Node node) -> void
+
+    # Reads unknown_flags, which must be "error".
+    def read_unknown_flags: (KDL::Node node) -> void
+
+    # Reads a flag, with its settings.
+    def flag: (KDL::Node node) -> Flag
+
+    # The names in a flag's first argument, such as "-C --project <dir>":
+    # its one-letter name, its long name, and the name of its value.
+    def flag_names: (String words) -> [String?, String, String?]
+
+    # Reads a command, with its flags and examples.
+    def command: (KDL::Node node) -> Command
+
+    # The help= of a flag or command, the `kind` of node named `name`,
+    # which every flag and command has.
+    def help: (String kind, String name, Hash[String, untyped] properties) -> String
+
+    # Reads an example.
+    def example: (KDL::Node node) -> Example
+
+    # Reads an exit status.
+    def exit_code: (KDL::Node node) -> ExitCode
+
+    # The one argument of a node that holds only a string.
+    def text: (KDL::Node node) -> untyped
+
+    # The arguments of a node that has no properties and no children.
+    def only: (KDL::Node node, ?Integer? count) -> Array[untyped]
+
+    # The values of a node's arguments, of which there must be `count`
+    # when it is given.
+    def arguments: (KDL::Node node, Integer? count) -> Array[untyped]
+
+    # The values of a node's properties, each of which must be `allowed`.
+    def properties: (KDL::Node node, Array[String] allowed) -> Hash[String, untyped]
+
+    # Raises Error when the node has children.
+    def no_children: (KDL::Node node) -> void
+
+    # The message for a node CrossLint doesn't read.
+    def unknown: (KDL::Node node) -> String
+  end
+end

@@ -7,6 +7,9 @@ class UsageSpecTest < Minitest::Test
 
   Spec = CrossLint::UsageSpec
 
+  # The texts every spec has, for a spec that tests something else.
+  TOP = %(name "T"\nbin "t"\nversion "1"\nabout "a"\n)
+
   def test_reads_the_texts_at_the_top
     spec = fixture_spec
 
@@ -66,11 +69,25 @@ class UsageSpecTest < Minitest::Test
   end
 
   def test_leaves_out_what_a_node_does_not_give
-    spec = Spec.new(%(cmd "a"\nflag "--b"))
+    spec = Spec.new(%(#{TOP}cmd "a" help="A"\nflag "--b" help="B"))
 
-    assert_equal Spec::Command.new(name: "a", help: nil, long_help: nil, flags: [], examples: []), spec.commands.first
-    assert_equal Spec::Flag.new(short: nil, long: "b", value: nil, help: nil, long_help: nil, choices: nil,
+    assert_nil spec.min_usage_version
+    assert_equal Spec::Command.new(name: "a", help: "A", long_help: nil, flags: [], examples: []), spec.commands.first
+    assert_equal Spec::Flag.new(short: nil, long: "b", value: nil, help: "B", long_help: nil, choices: nil,
       default: nil, global: false), spec.flags.first
+  end
+
+  def test_refuses_a_spec_without_the_texts_the_help_shows
+    assert_refuses "the spec has no name, which the help shows", %(bin "t"\nversion "1"\nabout "a")
+    assert_refuses "the spec has no bin, which the help shows", %(name "T"\nversion "1"\nabout "a")
+    assert_refuses "the spec has no version, which the help shows", %(name "T"\nbin "t"\nabout "a")
+    assert_refuses "the spec has no about, which the help shows", %(name "T"\nbin "t"\nversion "1")
+  end
+
+  def test_refuses_a_command_or_flag_without_help
+    assert_refuses %(cmd "a" has no help=, which the help shows), %(#{TOP}cmd "a")
+    assert_refuses %(flag "-b --b" has no help=, which the help shows), %(#{TOP}flag "-b --b")
+    assert_refuses %(flag "--c" has no help=, which the help shows), %(#{TOP}cmd "a" help="A" { flag "--c"; })
   end
 
   def test_a_flag_shows_how_it_is_written
@@ -133,15 +150,15 @@ class UsageSpecTest < Minitest::Test
   end
 
   def test_reads_flag_names_of_letters_digits_and_dashes
-    flag, = Spec.new(%(flag "-0 --dry-run2 <out_file-2>")).flags
+    flag, = Spec.new(%(#{TOP}flag "-0 --dry-run2 <out_file-2>" help="x")).flags
 
     assert_equal ["0", "dry-run2", "out_file-2"], [flag.short, flag.long, flag.value]
-    assert_equal "Z", Spec.new(%(flag "-Z --z")).flags.first.short
+    assert_equal "Z", Spec.new(%(#{TOP}flag "-Z --z" help="x")).flags.first.short
   end
 
   def test_refuses_unknown_flags_other_than_error
     assert_refuses %(unknown_flags is "warn", and CrossLint only stops at an unknown flag), %(unknown_flags "warn")
-    assert_nil Spec.new(%(unknown_flags "error")).about
+    assert_equal "a", Spec.new(%(#{TOP}unknown_flags "error")).about
   end
 
   private

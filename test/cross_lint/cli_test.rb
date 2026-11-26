@@ -6,7 +6,7 @@ class CLITest < Minitest::Test
   cover "CrossLint::CLI*"
 
   # A spec that raises +error+ when CrossLint reads its flags.
-  class BrokenSpec
+  class BrokenSpec < CrossLint::UsageSpec
     def initialize(error) = @error = error
     def flags = raise(@error)
   end
@@ -75,6 +75,14 @@ class CLITest < Minitest::Test
     assert_match(/\Acrosslint:   from .*cli_test\.rb:\d+:in 'CLITest::BrokenSpec#flags'\z/, lines[2])
     assert_operator lines.size, :>, 3
     assert(lines.drop(2).all? { |line| line.start_with?("crosslint:   from ") })
+  end
+
+  def test_shows_no_trace_for_a_bug_that_has_none
+    error = RuntimeError.new("boom")
+    def error.backtrace = nil
+    _, err, status = run_cli("--debug", spec: BrokenSpec.new(error))
+
+    assert_equal [2, 2], [err.lines.size, status]
   end
 
   def test_shows_where_a_bug_stopped_it_when_debug_is_set

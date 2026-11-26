@@ -3,37 +3,20 @@
 require "did_you_mean"
 
 module CrossLint
-  # A command line, read by the usage spec: the command in it, if any,
-  # and the value of each flag given, or that has a default.
-  #
-  # A flag is written as --name, --name=value, or --name value, and one
-  # with a one-letter name as -n, -nvalue, or -n value, with several
-  # one-letter flags in one word, as in -qa. After --, every word is an
-  # argument. Before a command, only the top-level flags are known; after
-  # it, the command's and the global ones.
   class CommandLine
-    # A mistake in the command line, with a message that says how to fix
-    # it.
     class Error < StandardError; end
 
-    # The flags that usage adds to every program, which the spec doesn't
-    # list.
     HELP = UsageSpec::Flag.new(short: "h", long: "help", value: nil, help: "Print help", long_help: nil,
       choices: nil, default: nil, global: true)
     VERSION = UsageSpec::Flag.new(short: "V", long: "version", value: nil, help: "Print version", long_help: nil,
       choices: nil, default: nil, global: true)
 
-    # What the person asked for: :help, :version, or :run.
     attr_reader :action
 
-    # The command given, a UsageSpec::Command, or nil for none.
     attr_reader :command
 
-    # Each flag's value by its long name: true for a flag that takes no
-    # value, or the value given or the default.
     attr_reader :flags
 
-    # Reads +argv+ by +spec+, and raises Error at a mistake.
     def initialize(spec, argv)
       @spec = spec
       @flags = {}
@@ -43,11 +26,9 @@ module CrossLint
       known_flags.each { |flag| @flags[flag.long] ||= flag.default if flag.default }
     end
 
-    # The flags known where the reading is: the top-level flags
-    # before a command, and the command's and the global ones after it,
-    # with --help and --version.
     def known_flags
-      flags = @command ? @command.flags + @spec.global_flags : @spec.flags
+      command = @command
+      flags = command ? command.flags + @spec.global_flags : @spec.flags
       flags + [HELP, VERSION]
     end
 
@@ -73,7 +54,8 @@ module CrossLint
       flag = known_flags.find { |known| known.long == name }
       raise Error, unknown_flag("--#{name}", known_flags.map { |known| "--#{known.long}" }) unless flag
 
-      set(flag, value || (flag.value && words.shift))
+      value ||= words.shift if flag.value
+      set(flag, value)
     end
 
     def read_short(letters, words)
@@ -118,8 +100,6 @@ module CrossLint
 
     def unknown_flag(name, names) = suggest("#{scope} has no flag #{shown(name)}", name, names)
 
-    # +message+, with the name the person most likely meant, or where to
-    # see them all.
     def suggest(message, typed, names)
       guess = DidYouMean::SpellChecker.new(dictionary: names).correct(typed).first
       return "#{message}; did you mean #{guess}?" if guess
@@ -129,17 +109,13 @@ module CrossLint
 
     def scope = [@spec.bin, @command&.name].compact.join(" ")
 
-    # A word the person typed, quoted when it holds anything but printable
-    # ASCII, so the message stays ASCII.
+    # Quoting keeps every message ASCII.
     def shown(word) = word.match?(/\A[!-~]+\z/) ? word : word.dump
 
-    # Words joined as in a sentence: "a", "a or b", "a, b, or c".
     def list(words)
-      *others, last = words
-      return last if others.empty?
-      return "#{others.first} or #{last}" if others.size == 1
+      return words.join(" or ") if words.size < 3
 
-      "#{others.join(", ")}, or #{last}"
+      "#{words.take(words.size - 1).join(", ")}, or #{words.last}"
     end
   end
 end

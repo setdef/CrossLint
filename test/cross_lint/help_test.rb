@@ -151,6 +151,12 @@ class HelpTest < Minitest::Test
     assert_includes CrossLint::Help.new(spec).render, "      --x        b\n\n#{" " * 17}c\n"
   end
 
+  def test_shows_a_flag_with_empty_help_by_its_name_alone
+    spec = CrossLint::UsageSpec.new(%(name "T"\nbin "t"\nversion "1"\nabout "a"\nflag "--x" help=""))
+
+    assert_includes CrossLint::Help.new(spec).render, "Flags:\n      --x\n"
+  end
+
   def test_keeps_a_word_wider_than_a_line_whole
     spec = CrossLint::UsageSpec.new(%(name "T"\nbin "t"\nversion "1"\nabout "x #{"a" * 120} y"))
 

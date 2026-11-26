@@ -10,6 +10,23 @@ Minitest::TestTask.create(:test) do |task|
   task.warning = true
 end
 
+namespace :rbs do
+  desc "Validate the signatures in sig/"
+  task :validate do
+    sh "rbs", "-I", "sig", "validate"
+  end
+
+  desc "Check that every public part of CrossLint has a comment in sig/"
+  task :comments do
+    ruby "tasks/signature_comments.rb"
+  end
+end
+
+desc "Check lib/ against sig/ with Steep (Steepfile)"
+task :steep do
+  sh "steep", "check"
+end
+
 WINDOWS = RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/)
 
 desc "Run mutation testing on lib/ (.mutant.yml); mutant forks, so it doesn't run on Windows"
@@ -44,7 +61,7 @@ task :reuse do
 end
 
 desc "Run every check CI runs"
-task check: [:test, :mutant, "usage:lint", "usage:reference", :reuse]
+task check: ["rbs:validate", "rbs:comments", :steep, :test, :mutant, "usage:lint", "usage:reference", :reuse]
 
 task default: :check
 
@@ -52,7 +69,7 @@ task default: :check
 # doesn't carry Fledge, and the app leaves out the contributors' groups.
 FLEDGE_ENV = {
   "BUNDLE_GEMFILE" => File.expand_path("build/Gemfile", __dir__),
-  "BUNDLE_WITHOUT" => "development:test"
+  "BUNDLE_WITHOUT" => "development:test:check"
 }.freeze
 
 desc "Build the app for this computer with Fledge, into build/dist"

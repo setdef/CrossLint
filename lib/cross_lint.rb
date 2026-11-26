@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# CrossLint checks the rules that span files, such as "every source file
-# has its test".
 module CrossLint
 end
 
