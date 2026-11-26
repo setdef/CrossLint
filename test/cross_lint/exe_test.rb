@@ -25,7 +25,7 @@ class ExeTest < Minitest::Test
   end
 
   def test_help_exits_with_2_at_a_command_it_does_not_have
-    assert_equal ["", "crosslint: crosslint has no command chekc; did you mean check?\n", 2], crosslint("help", "chekc")
+    assert_equal ["", "crosslint: crosslint has no command chekc, and the configuration lists no plugin of that name; did you mean check?\n", 2], crosslint("help", "chekc")
   end
 
   def test_exits_with_2_at_a_mistake

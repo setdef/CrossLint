@@ -92,6 +92,71 @@ class HelpTest < Minitest::Test
     HELP
   end
 
+  def test_lists_the_commands_of_plugins_and_a_line_for_each_thing_that_keeps_one_from_showing_after_the_programs_commands
+    help = CrossLint::Help.new(fixture_spec, plugins: plugins(notes: ["signatures isn't fetched yet"]))
+
+    assert_includes help.render, <<~HELP
+      Commands:
+        run   Run the thing
+        stop  Stop the thing
+        show  Show a thing
+        help  Explain a command
+
+      Plugin commands:
+        debt update               Rewrite the debt file
+        debt prune-stale-entries  Drop each entry no violation matches
+        signatures isn't fetched yet
+
+      Flags:
+    HELP
+  end
+
+  def test_lists_only_the_notes_when_no_plugin_adds_a_command_and_wraps_them
+    note = "#{"a" * 60} #{"b" * 60}"
+
+    assert_includes CrossLint::Help.new(fixture_spec, plugins: plugins(commands: [], notes: [note])).render, "\n\nPlugin commands:\n  #{"a" * 60}\n  #{"b" * 60}\n\nFlags:\n"
+  end
+
+  def test_shows_no_plugin_section_when_there_is_nothing_to_say_of_plugins
+    refute_includes CrossLint::Help.new(fixture_spec).render, "Plugin commands"
+    refute_includes CrossLint::Help.new(fixture_spec, plugins: plugins(commands: [], notes: [])).render, "Plugin commands"
+    refute_includes CrossLint::Help.new(fixture_spec, plugins: plugins).render(fixture_spec.commands.first), "Plugin commands"
+  end
+
+  def test_renders_the_help_of_a_plugin
+    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).plugin("debt", plugins.commands.map(&:last).take(2))
+      The commands of the debt plugin
+
+      Usage: tool debt COMMAND [FLAGS]
+
+      Commands:
+        update               Rewrite the debt file
+        prune-stale-entries  Drop each entry no violation matches
+
+      Global flags:
+        -v, --verbose  Say more
+        -h, --help     Print help
+        -V, --version  Print version
+    HELP
+  end
+
+  def test_renders_the_help_of_a_plugins_command
+    assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).plugin_command("debt", plugins.commands.first.last)
+      Rewrite the debt file
+
+      Usage: tool debt update [FLAGS]
+
+      Global flags:
+        -v, --verbose  Say more
+        -h, --help     Print help
+        -V, --version  Print version
+    HELP
+  end
+
+  def test_has_no_plugin_commands_unless_it_is_given_some
+    assert_equal CrossLint::Help::Plugins.new(commands: [], notes: []), CrossLint::Help::Plugins.none
+  end
+
   def test_leaves_out_what_a_command_does_not_have
     assert_equal <<~HELP, CrossLint::Help.new(fixture_spec).render(fixture_spec.commands[1])
       Stop the thing
@@ -230,4 +295,13 @@ class HelpTest < Minitest::Test
   # +text+ with every run of spaces and line breaks as one space, so that
   # wrapping doesn't matter.
   def squeeze(text) = text.gsub(/\s+/, " ")
+
+  private
+
+  def plugins(commands: nil, notes: [])
+    core = CrossLint::Core
+    update = core::CommandDeclaration.new(name: "update", help: "Rewrite the debt file", line: 1)
+    prune = core::CommandDeclaration.new(name: "prune-stale-entries", help: "Drop each entry no violation matches", line: 2)
+    CrossLint::Help::Plugins.new(commands: commands || [["debt", update], ["debt", prune]], notes:)
+  end
 end

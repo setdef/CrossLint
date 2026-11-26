@@ -103,10 +103,18 @@ class CommandLineTest < Minitest::Test
     assert_equal "run", read("help", "--", "run").topic.name
   end
 
-  def test_help_refuses_a_command_it_does_not_have
-    assert_error "tool has no command runn; did you mean run?", "help", "runn"
-    assert_error "tool has no command zzzzzz; tool --help lists them", "help", "zzzzzz"
-    assert_error 'tool has no command "x y"; tool --help lists them', "help", "x y"
+  def test_help_keeps_the_words_that_are_no_command_of_the_program_for_the_plugins
+    line = read("help", "debt", "update")
+
+    assert_equal [["debt", "update"], nil, "help"], [line.words, line.topic, line.command.name]
+    assert_equal [["zzzzzz"], nil], [read("help", "zzzzzz").words, read("help", "zzzzzz").topic]
+    assert_empty read("help", "run").words
+    assert_empty read("help").words
+    assert_equal ["x y"], read("help", "x y").words
+  end
+
+  def test_help_checks_the_flags_of_the_help_command_after_words_it_keeps
+    assert_error "tool help has no flag --out; tool help --help lists them", "help", "debt", "--out"
   end
 
   def test_help_takes_one_command_at_most
@@ -114,10 +122,30 @@ class CommandLineTest < Minitest::Test
     assert_error 'tool help takes one command at most; remove "x y"', "help", "run", "x y"
   end
 
-  def test_refuses_a_command_it_does_not_have
-    assert_error "tool has no command runn; did you mean run?", "runn"
-    assert_error "tool has no command -; tool --help lists them", "-"
-    assert_error "tool has no command zzzzzz; tool --help lists them", "zzzzzz"
+  def test_keeps_the_words_that_are_no_command_of_the_program_for_the_plugins
+    assert_equal [["debt", "update"], nil, :run], [read("debt", "update").words, read("debt", "update").command, read("debt", "update").action]
+    assert_equal ["-"], read("-").words
+    assert_equal [["runn"], {"color" => "auto"}], [read("runn").words, read("runn").flags]
+    assert_empty read.words
+    assert_empty read("run").words
+  end
+
+  def test_reads_a_word_after_the_first_that_is_no_command_as_one_more_of_the_plugins
+    assert_equal ["debt", "run", "stop"], read("debt", "run", "stop").words
+    assert_equal ["debt", "update"], read("--verbose", "debt", "--color", "never", "update", "-v").words
+    assert_equal({"verbose" => true, "color" => "never"}, read("--verbose", "debt", "--color", "never", "update", "-v").flags)
+  end
+
+  def test_knows_only_the_top_level_flags_after_the_words_of_a_plugin
+    assert_error "tool debt update has no flag --dry-run; tool debt update --help lists them", "debt", "update", "--dry-run"
+    assert_error "tool debt has no flag -x; tool debt --help lists them", "debt", "-x"
+    assert_equal %w[verbose color help version], read("debt", "update").known_flags.map(&:long)
+  end
+
+  def test_asks_for_the_help_of_a_plugin_command_and_keeps_its_words
+    line = read("debt", "update", "--help", "--bogus")
+
+    assert_equal [:help, nil, ["debt", "update"]], [line.action, line.command, line.words]
   end
 
   def test_refuses_a_flag_it_does_not_have
@@ -144,8 +172,6 @@ class CommandLineTest < Minitest::Test
 
   def test_quotes_a_word_that_is_not_printable_ascii
     assert_error "tool has no flag \"--v\\u00E9rbose\"; did you mean --verbose?", "--vérbose"
-    assert_error 'tool has no command "x y"; tool --help lists them', "x y"
-    assert_error 'tool has no command "\xFF"; tool --help lists them', "\xFF".b
     assert_error 'tool run takes no arguments; remove "x y"', "run", "x y"
     assert_error '--color takes auto or never, not "a b"', "--color", "a b"
   end

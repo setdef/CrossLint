@@ -56,7 +56,8 @@ class CLITest < Minitest::Test
   end
 
   def test_help_says_when_it_has_no_such_command
-    assert_equal ["", "crosslint: tool has no command runn; did you mean run?\n", 2], run_cli("help", "runn")
+    assert_equal ["", "crosslint: tool has no command runn, and the configuration lists no plugin of that name; did you mean run?\n", 2],
+      run_cli("help", "runn")
   end
 
   def test_says_a_command_does_not_work_yet
@@ -222,6 +223,130 @@ class CLITest < Minitest::Test
       check("check", "--update-debt", app: app)
     assert_equal ["", "crosslint: crosslint check has no flag --upate; crosslint check --help lists them\n", 2], check("check", "--upate", app: app)
     assert_equal 1, check("check", "--warnings=error", "--all", "--json", "--quiet", app: app)[2]
+  end
+
+  def test_a_plugins_command_runs_the_check_and_tells_the_plugins_step_its_name
+    out, err, status = check("debt", "update", app: app(debt: true))
+
+    assert_equal ["", 0], [out, status]
+    assert_equal "crosslint: wrote .config/crosslint/debt.tsv: 1 entry added, 0 removed\ncrosslint: checked 2 ruby-file artifacts: 1 accepted as debt\n", err
+    assert_equal 1, check("check", app: app(debt: true))[2]
+  end
+
+  def test_a_plugins_command_passes_whatever_the_check_found
+    assert_equal 1, check("check", "--warnings=error", app: app(debt: true))[2]
+    assert_equal 0, check("debt", "update", app: app(debt: true))[2]
+    assert_equal 0, check("debt", "update", app: app(debt: true, files: ["lib/a.rb", "test/a_test.rb"]))[2]
+  end
+
+  def test_a_plugins_command_takes_the_global_flags_before_or_after_its_words
+    assert_equal ["", "", 0], check("debt", "update", "--silent", app: app(debt: true))
+    assert_equal ["", "", 0], check("--silent", "debt", "update", app: app(debt: true))
+    assert_equal ["", "crosslint: wrote .config/crosslint/debt.tsv: 1 entry added, 0 removed\n", 0], check("-q", "debt", "update", app: app(debt: true))
+    assert_equal 0, check("debt", "-C", "#{WORK}/app", "update", app: app(debt: true))[2]
+  end
+
+  def test_a_plugins_command_takes_no_other_flags
+    assert_equal ["", "crosslint: crosslint debt update has no flag --json; did you mean --version?\n", 2],
+      check("debt", "update", "--json", app: app(debt: true))
+    assert_equal ["", "crosslint: crosslint debt update has no flag --warnings; crosslint debt update --help lists them\n", 2],
+      check("debt", "update", "--warnings=none", app: app(debt: true))
+    assert_equal ["", "crosslint: crosslint debt update takes no arguments; remove extra\n", 2], check("debt", "update", "extra", app: app(debt: true))
+  end
+
+  def test_a_plugins_command_stops_with_2_naming_what_is_missing
+    assert_equal ["", "crosslint: debt update is a command of the debt plugin, which .config/crosslint/config.kdl doesn't list\n", 2],
+      check("debt", "update", app: app)
+    assert_equal ["", "crosslint: crosslint debt has no command updat; did you mean update?\n", 2], check("debt", "updat", app: app(debt: true))
+    assert_equal ["", "crosslint: crosslint has no command chekc, and the configuration lists no plugin of that name; did you mean check?\n", 2],
+      check("chekc", "now", app: app(debt: true))
+  end
+
+  def test_a_plugins_command_stops_with_2_at_a_mistake_in_the_project_and_names_a_typo_of_a_command_of_crosslint
+    mistake = CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl")
+
+    assert_equal ["", "crosslint: .config/crosslint/config.kdl: lists nothing\n", 2], check("debt", "update", app: app(broken: mistake))
+    assert_equal ["", "crosslint: crosslint has no command chekc; did you mean check?\n", 2], check("chekc", "now", app: app(broken: mistake))
+  end
+
+  def test_the_program_help_lists_the_commands_of_the_projects_plugins_after_its_own
+    out, err, status = helping("--help", app: app(debt: true))
+
+    assert_equal [["", 0], true], [[err, status], out.include?("\nPlugin commands:\n  debt update  Rewrite the debt file to list the current violations\n\nFlags:\n")]
+    assert_equal [out, "", 0], helping("help", app: app(debt: true))
+    assert_equal [out, "", 0], helping("-h", app: app(debt: true))
+    refute_includes helping("--help", app: app)[0], "Plugin commands"
+  end
+
+  def test_help_of_a_command_of_crosslint_reads_no_project
+    broken = app(broken: CrossLint::Core::Mistake.new("lists nothing", file: "x"))
+
+    assert_equal [CrossLint::Help.new(shipped_spec).render(shipped_spec.commands.first), "", 0], helping("check", "--help", app: broken)
+  end
+
+  def test_the_program_help_says_why_it_shows_no_plugin_commands_and_exits_with_0
+    mistake = CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl", line: 2)
+    out, err, status = helping("--help", app: app(broken: mistake))
+    heading = "Plugin commands:\n  Not shown, because CrossLint couldn't read the project's plugins: .config/crosslint/config.kdl:2:\n  lists nothing\n\nFlags:\n"
+
+    assert_equal ["", 0, true], [err, status, out.include?(heading)]
+    assert_equal [out, "", 0], helping("help", app: app(broken: mistake))
+    outside = run_cli("--help", spec: shipped_spec, app: app(debt: true))
+
+    assert_equal [0, true], [outside[2], outside[0].include?("Plugin commands:\n  Not shown, because CrossLint couldn't read the project's plugins: no .config/crosslint/config.kdl\n  in ")]
+  end
+
+  def test_the_program_help_names_a_shared_plugin_not_fetched_yet
+    out, err, status = helping("--help", app: app(debt: true, shared: true))
+    heading = "Plugin commands:\n  debt update  Rewrite the debt file to list the current violations\n  signatures isn't fetched yet, so its commands aren't shown; crosslint check fetches it\n\n"
+
+    assert_equal ["", 0, true], [err, status, out.include?(heading)]
+  end
+
+  def test_help_for_a_plugin_lists_its_commands
+    help = CrossLint::Help.new(shipped_spec)
+    manifest = app(debt: true).load_project("#{WORK}/app").plugins.first.manifest
+    page = help.plugin("debt", manifest.commands)
+
+    assert_equal [page, "", 0], helping("debt", "--help", app: app(debt: true))
+    assert_equal [page, "", 0], helping("help", "debt", app: app(debt: true))
+    assert_equal [page, "", 0], helping("debt", app: app(debt: true))
+    assert_includes page, "Usage: crosslint debt COMMAND [FLAGS]\n"
+  end
+
+  def test_help_for_a_plugins_command_says_what_it_does
+    help = CrossLint::Help.new(shipped_spec)
+    manifest = app(debt: true).load_project("#{WORK}/app").plugins.first.manifest
+    page = help.plugin_command("debt", manifest.commands.first)
+
+    assert_equal [page, "", 0], helping("debt", "update", "--help", app: app(debt: true))
+    assert_equal [page, "", 0], helping("help", "debt", "update", app: app(debt: true))
+    assert_equal [page, "", 0], helping("--help", "debt", "update", app: app(debt: true)).then { |_, _, status| [page, "", status] }
+    assert_includes page, "Usage: crosslint debt update [FLAGS]\n"
+  end
+
+  def test_help_for_a_word_that_names_no_plugin_or_command_stops_with_2
+    assert_equal ["", "crosslint: crosslint debt has no command updat; did you mean update?\n", 2], helping("debt", "updat", "--help", app: app(debt: true))
+    assert_equal ["", "crosslint: debt update is a command of the debt plugin, which .config/crosslint/config.kdl doesn't list\n", 2],
+      helping("help", "debt", "update", app: app)
+    assert_equal ["", "crosslint: crosslint has no command zzzzzz, and the configuration lists no plugin of that name; crosslint --help lists the commands\n", 2],
+      helping("help", "zzzzzz", app: app)
+    assert_equal ["", "crosslint: tests is a plugin the configuration lists, and it adds no commands\n", 2], helping("help", "tests", app: app)
+  end
+
+  def test_help_for_a_plugin_that_cant_be_read_prints_the_programs_help_unless_the_word_is_a_typo_of_a_command
+    mistake = CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl")
+    out, err, status = helping("debt", "--help", app: app(broken: mistake))
+
+    assert_equal [["", 0], true], [[err, status], out.start_with?("CrossLint ") && out.include?("Plugin commands:\n  Not shown, because")]
+    assert_equal ["", "crosslint: crosslint has no command chekc; did you mean check?\n", 2], helping("chekc", "--help", app: app(broken: mistake))
+  end
+
+  def test_help_for_a_plugin_not_fetched_yet_prints_the_programs_help_with_the_reason
+    out, err, status = helping("signatures", "update", "--help", app: app(shared: true))
+
+    assert_equal ["", 0], [err, status]
+    assert_includes out, "  signatures isn't fetched yet, so its commands aren't shown; crosslint check fetches it\n"
   end
 
   def test_check_colors_the_messages_only_on_a_terminal_or_when_forced
@@ -410,12 +535,17 @@ class CLITest < Minitest::Test
     def tty? = true
   end
 
-  def run_cli(*argv, spec: fixture_spec, env: {})
+  def run_cli(*argv, spec: fixture_spec, env: {}, app: nil)
     out = StringIO.new
     err = StringIO.new
-    status = CrossLint::CLI.new(argv, out:, err:, env:, spec:).run
+    status = CrossLint::CLI.new(argv, out:, err:, env:, spec:, app:).run
     [out.string, err.string, status]
   end
+
+  # What crosslint prints for help with the words in argv, in the project
+  # the app holds, which -C names before the words, since --help ends the
+  # reading of the line.
+  def helping(*argv, app:) = check("-C", "#{WORK}/app", *argv, app:)
 
   def check(*argv, app: nil, tty: false, env: {}, err_tty: false)
     argv += ["-C", "#{WORK}/app"] if app && !argv.include?("-C") && !argv.include?("--project")
@@ -425,6 +555,19 @@ class CLITest < Minitest::Test
     [out.string, err.string, status]
   end
 
+  SHARED = "https://example.com/OWNER/signatures"
+
+  # The manifests of the built-in plugins in CrossLint's plugins folder:
+  # debt has a step and its command update, and angular has neither.
+  def built_in_manifests
+    core = CrossLint::Core
+    step = core::StepDeclaration.new(name: "track-debt", line: 1)
+    update = core::CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 2)
+    {File.join(CrossLint::App::PLUGINS, "debt") => core::Manifest.new(file: "debt/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [],
+      step_policies: [core::StepPolicy.new(name: "has-debt", line: 3)], steps: [step], commands: [update]),
+     File.join(CrossLint::App::PLUGINS, "angular") => core::Manifest.new(file: "angular/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [])}
+  end
+
   # A rule that raises.
   RAISES_SOURCE = "class Raises < CrossLint::Rule; def check(_) = raise('boom'); end"
 
@@ -432,9 +575,15 @@ class CLITest < Minitest::Test
 
   # A project with the plugin tests: every lib/{path}.rb has a test at
   # test/{path}_test.rb, and only lib/a.rb has one.
-  def app(files: ["lib/a.rb", "lib/b.rb", "test/a_test.rb"], severity: nil, unused: false, warnings: nil, verbosity: nil, broken: nil, raises: false)
+  #
+  # With debt, the project also lists the built-in debt plugin, and with
+  # shared, a shared plugin that isn't fetched.
+  def app(files: ["lib/a.rb", "lib/b.rb", "test/a_test.rb"], severity: nil, unused: false, warnings: nil, verbosity: nil, broken: nil, raises: false,
+    debt: false, shared: false)
     core = CrossLint::Core
     listed = [core::ListedPlugin.new(name: "./.config/tests", ref: nil, settings: [], line: 1)]
+    listed.unshift(core::ListedPlugin.new(name: "debt", ref: nil, settings: [], line: 2)) if debt
+    listed << core::ListedPlugin.new(name: SHARED, ref: "v1.0.0", settings: [], line: 3) if shared
     rules = unused ? [core::RuleDeclaration.new(name: "unused", ruby: "unused.rb", line: 3)] : []
     rules << core::RuleDeclaration.new(name: "raises", ruby: "raises.rb", line: 4) if raises
     artifact = core::ArtifactDeclaration.new(name: "ruby-file", files: core::PathPattern.new(source: "lib/{path}.rb"), line: 1,
@@ -445,7 +594,9 @@ class CLITest < Minitest::Test
     manifest = core::Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
     configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: listed, policies: [], warnings:, verbosity:)
     CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => broken || configuration}),
-      manifests: CrossLint::Adapters::MemoryPluginManifests.new({"#{WORK}/app/.config/tests" => manifest}),
+      manifests: CrossLint::Adapters::MemoryPluginManifests.new({"#{WORK}/app/.config/tests" => manifest}.merge(built_in_manifests)),
+      debt_files: CrossLint::Adapters::MemoryDebtFiles.new,
+      shared_plugins: CrossLint::Adapters::MemorySharedPlugins.new({}, err: StringIO.new),
       project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}),
       plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new({"#{WORK}/app/.config/tests/raises.rb" => RAISES}))
   end

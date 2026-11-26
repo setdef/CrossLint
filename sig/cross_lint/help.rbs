@@ -9,11 +9,41 @@ module CrossLint
     # The widest a line gets, unless one word is wider.
     WIDTH: Integer
 
-    # The help made from `spec`.
-    def initialize: (UsageSpec spec) -> void
+    # What the help says of the commands of the project's plugins: the
+    # plugin and the declaration of each command, and a line for each
+    # reason a command isn't shown.
+    class Plugins < Data
+      # Each command, with the name of the plugin that adds it.
+      attr_reader commands: Array[[String, Core::CommandDeclaration]]
+
+      # The lines that say why a plugin's commands aren't shown, such as
+      # that a shared plugin isn't fetched yet.
+      attr_reader notes: Array[String]
+
+      # Help of no plugin's commands, with nothing to say about them.
+      def self.none: () -> Plugins
+
+      # What the help says with these fields.
+      def self.new: (commands: Array[[String, Core::CommandDeclaration]], notes: Array[String]) -> instance
+
+      # What the help says with these fields.
+      def initialize: (commands: Array[[String, Core::CommandDeclaration]], notes: Array[String]) -> void
+    end
+
+    # The help made from `spec`, with `plugins` in the program's help: in a
+    # section of their own, after CrossLint's commands.
+    def initialize: (UsageSpec spec, ?plugins: Plugins) -> void
 
     # The help for `command`, or for the program when it is nil.
     def render: (?UsageSpec::Command? command) -> String
+
+    # The help of the plugin `name`, which adds `commands`: what it is, a
+    # usage line, its commands, and the global flags.
+    def plugin: (String name, Array[Core::CommandDeclaration] commands) -> String
+
+    # The help of the command `command` of the plugin `name`: its line of
+    # help, a usage line, and the global flags.
+    def plugin_command: (String name, Core::CommandDeclaration command) -> String
 
     # The short help of the program: what it does, its first two examples,
     # and a line saying --help lists every command.
@@ -22,6 +52,12 @@ module CrossLint
     private
 
     @spec: UsageSpec
+
+    @plugins: Plugins
+
+    # The section of the project's plugins' commands, and a line for each
+    # reason one isn't shown, or nil when there is nothing to say.
+    def plugin_commands: () -> String?
 
     # The sections of the program's help, nil for one it doesn't have.
     def program_sections: () -> Array[String?]

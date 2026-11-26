@@ -276,7 +276,7 @@ class LoadProjectTest < Minitest::Test
   end
 
   def test_stops_at_a_local_or_shared_plugin_with_the_name_of_a_built_in_one
-    built_in = {"debt" => "#{TOP}c/plugins/debt", "angular" => "#{TOP}c/plugins/angular"}
+    built_in = %w[debt angular].to_h { |name| [name, "#{TOP}c/plugins/#{name}"] }
     steps = {"track-debt" => RecordingStep.new}
     %w[debt angular].each do |name|
       message = ->(listed) {

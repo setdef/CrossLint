@@ -62,6 +62,52 @@ class AppTest < Minitest::Test
     assert_equal ["checked 2 a artifacts: 1 error, 1 stale entry, 1 accepted as debt", true], [after.summary.line, after.failed]
   end
 
+  def test_checks_a_project_it_has_loaded_as_a_plugins_command_when_it_is_told_to
+    write(@base, ".config/crosslint/config.kdl", %(plugin "debt"\nplugin ".config/crosslint/tests"\n))
+    write(@base, ".config/crosslint/tests/plugin.kdl", MANIFEST.sub("{path}.md", "lib/{path}.md"))
+    write(@base, "lib/a.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    app = App.new
+    project = app.load_project(@base)
+
+    assert_equal [true, true], [app.check_project(project).failed, app.check(@base).failed]
+    assert_equal [false, ["wrote .config/crosslint/debt.tsv: 1 entry added, 0 removed"]],
+      app.check_project(project, command: ["debt", "update"]).then { |result| [result.failed, result.wrote] }
+    refute app.check(@base).failed
+  end
+
+  def test_lists_what_a_project_has_on_disk_without_fetching_a_shared_plugin
+    url = "https://example.test/OWNER/signatures"
+    write(@base, ".config/crosslint/config.kdl", %(plugin "debt"\nplugin #{url.dump} ref="v1.0.0"\n))
+    err = StringIO.new
+    listing = App.new(err:).listing(@base)
+
+    assert_equal [".config/crosslint/config.kdl", ["debt"], [url]], [listing.file, listing.plugins.map(&:name), listing.unfetched.map(&:name)]
+    assert_empty err.string
+  end
+
+  def test_names_the_commands_of_each_built_in_plugin_whether_or_not_a_project_lists_it
+    write(@base, "plugins/debt/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "update" help="Updates"\ncommand "prune" help="Prunes"\n))
+    write(@base, "plugins/other/plugin.kdl", MANIFEST)
+
+    assert_equal({"debt" => %w[update prune], "other" => []}, App.new(plugins: File.join(@base, "plugins")).built_in_commands)
+    assert_equal({"debt" => ["update"], "angular" => []}, App.new.built_in_commands.slice("debt", "angular"))
+  end
+
+  def test_refuses_a_plugin_that_adds_commands_and_is_named_for_a_command_of_the_usage_spec_it_is_given_or_the_shipped_one
+    write(@base, "plugins/check/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "update" help="Updates"\n))
+    write(@base, "plugins/tool/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "update" help="Updates"\n))
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "check"\n))
+    plugins = File.join(@base, "plugins")
+
+    assert_match(/\Aplugin check in .* adds commands, and check is reserved/, assert_raises(Mistake) { App.new(plugins:).load_project(File.join(@base, "app")) }.message)
+    assert_equal ["check"], App.new(plugins:, reserved: ["other"]).load_project(File.join(@base, "app")).plugins.map(&:name)
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "tool"\n))
+
+    assert_equal ["tool"], App.new(plugins:).load_project(File.join(@base, "app")).plugins.map(&:name)
+    assert_match(/\Aplugin tool in .* adds commands, and tool is reserved/, assert_raises(Mistake) { App.new(plugins:, reserved: ["tool"]).load_project(File.join(@base, "app")) }.message)
+  end
+
   def test_takes_each_folder_with_a_manifest_as_a_built_in_plugin
     write(@base, "plugins/debt/plugin.kdl", MANIFEST)
     FileUtils.mkdir_p(File.join(@base, "plugins/other"))

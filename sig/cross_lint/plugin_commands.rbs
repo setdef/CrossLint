@@ -1,0 +1,53 @@
+module CrossLint
+  # Reads the words of a command line that no command of CrossLint's
+  # takes, such as `debt update`, as a plugin's name and the name of its
+  # command, among the plugins a project lists. Raises
+  # CommandLine::Error, with a message that says what to type, for a
+  # plugin the project doesn't list, a command the plugin doesn't have, and
+  # a word that is neither.
+  class PluginCommands
+    # A reader of words for the usage spec `spec`, whose commands are the
+    # ones no plugin's can be.
+    def initialize: (UsageSpec spec) -> void
+
+    # The plugin that `words` name, and its command, or nil for the command
+    # when `words` name the plugin alone. `plugins` are the ones
+    # the project lists, `file` is its configuration's path, and `built_in`
+    # gives the names of the commands of each built-in plugin, which a
+    # message may need to name a plugin that `plugins` lacks.
+    def find: (Array[String] words, Array[Core::Plugin] plugins, String file, ^() -> Hash[String, Array[String]] built_in) ->
+      [Core::Plugin, Core::CommandDeclaration?]
+
+    # What to raise when the project's plugins can't be read: an Error
+    # naming the nearest command of CrossLint's to `word`, or nil when none
+    # is near, since the word may be a plugin's.
+    def refusal: (String word) -> CommandLine::Error?
+
+    private
+
+    @spec: UsageSpec
+
+    # Raises Error for `name`, which no listed plugin has: with the
+    # command's place in a built-in plugin the project doesn't list when
+    # `word` is one of its commands, or else with the nearest names.
+    def unlisted: (String name, String? word, Array[Core::Plugin] plugins, String file, ^() -> Hash[String, Array[String]] built_in) -> bot
+
+    # The message for `word`, which none of the plugin's `commands` is.
+    def missing: (String name, String word, Array[String] commands) -> String
+
+    # The names of CrossLint's own commands.
+    def commands: () -> Array[String]
+
+    # The name among `known` that is nearest to `word`, or nil.
+    def nearest: (String word, Array[String] known) -> String?
+
+    # The program's name and `words`, as "crosslint debt update".
+    def scope: (*String words) -> String
+
+    # `word` as a message quotes it.
+    def shown: (String word) -> String
+
+    # An Error with `message`.
+    def error: (String message) -> CommandLine::Error
+  end
+end

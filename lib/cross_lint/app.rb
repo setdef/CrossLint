@@ -9,7 +9,7 @@ module CrossLint
 
     def initialize(configuration: Adapters::KDLConfiguration.new, manifests: Adapters::KDLPluginManifests.new,
       project_files: Adapters::GitProjectFiles.new, plugin_ruby: Adapters::FilePluginRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
-      debt_files: Adapters::TSVDebtFiles.new, err: $stderr, debug: false)
+      debt_files: Adapters::TSVDebtFiles.new, reserved: nil, err: $stderr, debug: false)
       @configuration = configuration
       @manifests = manifests
       @project_files = project_files
@@ -17,17 +17,26 @@ module CrossLint
       @helpers = helpers || Adapters::ProcessHelpers.new(err:, debug:)
       @shared_plugins = shared_plugins || Adapters::GitSharedPlugins.new(err:)
       @built_in = built_in_plugins(plugins)
+      @reserved = reserved || UsageSpec.load.commands.map(&:name)
       @steps = {"track-debt" => Core::TrackDebt.new(debt_files:)} #: Hash[String, Core::_Step]
     end
 
-    def load_project(start)
-      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, plugin_ruby: @plugin_ruby, shared_plugins: @shared_plugins,
-        built_in: @built_in, steps: @steps).call(start)
+    def load_project(start) = loader.call(start)
+
+    def check(start, **options) = check_project(load_project(start), **options)
+
+    def check_project(project, warnings: nil, verbosity: nil, all: false, command: nil, started: nil)
+      Core::Check.new(project_files: @project_files, plugin_ruby: @plugin_ruby, helpers: @helpers, steps: @steps)
+        .call(project, warnings:, verbosity:, all:, command:, started:)
     end
 
-    def check(start, warnings: nil, verbosity: nil, all: false, command: nil, started: nil)
-      Core::Check.new(project_files: @project_files, plugin_ruby: @plugin_ruby, helpers: @helpers, steps: @steps)
-        .call(load_project(start), warnings:, verbosity:, all:, command:, started:)
+    def listing(start) = loader.listed(start)
+
+    def built_in_commands
+      @built_in.to_h do |name, folder|
+        manifest = @manifests.read(File.dirname(folder), File.basename(folder)) #: Core::Manifest
+        [name, manifest.commands.map(&:name)]
+      end
     end
 
     def update(start, dry_run: false)
@@ -39,6 +48,11 @@ module CrossLint
     end
 
     private
+
+    def loader
+      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, plugin_ruby: @plugin_ruby, shared_plugins: @shared_plugins,
+        built_in: @built_in, steps: @steps, reserved: @reserved)
+    end
 
     def built_in_plugins(folder)
       Dir.glob("*/#{@manifests.file}", base: folder).to_h do |path|

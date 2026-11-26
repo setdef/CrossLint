@@ -11,6 +11,9 @@ module CrossLint
     VERSION = UsageSpec::Flag.new(short: "V", long: "version", value: nil, help: "Print version", long_help: nil,
       choices: nil, default: nil, global: true)
 
+    # Quoting keeps every message ASCII.
+    def self.shown(word) = word.match?(/\A[!-~]+\z/) ? word : word.dump
+
     attr_reader :action
 
     attr_reader :command
@@ -19,9 +22,12 @@ module CrossLint
 
     attr_reader :topic
 
+    attr_reader :words
+
     def initialize(spec, argv)
       @spec = spec
       @flags = {}
+      @words = []
       # --help and --version set @action, which stops the reading there, so a
       # mistake after either one is never read and the help still shows.
       read(argv.dup)
@@ -104,25 +110,28 @@ module CrossLint
       raise Error, "--#{flag.long} takes #{list(flag.choices)}, not #{shown(value)}"
     end
 
+    # A word that is none of CrossLint's commands may be a plugin's name, or
+    # its command's, which the plugins the project lists say, so it is kept
+    # for the caller, with the words after it.
     def read_argument(word)
       return read_topic(word) if @command&.name == "help"
+      return @words << word if @command.nil? && (@words.any? || spec_command(word).nil?)
       raise Error, "#{scope} takes no arguments; remove #{shown(word)}" if @command
 
-      @command = find_command(word, scope)
+      @command = spec_command(word)
     end
 
     def read_topic(word)
       raise Error, "#{scope} takes one command at most; remove #{shown(word)}" if @topic
+      return @words << word if @words.any?
 
       # The command help explains is one of the program's, so the program's
       # --help is what lists the commands, not help's own.
-      @topic = find_command(word, @spec.bin)
+      @topic = spec_command(word)
+      @words << word unless @topic
     end
 
-    def find_command(word, where)
-      @spec.commands.find { |command| command.name == word } ||
-        raise(Error, suggest("#{where} has no command #{shown(word)}", word, @spec.commands.map(&:name), where))
-    end
+    def spec_command(word) = @spec.commands.find { |command| command.name == word }
 
     def unknown_flag(name, names) = suggest("#{scope} has no flag #{shown(name)}", name, names, scope)
 
@@ -133,10 +142,12 @@ module CrossLint
       "#{message}; #{where} --help lists them"
     end
 
-    def scope = [@spec.bin, @command&.name].compact.join(" ")
+    def scope
+      command = @command
+      [@spec.bin, *(command ? [command.name] : @words)].join(" ")
+    end
 
-    # Quoting keeps every message ASCII.
-    def shown(word) = word.match?(/\A[!-~]+\z/) ? word : word.dump
+    def shown(word) = self.class.shown(word)
 
     def list(words)
       return words.join(" or ") if words.size < 3

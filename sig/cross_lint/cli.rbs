@@ -62,12 +62,52 @@ module CrossLint
 
     # Runs crosslint help: writes the help of the command `topic`, or of
     # the program when it is nil, as --help does, and returns 0.
-    def explain: (UsageSpec spec, UsageSpec::Command? topic) -> Integer
+    def explain: (UsageSpec spec, CommandLine line, UsageSpec::Command? topic) -> Integer
 
-    # Runs crosslint check, `command`: checks the project with the
-    # plugins' flags given, writes the report, and returns 1 when the
-    # check failed and 0 when it passed.
-    def check: (CommandLine line, UsageSpec::Command command) -> Integer
+    # The help of `command`, or of the program when it is nil, which lists
+    # the commands of the plugins the project lists, and says why when it
+    # can't, since help never fails for a mistake in a project.
+    def render_help: (UsageSpec spec, CommandLine line, UsageSpec::Command? command) -> String
+
+    # The plugins the project lists that are on disk, or the mistake that
+    # stopped the reading of the project. It fetches nothing.
+    def listing: (UsageSpec spec, CommandLine line) -> (Core::PluginListing | Core::Mistake)
+
+    # What the program's help says of the plugins in `found`: their
+    # commands, a line for each shared plugin not fetched yet, or the
+    # reason none is shown.
+    def help_plugins: (Core::PluginListing | Core::Mistake found) -> Help::Plugins
+
+    # Prints the help of the plugin or command the words of `line` name,
+    # and returns 0. Raises CommandLine::Error for words that name neither
+    # (PluginCommands), though it prints the program's help, with the
+    # reason, when the project can't be read or the plugin isn't fetched
+    # yet.
+    def plugin_help: (UsageSpec spec, CommandLine line) -> Integer
+
+    # `mistake` as a line says it: its file and line, then its message.
+    def text: (Core::Mistake mistake) -> String
+
+    # Runs crosslint check: checks the project, writes the report, and
+    # returns 1 when the check failed, 0 when it passed, and 2 at a fault.
+    def check: (UsageSpec spec, CommandLine line) -> Integer
+
+    # Runs crosslint PLUGIN COMMAND, as the words of `line` say: finds the
+    # plugin and its command among those the project lists, which is a
+    # mistake, naming the nearest spelling, when there is none, and runs
+    # the check as the command, which exits with 0 unless a fault stops a
+    # plugin.
+    def plugin_command: (UsageSpec spec, CommandLine line) -> Integer
+
+    # The app to use: the one given, or one that has the commands of
+    # `spec` as the names no plugin that adds commands can have.
+    def application: (UsageSpec spec) -> App
+
+    # Checks `project`, writes the report, and returns the exit status:
+    # 2 at a fault, 1 when the check failed, 0 otherwise. `command` is a
+    # plugin's name and the name of one of its commands, when the check
+    # runs as a plugin's command.
+    def check_project: (App app, CommandLine line, Core::Project project, ?[String, String]? command) -> Integer
 
     # Runs crosslint update: moves each shared plugin in the project's
     # configuration to the newest tag of its repository, or with --dry-run

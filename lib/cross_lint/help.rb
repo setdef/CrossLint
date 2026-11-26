@@ -4,13 +4,35 @@ module CrossLint
   class Help
     WIDTH = 100
 
-    def initialize(spec)
+    class Plugins < Data.define(:commands, :notes)
+      def self.none = new(commands: [], notes: [])
+    end
+
+    def initialize(spec, plugins: Plugins.none)
       @spec = spec
+      @plugins = plugins
     end
 
     def render(command = nil)
       sections = command ? command_sections(command) : program_sections
       sections.compact.join("\n")
+    end
+
+    def plugin(name, commands)
+      [
+        block("The commands of the #{name} plugin"),
+        "Usage: #{@spec.bin} #{name} COMMAND [FLAGS]\n",
+        section("Commands", commands.map { |command| [command.name, [command.help]] }),
+        section("Global flags", flag_rows(@spec.global_flags + extra_flags))
+      ].compact.join("\n")
+    end
+
+    def plugin_command(name, command)
+      [
+        block(command.help),
+        "Usage: #{@spec.bin} #{name} #{command.name} [FLAGS]\n",
+        section("Global flags", flag_rows(@spec.global_flags + extra_flags))
+      ].compact.join("\n")
     end
 
     def short
@@ -30,11 +52,22 @@ module CrossLint
         block(@spec.long_about || @spec.about),
         "Usage: #{@spec.bin} [FLAGS] [SUBCOMMAND]\n",
         section("Commands", @spec.commands.map { |command| [command.name, [command.help]] }),
+        plugin_commands,
         section("Flags", flag_rows(@spec.flags + extra_flags)),
         examples(@spec.examples),
         exit_codes,
         after && block(after)
       ]
+    end
+
+    # The commands the project's plugins add, and a line for each thing
+    # that keeps one from showing, in a section after CrossLint's commands.
+    def plugin_commands
+      rows = @plugins.commands.map { |plugin, command| ["#{plugin} #{command.name}", [command.help]] } #: Array[[String, Array[String]]]
+      return if rows.empty? && @plugins.notes.empty?
+
+      notes = @plugins.notes.flat_map { |note| wrap(note, "  ") }.map { |line| "#{line}\n" }
+      (section("Plugin commands", rows) || "Plugin commands:\n") + notes.join
     end
 
     def command_sections(command)
