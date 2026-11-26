@@ -6,10 +6,24 @@ module CrossLint
       @spec = spec
     end
 
-    def find(words, plugins, file, built_in)
+    # Settles the first word before any plugin is fetched or loaded: the
+    # name of a plugin the configuration lists, whether or not it is
+    # fetched, or else a mistake, which raises. When the configuration
+    # can't be read, only a typo of a command of CrossLint's is one.
+    def resolve(words, listing, built_in)
+      name = words.fetch(0)
+      return refuse_typo(name) if listing.is_a?(Core::Mistake)
+
+      listed = listing.plugins.map(&:name) + unfetched(listing)
+      unlisted(name, words.fetch(1, nil), listing, built_in) unless listed.include?(name)
+    end
+
+    # The plugin that the first of `words` names, which `resolve` found
+    # among `plugins`, and its command.
+    def find(words, plugins)
       name = words.fetch(0)
       word = words.fetch(1, nil)
-      plugin = plugins.find { |listed| listed.name == name } || unlisted(name, word, plugins, file, built_in)
+      plugin = plugins.find { |listed| listed.name == name } #: Core::Plugin
 
       commands = plugin.manifest.commands
       raise error("#{name} is a plugin the configuration lists, and it adds no commands") if commands.empty?
@@ -22,19 +36,27 @@ module CrossLint
       [plugin, command]
     end
 
-    def refusal(word)
-      guess = nearest(word, commands)
-      error("#{@spec.bin} has no command #{shown(word)}; did you mean #{guess}?") if guess
-    end
-
     private
 
-    def unlisted(name, word, plugins, file, built_in)
+    # A shared plugin's name comes from its URL, so it is known unfetched.
+    def unfetched(listing)
+      listing.unfetched.map do |plugin|
+        Core::SharedPlugin.plugin_name(plugin.name) #: String
+      end
+    end
+
+    def refuse_typo(word)
+      guess = nearest(word, commands)
+      raise error("#{@spec.bin} has no command #{shown(word)}; did you mean #{guess}?") if guess
+    end
+
+    def unlisted(name, word, listing, built_in)
       if built_in.call.fetch(name, []).include?(word)
-        raise error("#{name} #{word} is a command of the #{name} plugin, which #{file} doesn't list")
+        raise error("#{name} #{word} is a command of the #{name} plugin, which #{listing.file} doesn't list")
       end
 
-      guesses = [nearest(name, commands), nearest(name, plugins.reject { |plugin| plugin.manifest.commands.empty? }.map(&:name))].compact.uniq
+      others = listing.plugins.reject { |plugin| plugin.manifest.commands.empty? }.map(&:name) + unfetched(listing)
+      guesses = [nearest(name, commands), nearest(name, others)].compact.uniq
       raise error("#{@spec.bin} has no command #{shown(name)}, and the configuration lists no plugin of that name; " +
         (guesses.empty? ? "#{@spec.bin} --help lists the commands" : "did you mean #{Core::Spelling.list(guesses)}?"))
     end

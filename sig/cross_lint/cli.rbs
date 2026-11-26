@@ -85,6 +85,12 @@ module CrossLint
     # yet.
     def plugin_help: (UsageSpec spec, CommandLine line) -> Integer
 
+    # The reader of plugin commands and what the project lists, once the
+    # first word of `line` is known to be a plugin the configuration lists.
+    # Raises CommandLine::Error before anything is fetched or loaded when
+    # it is not.
+    def resolved: (UsageSpec spec, CommandLine line) -> [PluginCommands, Core::PluginListing | Core::Mistake]
+
     # `mistake` as a line says it: its file and line, then its message.
     def text: (Core::Mistake mistake) -> String
 

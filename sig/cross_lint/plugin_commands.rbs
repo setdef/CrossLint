@@ -10,27 +10,35 @@ module CrossLint
     # ones no plugin's can be.
     def initialize: (UsageSpec spec) -> void
 
-    # The plugin that `words` name, and its command, or nil for the command
-    # when `words` name the plugin alone. `plugins` are the ones
-    # the project lists, `file` is its configuration's path, and `built_in`
-    # gives the names of the commands of each built-in plugin, which a
-    # message may need to name a plugin that `plugins` lacks.
-    def find: (Array[String] words, Array[Core::Plugin] plugins, String file, ^() -> Hash[String, Array[String]] built_in) ->
-      [Core::Plugin, Core::CommandDeclaration?]
+    # Settles the first of `words` before any plugin is fetched or loaded,
+    # from what the project's configuration lists: it is the name of a
+    # plugin listed, fetched or not, or else this raises Error. When
+    # `listing` is the mistake that stopped the reading, only a word near a
+    # command of CrossLint's is an error, since it may be a plugin's name.
+    # `built_in` gives the names of the commands of each built-in plugin,
+    # which a message may need to name a plugin that isn't listed.
+    def resolve: (Array[String] words, Core::PluginListing | Core::Mistake listing, ^() -> Hash[String, Array[String]] built_in) -> void
 
-    # What to raise when the project's plugins can't be read: an Error
-    # naming the nearest command of CrossLint's to `word`, or nil when none
-    # is near, since the word may be a plugin's.
-    def refusal: (String word) -> CommandLine::Error?
+    # The plugin that the first of `words` names, which `resolve` found
+    # among `plugins`, and its command, or nil for the command when
+    # `words` name the plugin alone.
+    def find: (Array[String] words, Array[Core::Plugin] plugins) -> [Core::Plugin, Core::CommandDeclaration?]
 
     private
 
     @spec: UsageSpec
 
+    # The names of the shared plugins `listing` lists that aren't fetched.
+    def unfetched: (Core::PluginListing listing) -> Array[String]
+
+    # Raises Error naming the nearest command of CrossLint's to `word`, if
+    # one is near.
+    def refuse_typo: (String word) -> void
+
     # Raises Error for `name`, which no listed plugin has: with the
     # command's place in a built-in plugin the project doesn't list when
     # `word` is one of its commands, or else with the nearest names.
-    def unlisted: (String name, String? word, Array[Core::Plugin] plugins, String file, ^() -> Hash[String, Array[String]] built_in) -> bot
+    def unlisted: (String name, String? word, Core::PluginListing listing, ^() -> Hash[String, Array[String]] built_in) -> void
 
     # The message for `word`, which none of the plugin's `commands` is.
     def missing: (String name, String word, Array[String] commands) -> String

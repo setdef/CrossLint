@@ -266,6 +266,27 @@ class CLITest < Minitest::Test
       check("chekc", "now", app: app(debt: true))
   end
 
+  def test_a_mistyped_command_fetches_no_shared_plugin
+    fetched = StringIO.new
+
+    assert_equal ["", "crosslint: crosslint has no command chek, and the configuration lists no plugin of that name; did you mean check?\n", 2],
+      check("chek", "update", app: app(shared: true, fetch_log: fetched))
+    assert_equal ["", "crosslint: crosslint has no command signatuers, and the configuration lists no plugin of that name; did you mean signatures?\n", 2],
+      check("signatuers", "update", app: app(shared: true, fetch_log: fetched))
+    assert_equal ["", "crosslint: crosslint has no command chek, and the configuration lists no plugin of that name; did you mean check?\n", 2],
+      helping("chek", "--help", app: app(shared: true, fetch_log: fetched))
+    assert_equal "", fetched.string
+  end
+
+  def test_a_word_that_names_a_shared_plugin_not_fetched_yet_fetches_it_and_only_then
+    fetched = StringIO.new
+    out, err, status = check("signatures", "update", app: app(shared: true, fetch_log: fetched))
+
+    assert_equal ["", 2], [out, status]
+    assert_includes err, "couldn't fetch shared plugin signatures"
+    assert_equal "crosslint: fetching #{SHARED} at v1.0.0\n", fetched.string
+  end
+
   def test_a_plugins_command_stops_with_2_at_a_mistake_in_the_project_and_names_a_typo_of_a_command_of_crosslint
     mistake = CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl")
 
@@ -621,7 +642,7 @@ class CLITest < Minitest::Test
   # With debt, the project also lists the built-in debt plugin, and with
   # shared, a shared plugin that isn't fetched.
   def app(files: ["lib/a.rb", "lib/b.rb", "test/a_test.rb"], severity: nil, unused: false, warnings: nil, verbosity: nil, broken: nil, raises: false,
-    debt: false, shared: false)
+    debt: false, shared: false, fetch_log: StringIO.new)
     core = CrossLint::Core
     listed = [core::ListedPlugin.new(name: "./.config/tests", ref: nil, settings: [], line: 1)]
     listed.unshift(core::ListedPlugin.new(name: "debt", ref: nil, settings: [], line: 2)) if debt
@@ -638,7 +659,7 @@ class CLITest < Minitest::Test
     CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => broken || configuration}),
       manifests: CrossLint::Adapters::MemoryPluginManifests.new({"#{WORK}/app/.config/tests" => manifest}.merge(built_in_manifests)),
       debt_files: CrossLint::Adapters::MemoryDebtFiles.new,
-      shared_plugins: CrossLint::Adapters::MemorySharedPlugins.new({}, err: StringIO.new),
+      shared_plugins: CrossLint::Adapters::MemorySharedPlugins.new({}, err: fetch_log),
       project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}),
       plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new({"#{WORK}/app/.config/tests/raises.rb" => RAISES}))
   end

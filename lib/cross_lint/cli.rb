@@ -98,15 +98,11 @@ module CrossLint
     # or for a plugin not fetched yet, it prints the program's help with the
     # reason, unless the first word is a typo of a command of CrossLint's.
     def plugin_help(spec, line)
-      found = listing(spec, line)
-      commands = PluginCommands.new(spec)
+      commands, found = resolved(spec, line)
       word = line.words.fetch(0)
-      if found.is_a?(Core::Mistake)
-        refusal = commands.refusal(word)
-        raise refusal if refusal
-      elsif found.unfetched.none? { |listed| Core::SharedPlugin.plugin_name(listed.name) == word }
+      if !found.is_a?(Core::Mistake) && found.unfetched.none? { |listed| Core::SharedPlugin.plugin_name(listed.name) == word }
         help = Help.new(spec)
-        plugin, command = commands.find(line.words, found.plugins, found.file, -> { application(spec).built_in_commands })
+        plugin, command = commands.find(line.words, found.plugins)
         @out.write(command ? help.plugin_command(plugin.name, command) : help.plugin(plugin.name, plugin.manifest.commands))
         return 0
       end
@@ -126,16 +122,25 @@ module CrossLint
     # such plugin is refused before any check runs.
     def plugin_command(spec, line)
       app = application(spec)
-      commands = PluginCommands.new(spec)
-      project = begin
-        app.load_project(line.value("project") || Dir.pwd)
-      rescue Core::Mistake => mistake
-        raise commands.refusal(line.words.fetch(0)) || mistake
-      end
-      plugin, command = commands.find(line.words, project.plugins, project.configuration.file, -> { app.built_in_commands })
+      commands, found = resolved(spec, line)
+      raise found if found.is_a?(Core::Mistake)
+
+      # Only a word that names a shared plugin not fetched yet fetches it.
+      project = app.load_project(line.value("project") || Dir.pwd)
+      plugin, command = commands.find(line.words, project.plugins)
       # Two words or more name a command, which find has found.
       named = command #: Core::CommandDeclaration
       check_project(app, line, project, [plugin.name, named.name])
+    end
+
+    # The reader of plugin commands, and what the project lists, once the
+    # first word is known to be a plugin the configuration lists: a word
+    # that isn't raises before anything is fetched or loaded.
+    def resolved(spec, line)
+      commands = PluginCommands.new(spec)
+      found = listing(spec, line)
+      commands.resolve(line.words, found, -> { application(spec).built_in_commands })
+      [commands, found]
     end
 
     def application(spec) = @app || App.new(err: @err, debug: debug?, reserved: spec.commands.map(&:name))

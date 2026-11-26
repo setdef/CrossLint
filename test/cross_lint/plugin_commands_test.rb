@@ -16,14 +16,14 @@ class PluginCommandsTest < Minitest::Test
   end
 
   def test_finds_the_plugin_and_its_command
-    found = @commands.find(%w[debt update], [@plain, @debt], FILE, -> { {} })
+    found = @commands.find(%w[debt update], [@plain, @debt])
 
     assert_equal [@debt, "update"], [found.first, found.last.name]
-    assert_equal @debt.manifest.commands.last, @commands.find(%w[debt prune], [@plain, @debt], FILE, -> { {} }).last
+    assert_equal @debt.manifest.commands.last, @commands.find(%w[debt prune], [@plain, @debt]).last
   end
 
   def test_finds_the_plugin_alone_when_no_command_is_given
-    assert_equal [@debt, nil], @commands.find(%w[debt], [@plain, @debt], FILE, -> { {} })
+    assert_equal [@debt, nil], @commands.find(%w[debt], [@plain, @debt])
   end
 
   def test_says_a_plugin_that_adds_no_commands_adds_none
@@ -72,12 +72,28 @@ class PluginCommandsTest < Minitest::Test
   end
 
   def test_names_the_nearest_command_of_crosslint_for_a_word_when_the_project_cant_be_read
-    refusal = @commands.refusal("chek")
+    broken = Core::Mistake.new("lists nothing", file: FILE)
+    refusal = assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(%w[chek], broken, -> { {} }) }
 
-    assert_instance_of CrossLint::CommandLine::Error, refusal
     assert_equal "crosslint has no command chek; did you mean check?", refusal.message
-    assert_nil @commands.refusal("debt")
-    assert_equal %(crosslint has no command "ch\\u00E9ck"; did you mean check?), @commands.refusal("ch\u00E9ck").message
+    assert_nil @commands.resolve(%w[debt], broken, -> { {} })
+    # Whatever kind of mistake stopped the reading.
+    kind = Class.new(Core::Mistake).new("lists nothing", file: FILE)
+
+    assert_equal "crosslint has no command chek; did you mean check?",
+      assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(%w[chek], kind, -> { {} }) }.message
+    assert_equal %(crosslint has no command "ch\\u00E9ck"; did you mean check?),
+      assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(["ch\u00E9ck"], broken, -> { {} }) }.message
+  end
+
+  def test_a_shared_plugin_not_fetched_yet_is_listed_by_the_name_its_url_gives
+    unfetched = Core::ListedPlugin.new(name: "https://example.com/OWNER/signatures", ref: "v1.0.0", settings: [], line: 2)
+    listing = Core::PluginListing.new(file: FILE, plugins: [@debt], unfetched: [unfetched])
+
+    assert_nil @commands.resolve(%w[signatures update], listing, -> { {} })
+    error = assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(%w[signatuers], listing, -> { {} }) }
+
+    assert_equal "crosslint has no command signatuers, and the configuration lists no plugin of that name; did you mean signatures?", error.message
   end
 
   private
@@ -89,7 +105,11 @@ class PluginCommandsTest < Minitest::Test
   end
 
   def assert_refused(message, words, plugins: [@plain, @debt], built_in: -> { {} })
-    error = assert_raises(CrossLint::CommandLine::Error) { @commands.find(words, plugins, FILE, built_in) }
+    listing = Core::PluginListing.new(file: FILE, plugins:, unfetched: [])
+    error = assert_raises(CrossLint::CommandLine::Error) do
+      @commands.resolve(words, listing, built_in)
+      @commands.find(words, plugins)
+    end
 
     assert_equal message, error.message
   end
