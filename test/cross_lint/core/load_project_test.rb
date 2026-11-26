@@ -371,6 +371,8 @@ class LoadProjectTest < Minitest::Test
 
       def declare(_) = [artifact("ruby-file", files: @folder + "/{path}.rb", companions: {"test" => "t/{path}"})]
     RUBY
+    # A built-in plugin's Artifacts, which test/plugin_ruby.rb loaded at the top level, is put back.
+    loaded = Object.__send__(:remove_const, :Artifacts) if Object.const_defined?(:Artifacts, false)
     Object.const_set(:Artifacts, Class.new(CrossLint::Artifacts))
     project = load_project(manifest: declaring_manifest, ruby:)
 
@@ -379,6 +381,7 @@ class LoadProjectTest < Minitest::Test
       ruby: {"#{APP}/rules/tests/artifacts.rb" => ->(_) {}}
   ensure
     Object.__send__(:remove_const, :Artifacts) if Object.const_defined?(:Artifacts, false)
+    Object.const_set(:Artifacts, loaded) if loaded
   end
 
   def test_stops_at_a_policy_for_an_artifact_no_listed_plugin_declares

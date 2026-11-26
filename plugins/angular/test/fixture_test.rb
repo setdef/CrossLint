@@ -11,6 +11,12 @@ require "open3"
 # ng-nudge's defects it lists that reading TypeScript could copy as a test
 # that it doesn't.
 class AngularFixtureTest < Minitest::Test
+  # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage and
+  # mutant follow it.
+  cover "Artifacts*"
+  cover "StubMatchesComponent*"
+  cover "InterfaceMatchesComponent*"
+
   FIXTURE = File.join(__dir__, "fixture")
 
   Core = CrossLint::Core
@@ -56,11 +62,14 @@ class AngularFixtureTest < Minitest::Test
 
   def test_reports_what_ng_nudge_reports_and_what_its_defects_hid
     packages_installed
-    result = CrossLint::App.new.check(FIXTURE)
+    result = app.check(FIXTURE)
 
     assert_equal REPORTED, result.violations.map { |violation| "#{violation.artifact}: #{violation.message} (#{violation.plugin}/#{violation.policy})" }
     assert_equal [:warning], result.violations.select { |violation| violation.policy == "prefer-css-over-scss" }.map(&:severity)
-    assert_equal ["checked 11 component, 1 directive, 1 pipe, 2 service, 1 guard, 1 resolver, 1 interceptor, and 1 store artifacts: " \
+    # The detail of a missing member, which tells a debt entry which one it excuses.
+    members = %w[input\ caption input\ noInit input\ open input\ size input\ tip output\ changes output\ openChange]
+    assert_equal (members * 2).sort, result.violations.select { |violation| violation.message.match?(/ missing (in|out)put: /) }.map(&:detail).sort
+    assert_equal ["checked 12 component, 1 directive, 1 pipe, 2 service, 1 guard, 1 resolver, 1 interceptor, and 1 store artifacts: " \
       "23 errors, 1 warning, 3 accepted as debt", true, []], [result.summary.line, result.failed, result.faults]
   end
 
@@ -70,7 +79,7 @@ class AngularFixtureTest < Minitest::Test
   # does (lib/debt.js:30-35).
   def test_excuses_what_a_debt_file_moved_from_ng_nudge_excuses
     packages_installed
-    result = CrossLint::App.new.check(FIXTURE)
+    result = app.check(FIXTURE)
 
     assert_empty result.violations.map(&:artifact).grep(%r{/(foo|pipes)/})
     assert_equal ["3 accepted as debt"], result.summary.steps
@@ -83,9 +92,9 @@ class AngularFixtureTest < Minitest::Test
   # exit status 2, naming the plugin and the command.
   def test_stops_with_2_naming_the_plugin_and_node_when_node_isnt_on_the_path
     packages_installed
-    app = CrossLint::App.new(helpers: CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env: {"PATH" => ""}))
+    without_node = app(helpers: CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env: {"PATH" => ""}))
     err = StringIO.new
-    status = CrossLint::CLI.new(["check", "-C", FIXTURE], out: StringIO.new, err:, env: {}, app:).run
+    status = CrossLint::CLI.new(["check", "-C", FIXTURE], out: StringIO.new, err:, env: {}, app: without_node).run
 
     assert_equal 2, status
     assert_match %(plugin angular needs node on the PATH for its helper "members", and there is none), err.string
@@ -99,9 +108,9 @@ class AngularFixtureTest < Minitest::Test
     write(root, "src/a/a.component.stub.ts", "")
     write(root, "src/a/a.component.i.d.ts", "")
     Open3.capture3("git", "init", "-q", chdir: root)
-    missing = CrossLint::App.new.check(root).faults.map(&:message)
+    missing = app.check(root).faults.map(&:message)
     write(root, "tsconfig.json", "{}\n")
-    found = CrossLint::App.new.check(root).faults.map(&:message)
+    found = app.check(root).faults.map(&:message)
 
     assert_equal [["raised RuntimeError: reads TypeScript with tsconfig.json, the tsconfig setting's file, which doesn't exist"]],
       [missing.uniq]
@@ -111,6 +120,8 @@ class AngularFixtureTest < Minitest::Test
   end
 
   private
+
+  def app(**options) = CrossLint::App.new(plugin_ruby: LoadedPlugins::PluginRuby.new, **options)
 
   # Installing the fixture's packages is a setup step (rake fixtures),
   # which no test runs.

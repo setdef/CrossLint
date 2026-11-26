@@ -80,7 +80,7 @@ WINDOWS = RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/)
 # MUTANT_SHARD=N/M runs the Nth of M parts of the subjects mutant finds,
 # which CI runs on M computers at once. A subject goes to the part its
 # place in the sorted list says, so every subject is in exactly one part.
-desc "Run mutation testing on lib/ (.mutant.yml), all of it or MUTANT_SHARD=N/M of it; mutant forks, so it doesn't run on Windows"
+desc "Run mutation testing on lib/ and each built-in plugin's Ruby (.mutant.yml), all of it or MUTANT_SHARD=N/M of it; mutant forks, so it doesn't run on Windows"
 task :mutant do
   next puts("rake mutant: mutant doesn't run on Windows") if WINDOWS
   next sh("bundle", "exec", "mutant", "run") unless ENV["MUTANT_SHARD"]

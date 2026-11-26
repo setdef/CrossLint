@@ -8,6 +8,12 @@ require "open3"
 # ng-nudge's defects it lists that these checks could copy as a test that
 # they don't.
 class AngularPathsTest < Minitest::Test
+  # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage and
+  # mutant follow it.
+  cover "Artifacts*"
+  cover "StubMatchesComponent*"
+  cover "InterfaceMatchesComponent*"
+
   Core = CrossLint::Core
 
   def setup
@@ -143,6 +149,34 @@ class AngularPathsTest < Minitest::Test
     assert_equal [%(no file matches "src/{path}.store.ts", the files of artifact "store")], check(%(role "store")).notices.map(&:message)
   end
 
+  # Only a component has a stub, an interface, stylesheets, and the
+  # tsconfig as companions.
+  def test_declares_each_role_with_its_pattern_companions_key_and_whether_a_project_may_have_none
+    component = {"spec" => "src/{path}.component.spec.ts", "stub" => "src/{path}.component.stub.ts", "interface" => "src/{path}.component.i.d.ts",
+                 "css" => "src/{path}.component.css", "scss" => "src/{path}.component.scss", "tsconfig" => "tsconfig.json"}
+    default = %w[component directive pipe service guard resolver interceptor].map do |role|
+      [role, "src/{path}.#{role}.ts", (role == "component") ? component : {"spec" => "src/{path}.#{role}.spec.ts"}, "{path}", true]
+    end
+    moved = component.transform_values { |pattern| pattern.sub("src/", "app/") }.merge("tsconfig" => "config/tsconfig.app.json")
+
+    assert_equal default, declared(nil)
+    assert_equal default.map { |role, *rest| (role == "service") ? [role, rest[0], {}, rest[2], rest[3]] : [role, *rest] }, declared(%(role "service" {\n    expects\n  }))
+    assert_equal default.map { |role, *rest| (role == "service") ? [role, "src/x/{name}.service.ts", {"spec" => "src/x/{name}.service.spec.ts"}, "x/{name}", false] : [role, *rest] },
+      declared(%(role "service" files="x/{name}.service.ts"))
+    assert_equal default.map { |role, _, companions, key, optional| [role, "app/{path}.#{role}.ts", (role == "component") ? moved : companions.transform_values { _1.sub("src/", "app/") }, key, optional] } +
+      [["store", "app/{path}.store.ts", {"spec" => "app/{path}.store.spec.ts"}, "{path}", false]],
+      declared(%(src-dir "app"\n  tsconfig "config/tsconfig.app.json"\n  role "store"))
+  end
+
+  def test_finds_a_role_in_a_folder_with_two_dots_in_its_name_and_ignores_an_empty_segment_of_a_setting
+    write(@root, "src/a..b/c.store.ts", "")
+    write(@root, "app/x/d.pipe.ts", "")
+
+    assert_equal [["src/a..b/c.store.ts", "store", "spec-exists", "no spec file at src/a..b/c.store.spec.ts"]],
+      findings(check(%(role "store" files="a..b/{path}.store.ts")))
+    assert_equal [["app/x/d.pipe.ts", "pipe", "spec-exists", "no spec file at app/x/d.pipe.spec.ts"]], findings(check(%(src-dir "app//x")))
+  end
+
   def test_gives_each_artifact_ng_nudges_base_path_as_its_key
     write(@root, "src/app/foo/foo.component.ts", "")
     write(@root, "src/pages/home-page.ts", "")
@@ -176,12 +210,17 @@ class AngularPathsTest < Minitest::Test
     %w[spec stub].each { |kind| write(@root, "src/a/a.component.#{kind}.ts", "") }
     write(@root, "src/a/a.component.i.d.ts", "")
     write(@root, "tsconfig.json", "{}\n")
-    missing = check(%(tsconfig "./config/tsconfig.app.json")).faults.map(&:message).uniq
+    settings = %(tsconfig "./config/tsconfig.app.json")
+    # Each of the two rules that read TypeScript, with the other off.
+    alone = %w[stub interface].to_h { |rule| [rule, (%w[stub interface] - [rule]).map { |off| %(policy "angular/#{off}-matches-component" enabled=#false\n) }.join] }
+    missing = alone.transform_values { |lines| check(settings, lines:).faults.map(&:message).uniq }
     write(@root, "config/tsconfig.app.json", "{}\n")
-    found = check(%(tsconfig "./config/tsconfig.app.json")).faults.map(&:message).uniq
+    found = alone.transform_values { |lines| check(settings, lines:).faults.map(&:message).uniq }
 
-    assert_equal ["raised RuntimeError: reads TypeScript with config/tsconfig.app.json, the tsconfig setting's file, which doesn't exist"], missing
-    assert_equal ["raised RuntimeError: found no typescript package for config/tsconfig.app.json; install the project's packages, as with npm ci"], found
+    assert_equal %w[stub interface].to_h { |rule| [rule, ["raised RuntimeError: reads TypeScript with config/tsconfig.app.json, the tsconfig setting's file, which doesn't exist"]] },
+      missing
+    assert_equal %w[stub interface].to_h { |rule| [rule, ["raised RuntimeError: found no typescript package for config/tsconfig.app.json; install the project's packages, as with npm ci"]] },
+      found
   end
 
   def test_stops_at_a_setting_it_cant_use_naming_the_line
@@ -203,7 +242,7 @@ class AngularPathsTest < Minitest::Test
       %(role "a/b") => [2, %(role takes one name of letters, digits, - and _, as in role "store" files="{path}.store.ts")],
       %(role "a" "b") => [2, %(role takes one name of letters, digits, - and _, as in role "store" files="{path}.store.ts")],
       %(role 3) => [2, %(role takes one name of letters, digits, - and _, as in role "store" files="{path}.store.ts")],
-      %(role "store"\n  role "store") => [3, %(role "store" is set twice)],
+      %(role "store"\n  role "store") => [3, %(role "store" is set twice; the first is on line 2)],
       %(role "store" pattern="x") => [2, "role takes files= and nothing else, not pattern="],
       %(role "store" files="{path}.store.js") => [2, %(role "store" takes files= as a path pattern ending in .ts, relative to src-dir)],
       %(role "store" files="/{path}.store.ts") => [2, %(role "store" takes files= as a path pattern ending in .ts, relative to src-dir)],
@@ -215,6 +254,9 @@ class AngularPathsTest < Minitest::Test
       %(role "store" {\n    expects "spec" x=1\n  }) => [3, %(role "store" takes one thing in its block, expects COMPANION ...)],
       %(role "store" {\n    expects "stub"\n  }) => [3, %(role "store" expects "stub", and a role can expect only "spec")],
       %(role "store" {\n    expects 3\n  }) => [3, %(role "store" expects 3, and a role can expect only "spec")],
+      %(role "store" {\n    expects "spec" {\n      x\n    }\n  }) => [3, %(role "store" takes one thing in its block, expects COMPANION ...)],
+      %(role "store" {\n    bad\n    expects "spec"\n  }) => [3, %(role "store" takes one thing in its block, expects COMPANION ...)],
+      %(role "store" {\n    expects "spec"\n    bad\n    worse\n  }) => [4, %(role "store" takes one thing in its block, expects COMPANION ...)],
       %(srcDir "src") => [2, %(unknown setting "srcDir", did you mean "src-dir"?)]
     }.each do |settings, (line, message)|
       mistake = assert_raises(Core::Mistake, settings) { check(settings) }
@@ -225,11 +267,21 @@ class AngularPathsTest < Minitest::Test
 
   private
 
-  def check(settings = nil, debt: false, lines: "")
+  def check(settings = nil, debt: false, lines: "") = app(settings, debt:, lines:).check(@root)
+
+  def declared(settings)
+    app(settings).load_project(@root).plugins.first.manifest.artifacts.map do |artifact|
+      [artifact.name, artifact.files.source, artifact.companions.to_h { [_1.name, _1.pattern.source] }, artifact.key.source, artifact.optional]
+    end
+  end
+
+  # The app, over a project whose configuration lists the plugin with
+  # these settings.
+  def app(settings, debt: false, lines: "")
     block = settings ? " {\n  #{settings}\n}" : ""
     write(@root, ".config/crosslint/config.kdl", %(plugin "angular"#{block}\n#{%(plugin "debt"\n) if debt}#{lines}))
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
-    CrossLint::App.new.check(@root)
+    CrossLint::App.new(plugin_ruby: LoadedPlugins::PluginRuby.new)
   end
 
   def findings(result) = result.violations.map { |violation| [violation.artifact, violation.role, violation.policy, violation.message] }.sort

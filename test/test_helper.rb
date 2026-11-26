@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-# Every line and branch of lib/ must run in the tests. Under mutant, which
-# loads the tests once for every mutation it tries, coverage is left off.
+# Every line and branch of lib/ and of each built-in plugin's Ruby must run
+# in the tests. Under mutant, which loads the tests once for every
+# mutation it tries, coverage is left off.
 require "minitest/autorun"
 
 unless defined?(Mutant)
@@ -9,10 +10,10 @@ unless defined?(Mutant)
   SimpleCov.start do
     root File.expand_path("..", __dir__)
     enable_coverage :branch
-    track_files "lib/**/*.rb"
-    # A plugin's Ruby loads anew into each check, which starts its
-    # coverage again each time, so only lib/ is counted.
-    add_filter %r{\A/(test|tasks|vendor|plugins)/}
+    track_files "{lib,plugins}/**/*.rb"
+    # A plugin's tests are counted no more than test/ is.
+    add_filter %r{\A/(test|tasks|vendor)/}
+    add_filter %r{\A/plugins/[^/]+/test/}
     # A helper's process tree is a job object on Windows and a process
     # group elsewhere, and each system runs only its own.
     add_filter(RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/) ? "lib/cross_lint/adapters/process_group.rb" : "lib/cross_lint/adapters/job_object.rb")
@@ -42,6 +43,7 @@ Minitest.after_run { FileUtils.rm_rf(CACHE) }
 
 require "cross_lint"
 require "cross_lint/testing"
+require_relative "plugin_ruby"
 
 module TestHelper
   ROOT = File.expand_path("..", __dir__)

@@ -69,7 +69,8 @@ class Artifacts < CrossLint::Artifacts
     unless setting.arguments.size == 1 && name.is_a?(String) && name.match?(/\A[A-Za-z0-9_-]+\z/)
       raise mistake("role takes one name of letters, digits, - and _, as in role \"store\" files=\"{path}.store.ts\"", setting)
     end
-    raise mistake("role #{name.dump} is set twice", setting) if roles.dig(name, :line)
+    first = roles.dig(name, :line)
+    raise mistake("role #{name.dump} is set twice; the first is on line #{first}", setting) if first
 
     unknown = setting.properties.keys - ["files"]
     raise mistake("role takes files= and nothing else, not #{unknown.first}=", setting) unless unknown.empty?
@@ -77,7 +78,7 @@ class Artifacts < CrossLint::Artifacts
     files = setting.properties["files"]
     raise mistake("role #{name.dump} takes files= as a path pattern ending in .ts, relative to src-dir", setting) unless files.nil? || pattern?(files)
 
-    roles[name] = {files: files || roles.dig(name, :files) || "{path}.#{name}.ts", expects: expects(name, setting),
+    roles[name] = {files: files || "{path}.#{name}.ts", expects: expects(name, setting),
                    optional: files.nil? && roles.key?(name), line: setting.line}
   end
 
@@ -94,12 +95,12 @@ class Artifacts < CrossLint::Artifacts
 
     child = children.first
     unless children.size == 1 && child.name == "expects" && child.properties.empty? && child.children.empty?
-      raise mistake("role #{name.dump} takes one thing in its block, expects COMPANION ...", children.find { |each| each.name != "expects" } || children.last)
+      raise mistake("role #{name.dump} takes one thing in its block, expects COMPANION ...", children.reject { |each| each.name == "expects" }.first || children.last)
     end
 
     unknown = child.arguments.find { |companion| !EXPECTED.include?(companion) }
     raise mistake("role #{name.dump} expects #{unknown.inspect}, and a role can expect only \"spec\"", child) if unknown
 
-    child.arguments.uniq
+    child.arguments
   end
 end

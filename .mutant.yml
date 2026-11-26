@@ -1,6 +1,6 @@
-# Mutation testing (rake mutant): mutant changes lib/ in one place at a
-# time, and a test must fail for each change. Mutant is free for open-source
-# projects, which CrossLint is.
+# Mutation testing (rake mutant): mutant changes lib/ and each built-in
+# plugin's Ruby in one place at a time, and a test must fail for each
+# change. Mutant is free for open-source projects, which CrossLint is.
 usage: opensource
 integration:
   name: minitest
@@ -10,11 +10,17 @@ includes:
 requires:
   - cross_lint
   - cross_lint/testing
+  # Before mutant looks for subjects, which is before it loads the tests.
+  - plugin_ruby
 # The contract tests in CrossLint::Testing are tests themselves: the
 # adapters' tests run them, and no test covers them.
 matcher:
   subjects:
     - CrossLint*
+    # The classes of each built-in plugin's Ruby: its artifacts file and
+    # its rules, which test/plugin_ruby.rb loads once.
+    - source:plugins/*/*.rb
+    - source:plugins/*/rules/*.rb
   ignore:
     - CrossLint::Testing*
     # Windows alone runs the job object, and mutant doesn't run there.
