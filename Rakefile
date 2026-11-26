@@ -136,6 +136,26 @@ end
 task "check:without_mutant" => [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :crosslint, "usage:lint",
   "usage:reference", :reuse]
 
+desc "Run mutation testing on the subjects changed since origin/trunk (or GATE_BASE), which every mutation of must be killed; mutant forks, so it doesn't run on Windows"
+task "gate:mutant" do
+  next puts("rake gate:mutant: mutant doesn't run on Windows") if WINDOWS
+
+  base = ENV.fetch("GATE_BASE", "origin/trunk")
+  # Without the base, mutant fails in a way that says nothing of it, and a
+  # build machine has origin/trunk only when its request says --base origin/trunk.
+  abort "rake gate:mutant: no #{base} to compare with; fetch it, or set GATE_BASE" unless system("git", "rev-parse", "--verify", "--quiet", base, out: File::NULL)
+
+  sh "bundle", "exec", "mutant", "run", "--since", base
+end
+
+# The checks to run before a push, which are CI's build cut to what a
+# push can wait for: every quick check, cheapest first, and mutation
+# testing of only the subjects the change touches. The runtime check of
+# signatures (test:rbs) runs the tests a second time and is left to CI,
+# which runs `rake check` after the push.
+desc "Run the quick checks, and mutation testing of the subjects changed since origin/trunk, before a push"
+task gate: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :reuse, :steep, :test, "gate:mutant"]
+
 desc "Run every check CI runs"
 task check: ["check:without_mutant", :mutant]
 
