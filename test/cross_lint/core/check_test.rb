@@ -396,6 +396,15 @@ class CheckTest < Minitest::Test
     assert_empty check(project(stepped), files: [], verbosity: :silent, steps: {"track-debt" => step}).findings
   end
 
+  def test_orders_stale_entries_by_artifact_then_plugin_then_policy_then_message
+    entry = ->(artifact, plugin, policy, message) { Stale.new(plugin:, policy:, artifact:, file: "debt.tsv", line: 2, message:) }
+    ordered = [entry.("a", "p1", "x", "m1"), entry.("a", "p1", "x", "m2"), entry.("a", "p1", "y", "m1"),
+      entry.("a", "p2", "x", "m1"), entry.("b", "p1", "x", "m1")]
+    step = ScriptedStep.new(stale: ordered.reverse)
+
+    assert_equal ordered, check(project(stepped), files: [], steps: {"track-debt" => step}).findings
+  end
+
   def test_reports_a_steps_warnings_only_at_the_normal_verbosity_and_never_fails_on_them
     notice = Notice.new(file: "debt.tsv", line: 3, message: "coarse")
     step = ScriptedStep.new(notices: [notice])

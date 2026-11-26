@@ -142,7 +142,6 @@ class GitProjectFilesTest < Minitest::Test
     FileUtils.mkdir_p(other)
     Open3.capture3("git", "init", "-q", chdir: other)
     ENV["GIT_DIR"] = File.join(other, ".git")
-    ENV["GIT_WORK_TREE"] = other
     mistake = assert_raises(Mistake) { port.files(outside_root) }
 
     assert_equal CrossLint::Adapters::GitProjectFiles.outside(outside_root), mistake.message
