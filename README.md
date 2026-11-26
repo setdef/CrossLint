@@ -66,7 +66,7 @@ Each finding is one line on standard output, with the file, the message, and the
 | Where `crosslint` runs | macOS on Apple silicon; Linux on x86-64, with glibc 2.39 or later; Windows on x86-64 |
 | Projects | Any language, in any folder layout |
 | The Angular plugin | Angular projects with [Node](https://nodejs.org/) and the project's `typescript` package installed |
-| Moving from ng-nudge | Projects that use ng-nudge 0.3.0 |
+| Moving from ng-nudge | Projects that use ng-nudge 0.3.0; one whose `rc.json` sets `withComment.matching` needs Node on the `PATH` |
 
 ## Installation
 
@@ -79,16 +79,21 @@ To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugi
 1. **Write a configuration.** In the project's root, `crosslint init` writes `.config/crosslint/config.kdl`, which lists the plugins CrossLint runs, with the recommended ones already in it. No plugin runs until the configuration lists it.
 2. **Declare the project's rules** in a local plugin: a folder in the repository with a `plugin.kdl` that declares its artifacts, policies, and rules, as in [A first example](#a-first-example). List the folder in `.config/crosslint/config.kdl`.
 3. **Run the checks** with `crosslint check` from anywhere in the project. It exits with 0 when every check passes, 1 when there are violations, and 2 when CrossLint can't run, such as for a mistake in the configuration.
-4. **Accept what you can't fix yet** with `crosslint debt update`, a command of the debt plugin, which writes every current violation to `.config/crosslint/debt.tsv`. Add a comment to each line saying why it's there. From then on, `crosslint check` passes as long as no violation is new, and fails when a recorded one is fixed, until `crosslint debt update` removes it from the file.
+4. **Accept what you can't fix yet** with `crosslint debt update`, a command of the debt plugin, which writes every current violation to `.config/crosslint/debt.tsv`. Add a comment to each line saying why it's there. From then on, `crosslint check` passes as long as no violation is new, and fails when a recorded one is fixed, until `crosslint debt update` removes it from the file. `crosslint debt update --dry-run` lists what an update would change, and writes nothing.
 5. **Run it in CI** as you run the project's tests, so a pull request with a new violation fails.
 
 ### Moving from ng-nudge
 
-`crosslint init --from-ng-nudge` isn't available yet; until it is, keep using ng-nudge.
+In the project's root, run `crosslint init --from-ng-nudge --dry-run` first: it lists every change the move would make, and makes none. Then run `crosslint init --from-ng-nudge`, which:
 
-In the project's root, `crosslint init --from-ng-nudge` writes `.config/crosslint/config.kdl` from `.config/ng-nudge/rc.json`, with the Angular plugin and the debt plugin listed, and moves the debt file to `.config/crosslint/debt.tsv` with every comment kept. With `--dry-run`, it lists the changes and makes none. Then replace ng-nudge's dev dependency and each `npx ng-nudge` in the project's scripts and CI with `crosslint check`.
+- writes `.config/crosslint/config.kdl` from `.config/ng-nudge/rc.json`, with the Angular plugin, the debt plugin, and every setting `rc.json` has, or ng-nudge's defaults when there is no `rc.json`;
+- moves the debt file to `.config/crosslint/debt.tsv` byte for byte, with every entry and comment, and deletes ng-nudge's copy;
+- leaves `rc.json` and the rule files in `.config/ng-nudge/rules/`, which ng-nudge never ran, where they are;
+- lists each file that ng-nudge's patterns and CrossLint's would find differently, using the glob package in the project's `node_modules`.
 
-CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't read and stylesheets it looks for in the wrong folder. Run `crosslint debt update` once after moving, so the next check passes, and work through the entries it adds as you would any other debt.
+It checks everything before it changes anything. A setting it can't carry with the same meaning, such as a pattern with braces, stops it with exit status 2, naming the setting and what to write instead. So does a file in `.config/ng-nudge/artifacts/` or `policies/`, whose code CrossLint can't run, and an existing configuration or debt file, which `--force` replaces. Then replace ng-nudge's dev dependency and each `npx ng-nudge` in the project's scripts and CI with `crosslint check`.
+
+CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't read and stylesheets it looks for in the wrong folder. Run `crosslint debt update` once after moving, and work through the entries it adds as you would any other debt. The next check then passes, unless `rc.json` had ng-nudge report debt entries as errors, which CrossLint keeps doing.
 
 ## Documentation
 
