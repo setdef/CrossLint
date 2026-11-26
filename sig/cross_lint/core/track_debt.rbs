@@ -65,17 +65,26 @@ module CrossLint
         # The violation's detail, or an empty string for none.
         attr_reader detail: String
 
-        # An identity with these fields.
-        def self.new: (plugin: String, policy: String, artifact: String, role: String, detail: String) -> instance
+        # The artifact's key, which an entry can hold in place of its
+        # primary path, or nil.
+        attr_reader key: String?
 
         # An identity with these fields.
-        def initialize: (plugin: String, policy: String, artifact: String, role: String, detail: String) -> void
+        def self.new: (plugin: String, policy: String, artifact: String, role: String, detail: String, key: String?) -> instance
+
+        # An identity with these fields.
+        def initialize: (plugin: String, policy: String, artifact: String, role: String, detail: String, key: String?) -> void
 
         # The identity of `violation`.
         def self.of: (Violation violation) -> Identity
 
         # PLUGIN/POLICY.
         def rule: () -> String
+
+        # What an entry's Artifact column can hold to match this
+        # identity: the primary path and the key, each alone and as
+        # `NAME.ROLE`.
+        def artifacts: () -> Array[String]
       end
 
       # The debt file's path when `file` gives none.

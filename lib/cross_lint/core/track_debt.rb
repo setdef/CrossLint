@@ -14,11 +14,16 @@ module CrossLint
       class Settings < Data.define(:file, :report); end
 
       # A violation's identity, by which an entry matches it.
-      class Identity < Data.define(:plugin, :policy, :artifact, :role, :detail)
+      class Identity < Data.define(:plugin, :policy, :artifact, :role, :detail, :key)
         def self.of(violation) = new(plugin: violation.plugin, policy: violation.policy, artifact: violation.artifact,
-          role: violation.role, detail: violation.detail.to_s)
+          role: violation.role, detail: violation.detail.to_s, key: violation.key)
 
         def rule = "#{plugin}/#{policy}"
+
+        # What an entry's Artifact column can hold for it: its primary
+        # path or its key, such as the base path ng-nudge writes, each
+        # alone or with its role.
+        def artifacts = [artifact, key].compact.flat_map { |name| [name, "#{name}.#{role}"] }
       end
 
       FILE = ".config/crosslint/debt.tsv"
@@ -151,7 +156,7 @@ module CrossLint
       def matches(entry, rule, identities)
         legacy = !entry.rule.include?("/") && entry.detail.nil?
         identities.select do |identity|
-          [identity.plugin, identity.policy] == rule && [identity.artifact, "#{identity.artifact}.#{identity.role}"].include?(entry.artifact) &&
+          [identity.plugin, identity.policy] == rule && identity.artifacts.include?(entry.artifact) &&
             (legacy || identity.detail == entry.detail.to_s)
         end
       end

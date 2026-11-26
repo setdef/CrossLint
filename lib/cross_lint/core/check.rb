@@ -103,7 +103,7 @@ module CrossLint
             companion_path = companion.pattern.expand(match)
             Companion.new(name: companion.name, path: companion_path, exists: @project_files.exist?(project.root, companion_path))
           end
-          Artifact.new(plugin: plugin.name, role: declaration.name, path:, match:, companions:)
+          Artifact.new(plugin: plugin.name, role: declaration.name, path:, match:, companions:, key: declaration.key&.expand(match))
         end
       end
 
@@ -134,7 +134,7 @@ module CrossLint
             checker = BuiltInRule.named(rule.name) || rules.fetch([plugin.name, rule.name])
             checker.results(artifact, rule.arguments, read).map do |result|
               Violation.new(plugin: plugin.name, policy: policy.name, artifact: result.path, role: result.role, message: result.message,
-                severity: override || rule.severity || checker.severity, detail: result.detail)
+                severity: override || rule.severity || checker.severity, detail: result.detail, key: artifact.key)
             end
           end
         end

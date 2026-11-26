@@ -35,6 +35,14 @@ class CheckTest < Minitest::Test
       message: "no test file at test/a_test.rb", severity: :error, detail: nil), violation
   end
 
+  def test_gives_an_artifact_and_its_violations_the_key_its_declaration_gives
+    keyed = declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb").with(key: PathPattern.new(source: "{path}"))
+    plugin = plugin("tests", artifacts: [keyed, declaration("rake-file", "{path}.rake", "test" => "test/{path}_test.rb")],
+      policies: [policy("has-test", rules: [rule]), policy("rake-has-test", rules: [rule], applies_to: "rake-file")])
+
+    assert_equal [["lib/app/a.rb", "app/a"], ["tasks.rake", nil]], check(project(plugin), files: ["lib/app/a.rb", "tasks.rake"]).findings.map { [_1.artifact, _1.key] }
+  end
+
   def test_passes_when_every_companion_exists
     result = check(project(tests_plugin), files: ["lib/a.rb", "lib/a/b.rb", "test/a_test.rb", "test/a/b_test.rb", "README.md"])
 

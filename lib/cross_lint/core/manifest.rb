@@ -6,7 +6,9 @@ module CrossLint
   module Core
     class CompanionDeclaration < Data.define(:name, :pattern, :line); end
 
-    class ArtifactDeclaration < Data.define(:name, :files, :companions, :line)
+    class ArtifactDeclaration < Data.define(:name, :files, :companions, :line, :key)
+      def initialize(key: nil, **fields) = super
+
       def companion(name) = companions.find { |companion| companion.name == name }
     end
 

@@ -35,11 +35,17 @@ module CrossLint
       # The line the declaration is on.
       attr_reader line: Integer
 
-      # An artifact with these fields.
-      def self.new: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer) -> instance
+      # The pattern that gives each artifact's key, the name a debt entry
+      # can give it by in place of its primary path, or nil for none.
+      attr_reader key: PathPattern?
 
-      # An artifact with these fields.
-      def initialize: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer) -> void
+      # An artifact with these fields, and no key pattern unless given.
+      def self.new: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer,
+                     ?key: PathPattern?) -> instance
+
+      # An artifact with these fields, and no key pattern unless given.
+      def initialize: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer,
+                       ?key: PathPattern?) -> void
 
       # The companion called `name`, or nil.
       def companion: (String name) -> CompanionDeclaration?

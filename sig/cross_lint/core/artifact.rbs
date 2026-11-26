@@ -49,13 +49,17 @@ module CrossLint
       # The companions, in the order the declaration has them.
       attr_reader companions: Array[Companion]
 
-      # An artifact with these fields.
-      def self.new: (plugin: String, role: String, path: String, match: Hash[String, String],
-                     companions: Array[Companion]) -> instance
+      # The name a debt entry can give the artifact by in place of its
+      # primary path, from its declaration's key pattern, or nil.
+      attr_reader key: String?
 
-      # An artifact with these fields.
+      # An artifact with these fields, and no key unless given.
+      def self.new: (plugin: String, role: String, path: String, match: Hash[String, String],
+                     companions: Array[Companion], ?key: String?) -> instance
+
+      # An artifact with these fields, and no key unless given.
       def initialize: (plugin: String, role: String, path: String, match: Hash[String, String],
-                       companions: Array[Companion]) -> void
+                       companions: Array[Companion], ?key: String?) -> void
 
       # The companion called `name`. Raises KeyError when the declaration
       # has none of that name, which LoadProject rules out for every
@@ -90,13 +94,16 @@ module CrossLint
       # same artifact, such as a missing member's name, or nil.
       attr_reader detail: String?
 
-      # A violation with these fields.
-      def self.new: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
-                     detail: String?) -> instance
+      # The artifact's key, or nil.
+      attr_reader key: String?
 
-      # A violation with these fields.
+      # A violation with these fields, and no key unless given.
+      def self.new: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
+                     detail: String?, ?key: String?) -> instance
+
+      # A violation with these fields, and no key unless given.
       def initialize: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
-                       detail: String?) -> void
+                       detail: String?, ?key: String?) -> void
     end
   
     # What a Ruby rule reports, made with CrossLint::Rule#violation: the

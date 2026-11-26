@@ -58,6 +58,35 @@ class TrackDebtTest < Minitest::Test
     assert_equal [[], ["app/card.component"]], [result.excused, result.stale.map(&:artifact)]
   end
 
+  # ng-nudge's debt file names an Angular artifact by its base path, which
+  # the Angular plugin gives its artifacts as their key.
+  def test_matches_an_entry_by_the_artifacts_key_alone_or_with_its_role
+    violations = [violation("src/app/a.component.ts", role: "component", key: "app/a"),
+      violation("src/app/b.component.ts", role: "component", key: "app/b"), violation("src/app/c.component.ts", role: "component", key: "app/c")]
+    entries = [entry("tests/has-test", "app/a"), entry("tests/has-test", "app/b.component"), entry("tests/has-test", "app/c.service")]
+    result = step(violations, entries)
+
+    assert_equal [violations.first(2), ["app/c.service"]], [result.excused, result.stale.map(&:artifact)]
+  end
+
+  def test_matches_no_entry_by_the_key_of_an_artifact_without_one
+    result = step([violation("lib/a.rb")], [entry("tests/has-test", ".ruby-file"), entry("tests/has-test", "")])
+
+    assert_equal [[], [".ruby-file", ""]], [result.excused, result.stale.map(&:artifact)]
+  end
+
+  # ng-nudge's base path drops the role (lib/artifact/artifact.js:34).
+  def test_excuses_both_artifacts_an_ng_nudge_key_names_and_writes_one_entry_for_each
+    violations = [violation("src/app/foo.component.ts", role: "component", key: "app/foo"), violation("src/app/foo.service.ts", role: "service", key: "app/foo")]
+    result = step(violations, [entry("tests/has-test", "app/foo", "later")])
+
+    assert_equal [violations, 1], [result.excused, result.notices.size]
+    assert_match "matches the violations of 2 artifacts", result.notices.first.message
+    step(violations, [entry("tests/has-test", "app/foo", "later")], update: true)
+
+    assert_equal [["src/app/foo.component.ts", "later"], ["src/app/foo.service.ts", "later"]], written.map { [_1.artifact, _1.comment] }
+  end
+
   def test_matches_an_entry_with_a_detail_only_to_that_detail_and_one_without_only_to_none
     violations = [violation("lib/a.rb", detail: "name"), violation("lib/a.rb", detail: "size"), violation("lib/b.rb")]
     result = step(violations, [entry("tests/has-test", "lib/a.rb", detail: "name"), entry("tests/has-test", "lib/b.rb", detail: "name"),
@@ -340,8 +369,8 @@ class TrackDebtTest < Minitest::Test
 
   private
 
-  def violation(artifact, plugin: "tests", policy: "has-test", role: "ruby-file", detail: nil, severity: :error)
-    Violation.new(plugin:, policy:, artifact:, role:, message: "no test", severity:, detail:)
+  def violation(artifact, plugin: "tests", policy: "has-test", role: "ruby-file", detail: nil, severity: :error, key: nil)
+    Violation.new(plugin:, policy:, artifact:, role:, message: "no test", severity:, detail:, key:)
   end
 
   def debt_violation(message, severity, line)
