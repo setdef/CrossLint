@@ -10,11 +10,17 @@ class KDLConfigurationTest < Minitest::Test
   Mistake = CrossLint::Core::Mistake
   FILE = ".config/crosslint/config.kdl"
 
+  # The tests run in their base, so that a mutation of the adapter that
+  # writes a configuration to the path FILE, relative to the folder it runs
+  # in, writes it there and not over the checkout's own configuration.
   def setup
     @base = Dir.mktmpdir("crosslint")
+    @folder = Dir.pwd
+    Dir.chdir(@base)
   end
 
   def teardown
+    Dir.chdir(@folder)
     FileUtils.rm_rf(@base)
   end
 
@@ -286,6 +292,91 @@ class KDLConfigurationTest < Minitest::Test
     assert_equal [FILE, nil, "couldn't be replaced, since permission was denied; close any program that has it open, and run again"],
       [mistake.file, mistake.line, mistake.message]
     assert_equal [%(plugin "#{URL}" ref="v1"\n), ["config.kdl"]], [File.binread(path), Dir.children(File.dirname(path))]
+  end
+
+  def test_writes_the_configuration_as_kdl_with_a_blank_line_between_its_kinds
+    core = CrossLint::Core
+    plugins = [core::ListedPlugin.new(name: URL, ref: "v1", settings: [], line: 0),
+      core::ListedPlugin.new(name: "angular", ref: nil, line: 0, settings: [
+        core::Setting.new(name: "role", arguments: ["store"], properties: {"files" => "{path}.store.ts"}, line: 0,
+          children: [core::Setting.new(name: "expects", arguments: [], properties: {}, children: [], line: 0)])
+      ])]
+    policies = [core::PolicySetting.new(name: "angular/spec-exists", enabled: false, severity: :warning, line: 0),
+      core::PolicySetting.new(name: "angular/stub-exists", enabled: nil, severity: nil, line: 0)]
+    CrossLint::Adapters::KDLConfiguration.new.write(folder("project"), core::Configuration.new(file: FILE, plugins:, policies:, warnings: :all, verbosity: nil))
+
+    assert_equal <<~KDL, File.binread(File.join(@base, "project", FILE))
+      plugin "#{URL}" ref="v1"
+      plugin "angular" {
+        role "store" files="{path}.store.ts" {
+          expects
+        }
+      }
+
+      policy "angular/spec-exists" enabled=#false severity="warning"
+      policy "angular/stub-exists"
+
+      warnings "all"
+    KDL
+  end
+
+  def test_writes_a_string_with_the_short_escape_kdl_has_for_each_character_that_has_one_and_u_for_the_rest
+    setting = CrossLint::Core::Setting.new(name: "text", arguments: ["a\"b\\c\nd\te\rf\u0001g\u007fh\u0085i j k é"], properties: {}, children: [], line: 0)
+    plugin = CrossLint::Core::ListedPlugin.new(name: "a", ref: nil, settings: [setting], line: 0)
+    CrossLint::Adapters::KDLConfiguration.new.write(folder("project"),
+      CrossLint::Core::Configuration.new(file: FILE, plugins: [plugin], policies: [], warnings: nil, verbosity: nil))
+
+    assert_equal %(plugin "a" {\n  text "a\\"b\\\\c\\nd\\te\\rf\\u{1}g\\u{7f}h\\u{85}i\\u{2028}j\\u{2029}k é"\n}\n), File.read(File.join(@base, "project", FILE), encoding: Encoding::UTF_8)
+  end
+
+  def test_writes_a_value_that_is_not_a_string_as_kdl_does
+    setting = CrossLint::Core::Setting.new(name: "limit", arguments: [nil, true], properties: {"on" => false}, children: [], line: 0)
+    plugin = CrossLint::Core::ListedPlugin.new(name: "a", ref: nil, settings: [setting], line: 0)
+    CrossLint::Adapters::KDLConfiguration.new.write(folder("project"),
+      CrossLint::Core::Configuration.new(file: FILE, plugins: [plugin], policies: [], warnings: nil, verbosity: nil))
+
+    assert_equal %(plugin "a" {\n  limit #null #true on=#false\n}\n), File.binread(File.join(@base, "project", FILE))
+  end
+
+  def test_refuses_to_write_a_value_that_kdl_has_no_use_for_here_and_writes_nothing
+    setting = CrossLint::Core::Setting.new(name: "limit", arguments: [:three], properties: {}, children: [], line: 0)
+    plugin = CrossLint::Core::ListedPlugin.new(name: "a", ref: nil, settings: [setting], line: 0)
+    configuration = CrossLint::Core::Configuration.new(file: FILE, plugins: [plugin], policies: [], warnings: nil, verbosity: nil)
+    error = assert_raises(ArgumentError) { CrossLint::Adapters::KDLConfiguration.new.write(folder("project"), configuration) }
+
+    assert_equal "can't write :three as a KDL value", error.message
+    refute File.exist?(File.join(@base, "project", FILE))
+  end
+
+  def test_leaves_the_file_as_it_was_when_the_system_denies_the_rename_of_a_write
+    path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
+    configuration = CrossLint::Core::Configuration.new(file: FILE, plugins: [], policies: [], warnings: nil, verbosity: nil)
+    mistake = begin
+      Thread.current[:crosslint_config_rename_denied] = true
+      assert_raises(Mistake) { CrossLint::Adapters::KDLConfiguration.new.write(File.join(@base, "project"), configuration) }
+    ensure
+      Thread.current[:crosslint_config_rename_denied] = nil
+    end
+
+    assert_equal [FILE, nil, "couldn't be written, since permission was denied; close any program that has it open, and run again"],
+      [mistake.file, mistake.line, mistake.message]
+    assert_equal [%(plugin "#{URL}" ref="v1"\n), ["config.kdl"]], [File.binread(path), Dir.children(File.dirname(path))]
+  end
+
+  def test_names_a_folder_that_does_not_exist_when_it_asks_or_writes
+    missing = File.join(@base, "missing")
+    port = CrossLint::Adapters::KDLConfiguration.new
+    configuration = CrossLint::Core::Configuration.new(file: FILE, plugins: [], policies: [], warnings: nil, verbosity: nil)
+
+    assert_equal "no folder #{missing}", assert_raises(Mistake) { port.exist?(missing) }.message
+    assert_equal "no folder #{missing}", assert_raises(Mistake) { port.write(missing, configuration) }.message
+    refute File.exist?(missing)
+  end
+
+  def test_does_not_take_a_folder_named_like_the_configuration_for_one_it_has
+    FileUtils.mkdir_p(File.join(@base, "app", FILE))
+
+    refute CrossLint::Adapters::KDLConfiguration.new.exist?(File.join(@base, "app"))
   end
 
   def test_refuses_to_set_the_ref_of_a_plugin_that_has_none_or_one_it_cant_rewrite

@@ -246,6 +246,19 @@ class AppTest < Minitest::Test
     assert_equal ["crosslint: listing the tags of #{url}"] * 3, err.string.lines(chomp: true)
   end
 
+  def test_writes_the_configuration_with_the_recommended_plugins_through_the_port_it_is_given
+    configuration = CrossLint::Adapters::MemoryConfiguration.new
+    app = App.new(configuration:)
+    dry = app.init("/app", dry_run: true)
+
+    assert_equal [["would write .config/crosslint/config.kdl, with the recommended plugins: debt"], false], [dry.lines, configuration.exist?("/app")]
+    assert_equal ["wrote .config/crosslint/config.kdl, with the recommended plugins: debt"], app.init("/app").lines
+    assert_equal ["debt"], configuration.read("/app").plugins.map(&:name)
+    assert_raises(Mistake) { app.init("/app") }
+    assert_raises(Mistake) { app.init("/app", dry_run: true) }
+    assert_equal ["replaced .config/crosslint/config.kdl, with the recommended plugins: debt"], app.init("/app", force: true).lines
+  end
+
   # The https URLs these tests use differ, so that the cache the tests
   # share holds no fetch of another test's.
   def test_fetches_a_shared_plugin_with_git_into_the_cache_of_the_user_unless_it_is_given_another_port

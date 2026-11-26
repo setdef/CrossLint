@@ -18,6 +18,19 @@ module CrossLint
     # when the project has none.
     def read: (String root) -> Core::Configuration
 
+    # Whether the project whose root is `root` has a configuration there,
+    # as a file: `root` itself, not a folder above it. Raises
+    # Core::Mistake when `root` isn't a folder.
+    def exist?: (String root) -> bool
+
+    # Replaces the configuration in `root` whole with `configuration`,
+    # written so that `read` returns it again, but for the lines of its
+    # plugins, settings, and policy lines, which the port sets. Makes the
+    # folders the file is in when there are none, and leaves the file as
+    # it was when the write fails. Raises Core::Mistake, naming the file,
+    # when it can't write, and when `root` isn't a folder.
+    def write: (String root, Core::Configuration configuration) -> void
+
     # Sets the ref of each plugin the configuration of `root` lists, by
     # the plugin's name, that is a key of `refs`, to its value, and
     # changes nothing else of the configuration: with a file, every other

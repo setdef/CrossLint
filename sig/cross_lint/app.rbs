@@ -50,6 +50,12 @@ module CrossLint
     # `dry_run`.
     def update: (String start, ?dry_run: bool) -> Core::UpdateResult
 
+    # The result of writing the configuration with the recommended
+    # plugins in the folder `start` (Core::InitConfiguration), or of
+    # listing what it would write, with `dry_run`; with `force`, over a
+    # configuration that is there.
+    def init: (String start, ?force: bool, ?dry_run: bool) -> Core::InitResult
+
     # The report that writes to `out` and `err`: JSON with `json`, else
     # text, in color with `color`, and each fault's trace with `debug`.
     def report: (out: CLI::_Output, err: CLI::_Output, ?json: bool, ?color: bool, ?debug: bool) -> _Report

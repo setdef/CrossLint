@@ -117,9 +117,65 @@ module CrossLint
         assert_equal port.file, mistake.file
       end
 
+      def test_says_whether_a_project_has_a_configuration_in_the_folder_itself
+        port = configuration_port({"app" => ["one"]})
+
+        assert port.exist?(folder("app"))
+        refute port.exist?(folder("app/inner"))
+        refute port.exist?(folder("elsewhere"))
+      end
+
+      def test_writes_a_configuration_that_reads_back_as_it_was_written
+        port = configuration_port({})
+        root = folder("fresh")
+        written = written_configuration(port.file)
+        port.write(root, written)
+
+        assert port.exist?(root)
+        assert_equal root, port.find_root(folder("fresh/inner"))
+        assert_equal without_lines(written), without_lines(port.read(root))
+      end
+
+      def test_replaces_the_configuration_it_has_whole
+        port = configuration_port({"app" => ["one", "two"]})
+        written = written_configuration(port.file).with(plugins: [], policies: [], warnings: nil, verbosity: nil)
+        port.write(folder("app"), written)
+
+        assert_equal without_lines(written), without_lines(port.read(folder("app")))
+      end
+
+      def test_writes_the_configuration_of_one_project_and_no_other
+        port = configuration_port({"app" => ["one"]})
+        port.write(folder("other"), written_configuration(port.file))
+
+        assert_equal ["one"], port.read(folder("app")).plugins.map(&:name)
+      end
+
       private
 
       def example_configuration = example_configuration_port.read(folder("example"))
+
+      # A configuration with every kind of line, and strings that need
+      # escapes to be written.
+      def written_configuration(file)
+        plugin = ->(name, ref, settings) { Core::ListedPlugin.new(name:, ref:, settings:, line: 0) }
+        setting = ->(name, arguments, properties, children) { Core::Setting.new(name:, arguments:, properties:, children:, line: 0) }
+        angular = plugin.call("angular", nil, [
+          setting.call("src-dir", ["a \"b\"\\c\td\ne\u0001f\u2028g é"], {}, []),
+          setting.call("role", ["store"], {"files" => "{path}.store.ts"}, [setting.call("expects", [], {}, [])])
+        ])
+        debt = plugin.call("debt", nil, [setting.call("report-entries", [], {"commented" => "warning", "matching" => "^\\d+$"}, [])])
+        Core::Configuration.new(file:, plugins: [plugin.call("https://github.com/OWNER/REPO", "v1.2.0", []), angular, debt],
+          policies: [Core::PolicySetting.new(name: "angular/spec-exists", enabled: false, severity: :warning, line: 0),
+            Core::PolicySetting.new(name: "debt/has-debt", enabled: nil, severity: :error, line: 0)],
+          warnings: :none, verbosity: :quiet)
+      end
+
+      def without_lines(configuration)
+        settings = ->(each) { each.map { |setting| setting.with(line: 0, children: settings.call(setting.children)) } }
+        configuration.with(plugins: configuration.plugins.map { |plugin| plugin.with(line: 0, settings: settings.call(plugin.settings)) },
+          policies: configuration.policies.map { |policy| policy.with(line: 0) })
+      end
     end
 
     module PluginManifestsContract

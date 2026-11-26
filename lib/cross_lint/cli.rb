@@ -36,6 +36,7 @@ module CrossLint
       if running && command
         return check(spec, line) if command.name == "check"
         return update(line) if command.name == "update"
+        return init(spec, line) if command.name == "init"
         return explain(spec, line, line.topic) if command.name == "help"
 
         return say("#{spec.bin} #{command.name} doesn't work yet")
@@ -162,6 +163,16 @@ module CrossLint
       return 2 unless result.faults.empty?
 
       result.failed ? 1 : 0
+    end
+
+    # --silent leaves out the line that says what init wrote.
+    def init(spec, line)
+      return say("crosslint init --from-ng-nudge doesn't work yet") if line.flags.key?("from-ng-nudge")
+
+      app = application(spec)
+      result = app.init(line.value("project") || Dir.pwd, force: line.flags.key?("force"), dry_run: line.flags.key?("dry-run"))
+      result.lines.each { |text| @err.puts(PREFIX + text) } unless line.flags.key?("silent")
+      0
     end
 
     # --silent leaves out each plugin's line, but not the line before each

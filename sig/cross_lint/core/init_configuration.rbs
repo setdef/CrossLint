@@ -1,0 +1,54 @@
+module CrossLint
+  module Core
+    # What `crosslint init` wrote, or would write.
+    #
+    # ```ruby
+    # result = CrossLint::Core::InitResult.new(file: ".config/crosslint/config.kdl", plugins: ["debt"], replaced: false, dry_run: false)
+    # result.lines # => ["wrote .config/crosslint/config.kdl, with the recommended plugins: debt"]
+    # ```
+    class InitResult < Data
+      # The configuration's path, as messages name it.
+      attr_reader file: String
+
+      # The recommended plugins the configuration lists.
+      attr_reader plugins: Array[String]
+
+      # Whether a configuration was there, and `--force` replaced it.
+      attr_reader replaced: bool
+
+      # Whether init only listed what it would write.
+      attr_reader dry_run: bool
+
+      # A result with these fields.
+      def self.new: (file: String, plugins: Array[String], replaced: bool, dry_run: bool) -> instance
+
+      # A result with these fields.
+      def initialize: (file: String, plugins: Array[String], replaced: bool, dry_run: bool) -> void
+
+      # One line: what was written, replaced, or would be, to which file,
+      # with which plugins.
+      def lines: () -> Array[String]
+    end
+
+    # Writes a project's configuration, listing the recommended plugins
+    # (`debt`). It refuses to replace a configuration the project has,
+    # with a Mistake naming the file, unless it is told to.
+    class InitConfiguration
+      # The plugins a new configuration lists.
+      RECOMMENDED: Array[String]
+
+      # A use case that finds and writes the configuration through
+      # `configuration`.
+      def initialize: (configuration: _Configuration) -> void
+
+      # Writes the configuration in `root`, which is the folder itself and
+      # not one above it. With `force`, replaces one that is there; with
+      # `dry_run`, writes nothing.
+      def call: (String root, ?force: bool, ?dry_run: bool) -> InitResult
+
+      private
+
+      @configuration: _Configuration
+    end
+  end
+end

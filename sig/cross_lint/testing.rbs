@@ -80,10 +80,33 @@ module CrossLint
       # configuration.
       def test_names_the_file_when_the_project_it_sets_refs_in_has_no_configuration: () -> void
 
+      # exist? is true for a folder that has a configuration, and false
+      # for one below it and for one with none.
+      def test_says_whether_a_project_has_a_configuration_in_the_folder_itself: () -> void
+
+      # write puts a configuration in a folder that has none, find_root
+      # finds it from below, and read returns what was written, with
+      # strings that need escapes in it.
+      def test_writes_a_configuration_that_reads_back_as_it_was_written: () -> void
+
+      # write replaces the configuration a folder has, leaving nothing of
+      # it.
+      def test_replaces_the_configuration_it_has_whole: () -> void
+
+      # write changes no other project's configuration.
+      def test_writes_the_configuration_of_one_project_and_no_other: () -> void
+
       private
 
       # The configuration `example_configuration_port` holds.
       def example_configuration: () -> Core::Configuration
+
+      # A configuration with every kind of line, and strings that need
+      # escapes.
+      def written_configuration: (String file) -> Core::Configuration
+
+      # `configuration` with every line number 0.
+      def without_lines: (Core::Configuration configuration) -> Core::Configuration
     end
 
     # What a test of a plugin-manifest adapter defines.

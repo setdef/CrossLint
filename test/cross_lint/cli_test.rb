@@ -545,6 +545,62 @@ class CLITest < Minitest::Test
       update("update", app:)
   end
 
+  def test_init_writes_the_configuration_and_says_so_on_standard_error
+    configuration = CrossLint::Adapters::MemoryConfiguration.new
+    out, err, status = init("init", app: CrossLint::App.new(configuration:))
+
+    assert_equal ["", "crosslint: wrote .config/crosslint/config.kdl, with the recommended plugins: debt\n", 0], [out, err, status]
+    assert_equal ["debt"], configuration.read("#{WORK}/app").plugins.map(&:name)
+  end
+
+  def test_init_says_what_it_did_unless_silent
+    assert_equal ["", "", 0], init("init", "--silent", app: CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new))
+    assert_equal 1, init("init", "--quiet", app: CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new))[1].lines.size
+  end
+
+  def test_init_refuses_to_replace_a_configuration_unless_it_is_forced
+    app, configuration = update_app
+
+    assert_equal ["", "crosslint: .config/crosslint/config.kdl: already exists, and crosslint init changes nothing in it; crosslint init --force replaces it\n", 2],
+      init("init", app:)
+    assert_equal [ONE, TWO], configuration.read("#{WORK}/app").plugins.map(&:name)
+    %w[--force -f].each do |flag|
+      app, configuration = update_app
+
+      assert_equal ["", "crosslint: replaced .config/crosslint/config.kdl, with the recommended plugins: debt\n", 0], init("init", flag, app:)
+      assert_equal ["debt"], configuration.read("#{WORK}/app").plugins.map(&:name)
+    end
+  end
+
+  def test_init_lists_what_it_would_write_and_writes_nothing_with_dry_run
+    %w[--dry-run -n].each do |flag|
+      configuration = CrossLint::Adapters::MemoryConfiguration.new
+
+      assert_equal ["", "crosslint: would write .config/crosslint/config.kdl, with the recommended plugins: debt\n", 0],
+        init("init", flag, app: CrossLint::App.new(configuration:))
+      refute configuration.exist?("#{WORK}/app")
+    end
+  end
+
+  def test_init_writes_in_the_current_folder_unless_it_is_told_otherwise
+    Dir.mktmpdir do |project|
+      assert_equal ["", "crosslint: wrote .config/crosslint/config.kdl, with the recommended plugins: debt\n", 0],
+        Dir.chdir(project) { run_cli("init", spec: shipped_spec) }
+      assert_equal %(plugin "debt"\n), File.binread(File.join(project, ".config/crosslint/config.kdl"))
+    end
+  end
+
+  def test_init_says_it_cannot_yet_move_a_project_from_ng_nudge
+    assert_equal ["", "crosslint: crosslint init --from-ng-nudge doesn't work yet\n", 2],
+      init("init", "--from-ng-nudge", app: CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new))
+  end
+
+  def test_init_names_the_folder_that_does_not_exist
+    missing = File.join(Dir.tmpdir, "crosslint-missing-#{SecureRandom.hex(8)}")
+
+    assert_equal ["", "crosslint: no folder #{missing}\n", 2], run_cli("init", "-C", missing, spec: shipped_spec)
+  end
+
   def test_update_builds_the_app_it_needs_and_works_from_the_current_folder_unless_it_is_told_otherwise
     Dir.mktmpdir do |base|
       url = "https://example.test/#{SecureRandom.hex(8)}/signatures"
@@ -584,6 +640,9 @@ class CLITest < Minitest::Test
     shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new(repositories, err: StringIO.new)
     [CrossLint::App.new(configuration:, shared_plugins:), configuration]
   end
+
+  # What init prints in the project at WORK/app, as update does.
+  def init(*argv, app:) = update(*argv, app:)
 
   def update(*argv, app:)
     argv += ["-C", "#{WORK}/app"] unless argv.include?("-C")

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "kdl_document"
+require "fileutils"
 require_relative "replace_file"
 
 module CrossLint
@@ -23,7 +24,27 @@ module CrossLint
       # text is the second group.
       STRING = /\G(#*)"(.*?)"\1/m
 
+      # What a string can't hold as it is. KDL has a short escape for some,
+      # and writes any other as \u{HEX}.
+      ESCAPED = /[\\"\p{Cc}\p{Zl}\p{Zp}]/
+
+      ESCAPES = {"\\" => "\\\\", "\"" => "\\\"", "\n" => "\\n", "\r" => "\\r", "\t" => "\\t"}.freeze
+
       def file = FILE
+
+      def exist?(root)
+        folder!(root)
+        File.file?(File.join(root, FILE))
+      end
+
+      def write(root, configuration)
+        folder!(root)
+        path = File.join(root, FILE)
+        FileUtils.mkdir_p(File.dirname(path))
+        ReplaceFile.call(path, render(configuration))
+      rescue Errno::EACCES
+        raise Core::Mistake.new("couldn't be written, since permission was denied; close any program that has it open, and run again", file: FILE)
+      end
 
       def find_root(start)
         raise Core::Mistake, "no folder #{start}" unless File.directory?(start)
@@ -70,6 +91,47 @@ module CrossLint
       end
 
       private
+
+      def folder!(root)
+        raise Core::Mistake, "no folder #{root}" unless File.directory?(root)
+      end
+
+      # The configuration as KDL: its plugins with their settings, then its
+      # policy lines, then its modes, a blank line between the kinds.
+      def render(configuration)
+        plugins = configuration.plugins.map do |listed|
+          node("plugin", [listed.name], listed.ref ? {"ref" => listed.ref} : {}, listed.settings, 0)
+        end
+        policies = configuration.policies.map do |policy|
+          properties = {} #: Hash[String, untyped]
+          properties["enabled"] = policy.enabled unless policy.enabled.nil?
+          properties["severity"] = policy.severity.to_s if policy.severity
+          node("policy", [policy.name], properties, [], 0)
+        end
+        modes = {"warnings" => configuration.warnings, "verbosity" => configuration.verbosity}.filter_map do |name, mode|
+          node(name, [mode.to_s], {}, [], 0) if mode
+        end
+        [plugins, policies, modes].reject(&:empty?).map(&:join).join("\n")
+      end
+
+      def node(name, arguments, properties, children, depth)
+        indent = "  " * depth
+        head = [name, *arguments.map { |each| value(each) }, *properties.map { |key, each| "#{key}=#{value(each)}" }].join(" ")
+        return "#{indent}#{head}\n" if children.empty?
+
+        inside = children.map { |child| node(child.name, child.arguments, child.properties, child.children, depth + 1) }
+        "#{indent}#{head} {\n#{inside.join}#{indent}}\n"
+      end
+
+      def value(each)
+        case each
+        when String then %("#{each.gsub(ESCAPED) { |char| ESCAPES.fetch(char) { format("\\u{%x}", char.ord) } }}")
+        when true then "#true"
+        when false then "#false"
+        when nil then "#null"
+        else raise(ArgumentError, "can't write #{each.inspect} as a KDL value")
+        end
+      end
 
       # Where the text of the ref of `node` is in `source`, how long it is,
       # and `ref` to put there. Only the text between the quotes changes.

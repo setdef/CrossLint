@@ -124,6 +124,12 @@ module CrossLint
     # to standard error, none with --silent. Returns 0.
     def update: (CommandLine line) -> Integer
 
+    # Runs crosslint init: writes the configuration with the recommended
+    # plugins in the project's folder, or with --dry-run lists what it
+    # would write, and says on standard error what it wrote, nothing with
+    # --silent. Returns 0.
+    def init: (UsageSpec spec, CommandLine line) -> Integer
+
     # Whether to color the report: never with --no-color, a NO_COLOR that
     # isn't empty, or TERM=dumb; else with a FORCE_COLOR that isn't empty,
     # or when standard output is a terminal.

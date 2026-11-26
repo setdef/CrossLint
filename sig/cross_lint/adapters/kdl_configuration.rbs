@@ -28,7 +28,28 @@ module CrossLint
       # text is the second group.
       STRING: Regexp
 
+      # What a string can't hold as it is when it is written: a backslash,
+      # a quote, a control character, and a line or paragraph separator.
+      ESCAPED: Regexp
+
+      # The short escape KDL has for each of those that has one.
+      ESCAPES: Hash[String, String]
+
       private
+
+      # Raises Core::Mistake unless `root` is a folder.
+      def folder!: (String root) -> void
+
+      # `configuration` as KDL text.
+      def render: (Core::Configuration configuration) -> String
+
+      # One node as KDL text, at `depth` levels of indent, with its
+      # children, and a line break at its end.
+      def node: (String name, Array[untyped] arguments, Hash[String, untyped] properties, Array[Core::Setting] children, Integer depth) -> String
+
+      # `each` as KDL writes a value: a string in quotes, with escapes,
+      # `#true`, `#false`, `#null`, or a number.
+      def value: (untyped each) -> String
 
       # Where the text of the ref of the `plugin` node `node` is in
       # `source`, how long it is, and `ref`, to put there. Raises

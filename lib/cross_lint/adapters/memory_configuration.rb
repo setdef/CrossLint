@@ -23,6 +23,12 @@ module CrossLint
         folder
       end
 
+      def exist?(root) = @projects.key?(root)
+
+      def write(root, configuration)
+        @projects[root] = configuration
+      end
+
       def set_refs(root, refs)
         configuration = read(root)
         plugins = configuration.plugins.map { |listing| refs.key?(listing.name) ? listing.with(ref: refs.fetch(listing.name)) : listing }
