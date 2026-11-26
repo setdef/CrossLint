@@ -23,9 +23,13 @@ module CrossLint
       command = line.command
       words = line.words
       running = line.action == :run
-      # A plugin's name alone, as in crosslint debt, asks what the plugin has.
-      return plugin_help(spec, line) if words.any? && (line.action == :help || (running && (command&.name == "help" || (command.nil? && words.size == 1))))
-      return plugin_command(spec, line) if running && command.nil? && words.any?
+      if words.any? && line.action != :version
+        # Words come with no command of CrossLint's but help. A plugin's name
+        # alone, as in crosslint debt, asks what the plugin has.
+        return plugin_help(spec, line) if line.action == :help || command || words.size == 1
+
+        return plugin_command(spec, line)
+      end
 
       if running && command
         return check(spec, line) if command.name == "check"
@@ -65,8 +69,9 @@ module CrossLint
     # The help of `command`, or of the program with the commands of the
     # project's plugins, which only the program's help reads the project for.
     def render_help(spec, line, command)
-      plugins = command ? Help::Plugins.none : help_plugins(listing(spec, line))
-      Help.new(spec, plugins:).render(command)
+      return Help.new(spec).render(command) if command
+
+      Help.new(spec, plugins: help_plugins(listing(spec, line))).render
     end
 
     # What the plugins the project lists have on disk, or the mistake that

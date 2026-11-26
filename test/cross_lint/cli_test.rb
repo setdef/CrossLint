@@ -7,6 +7,10 @@ require "open3"
 class CLITest < Minitest::Test
   cover "CrossLint::CLI*"
 
+  # A mistake of a kind that no code of CrossLint's raises, to tell a mistake
+  # from one of its subclasses.
+  class RareMistake < CrossLint::Core::Mistake; end
+
   # Absolute paths as File.expand_path gives them, with a drive on Windows.
   TOP = File.expand_path("/")
   WORK = File.expand_path("/work")
@@ -340,6 +344,44 @@ class CLITest < Minitest::Test
 
     assert_equal [["", 0], true], [[err, status], out.start_with?("CrossLint ") && out.include?("Plugin commands:\n  Not shown, because")]
     assert_equal ["", "crosslint: crosslint has no command chekc; did you mean check?\n", 2], helping("chekc", "--help", app: app(broken: mistake))
+  end
+
+  def test_a_plugins_command_reads_the_project_of_the_folder_it_runs_in_and_refuses_a_plugin_named_for_a_command_of_the_spec_it_is_given
+    Dir.mktmpdir("crosslint") do |project|
+      write(project, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/run"\n))
+      write(project, ".config/crosslint/run/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "go" help="Goes"\n))
+      out, err, status = Dir.chdir(project) { run_cli("go", "now") }
+
+      assert_equal ["", 2], [out, status]
+      assert_match(%r{\Acrosslint: \.config/crosslint/run/plugin\.kdl:3: plugin run in .* adds commands, and run is reserved, as a command of CrossLint}, err)
+    end
+  end
+
+  def test_a_version_flag_after_a_plugins_words_prints_the_version
+    assert_equal ["crosslint #{shipped_spec.version}\n", "", 0], check("debt", "--version", app: app(debt: true))
+    assert_equal ["crosslint #{shipped_spec.version}\n", "", 0], check("debt", "update", "-V", app: app(debt: true))
+  end
+
+  def test_help_for_a_command_of_crosslint_lists_no_plugin_commands_and_reads_no_project
+    spy = Class.new(CrossLint::App) { def listing(_) = raise("read the project") }.new
+    check_help = CrossLint::Help.new(shipped_spec).render(shipped_spec.commands.first)
+
+    assert_equal [check_help, "", 0], check("check", "--help", app: spy)
+    assert_equal [check_help, "", 0], check("help", "check", app: spy)
+    assert_equal [check_help, "", 0], helping("check", "--help", app: app(debt: true))
+  end
+
+  def test_help_names_a_listed_plugin_though_another_is_not_fetched_yet
+    debt = CrossLint::Help.new(shipped_spec).plugin("debt", built_in_manifests.fetch(File.join(CrossLint::App::PLUGINS, "debt")).commands)
+
+    assert_equal [debt, "", 0], helping("debt", "--help", app: app(debt: true, shared: true))
+  end
+
+  def test_help_treats_a_kind_of_mistake_as_one_when_the_plugins_cant_be_read
+    broken = app(broken: RareMistake.new("lists nothing", file: ".config/crosslint/config.kdl"))
+
+    assert_includes helping("--help", app: broken)[0], "Plugin commands:\n  Not shown, because"
+    assert_includes helping("debt", "--help", app: broken)[0], "Plugin commands:\n  Not shown, because"
   end
 
   def test_help_for_a_plugin_not_fetched_yet_prints_the_programs_help_with_the_reason
