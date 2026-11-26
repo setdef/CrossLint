@@ -133,9 +133,9 @@ CrossLint starts a helper at the first call, as `COMMAND FILE` in the project's 
 
 A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, and a message naming the plugin and the command it needs.
 
-## Steps, settings, and flags
+## Steps, settings, and commands
 
-A plugin can also declare a step, the settings it takes, and flags of `crosslint check`. The debt plugin's `plugin.kdl`, which ships inside CrossLint, declares all four kinds of line:
+A plugin can also declare a step, the settings it takes, and commands under the plugin's name. The debt plugin's `plugin.kdl`, which ships inside CrossLint, declares all four kinds of line:
 
 ```kdl
 step "track-debt"
@@ -145,7 +145,7 @@ policy "has-debt"
 setting "file"
 setting "report-entries"
 
-flag "update-debt"
+command "update" help="Rewrite the debt file to list the current violations"
 ```
 
 | Line | Meaning |
@@ -153,7 +153,9 @@ flag "update-debt"
 | `step NAME` | A step built into CrossLint, for CrossLint to run after every rule of every plugin has run. The step sees every violation, whatever `--warnings` or `--quiet` hides, and can excuse some, add others, and report stale entries. CrossLint has one step, `track-debt`. |
 | `policy NAME` with no block | A policy no rule runs, whose violations the plugin's step reports, such as `has-debt`. The configuration disables it or changes its severity like any other policy. |
 | `setting NAME` | A setting the plugin takes in its block in the configuration. A setting the plugin doesn't declare stops CrossLint with exit status 2. |
-| `flag NAME` | A flag of `crosslint check`, written without its dashes, that the plugin's steps get. A flag no listed plugin declares stops CrossLint with exit status 2. |
+| `command NAME help=TEXT` | A command the project runs as `crosslint PLUGIN NAME`, with `TEXT` as its one line in `--help`. It runs the check, then tells the plugin's step the command's name, and the step does the command's work; a plugin with a command and no step is a mistake. `NAME` is lowercase letters, digits, and `-`, and can't be `help`. It exits with 0 when it did what it was asked, and with 2 when CrossLint can't run it. |
+
+A plugin adds no flag to `crosslint check` or to any other command of CrossLint's, and a plugin that has commands can't have the name of one of CrossLint's commands. Its commands take the global flags, anywhere on the line. What `--help` shows for them, and what a mistyped one prints, is in [Plugins](../design/plugins.md#plugin-commands).
 
 ## Artifacts declared in Ruby
 
@@ -183,7 +185,7 @@ end
 | Method | Meaning |
 | --- | --- |
 | `declare(settings)` | Called once per check, before any rule runs. Each setting has `name`, `arguments`, `properties`, `children`, and `line`, as the configuration gives them. |
-| `artifact(NAME, files:, companions: {}, key: nil, optional: false)` | Declares an artifact as an `artifact` line does, with `files` and each companion's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `files` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. |
+| `artifact(NAME, files:, companions: {}, key: nil, optional: false, hidden: true)` | Declares an artifact as an `artifact` line does, with `files` and each companion's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `files` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. With `hidden: false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. |
 | `mistake(MESSAGE, SETTING)` | A mistake in the configuration at that setting's line, for `declare` to raise. It stops CrossLint with exit status 2, as any mistake does. |
 
 Anything else `declare` raises stops CrossLint with exit status 2, naming the plugin, since no check can run without its artifacts.

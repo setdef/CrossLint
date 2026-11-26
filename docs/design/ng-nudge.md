@@ -15,7 +15,7 @@ What CrossLint must keep from [ng-nudge](https://github.com/OverTheTopMarketing/
 ## Defects not to copy
 
 - **Existence from the filesystem, not from TypeScript.** ng-nudge asks its ts-morph project whether a companion exists, and that project holds only what `tsconfig.json` includes, so an excluded spec counts as missing (`lib/artifact/artifact-file.js:16-18`).
-- **Stylesheets beside the component.** ng-nudge looks for them relative to the working directory instead of `srcDir`, so `prefer-css-over-scss` never fires (`lib/artifact/component.artifact.js:71-77`). Fixing this finds violations ng-nudge hid, which is why moving ends with one `--update-debt`.
+- **Stylesheets beside the component.** ng-nudge looks for them relative to the working directory instead of `srcDir`, so `prefer-css-over-scss` never fires (`lib/artifact/component.artifact.js:71-77`). Fixing this finds violations ng-nudge hid, which is why moving ends with one `crosslint debt update`.
 - **A rule's declared severity.** ng-nudge gives every rule with no `rc.json` entry `error`, so its warning rule fails the run (`lib/config/registry/rule.registry.js:18-20`).
 - **`expects` that works.** In ng-nudge any `expects` list turns a role's checks off, because strings are compared with a class (`lib/artifact/artifact.js:80-82`).
 - **Every input and output form.** ng-nudge skips a decorated property with no initializer, setters, `model()`, `outputFromObservable()`, and aliases (`lib/artifact/api.js:52-88`), and doesn't follow an interface's `extends` (`lib/artifact/interface-api.js:28-31`).

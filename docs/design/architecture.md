@@ -10,12 +10,12 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 | Ports | `sig/cross_lint/ports.rbs` | One RBS interface for each thing outside the core | Nothing; Ruby never loads them |
 | Adapters | `lib/cross_lint/adapters/` | One implementation of a port per format or system, and an in-memory one of each | The core, and gems |
 | Contract tests | `lib/cross_lint/testing.rb` | For each port, the Minitest tests every adapter of it passes | The core, and Minitest |
-| Command line | `lib/cross_lint/cli.rb` and beside it | Reading arguments by `crosslint.usage.kdl`, calling one use case, and turning its result into an exit status | The composition root |
+| Command line | `lib/cross_lint/cli.rb` and beside it | Reading arguments by `crosslint.usage.kdl` and the commands the project's plugins declare, calling one use case, and turning its result into an exit status | The composition root |
 | Composition root | `lib/cross_lint/app.rb` | Building the adapters and handing them to a use case | Everything above |
 | Built-in plugins | `plugins/angular/`, `plugins/debt/` | Each a folder with a `plugin.kdl`, its Ruby, its helpers, and its tests with their fixtures | Only what any plugin can reach |
 
 - **The domain:** artifact, companion, policy, rule result, violation with its identity, and debt entry, by the [glossary](../glossary.md)'s words. Each is immutable, and defined as `class Violation < Data.define(...)`: RBS's runtime checker misses a class defined with a block passed to `Data.define`.
-- **The use cases:** check, initialize a configuration, and update shared plugins (`crosslint update`). Updating the debt is part of the check: the debt plugin's step does it when `--update-debt` is given. A use case takes its ports as keyword arguments and returns a value; it never prints, reads a file, or exits.
+- **The use cases:** check, initialize a configuration, and update shared plugins (`crosslint update`). A plugin's command, such as `crosslint debt update`, runs the check use case and tells the plugin's step the command's name; the debt plugin's step then rewrites its file. How plugins reach the engine is [ADR 0003](../decisions/0003-a-plugin-reaches-the-engine-only-through-what-its-manifest-declares.md). A use case takes its ports as keyword arguments and returns a value; it never prints, reads a file, or exits.
 - **The ports:** project files (which files exist, as Git sees the working tree), configuration, plugin manifests, debt file, shared plugins (fetching them, and listing a repository's tags), plugins' Ruby, helpers, and report. Each one's contract is its RBS interface plus its contract tests: change the tests first, then the interface, then the adapters.
 
 ## Rules
@@ -25,4 +25,5 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 - Every adapter of a port passes that port's contract tests, the in-memory adapter included; the use cases' tests run against the in-memory adapters.
 - Nothing outside `plugins/angular/` refers to anything inside it, so it can move to a separate repository.
 - Every file under `lib/` has an RBS signature at the matching path under `sig/`. Steep checks `lib/` against `sig/`, and the test suite runs a second time under RBS's runtime checker. CrossLint checks that every file has its signature with a local plugin, the one in the README's first example.
+- A built-in plugin's Ruby loads at run time, once for each check, so the tests load it once as well, as top-level constants (`test/plugin_ruby.rb`), and coverage and mutant measure it as they measure `lib/`.
 - Code stays within Ruby 3.3's syntax, which mutant's parser reads, since every change is mutation-tested.

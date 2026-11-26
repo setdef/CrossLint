@@ -39,6 +39,7 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **configuration** | `.config/crosslint/config.kdl` in a project's root, beside the debt file and any local plugins the project keeps in `.config/crosslint/`. It lists the plugins CrossLint runs, and settings for their rules. | config file, rc file, settings (a setting is one value in it) |
 | **setting** | One value in the configuration, such as a plugin's `src-dir` or a policy's `severity`. | option (an option is on the command line), preference |
 | **mistake** | Something in the configuration or a manifest that CrossLint can't use, such as a node it doesn't know. A mistake stops CrossLint with exit status 2 before it checks anything, naming the file and the line. | error (an error is a severity), invalid config |
+| **plugin command** | A command a plugin adds under the plugin's name, which a project runs as `crosslint PLUGIN COMMAND`, such as the debt plugin's `crosslint debt update`. It runs the check, and the plugin's step does the command's work. | subcommand, plugin flag |
 | **helper** | A program in another language that a plugin carries to read files of that language, such as the Angular plugin's JavaScript that asks the project's TypeScript compiler for a component's inputs. It runs on the runtime for that language that the project already has. | adapter, bridge, sidecar |
 
 ## Debt
@@ -48,4 +49,4 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **debt** | Violations a project accepts for now, so the check passes until a new one appears. | baseline, suppressions, ignores, allowlist |
 | **debt file** | `.config/crosslint/debt.tsv`, the file that lists a project's debt, one entry per line, committed with the project. | baseline file |
 | **entry** | One line of the debt file: the plugin and policy that found the violation, the artifact, a detail where the rule gives one, and a comment saying why the violation is accepted. | record, row |
-| **stale entry** | An entry that no current violation matches, because someone fixed it. A stale entry fails the check until `crosslint check --update-debt` removes it. | paid-off debt, resolved debt |
+| **stale entry** | An entry that no current violation matches, because someone fixed it. A stale entry fails the check until `crosslint debt update` removes it. | paid-off debt, resolved debt |

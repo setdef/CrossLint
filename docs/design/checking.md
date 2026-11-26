@@ -16,7 +16,7 @@ What `crosslint check` must guarantee, and the traps known so far. Its interface
 - Read and check every plugin the configuration lists before checking any file. A mistake in a configuration or a `plugin.kdl` stops CrossLint with exit status 2, naming the file, the line, and the nearest valid spelling. A line CrossLint doesn't understand is never skipped, because a skipped rule is a check that never runs.
 - A rule runs only on an artifact a policy applies it to. A rule no policy runs is reported, never loaded and ignored.
 - **Every violation has its plugin and policy, its artifact with the artifact's role, a message, and a severity,** and a detail where one artifact can have several, such as a missing member's name. A violation without them is a fault in its plugin, reported as such, since debt can't record it.
-- A check reads files and writes none. Only `--update-debt`, `init`, and `update` write, and each says which files it wrote.
+- A check reads files and writes none. Only `init`, `update`, and a plugin's command, such as `crosslint debt update`, write, and each says which files it wrote.
 
 ## Output and exit status
 

@@ -14,14 +14,14 @@ What the debt plugin must guarantee, and the traps known so far. The file's sett
 ## Matching
 
 - **A violation's identity is its plugin and policy, its artifact with the artifact's role, and its detail,** such as a member's name. An entry matches one violation with the same identity. The `Artifact` column holds the artifact's primary path or its key, such as the base path ng-nudge writes for an Angular artifact (`app/card/card`), each alone or as `<name>.<role>`; CrossLint reads all four, and writes the primary path, or `<path>.<role>` when two roles share it. The `Rule` column holds `PLUGIN/POLICY`, or a bare name, as ng-nudge writes it, which stands for the policy of that name when exactly one listed plugin has one.
-- **An entry with no detail matches only a violation with no detail.** Except: an entry written by ng-nudge, for a policy whose violations carry a detail, matches every violation of that policy on its artifact, with a warning naming the entry, until `--update-debt` rewrites it as one entry per violation, each with its detail. Moving from ng-nudge then adds no failures, and the coarse matching ends after one update.
-- **An entry two artifacts match** excuses both, with a warning naming both, and `--update-debt` rewrites it as one entry per artifact, keyed `<base>.<role>`.
-- **An entry for a disabled policy, or for a plugin the configuration doesn't list, is not checked:** neither stale nor reported, and `--update-debt` keeps it with its comment.
-- **Excusing, stale detection, and `--update-debt` see every violation,** whatever `--warnings` or `--quiet` hides.
+- **An entry with no detail matches only a violation with no detail.** Except: an entry written by ng-nudge, for a policy whose violations carry a detail, matches every violation of that policy on its artifact, with a warning naming the entry, until `crosslint debt update` rewrites it as one entry per violation, each with its detail. Moving from ng-nudge then adds no failures, and the coarse matching ends after one update.
+- **An entry two artifacts match** excuses both, with a warning naming both, and `crosslint debt update` rewrites it as one entry per artifact, keyed `<base>.<role>`.
+- **An entry for a disabled policy, or for a plugin the configuration doesn't list, is not checked:** neither stale nor reported, and `crosslint debt update` keeps it with its comment.
+- **Excusing, stale detection, and `crosslint debt update` see every violation,** whatever `--warnings` or `--quiet` hides.
 
 ## Updating
 
-- `--update-debt` keeps each entry that still matches, with its comment, in its place; drops stale entries; adds one entry per new violation, warnings included, with an empty comment, never a duplicate; and never records the debt plugin's `has-debt` violations.
+- `crosslint debt update` keeps each entry that still matches, with its comment, in its place; drops stale entries; adds one entry per new violation, warnings included, with an empty comment, never a duplicate; and never records the debt plugin's `has-debt` violations.
 - New entries are written in an order that doesn't depend on the order the filesystem lists files in.
 - After an update, report the state the update left, and exit with 0.
 

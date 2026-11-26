@@ -39,7 +39,7 @@ ng-nudge's checks for Angular projects: a spec for every component, directive, p
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
-| `src-dir PATH` | The folder the plugin's artifacts are found in, relative to the project's root. | `src` |
+| `src-dir PATH` | The folder the plugin's artifacts are found in, relative to the project's root. A file or folder below it whose name starts with `.` is skipped, as ng-nudge skips them. | `src` |
 | `tsconfig PATH` | The `tsconfig.json` the helper reads, relative to the project's root, once a component has a stub or an interface. | `tsconfig.json` |
 | `role NAME files=PATTERN { expects COMPANION ... }` | Find a role's files by this [path pattern](plugin.md#artifact), which ends in `.ts`, relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. Each companion is at the primary file's path with `.ts` replaced, such as `.spec.ts`. `expects` takes only `spec`; without a block, the role expects a spec. | |
 
@@ -52,7 +52,13 @@ Debt tracking: violations listed in the debt file don't fail the check, and an e
 | `file PATH` | The debt file, relative to the project's root. | `.config/crosslint/debt.tsv` |
 | `report-entries commented=SEVERITY matching=REGEX` | Also report each entry as a finding on the debt file, `line N lists PLUGIN/POLICY on ARTIFACT as debt: COMMENT`, from the policy `debt/has-debt`: an entry with a comment at `commented` (`error`, `warning`, or `none`; without it, the policy's severity), and one without at the policy's severity. With `matching`, only a comment the regular expression matches counts as one. | entries aren't reported |
 
-An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is: it is neither stale nor reported, and `--update-debt` keeps it with its comment.
+An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is: it is neither stale nor reported, and `crosslint debt update` keeps it with its comment.
+
+The debt plugin adds one command:
+
+| Command | What it does |
+| --- | --- |
+| `crosslint debt update` | Runs the check, then rewrites the debt file to list exactly the current violations: keeps each entry that still matches, with its comment, drops stale entries, and adds one entry with an empty comment for each new violation, warnings included. Then reports the state the update left, and exits with 0. It takes the global flags, such as `-C`. |
 
 ## `policy`
 

@@ -5,7 +5,7 @@
 - **License:** MIT
 - **Repository:** https://github.com/setdef/CrossLint
 
-CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint/config.kdl, lists the plugins it runs.
+CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint/config.kdl, lists the plugins it runs. A plugin can add commands under its own name, such as crosslint debt update, and crosslint --help lists the commands of the plugins the project lists.
 
 Findings go to standard output, one per line. The lines CrossLint prints about itself go to standard error, and each begins with "crosslint:".
 
@@ -24,14 +24,6 @@ Runs every plugin the configuration lists, prints each violation, and exits with
 
 ```
 crosslint check
-```
-
-**Accept the current violations as debt**
-
-Writes every current violation to the debt file, so the next check passes until a new one appears.
-
-```
-crosslint check --update-debt
 ```
 
 **Move a project from ng-nudge**
@@ -65,7 +57,7 @@ crosslint init --from-ng-nudge
 
 Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the file, the message, and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
 
-Violations listed in the debt file don't fail the check. An entry that no violation matches any more does, until --update-debt removes it.
+A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report stale entries, which fail the check: an entry that no violation matches any more fails it until crosslint debt update removes it.
 
 ### Flags
 - **`--warnings <mode>`** — Show warnings, hide them, or let them fail the check
@@ -75,9 +67,6 @@ Violations listed in the debt file don't fail the check. An entry that no violat
   **Default:** `all`
 - **`-a --all`** — List every artifact checked, passing ones included; --json leaves passing ones out
 - **`--json`** — Print the findings and the summary as one JSON object in place of lines
-- **`--update-debt`** — After checking, rewrites the debt file to list exactly the current violations: keeps each entry that still matches, with its comment, drops stale entries, and adds one entry with an empty comment for each new violation. Then reports the state the update left, and exits with 0.
-
-  **Effect:** modifies state
 
 ### Exit Status
 
@@ -104,12 +93,6 @@ crosslint check --warnings=error
 
 ```
 crosslint check --json
-```
-
-**Record the current violations as debt**
-
-```
-crosslint check --update-debt
 ```
 
 ## `crosslint init`

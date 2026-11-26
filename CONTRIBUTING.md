@@ -15,11 +15,11 @@ What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/RE
 
 ## Checks
 
-`bundle exec rake check` runs every check CI runs, and a change passes all of them before it's pushed:
+After `bundle install`, run `bundle exec rake fixtures` once: it installs the packages the Angular plugin's test fixtures lock, with `npm ci`, using the Node that `mise.toml` pins. No test task runs it, and a test whose fixture lacks them fails saying to run it. Then `bundle exec rake check` runs every check CI runs, and a change passes all of them before it's pushed:
 
-- the test suite, covering every line and branch of `lib/` but the other system's process tree (`job_object.rb` off Windows, `process_group.rb` on it), with each built-in plugin's tests in its folder under `plugins/`; the Angular plugin's tests need the Node that `mise.toml` pins, and `rake fixtures`, which the test tasks run first, installs their fixtures' packages with `npm ci`;
+- the test suite, covering every line and branch of `lib/` and of each built-in plugin's Ruby, but the other system's process tree (`job_object.rb` off Windows, `process_group.rb` on it), with each built-in plugin's tests in its folder under `plugins/`;
 - the same suite under RBS's runtime type checker, which compares every call into CrossLint with `sig/`;
-- mutation testing with mutant, `JobObject` aside, which a test must catch every change of;
+- mutation testing with mutant, of `lib/` and each built-in plugin's Ruby, `JobObject` aside, which a test must catch every change of; CI runs it in four parts at once, each as `MUTANT_SHARD=N/4 bundle exec rake mutant`, and `rake check:without_mutant` runs the rest;
 - Steep, checking `lib/` against `sig/`, `rbs validate`, and the check that every public declaration in `sig/` has a comment;
 - Standard, for style, set to Ruby 3.3's syntax, which mutant reads;
 - every Ruby example in the documentation, run and checked against the results it shows;
@@ -30,6 +30,14 @@ Every public class, module, method, and constant is documented in its RBS signat
 ## Landing a change
 
 Commit straight to `trunk`, one change at a time, each one complete and releasable. A spike, an experiment written to answer a question, is throwaway code and stays off `trunk`; its answer goes in the issue it serves. Run the checks that apply to the change before you push, and rebase and run them again when a push is refused because `trunk` moved.
+
+When CI on `trunk` fails, revert the commit that broke it at once, whoever wrote it, and tell its author in the issue the commit names; the fix lands again afterwards, with a test. Nobody fixes forward on a red `trunk`.
+
+### Known flaky tests
+
+A test that fails without a change to what it tests is a fault in the test, fixed or set aside with its reason recorded here, never rerun until it passes. Running it again never closes it.
+
+- **Mutations of `err:` in `App#initialize` and `CLI#check`** sometimes survive a full mutation run, and never alone. The likely cause is a thread that raises into a test after it ended; #18 tracks it.
 
 ## Licensing
 

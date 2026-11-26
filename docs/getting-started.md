@@ -94,10 +94,11 @@ crosslint: checked 9 ruby-file artifacts: 2 errors
 
 ## Accept the rest as debt
 
-The other two will take longer. Rather than leave the check failing until they're done, record them as **debt**:
+The other two will take longer. Rather than leave the check failing until they're done, record them as **debt** with the debt plugin's command:
 
+<!-- Placeholder: replace this output with that of a real run of crosslint debt update once the command works (#20). -->
 ```console
-$ crosslint check --update-debt
+$ crosslint debt update
 crosslint: wrote .config/crosslint/debt.tsv: 2 entries added, 0 removed
 crosslint: checked 9 ruby-file artifacts: 2 accepted as debt
 ```
@@ -113,7 +114,7 @@ $ echo $?
 
 Commit `.config/crosslint/config.kdl`, the plugin, and the debt file.
 
-Now the check passes while no violation is new. Add a Ruby file under `lib/` with no test, and it fails again. Write the test for `currency.rb`, and it fails too: its entry has become a **stale entry**, and `crosslint check --update-debt` removes it, so the debt file only ever shrinks as the work gets done.
+Now the check passes while no violation is new. Add a Ruby file under `lib/` with no test, and it fails again. Write the test for `currency.rb`, and it fails too: its entry has become a **stale entry**, and `crosslint debt update` removes it, so the debt file only ever shrinks as the work gets done.
 
 ## Check your work
 
