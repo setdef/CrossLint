@@ -1,0 +1,9 @@
+{
+  "name": "summary",
+  "protocol": 1,
+  "runtime": { "command": "sh", "args": ["{plugin_dir}/plugin.sh"], "also": ["jq"] },
+  "lifetime": "per-check",
+  "artifacts": [],
+  "policies": [],
+  "hooks": { "post_check": {} }
+}

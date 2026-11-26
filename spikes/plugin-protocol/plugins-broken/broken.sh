@@ -10,6 +10,13 @@ case "$1" in
                    *) echo '{"id":2,"error":{"code":"dependency-missing","message":"the project has no installed typescript"}}' ;;
                  esac
                done ;;
+  # A violation with no rule cannot become a debt entry, so the host refuses it (ng-nudge bug 27).
+  no-rule)    while read -r line; do
+                case "$line" in
+                  *handshake*) echo '{"id":1,"result":{"protocol":1,"name":"no-rule"}}' ;;
+                  *) echo '{"id":2,"result":{"violations":[{"path":"src/app/card/card.component.ts","message":"no rule here"}]}}' ;;
+                esac
+              done ;;
   # A plugin that starts a child and hangs. The child's pid goes to $HANG_PIDFILE so run.sh can check it is gone.
   hang)       read -r line; sleep 30 & echo $! > "$HANG_PIDFILE"; wait ;;
 esac

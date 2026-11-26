@@ -16,6 +16,7 @@ mise x -- ruby -v
 
 # Fledge runs app/main.rb. The host is the program, so the build copies it there.
 cp ../host/crosslint.rb app/main.rb
+cp ../host/debt.rb app/debt.rb
 (cd app && mise x -- bundle lock)
 
 rm -rf dist

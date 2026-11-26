@@ -1,0 +1,3 @@
+Rule	Artifact	Comment
+interface-matches-api	app/multi/multi	first
+interface-matches-api	app/multi/multi	second

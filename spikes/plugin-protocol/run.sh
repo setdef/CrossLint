@@ -59,6 +59,7 @@ expect_failure crash "crashes: exited: status 3 before answering. stderr: boom"
 expect_failure garbage "prints-garbage: bad-json"
 expect_failure wrong-protocol "speaks-protocol-2: protocol-mismatch"
 expect_failure error-reply "replies-with-an-error: dependency-missing"
+expect_failure no-rule "violation-without-rule: bad-response: a violation needs a rule and a path"
 export HANG_PIDFILE="$here/.scratch/hang.pid"
 rm -f "$HANG_PIDFILE"
 expect_failure bad-condition 'bad-condition: bad-manifest: unknown condition "moon-phase"'
@@ -95,5 +96,9 @@ if ! PATH="$ruby_dir:/usr/bin:/bin" command -v node >/dev/null 2>&1; then
 else
   echo "skip no-node check: node is in /usr/bin or /bin here"
 fi
+
+# 4. Debt tracking, designs (a) and (b), over the same cases: see debt/check.sh.
+bash "$here/debt/check.sh" snapshot mixed mixed-update=mixed more detail detail-update=detail shared shared-update=shared \
+  idempotent=full bad-row disabled=full plugin-failed-no-node=full has-debt-true=mixed has-debt-none=mixed has-debt-matching=mixed two-hooks=mixed || failed=1
 
 exit "$failed"

@@ -1,0 +1,7 @@
+Debt not checked in this run:
+   app/card/card.component spec-exists: it did not run on this artifact (disabled, or its policy does not apply)
+   app/card/card.service spec-exists: it did not run on this artifact (disabled, or its policy does not apply)
+   app/data/data spec-exists: it did not run on this artifact (disabled, or its policy does not apply)
+   app/footer/footer spec-exists: it did not run on this artifact (disabled, or its policy does not apply)
+   app/multi/multi spec-exists: it did not run on this artifact (disabled, or its policy does not apply)
+exit 0

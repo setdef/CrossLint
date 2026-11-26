@@ -1,0 +1,17 @@
+Rule	Artifact	Comment	Detail
+spec-exists	app/footer/footer	"add it when the footer is redesigned, ""soon"""
+stub-exists	app/list/list
+interface-matches-api	app/card/card	"first line
+second line"
+prefer-css-over-scss	app/card/card	written on Windows	
+interface-exists	app/footer/footer	"a	tab"
+interface-matches-api	app/list/list		inheritedSignal
+interface-matches-api	app/multi/multi		alpha
+interface-matches-api	app/multi/multi		beta
+interface-matches-api	app/multi/multi		gamma
+spec-exists	app/card/card.component		
+spec-exists	app/card/card.service		
+spec-exists	app/data/data		
+spec-exists	app/multi/multi		
+stub-exists	app/card/card		
+stub-exists	app/multi/multi		

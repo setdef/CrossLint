@@ -68,7 +68,7 @@ function check({ root, items }) {
     const decls = program.getSourceFile(abs(iface.path)).statements.filter(ts.isInterfaceDeclaration);
     const declared = new Set(decls.flatMap((d) => d.members.map((m) => m.name.getText())));
     for (const name of apiOf(item.path)) {
-      if (!declared.has(name)) violations.push({ rule: 'interface-matches-api', path: item.path, message: `${iface.path} lacks "${name}"` });
+      if (!declared.has(name)) violations.push({ rule: 'interface-matches-api', path: item.path, message: `${iface.path} lacks "${name}"`, detail: name });
     }
   }
   return { violations };

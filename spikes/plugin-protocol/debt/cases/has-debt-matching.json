@@ -1,0 +1,1 @@
+{ "rules": { "has-debt": { "severity": "warning", "withComment": { "maxSeverity": "none", "matching": "redesigned|Windows" } } } }

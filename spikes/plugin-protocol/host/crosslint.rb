@@ -8,6 +8,7 @@
 #
 # Exit status: 0 no violations, 1 violations, 2 a plugin failed.
 
+require "fileutils"
 require "json"
 require "open3"
 require "optparse"
@@ -21,9 +22,10 @@ module Spike
   PROTOCOL = 1
 
   class PluginFailure < StandardError
-    attr_reader :kind
+    attr_reader :kind, :plugin
 
     def initialize(plugin, kind, message)
+      @plugin = plugin
       @kind = kind
       super("plugin #{plugin}: #{kind}: #{message}")
     end
@@ -81,6 +83,14 @@ module Spike
         nil
       end
     end
+  end
+
+  # An artifact's key in debt.tsv: its path below srcDir, without the role suffix (src/app/foo/foo.service.ts -> app/foo/foo).
+  def self.key(path, src_dir)
+    rel = path.delete_prefix("#{src_dir}/")
+    dir = File.dirname(rel)
+    base = File.basename(rel).split(".").first
+    dir == "." ? base : "#{dir}/#{base}"
   end
 
   # A policy's condition, as data. See the README for the list.
@@ -196,10 +206,22 @@ module Spike
       t0 = now
       result = call("check", { "root" => @root, "artifact" => artifact, "items" => items })
       @timings << ["check", now - t0]
-      result.fetch("violations").map { _1.merge("plugin" => @name) }
+      result.fetch("violations").map do |v|
+        fail!("bad-response", "a violation needs a rule and a path: #{v.inspect[0, 80]}") unless v["rule"].is_a?(String) && !v["rule"].empty? && v["path"].is_a?(String)
+
+        v.merge("plugin" => @name)
+      end
     rescue KeyError => e
       fail!("bad-response", e.message)
     end
+
+    # The post-check hook: one request after every check, with all the violations (see ../README.md).
+    def post_check(params)
+      t0 = now
+      call("post_check", params).tap { @timings << ["post_check", now - t0] }
+    end
+
+    def post_check? = @manifest.dig("hooks", "post_check") ? true : false
 
     def stop
       return unless @wait
@@ -270,8 +292,13 @@ module Spike
   end
 end
 
-options = { root: Dir.pwd, provision: false, timing: false, repeat: 1, lifetime: nil, config: {} }
+options = { root: Dir.pwd, provision: false, timing: false, repeat: 1, lifetime: nil, config: {}, core_debt: false, flags: [] }
+# A plugin's manifest lists the command-line flags its hook takes, so the host reads the manifests before it parses the line.
+hook_flags = ARGV.select { File.file?(File.join(_1, "plugin.json")) }.flat_map { JSON.parse(File.read(File.join(_1, "plugin.json"))).dig("hooks", "post_check", "flags") || [] }
 OptionParser.new do |o|
+  hook_flags.each { |flag| o.on("--#{flag}") { options[:flags] << flag } }
+  o.on("--core-debt") { options[:core_debt] = true } # design (a): the host does debt tracking itself
+  o.on("--update-debt") { options[:flags] << "update-debt" } if ARGV.include?("--core-debt")
   o.on("--info") do
     puts "ruby #{RUBY_VERSION} #{RUBY_PLATFORM}", "host_ruby #{RbConfig.ruby}", "ruby on PATH #{Spike.which("ruby") || "none"}"
     exit
@@ -298,6 +325,12 @@ rescue Spike::PluginFailure => e
   nil
 end
 
+# Facts the post-check hook needs: the key of each item found, which rules ran where, which items exist.
+src_dir = options[:config]["srcDir"] || "src"
+keys = {}
+known = {}
+ran = []
+
 # Apply the policies: which rules run on which artifacts. plan[target plugin][[owner, artifact]] = items by path.
 plan = Hash.new { |h, k| h[k] = {} }
 loaded.each do |owner|
@@ -305,6 +338,8 @@ loaded.each do |owner|
     Array(policy.fetch("artifacts")).each do |artifact_name|
       artifact = owner.artifact(artifact_name)
       owner.items(artifact).each do |item|
+        keys[[owner.name, artifact_name, item["path"]]] = Spike.key(item["path"], src_dir)
+        known[[artifact_name, keys[[owner.name, artifact_name, item["path"]]]]] = true
         next unless Spike.holds?(policy["when"], item, artifact, options[:config], options[:root], owner.name)
 
         # A rule is "name" (the policy's own plugin) or "plugin/name". No `rules` means the plugin decides.
@@ -337,11 +372,15 @@ loaded.each do |plugin|
   groups = plan.fetch(plugin, {})
   begin
     plugin.start if plugin.per_run? && !groups.empty?
-    groups.each do |(_owner, artifact_name), by_path|
+    groups.each do |(owner_name, artifact_name), by_path|
       begin
         plugin.start unless plugin.per_run?
         results = Array.new(options[:repeat]) { plugin.check(artifact_name, by_path.values) }
-        violations.concat(results.first)
+        # Each violation gets the artifact it was found on and that artifact's key.
+        violations.concat(results.first.map { _1.merge("artifact" => artifact_name, "key" => keys[[owner_name, artifact_name, _1["path"]]] || Spike.key(_1["path"], src_dir)) })
+        by_path.each_value do |item|
+          (item["rules"] || plugin.manifest.fetch("rules", []).map { _1["name"] }).each { |rule| ran << [plugin.name, rule, artifact_name, keys[[owner_name, artifact_name, item["path"]]]] }
+        end
       ensure
         plugin.stop unless plugin.per_run?
       end
@@ -356,6 +395,52 @@ loaded.each do |plugin|
   end
 end
 
-violations.each { |v| puts "#{v["path"]}: [#{v["plugin"]}/#{v["rule"]}] #{v["message"]}" }
+violations.each_with_index { |v, i| v["id"] = i }
+
+# After the checks, whoever does debt tracking sees every violation and says which are excused, which
+# entries are stale, and what to write. Design (a): the host does it (host/debt.rb). Design (b): a
+# plugin with a post_check hook does it, and the host applies the answer the same way.
+report = []
+failing = false
+apply = lambda do |answer|
+  excused = answer.fetch("excused").to_h { [_1, true] }
+  violations = violations.reject { excused[_1["id"]] } + answer.fetch("violations", [])
+  report.concat(answer.fetch("report", []))
+  failing ||= answer["failing"]
+  answer.fetch("writes", []).each do |w|
+    target = File.expand_path(w["path"], options[:root])
+    raise Spike::PluginFailure.new("host", "bad-write", "#{w["path"]} is outside the project") unless target.start_with?(options[:root])
+
+    FileUtils.mkdir_p(File.dirname(target))
+    File.binwrite(target, w["content"])
+  end
+end
+healthy = loaded.reject { |p| failures.any? { _1.plugin == p.name } }
+debt_input = {
+  "root" => options[:root], "config" => options[:config], "flags" => options[:flags], "violations" => violations, "ran" => ran, "known" => known.keys,
+  "rules" => (healthy.flat_map { |p| p.manifest.fetch("rules", []).map { |r| [p.name, r["name"]] } } | violations.map { [_1["plugin"], _1["rule"]] })
+}
+begin
+  if options[:core_debt]
+    require_relative "debt"
+    begin
+      apply.(Debt.evaluate(debt_input))
+    rescue Debt::Error => e
+      raise Spike::PluginFailure.new("core-debt", "debt-file", e.message)
+    end
+  end
+  loaded.select(&:post_check?).each do |plugin|
+    plugin.start
+    apply.(plugin.post_check(debt_input.merge("violations" => violations)))
+  ensure
+    plugin.stop
+    plugin.timings.each { |what, s| warn format("timing %-28s %-16s %6.0f ms", plugin.name, what, s * 1000) } if options[:timing]
+  end
+rescue Spike::PluginFailure => e
+  fail_with.(e)
+end
+
+violations.each { |v| puts "#{v["path"]}: [#{v["plugin"]}/#{v["rule"]}] #{"(warning) " if v["severity"] == "warning"}#{v["message"]}" }
+report.each { puts _1 }
 exit 2 unless failures.empty?
-exit 1 unless violations.empty?
+exit 1 if failing || violations.any? { (_1["severity"] || "error") == "error" }
