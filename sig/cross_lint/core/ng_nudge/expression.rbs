@@ -1,0 +1,144 @@
+module CrossLint
+  module Core
+    module NgNudge
+      # A JavaScript regular expression from ng-nudge's rc.json, as the Ruby
+      # regular expression with the same meaning, tested anywhere in the
+      # text as ng-nudge's `RegExp#test` does.
+      #
+      # `^` and `$` become `\A` and `\z`; `.` becomes a class of anything
+      # but JavaScript's line terminators; `\s` and `\S` become
+      # JavaScript's white space; `\b` and `\B` become boundaries of ASCII
+      # word characters; `\xHH` becomes `\uHHHH`; and a backreference by
+      # number becomes `\k<N>`. Literals, `\d`, `\w`, `\n`, `\t`, groups,
+      # named groups, lookahead, lookbehind, simple classes, and
+      # quantifiers stay as they are. Everything else is refused, such as
+      # `\p`, `\h`, `\A`, POSIX classes, `[]`, `[^]`, a backreference to a
+      # group not yet defined, and a possessive quantifier. The caller
+      # tests the two expressions against the same texts, since a
+      # difference in what they match is the last thing the translation
+      # can't rule out.
+      #
+      # ```ruby
+      # CrossLint::Core::NgNudge::Expression.translate("^TODO\\b") # => "\\ATODO(?:(?<![A-Za-z0-9_])(?=[A-Za-z0-9_])|(?<=[A-Za-z0-9_])(?![A-Za-z0-9_]))"
+      # ```
+      class Expression
+        # The reason an expression isn't translated.
+        class Unsupported < ArgumentError
+        end
+
+        # The contents of a class for the code points, and ranges of
+        # code points, in `codes`, each written as `\uHHHH`.
+        def self.escapes: (Array[Integer | Range[Integer]] codes) -> String
+
+        # What JavaScript's `\s` stands for, as the contents of a class.
+        SPACE: String
+
+        # What JavaScript's `.` leaves out, as the contents of a class.
+        LINE_END: String
+
+        # The characters of JavaScript's `\w`, as the contents of a class.
+        WORD: String
+
+        # JavaScript's `\b`, as a Ruby expression.
+        BOUNDARY: String
+
+        # JavaScript's `\B`, as a Ruby expression.
+        NOT_BOUNDARY: String
+
+        # The characters a backslash before them makes stand for themselves.
+        LITERAL: String
+
+        # What can follow a `(` for a group that doesn't capture.
+        LOOKAROUND: Array[String]
+
+        # `{n}`, `{n,}`, and `{n,m}`, where JavaScript and Ruby agree.
+        QUANTIFIER: Regexp
+
+        # A name of a group that both read the same.
+        NAME: Regexp
+
+        # The Ruby expression for `source`, a JavaScript expression with no
+        # flags, as source text. Raises Unsupported, with the reason, for
+        # every form it doesn't translate.
+        def self.translate: (String source) -> String
+
+        # A translation of `source`.
+        def initialize: (String source) -> void
+
+        # The Ruby expression as source text. Raises Unsupported.
+        def translated: () -> String
+
+        private
+
+        @source: String
+
+        @out: String
+
+        @at: Integer
+
+        @open: Array[Array[String]]
+
+        @groups: Integer
+
+        @closed: Array[String]
+
+        @named: bool
+
+        @quantified: bool?
+
+        # Raises Unsupported with `message`.
+        def refuse: (String message) -> bot
+
+        # The source from the character at `from` on.
+        def rest: (Integer from) -> String
+
+        # Reads one character of the source, and what follows it that it
+        # starts.
+        def step: () -> void
+
+        # Writes `text`, which a quantifier can follow.
+        def atom: (String text) -> String
+
+        # Writes the quantifier `text`, and the `?` after it that makes it
+        # lazy.
+        def quantifier: (String text) -> void
+
+        # Reads the `{n,m}` that follows a `{`.
+        def braces: () -> void
+
+        # Reads what follows a `(`: a group, a lookaround, or a named
+        # group.
+        def open: () -> String
+
+        # Writes the `(` of a capturing group, numbered, with its `name`.
+        def capture: (Array[String] names, String text) -> String
+
+        # Writes a `)`, and notes the group it closes as defined.
+        def close: () -> String
+
+        # Reads the escape that follows a backslash, inside a class or not.
+        def escape: (inside: bool) -> String
+
+        # `\b` or `\B`, which a class can't have.
+        def boundary: (String char, bool inside) -> String
+
+        # The `\uHHHH` for `size` hexadecimal digits that follow `\x` or
+        # `\u`.
+        def hex: (Integer size) -> String
+
+        # The `\k<N>` for the backreference by number that the escape just
+        # read starts, with every digit of N.
+        def reference: () -> String
+
+        # The `\k<name>` for a backreference by name.
+        def named_reference: () -> String
+
+        # Reads a class, from the characters after its `[`.
+        def set: () -> String
+
+        # Writes the character `char` of a class.
+        def member: (String char) -> String
+      end
+    end
+  end
+end
