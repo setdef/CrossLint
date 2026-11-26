@@ -1,0 +1,72 @@
+module CrossLint
+  module Core
+    # Checks a loaded project: finds each artifact by its files pattern,
+    # applies each enabled policy where its condition holds, runs its
+    # rules, gives each violation its severity, and returns what to
+    # report under the --warnings mode and the verbosity. It reads the
+    # project's files only through `project_files`, and writes nothing.
+    class Check
+      # A use case that reads the project's files through `project_files`.
+      def initialize: (project_files: _ProjectFiles) -> void
+
+      # The result of checking `project`. `warnings` and `verbosity` are
+      # the command line's, nil when it gives none, and the configuration's
+      # or CrossLint's defaults (`:all`, `:normal`) apply then. With `all`,
+      # the findings include each artifact checked that has no violation.
+      # Raises Mistake for a policy that runs a rule written in Ruby, since
+      # running those doesn't work yet, and for a root outside a Git
+      # working tree.
+      def call: (Project project, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
+                 ?all: bool) -> CheckResult
+
+      private
+
+      @project_files: _ProjectFiles
+
+      # Each policy the configuration doesn't disable, with its plugin.
+      def enabled_policies: (Project project) -> Array[[Plugin, Policy]]
+
+      # The configuration's setting for a plugin's policy, or nil.
+      def setting: (Project project, Plugin plugin, Policy policy) -> PolicySetting?
+
+      # Raises Mistake when the policy runs a rule that isn't built in.
+      def refuse_ruby_rules: (Plugin plugin, Policy policy) -> void
+
+      # The artifacts `declaration` finds among `files`, in their order.
+      def find: (Project project, Plugin plugin, ArtifactDeclaration declaration, Array[String] files) -> Array[Artifact]
+
+      # The plugin and artifact names of the artifact a policy applies to.
+      def target: (Plugin plugin, Policy policy) -> [String, String]
+
+      # The kinds of artifact an enabled policy applies to, as plugin and
+      # artifact names, in the order the plugins declare them.
+      def checked_kinds: (Project project, Array[[Plugin, Policy]] policies) -> Array[[String, String]]
+
+      # The violations a policy's rules report.
+      def run: (Project project, Plugin plugin, Policy policy, Hash[String, Hash[String, Array[Artifact]]] kinds) -> Array[Violation]
+
+      # The result: violations, notices, and passing artifacts filtered by
+      # `warnings` and `verbosity`, and the summary. A nil `warnings` is
+      # `:all`.
+      def report: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
+                   Array[Violation] violations, warnings: (:all | :none | :error)?, verbosity: (:normal | :quiet | :silent),
+                   all: bool) -> CheckResult
+
+      # A notice for each Ruby rule no policy runs and each artifact
+      # declaration whose files pattern matches no file.
+      def notices: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds) -> Array[Notice]
+
+      # The artifacts of the checked kinds that have no violation.
+      def passed: (Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
+                   Array[Violation] violations) -> Array[Artifact]
+
+      # The summary of the violations shown, with `hidden` true when
+      # --warnings=none hides warnings.
+      def summary: (Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
+                    Array[Violation] shown, bool hidden) -> Summary
+
+      # `findings` in the order the report gives them.
+      def sort: (Array[Violation | Artifact] findings) -> Array[Violation | Artifact]
+    end
+  end
+end

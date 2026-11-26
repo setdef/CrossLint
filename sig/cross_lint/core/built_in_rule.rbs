@@ -23,6 +23,23 @@ module CrossLint
       # The built-in rule called `name`, or nil.
       def self.named: (String name) -> BuiltInRule?
 
+      # The built-in rule called `name`. Raises KeyError when there is
+      # none.
+      def self.fetch: (String name) -> BuiltInRule
+
+      # The messages of the violations the rule reports for `artifact`,
+      # given a policy's `arguments`: for companion-exists, one when the
+      # companion doesn't exist; for companion-absent, one when it does.
+      #
+      # ```ruby
+      # companion = CrossLint::Core::Companion.new(name: "test", path: "test/a_test.rb", exists: false)
+      # artifact = CrossLint::Core::Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb",
+      #   match: {"path" => "a"}, companions: [companion])
+      # CrossLint::Core::BuiltInRule.named("companion-exists").messages(artifact, {"companion" => "test"})
+      # # => ["no test file at test/a_test.rb"]
+      # ```
+      def messages: (Artifact artifact, Hash[String, untyped] arguments) -> Array[String]
+
       # A built-in rule with these fields.
       def self.new: (name: String, arguments: Array[String], severity: severity) -> instance
 

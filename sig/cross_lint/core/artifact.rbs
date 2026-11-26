@@ -1,0 +1,102 @@
+module CrossLint
+  module Core
+    # One of an artifact's companions: its name, its path for the
+    # artifact's primary file, and whether a file or folder is there.
+    class Companion < Data
+      # The companion's name, as its artifact declares it, such as "test".
+      attr_reader name: String
+
+      # The companion's path, relative to the project's root, with `/`.
+      attr_reader path: String
+
+      # Whether a file or folder exists at `path`, by its exact name.
+      attr_reader exists: bool
+
+      # A companion with these fields.
+      def self.new: (name: String, path: String, exists: bool) -> instance
+
+      # A companion with these fields.
+      def initialize: (name: String, path: String, exists: bool) -> void
+
+      # Whether a file or folder exists at `path`.
+      def exist?: () -> bool
+    end
+
+    # An artifact: one primary file, found by an artifact declaration's
+    # files pattern, with its companions.
+    #
+    # ```ruby
+    # companion = CrossLint::Core::Companion.new(name: "test", path: "test/a_test.rb", exists: false)
+    # artifact = CrossLint::Core::Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb",
+    #   match: {"path" => "a"}, companions: [companion])
+    # artifact.companion("test").exist? # => false
+    # ```
+    class Artifact < Data
+      # The name of the plugin that declares the artifact.
+      attr_reader plugin: String
+
+      # The artifact's role: the name its declaration has, such as
+      # "ruby-file".
+      attr_reader role: String
+
+      # The primary file's path, relative to the project's root, with `/`.
+      attr_reader path: String
+
+      # What each placeholder of the files pattern matched in `path`, by
+      # name.
+      attr_reader match: Hash[String, String]
+
+      # The companions, in the order the declaration has them.
+      attr_reader companions: Array[Companion]
+
+      # An artifact with these fields.
+      def self.new: (plugin: String, role: String, path: String, match: Hash[String, String],
+                     companions: Array[Companion]) -> instance
+
+      # An artifact with these fields.
+      def initialize: (plugin: String, role: String, path: String, match: Hash[String, String],
+                       companions: Array[Companion]) -> void
+
+      # The companion called `name`. Raises KeyError when the declaration
+      # has none of that name, which LoadProject rules out for every
+      # policy.
+      def companion: (String name) -> Companion
+    end
+
+    # What a rule reports when an artifact fails it: the plugin and policy
+    # that ran the rule, the artifact by its primary file and role, a
+    # message, a severity, and a detail where one artifact can fail a
+    # rule in several ways.
+    class Violation < Data
+      # The name of the plugin whose policy ran the rule.
+      attr_reader plugin: String
+
+      # The policy's name.
+      attr_reader policy: String
+
+      # The artifact's primary file, relative to the project's root.
+      attr_reader artifact: String
+
+      # The artifact's role, its declaration's name.
+      attr_reader role: String
+
+      # What is wrong, such as "no test file at test/a_test.rb".
+      attr_reader message: String
+
+      # The severity, after the policy's and the configuration's.
+      attr_reader severity: severity
+
+      # What tells this violation from others of the same policy on the
+      # same artifact, such as a missing member's name, or nil.
+      attr_reader detail: String?
+
+      # A violation with these fields.
+      def self.new: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
+                     detail: String?) -> instance
+
+      # A violation with these fields.
+      def initialize: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
+                       detail: String?) -> void
+    end
+  end
+end

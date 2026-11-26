@@ -1,0 +1,101 @@
+module CrossLint
+  module Core
+    # A warning CrossLint gives about a plugin, not about an artifact,
+    # such as a files pattern that matches no file: the manifest it is
+    # about, the line, and the message.
+    class Notice < Data
+      # The manifest's path, relative to the project's root.
+      attr_reader file: String
+
+      # The line in the manifest.
+      attr_reader line: Integer
+
+      # What CrossLint warns of.
+      attr_reader message: String
+
+      # A notice with these fields.
+      def self.new: (file: String, line: Integer, message: String) -> instance
+
+      # A notice with these fields.
+      def initialize: (file: String, line: Integer, message: String) -> void
+    end
+
+    # How many artifacts of each kind a check checked, and how many errors
+    # and warnings it reports.
+    #
+    # ```ruby
+    # summary = CrossLint::Core::Summary.new(kinds: [["ruby-file", 9]], errors: 3, warnings: 0, warnings_shown: true)
+    # summary.line # => "checked 9 ruby-file artifacts: 3 errors"
+    # summary.with(kinds: [["ruby-file", 9], ["adr", 1]], errors: 0, warnings: 1).line
+    # # => "checked 9 ruby-file and 1 adr artifacts: 1 warning"
+    # summary.with(errors: 0).line # => "checked 9 ruby-file artifacts: no violations"
+    # ```
+    class Summary < Data
+      # Each kind of artifact a policy applies to, by its name, or by
+      # PLUGIN/NAME when two plugins have one of that name, with how many
+      # artifacts of it there are, in the order the plugins declare them.
+      attr_reader kinds: Array[[String, Integer]]
+
+      # How many violations of severity error the check reports.
+      attr_reader errors: Integer
+
+      # How many violations of severity warning the check reports.
+      attr_reader warnings: Integer
+
+      # False when --warnings=none hides warnings.
+      attr_reader warnings_shown: bool
+
+      # A summary with these fields.
+      def self.new: (kinds: Array[[String, Integer]], errors: Integer, warnings: Integer, warnings_shown: bool) -> instance
+
+      # A summary with these fields.
+      def initialize: (kinds: Array[[String, Integer]], errors: Integer, warnings: Integer, warnings_shown: bool) -> void
+
+      # How many artifacts the check checked, of every kind.
+      def artifacts: () -> Integer
+
+      # The summary as one line, without the "crosslint: " that begins it.
+      def line: () -> String
+
+      private
+
+      # The errors and warnings, as words: "3 errors, 1 warning", or "no
+      # violations", or "no errors" when warnings are hidden.
+      def found: () -> String
+    end
+
+    # What a check found, filtered by --warnings and the verbosity: what
+    # to report, and whether the check failed.
+    class CheckResult < Data
+      # The warnings about plugins to report.
+      attr_reader notices: Array[Notice]
+
+      # The violations to report, and under --all each artifact checked
+      # that has none, sorted by the artifact's path, then plugin, policy,
+      # and message.
+      attr_reader findings: Array[Violation | Artifact]
+
+      # The summary, whatever the verbosity.
+      attr_reader summary: Summary
+
+      # `:normal`, `:quiet` for a report with no summary, or `:silent`
+      # for none.
+      attr_reader verbosity: (:normal | :quiet | :silent)
+
+      # Whether the check failed: an error, or a warning under
+      # --warnings=error.
+      attr_reader failed: bool
+
+      # A result with these fields.
+      def self.new: (notices: Array[Notice], findings: Array[Violation | Artifact], summary: Summary,
+                     verbosity: (:normal | :quiet | :silent), failed: bool) -> instance
+
+      # A result with these fields.
+      def initialize: (notices: Array[Notice], findings: Array[Violation | Artifact], summary: Summary,
+                       verbosity: (:normal | :quiet | :silent), failed: bool) -> void
+
+      # The findings that are violations.
+      def violations: () -> Array[Violation]
+    end
+  end
+end

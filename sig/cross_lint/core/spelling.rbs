@@ -18,8 +18,9 @@ module CrossLint
       # none.
       def self?.unknown: (String kind, String word, Array[String] known, ?none: String) -> String
 
-      # Words joined as in a sentence: "a", "a or b", "a, b, or c".
-      def self?.list: (Array[String] words) -> String
+      # Words joined as in a sentence: "a", "a or b", "a, b, or c", with
+      # `conjunction` in place of "or" when given, as in "a, b, and c".
+      def self?.list: (Array[String] words, ?String conjunction) -> String
     end
   end
 end

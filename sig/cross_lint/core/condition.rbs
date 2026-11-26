@@ -22,6 +22,9 @@ module CrossLint
 
         # Itself, the one companion test it holds.
         def companion_tests: () -> Array[CompanionExists]
+
+        # Whether `artifact`'s companion of this name exists.
+        def holds?: (Artifact artifact) -> bool
       end
 
       # Holds when the condition inside doesn't.
@@ -40,6 +43,9 @@ module CrossLint
 
         # The companion tests the condition inside holds.
         def companion_tests: () -> Array[CompanionExists]
+
+        # Whether the condition inside doesn't hold for `artifact`.
+        def holds?: (Artifact artifact) -> bool
       end
 
       # Holds when every condition inside does.
@@ -58,6 +64,9 @@ module CrossLint
 
         # The companion tests the conditions inside hold.
         def companion_tests: () -> Array[CompanionExists]
+
+        # Whether every condition inside holds for `artifact`.
+        def holds?: (Artifact artifact) -> bool
       end
 
       # Holds when at least one condition inside does.
@@ -76,6 +85,9 @@ module CrossLint
 
         # The companion tests the conditions inside hold.
         def companion_tests: () -> Array[CompanionExists]
+
+        # Whether at least one condition inside holds for `artifact`.
+        def holds?: (Artifact artifact) -> bool
       end
     end
   end

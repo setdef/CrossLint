@@ -17,10 +17,10 @@ module CrossLint
         "unknown #{kind} #{word.dump}; expected #{list(known.map(&:dump))}"
       end
 
-      def list(words)
-        return words.join(" or ") if words.size < 3
+      def list(words, conjunction = "or")
+        return words.join(" #{conjunction} ") if words.size < 3
 
-        "#{words.take(words.size - 1).join(", ")}, or #{words.last}"
+        "#{words.take(words.size - 1).join(", ")}, #{conjunction} #{words.last}"
       end
     end
   end
