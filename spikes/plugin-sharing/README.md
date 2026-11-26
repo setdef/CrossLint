@@ -62,13 +62,14 @@ Assumption, from issue #1: CrossLint is a self-contained app that carries its ow
 | **Plugin as code in another language** (a JavaScript helper that reads TypeScript) | Writes JavaScript. | Needs Node on the machine, or CrossLint carries Node. | Breaks the "neither Ruby nor Node" case unless CrossLint bundles a JavaScript runtime. A project with Node has it; one without does not. |
 | **Registry package** (RubyGems, npm) | Publishes to a registry. | `gem install` or `npm install`. mise has `gem:` and `npm:` backends. | Not approved ([plan](../../docs/plan.md)). Needs Ruby or Node on the machine, so it fails the no-runtime case for any language the project lacks. |
 | **A new binary with the plugin built in** (golangci-lint's route) | Publishes a module; the project (or CI) builds a custom binary. | Installs a toolchain, builds. | Needs the toolchain the project is trying to avoid. Shows what plugin-by-rebuild costs a single-binary tool. |
+| **Inside an Agent Skill folder** | Puts the plugin's data files in the skill's `assets/` or `references/` directory ([Agent Skills specification](https://agentskills.io/specification): optional `scripts/`, `references/`, `assets/`). | Installs the skill the way it installs any skill; points the CrossLint config at `<skills dir>/<skill>/...`. | The path depends on where the project keeps skills and how they get there. mise can fetch skills a tool's release declares and link them with `mise skills sync` ([Packslip resources](https://mise.jdx.dev/dev-tools/packslip-resources.html)), but the page says those links are symlinks into mise's install directory and should not be committed, so a fresh clone or CI job has no plugin until someone runs `mise skills sync`. A missing plugin file must be an error, or the check silently stops running. The plugin version moves with the skill's, not with CrossLint's. I read the documentation; I did not run `mise skills sync`, and I did not check how other skill installers handle non-Markdown files. |
 
 ### Experiment: installing a plugin through mise
 
 `try-mise.sh` ran with mise 2026.11.12, the version in Fledge#123, on one platform (no Linux or Windows run). It built a tarball holding a data-only plugin (two YAML files), then:
 
-1. Installed it with `"http:crosslint-plugin-example-plugin" = { version = "0.1.0", url = "file://.../example-plugin-0.1.0.tar.gz", checksum = "sha256:..." }`. It installed in 52 ms. `mise where` printed the install directory, which held `example-plugin/crosslint-plugin.yml` and `example-plugin/rules/...` (the top folder was kept). With an empty `mise.lock` present, `mise lock` recorded the URL and checksum for seven platforms.
-2. Changed the archive and installed again into a fresh data directory. mise refused it with `Expected: sha256:2f39...` and `Actual: sha256:4287...`.
+1. Installed it with `"http:crosslint-plugin-adr-index" = { version = "0.1.0", url = "file://.../adr-index-0.1.0.tar.gz", checksum = "sha256:..." }`. It installed in 52 ms. `mise where` printed the install directory, which held `adr-index/crosslint-plugin.yml` and `adr-index/rules/...` (the top folder was kept). With an empty `mise.lock` present, `mise lock` recorded the URL and checksum for seven platforms.
+2. Changed the archive and installed again into a fresh data directory. mise refused it with `Expected: sha256:f211...` and `Actual: sha256:c706...`.
 3. Pointed the same backend at a GitHub tag archive of a public repository (`https://github.com/rubocop/rubocop-rake/archive/refs/tags/v0.7.1.tar.gz`, a tag with no release attached). It installed, the top folder was stripped, and `mise lock` recorded the archive's checksum.
 
 What the run shows: a plugin can be fetched from a tag or a release URL, pinned and verified by checksum, with no Ruby, Node or Git, and with no registry. What it does not show: how CrossLint finds the install directory (it would call `mise where` or read `mise.lock`, or the project would set a path), a Linux or Windows run, or the `github:` backend.
@@ -128,7 +129,7 @@ Observations that bear on the choice:
 ## Decisions this work needs from the maintainer
 
 1. Whether a project's own artifacts, policies and rules need a manifest (options A to C above).
-2. Which sharing mechanism CrossLint supports first, given the registry is not approved: fetch by URL by CrossLint, mise `http:` or `github:`, or vendoring. The experiment shows mise works for data-only plugins.
+2. Which sharing mechanism CrossLint supports first, given the registry is not approved: fetch by URL by CrossLint, mise `http:` or `github:`, vendoring, or skill folders. The experiment shows mise works for data-only plugins.
 3. Default set (options A to C above).
 4. Angular plugin location (options A to C above).
 5. Whether plugins may contain code in a language other than CrossLint's, because it determines whether a "neither Ruby nor Node" project can ever use one.
@@ -137,5 +138,6 @@ Observations that bear on the choice:
 
 - Linux and Windows runs of the mise experiment, and mise's `github:` backend against a real release (needs a release; releases are out of scope here).
 - Whether a Fledge-built app can load Ruby files and gems from outside itself.
+- `mise skills sync` and other skill installers with a plugin folder in a skill.
 - RuboCop's remote `inherit_from` has no documented checksum; I did not test it.
 - Some table cells (names, keywords, `peerDependencies`) rest on page summaries I could not re-read in full: ESLint's plugin pages and Stylelint's plugin page. Check them before quoting.
