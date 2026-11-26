@@ -219,11 +219,28 @@ class TrackDebtTest < Minitest::Test
     assert_equal [dry.excused, dry.stale], [[violation("lib/b.rb", severity: :warning)], [stale_at(3), stale_at(4)]]
   end
 
-  def test_a_dry_run_matches_an_entry_written_with_backslashes_as_one_written_with_slashes
+  def test_a_dry_run_matches_an_entry_written_with_backslashes_as_one_written_with_slashes_and_lists_it_as_replaced
     dry = step([violation("lib/a/b.rb")], [entry("tests/has-test", "lib\\a\\b.rb", "kept")], update: true, dry_run: true)
 
-    assert_equal [[violation("lib/a/b.rb")], [], ["would write #{FILE}: 0 entries added, 0 removed, 1 rewritten"]], [dry.excused, dry.stale, dry.wrote]
+    assert_equal [violation("lib/a/b.rb")], dry.excused
+    assert_equal [], dry.stale
+    assert_equal ["would replace tests/has-test on lib/a/b.rb, line 2", "would add tests/has-test on lib/a/b.rb",
+      "would write #{FILE}: 0 entries added, 0 removed, 1 rewritten"], dry.wrote
     assert_equal ["lib\\a\\b.rb"], written.map(&:artifact)
+  end
+
+  def test_a_dry_run_lists_the_entries_an_update_writes_that_the_file_didnt_have
+    violations = [violation("lib/a/b.rb"), violation("lib/c.rb"), violation("lib/new.rb")]
+    entries = [entry("tests/has-test", "lib/c.rb", "same"), entry("tests/has-test", "lib\\a\\b.rb", "kept", line: 3),
+      entry("tests/has-test", "lib/gone.rb", "fixed", line: 4)]
+    dry = step(violations, entries, update: true, dry_run: true)
+    step(violations, entries, update: true)
+    new_lines = written.reject { |each| each.source == "src2" }.map { |each| "would add tests/has-test on #{each.artifact}" }
+
+    assert_equal ["would replace tests/has-test on lib/a/b.rb, line 3", "would remove tests/has-test on lib/gone.rb, line 4"],
+      dry.wrote.grep(/\Awould (replace|remove)/)
+    assert_equal new_lines.sort, dry.wrote.grep(/\Awould add/).sort
+    assert_equal ["lib/c.rb", "lib/a/b.rb", "lib/new.rb"], written.map(&:artifact)
   end
 
   def test_a_dry_run_says_which_entry_it_would_replace_with_which

@@ -209,7 +209,11 @@ module CrossLint
             removed += 1
             changes << "remove #{described(entry)}, line #{entry.line}"
           else
-            rewritten += 1 unless entry.source
+            unless entry.source
+              rewritten += 1
+              changes << "replace #{described(entry)}, line #{entry.line}"
+              changes << "add #{described(entry)}"
+            end
             written << entry
           end
         end
