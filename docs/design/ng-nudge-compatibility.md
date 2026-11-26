@@ -6,11 +6,11 @@ Three rules govern it:
 
 - **None of ng-nudge's value is lost, and none of its bugs are kept.** How CrossLint's output looks is free to change.
 - **A project that uses ng-nudge replaces it with CrossLint in 30 minutes or less,** as a drop-in or close to one.
-- **Where keeping ng-nudge's behavior conflicts with a command-line guideline,** [command-line.md](command-line.md) holds the conflict and its options.
+- **Where keeping ng-nudge's behavior conflicts with a command-line guideline,** [command-line.md](command-line.md) holds the conflict and how it is settled.
 
 Every statement here about what ng-nudge does is about ng-nudge 0.3.0, the package version at commit [`10a7224`](https://github.com/OverTheTopMarketing/ng-nudge/tree/10a722456daacca08f6425c5b74e5586183c654b) of its `main` branch. References such as `lib/debt.js:30-35` are to files and lines at that commit. Each section says which of ng-nudge's behaviors CrossLint keeps, and how. [Bugs not kept](#bugs-not-kept) lists each bug CrossLint doesn't keep, with where ng-nudge has it.
 
-In CrossLint, ng-nudge's Angular checks are part of an Angular plugin and its debt tracking is a debt plugin ([plugins.md](plugins.md)). The requirements in this document hold for CrossLint with those two plugins listed. Choices this document leaves open are collected under [Open choices](#open-choices).
+In CrossLint, ng-nudge's Angular checks are part of an Angular plugin and its debt tracking is a debt plugin ([plugins.md](plugins.md)). The requirements in this document hold for CrossLint with those two plugins listed.
 
 ## Running
 
@@ -27,23 +27,24 @@ CrossLint has a flag for each of ng-nudge's ([`bin/ng-nudge:24-33`][bin-24]), wi
 | `--warnings=all`, `--warnings=none`, `--warnings=error` | Same values and meanings: show warnings (the default), hide them, or let them fail the run. |
 | `-q`, `--quiet` | Prints only what fails the run, and no summary. A warning that fails the run under `--warnings=error` is printed, where ng-nudge leaves it out. |
 | `-s`, `--silent` | Prints nothing but errors that stop the run; only the exit code says the result. Wins over `--quiet`. |
-| `--update-debt` | Runs every check, reports, then rewrites the debt file. Its short form, `-d`, conflicts with the guidelines: see [command-line.md, `-d`](command-line.md#-d-and---update-debt). |
+| `--update-debt` | Runs every check, reports, then rewrites the debt file. Its short form, `-d`, stays an alias for a stated number of releases, with a deprecation notice on stderr, and then is an error that points to `--update-debt`: see [command-line.md, `-d`](command-line.md#-d-and---update-debt). |
 | `-h`, `--help` | Prints the help and exits 0. |
 
 Flags on the command line win over `options` in `rc.json`.
 
-What CrossLint does with an unknown flag or an invalid value is in [command-line.md](command-line.md#mistakes-in-flags-and-configuration). It never ignores either silently, as ng-nudge does.
+An unknown flag, an unknown argument and an invalid value are errors, reported before any check runs ([command-line.md](command-line.md#mistakes-in-flags-and-configuration)). CrossLint never ignores them silently, as ng-nudge does.
 
 ## Exit codes
 
-- `0`: no unexcused violation fails the run, and no debt entry is stale.
-- Non-zero: an unexcused error; an unexcused warning under `--warnings=error`; any stale debt entry; or an error that stops the run.
+- `0`: no unexcused violation fails the run, and no debt entry is stale. A successful `--update-debt` run also exits 0.
+- `1`: an unexcused error; an unexcused warning under `--warnings=error`; or any stale debt entry.
+- `2`: an error that stops the run.
 
-ng-nudge exits 1 for all of these ([`lib/verification-task.js:25-29`][task-25], [`bin/ng-nudge:86-88`][bin-86]). Whether CrossLint keeps 1 for all of them or gives errors that stop the run a separate code is a conflict with the guidelines: see [command-line.md, exit codes](command-line.md#exit-codes). The exit code of a successful `--update-debt` run is an [open choice](#open-choices).
+ng-nudge exits 1 for all of these ([`lib/verification-task.js:25-29`][task-25], [`bin/ng-nudge:86-88`][bin-86]). CrossLint gives an error that stops the run a separate code, so a script can tell a broken setup from violations ([command-line.md, exit codes](command-line.md#exit-codes)). A successful `--update-debt` exits 0 because the code then reports the command; ng-nudge exits 1 when the update recorded new violations or removed stale entries, which reports the checks before the update. A script that runs `--update-debt` and goes on sees the change.
 
 ## Configuration
 
-CrossLint reads `.config/ng-nudge/rc.json` and gives each of its keys ng-nudge's meaning. Whether it reads that file on every run, or converts it once into a configuration file in CrossLint's format, is an [open choice](#open-choices).
+CrossLint reads `.config/ng-nudge/rc.json` in place on every run and gives each of its keys ng-nudge's meaning, so a migrating project changes nothing in it. The form of CrossLint's configuration, which lists plugins, waits on [#4](https://github.com/setdef/CrossLint/issues/4) and on the command's name.
 
 | Key | Meaning in CrossLint |
 |---|---|
@@ -110,12 +111,12 @@ Each message keeps the facts ng-nudge's message gives: the artifact, the missing
 The debt plugin keeps every part of ng-nudge's debt tracking.
 
 - The debt file holds one entry per excused violation, with a rule, an artifact and a comment. A missing file means no debt.
-- CrossLint reads a `.config/ng-nudge/debt.tsv` written by ng-nudge 0.3.0, with every entry and every comment: tab-separated, header row `Rule`, `Artifact`, `Comment`, quoted the way d3-dsv quotes (a field with a tab, newline, carriage return or `"` is wrapped in `"` with `"` doubled), ending with a newline. Whether it keeps reading and writing that file, or converts it once, is an [open choice](#open-choices).
-- An entry matches a violation by the violation's identity: its rule, its artifact with the artifact's role, and a detail such as the member's name. An entry excuses only the violation it matches: not another artifact with the same base path, and not a later violation of the same rule on the same artifact. ng-nudge matches on the rule and the base path alone ([`lib/debt.js:30-35`][debt-30]).
+- CrossLint reads and writes `.config/ng-nudge/debt.tsv` in place, in the format of ng-nudge 0.3.0, with every entry and every comment: tab-separated, header row `Rule`, `Artifact`, `Comment`, quoted the way d3-dsv quotes (a field with a tab, newline, carriage return or `"` is wrapped in `"` with `"` doubled), ending with a newline. A project changes nothing in the file, and its comments survive, which regenerating the file would lose. CrossLint also reads and writes an optional `Detail` column, which ng-nudge ignores.
+- An entry matches a violation by the violation's identity: its rule, its artifact with the artifact's role, and a detail such as the member's name. An entry excuses only the violation it matches: not another artifact with the same base path, and not a later violation of the same rule on the same artifact. ng-nudge matches on the rule and the base path alone ([`lib/debt.js:30-35`][debt-30]). An entry with no detail matches a violation by rule and artifact with role. An entry that two artifacts share is reported as ambiguous.
 - An excused violation is neither printed as a finding nor counted toward the exit code. Excusing, stale detection and `--update-debt` consider every violation, whatever `--warnings` or the verbosity hides.
 - An entry that no violation matches is stale. CrossLint lists it with its artifact and rule, says how to update the debt file, and fails the run.
 - An entry for a disabled rule is neither stale nor removed by `--update-debt`, and its comment is kept.
-- `--update-debt` keeps every entry that still matches, with its comment and in its place; drops stale entries; adds one entry per distinct unexcused violation, warnings included, with an empty comment, never a duplicate; and never writes the `has-debt` violations themselves. It creates the file and its folder when they don't exist. With no entries left, the file keeps its header. The file is replaced whole, so an interrupted update leaves the previous file.
+- `--update-debt` keeps every entry that still matches, with its comment and in its place; drops stale entries; adds one entry per distinct unexcused violation, warnings included, with its detail in the `Detail` column and an empty comment, never a duplicate; and never writes the `has-debt` violations themselves. It creates the file and its folder when they don't exist. With no entries left, the file keeps its header. The file is replaced whole, so an interrupted update leaves the previous file.
 - After an update, CrossLint reports the state the update left: it doesn't tell the user to run the command that just ran. It names the file it wrote by its real path.
 - Debt keys use `/` on every system, relative to `srcDir`, so a debt file written on Windows matches on macOS and Linux and the other way round.
 - Entries are written in an order that doesn't depend on the order the filesystem lists files in.
@@ -139,7 +140,7 @@ ng-nudge loads a project's extensions as JavaScript classes from `.config/ng-nud
 
 - A project artifact class that only sets a role and its companions becomes data in that plugin.
 - How a project's policies and rules are carried over, rewritten or run as they are, waits on [#4](https://github.com/setdef/CrossLint/issues/4).
-- CrossLint never ignores a file in one of those folders without saying so. A rule file that no policy runs is reported. Which runtime version an extension needs is stated, and a runtime too old for it is reported by name.
+- CrossLint never ignores a file in one of those folders without saying so. A rule that no policy runs is reported as unused ([plugins.md](plugins.md#a-rule-no-policy-runs)). Which runtime version an extension needs is stated, and a runtime too old for it is reported by name.
 - Whether a project's artifact is checked never depends on which copy of CrossLint runs.
 - Every violation carries the name of the rule that reported it, so every violation can become debt.
 
@@ -187,21 +188,12 @@ A project moves from ng-nudge to CrossLint in these steps:
 |---|---|
 | Install | Replaces ng-nudge's dev dependency with CrossLint's install, and `npx ng-nudge` in its scripts and CI with CrossLint's command. A project that installed ng-nudge from GitHub Packages also removes the `@overthetopmarketing` registry line and its credentials. |
 | Plugins | Lists the Angular plugin and the debt plugin in its configuration ([plugins.md](plugins.md)). |
-| `rc.json` | Nothing, or one conversion command, as the [open choice](#open-choices) settles. |
-| `debt.tsv` | Nothing, or one conversion command, as the [open choice](#open-choices) settles. A debt file written on Windows has its `\` keys changed to `/` once. |
+| `rc.json` | Nothing: CrossLint reads it in place ([Configuration](#configuration)). |
+| `debt.tsv` | Nothing: CrossLint reads and writes it in place ([Debt tracking](#debt-tracking)). A debt file written on Windows has its `\` keys changed to `/` once. |
 | New violations | Fixing the stylesheet folder, existence from `tsconfig.json`, `expects`, inherited interface members and the missed input and output forms ([Bugs not kept](#bugs-not-kept)) finds violations ng-nudge hid. One `--update-debt` run takes them in as debt, so the first run after the migration passes. |
 | Project artifacts | Each artifact class that only sets a role and companions becomes a few lines of data. |
 | Project policies and rules | Wait on [#4](https://github.com/setdef/CrossLint/issues/4). A project with many of them meets the 30 minutes only if CrossLint runs them as they are or converts them. |
-| Scripts | A script that passes `-d`, tests for exit code 1, reads one output stream, or parses the printed text checks the changes in [command-line.md](command-line.md#conflicts-with-ng-nudge). |
-
-Converting a debt file means giving each entry the role and detail its key needs ([Debt tracking](#debt-tracking)). CrossLint takes them from the current violations. An entry that two artifacts share can't be given to one of them, so the conversion keeps it on both, with its comment.
-
-## Open choices
-
-- **`rc.json`: read in place, or convert once.** CrossLint reads `.config/ng-nudge/rc.json` on every run, so a project changes nothing, and CrossLint keeps reading a file named for another tool. Or a command converts it once into a configuration file in CrossLint's format, so a project runs one command and commits the result. The form of CrossLint's configuration waits on [#4](https://github.com/setdef/CrossLint/issues/4) and on the command's name.
-- **`debt.tsv`: read in place, or convert once.** CrossLint reads and writes ng-nudge's format, with the key extended to hold the role and the detail, so the file changes on its first update; or a command converts it once into a debt file in CrossLint's format. Under both, every comment is kept.
-- **The exit code of a successful `--update-debt` run.** ng-nudge exits 1 when the update recorded new violations or removed stale entries, which reads as the result of the checks before the update. CrossLint exits 0 after a successful update, which reads as the result of the command; or it exits as ng-nudge does. A script that runs `--update-debt` and then goes on sees whichever is chosen.
-- **The conflicts with the command-line guidelines,** each with its options, are in [command-line.md](command-line.md#conflicts-with-ng-nudge).
+| Scripts | A script that passes `-d` (it gets a deprecation notice), tests for exit code 1 (an error that stops the run is now 2, and a successful `--update-debt` is 0), reads stderr for warnings (they are on stdout), or parses the printed text checks the changes in [command-line.md](command-line.md#conflicts-with-ng-nudge). |
 
 [afile-16]: https://github.com/OverTheTopMarketing/ng-nudge/blob/10a722456daacca08f6425c5b74e5586183c654b/lib/artifact/artifact-file.js#L16-L18
 [api-21]: https://github.com/OverTheTopMarketing/ng-nudge/blob/10a722456daacca08f6425c5b74e5586183c654b/lib/artifact/api.js#L21-L29

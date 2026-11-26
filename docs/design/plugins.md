@@ -50,13 +50,13 @@ A project migrating from ng-nudge lists the Angular plugin and the debt plugin (
 
 - Every rule is configured the same way, whichever plugin supplies it, the project's local plugin included: it can be turned off, and its severity can be set. ng-nudge ignores both settings for the rules of the policies a project writes. A rule with no severity in the configuration has the default severity its plugin declares, where ng-nudge gives every such rule `error`. Both are in [ng-nudge-compatibility.md, Bugs not kept](ng-nudge-compatibility.md#bugs-not-kept).
 - ng-nudge's rule names, such as `spec-exists` and `has-debt`, keep working in a project's configuration and debt file, because both hold them ([ng-nudge-compatibility.md](ng-nudge-compatibility.md#policies-and-rules)).
-- **Open: how rule names from different plugins are kept apart.** Either a rule's full name carries its plugin's name, as ESLint's `plugin/rule` does, and ng-nudge's bare names stand for the Angular and debt plugins' rules; or rule names are bare, and two listed plugins that supply a rule of the same name are an error.
+- A rule's full name is `plugin/rule`, as in ESLint, so rules of the same name from different plugins stay apart. A bare name stands for the Angular plugin's or the debt plugin's rule of that name, so ng-nudge's names keep working.
 
 ## A rule no policy runs
 
 A rule that no policy applies never runs, and CrossLint says so instead of loading it and ignoring it, as ng-nudge does with the rules in `.config/ng-nudge/rules/` ([ng-nudge-compatibility.md, Bugs not kept](ng-nudge-compatibility.md#bugs-not-kept)).
 
-**Open: what CrossLint does with such a rule.** Either it reports the rule as unused and runs nothing; or a plugin whose manifest declares no policies gets one policy per artifact that applies all of the plugin's rules, and a rule that is still unused is reported.
+CrossLint reports such a rule as unused. It creates no implicit policy for it, because a rule runs on an artifact only when a policy applies it there.
 
 ## Waits on #4
 
