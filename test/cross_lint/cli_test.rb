@@ -99,10 +99,10 @@ class CLITest < Minitest::Test
     assert_equal "crosslint: run it again with --debug to see where it stopped\n", err.lines[2]
   end
 
-  def test_writes_only_ascii_to_standard_error
+  def test_writes_the_text_of_an_error_as_it_is_to_standard_error
     _, err, = run_cli(spec: BrokenSpec.new(RuntimeError.new("bôom \xFF".b.force_encoding("UTF-8"))))
 
-    assert_equal "crosslint: stopped on a bug in CrossLint: RuntimeError: b?om ?\n", err.lines.first
+    assert_equal "crosslint: stopped on a bug in CrossLint: RuntimeError: bôom \xFF\n".b, err.lines.first.b
   end
 
   def test_check_prints_each_violation_and_the_summary_and_exits_with_1
@@ -122,6 +122,12 @@ class CLITest < Minitest::Test
     assert_equal summary, check("check", "--project", "#{WORK}/app", app: app)[1]
     assert_match(/\Acrosslint: no \.config\/crosslint\/config\.kdl in .*elsewhere or any folder above it/,
       check("check", "-C", "#{TOP}elsewhere", app: app)[1])
+  end
+
+  def test_check_writes_a_path_in_a_message_as_it_is
+    message = check("check", "-C", "#{TOP}elsewhere/café", app: app)[1]
+
+    assert_match(/\Acrosslint: no \.config\/crosslint\/config\.kdl in .*elsewhere\/café or any folder above it/, message)
   end
 
   def test_check_takes_warnings_from_the_flag_over_the_configuration

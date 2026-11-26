@@ -62,7 +62,7 @@ module CrossLint
     end
 
     def say(message)
-      @err.puts "#{PREFIX}#{message.encode("US-ASCII", invalid: :replace, undef: :replace)}"
+      @err.puts(PREFIX + message)
       2
     end
 
