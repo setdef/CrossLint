@@ -1,0 +1,11 @@
+[settings]
+ruby.precompiled_url = "https://github.com/jdx/ruby/releases/download/{version}/ruby-{version}.{platform}.tar.gz"
+ruby.compile = false
+
+[tools]
+ruby = { version = "4.1.0-preview1", os = ["linux", "macos"] }
+
+[tools."http:rubyinstaller-head"]
+version = "20261110"
+os = ["windows"]
+platforms.windows-x64 = { url = "https://github.com/setdef/Fledge/releases/download/inputs-rubyinstaller-head-20261110/rubyinstaller-head-x64.7z", checksum = "sha256:901473edafd6b174d79978fc109d3df3ab73b1436719233f35c1a31b5b18bf58" }

@@ -1,0 +1,52 @@
+--- a/ext/tree_sitter/macros.h
++++ b/ext/tree_sitter/macros.h
+@@ -73,7 +73,7 @@
+     return sizeof(type);                                                       \
+   }
+
+-#define DATA_DECLARE_DATA_TYPE(type)                                           \
++#define DATA_DECLARE_DATA_TYPE_WITH_FLAGS(type, type_flags)                    \
+   const rb_data_type_t type##_data_type = {                                    \
+       .wrap_struct_name = #type "",                                            \
+       .function =                                                              \
+@@ -83,8 +83,17 @@
+               .dsize = type##_memsize,                                         \
+               .dcompact = NULL,                                                \
+           },                                                                   \
+-      .flags = RUBY_TYPED_FREE_IMMEDIATELY,                                    \
++      .flags = type_flags,                                                     \
+   };
++
++#define DATA_DECLARE_DATA_TYPE(type)                                           \
++  DATA_DECLARE_DATA_TYPE_WITH_FLAGS(type, RUBY_TYPED_FREE_IMMEDIATELY)
++
++// For a type whose free function calls into Ruby (allocates an object, looks
++// up or changes a Hash): without RUBY_TYPED_FREE_IMMEDIATELY, Ruby calls the
++// free function after the garbage collection, not during it.
++#define DATA_DECLARE_DATA_TYPE_DEFERRED_FREE(type)                             \
++  DATA_DECLARE_DATA_TYPE_WITH_FLAGS(type, 0)
+
+ #define DATA_ALLOCATE(type)                                                    \
+   static VALUE type##_allocate(VALUE klass) {                                  \
+--- a/ext/tree_sitter/node.c
++++ b/ext/tree_sitter/node.c
+@@ -14,7 +14,7 @@
+ }
+
+ DATA_MEMSIZE(node)
+-DATA_DECLARE_DATA_TYPE(node)
++DATA_DECLARE_DATA_TYPE_DEFERRED_FREE(node)
+ DATA_ALLOCATE(node)
+ DATA_UNWRAP(node)
+
+--- a/ext/tree_sitter/tree.c
++++ b/ext/tree_sitter/tree.c
+@@ -46,7 +46,7 @@
+ }
+
+ DATA_MEMSIZE(tree)
+-DATA_DECLARE_DATA_TYPE(tree)
++DATA_DECLARE_DATA_TYPE_DEFERRED_FREE(tree)
+ DATA_ALLOCATE(tree)
+ DATA_UNWRAP(tree)
+

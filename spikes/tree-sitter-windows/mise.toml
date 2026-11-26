@@ -1,0 +1,26 @@
+# The tools the reproduction needs. MISE_ENV picks the Ruby:
+#   MISE_ENV=head    the Ruby that Fledge v0.17.0 ships (Windows: RubyInstaller's
+#                    head build; macOS and Linux: 4.1.0-preview1)
+#   MISE_ENV=ruby40  Ruby 4.0 (Windows: RubyInstaller's release)
+# The Windows tables follow Fledge's mise.toml at v0.17.0, as in ../fledge-tree-sitter.
+min_version = "2026.10.11"
+
+[tools."http:msys2-zlib"]
+version = "1.4-2"
+os = ["windows"]
+platforms.windows-x64 = { url = "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-zlib-1.4-2-any.pkg.tar.zst", checksum = "sha256:172541cf5e2391a402f092104988699b0163129d22be1d6b4b201bfb84af6fcf", bin_path = "ucrt64/bin" }
+
+[tools."http:msys2-libgcc"]
+version = "16.2.0-6"
+os = ["windows/x64"]
+platforms.windows-x64 = { url = "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-libgcc-16.2.0-6-any.pkg.tar.zst", checksum = "sha256:80b2497f019977dd9528b1abc8621b1328a0115ab1f724047ccbb56bf323f11d", bin_path = "ucrt64/bin" }
+
+[tools."http:msys2"]
+version = "20261112.002116"
+os = ["windows"]
+platforms.windows-x64 = { url = "https://github.com/ruby/setup-msys2-gcc/releases/download/v20261112.002116/msys2-ucrt64.7z", checksum = "sha256:2b1b2508f754bfed6e343b7a1f8211646c8df3bb7fb9cb5a42592929f11f1499", bin_path = "ucrt64/bin" }
+
+[env]
+MSYS2_PATH = { value = '{% if os() == "windows" %}{{ tools["http:msys2"].path }}{% endif %}', tools = true }
+RI_DEVKIT = { value = '{% if os() == "windows" %}{{ tools["http:msys2"].path }}{% endif %}', tools = true }
+RUBY_DLL_PATH = { value = '{% if os() == "windows" %}{{ tools["http:msys2-zlib"].path }}/ucrt64/bin;{{ tools["http:msys2-libgcc"].path }}/ucrt64/bin{% endif %}', tools = true }
