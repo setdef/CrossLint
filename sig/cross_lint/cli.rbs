@@ -60,6 +60,9 @@ module CrossLint
 
     @app: App?
 
+    # Writes the program's name and version, and returns 0.
+    def version: (UsageSpec spec) -> Integer
+
     # Runs crosslint help: writes the help of the command `topic`, or of
     # the program when it is nil, as --help does, and returns 0.
     def explain: (UsageSpec spec, CommandLine line, UsageSpec::Command? topic) -> Integer

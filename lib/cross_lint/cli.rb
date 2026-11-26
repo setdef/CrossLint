@@ -23,7 +23,9 @@ module CrossLint
       command = line.command
       words = line.words
       running = line.action == :run
-      if words.any? && line.action != :version
+      return version(spec) if line.action == :version
+
+      if words.any?
         # Words come with no command of CrossLint's but help. A plugin's name
         # alone, as in crosslint debt, asks what the plugin has.
         return plugin_help(spec, line) if line.action == :help || command || words.size == 1
@@ -40,9 +42,7 @@ module CrossLint
       end
 
       @out.write(
-        if line.action == :version
-          "#{spec.bin} #{spec.version}\n"
-        elsif running
+        if running
           Help.new(spec).short
         else
           render_help(spec, line, command)
@@ -60,6 +60,11 @@ module CrossLint
     end
 
     private
+
+    def version(spec)
+      @out.write("#{spec.bin} #{spec.version}\n")
+      0
+    end
 
     def explain(spec, line, topic)
       @out.write(render_help(spec, line, topic))
