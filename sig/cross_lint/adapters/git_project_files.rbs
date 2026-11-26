@@ -28,7 +28,7 @@ module CrossLint
       def environment: () -> Hash[String, String?]
 
       # Git's own message when it refused a folder that is a working tree.
-      def refusal: (Hash[String, String?] env, String root, String error) -> String
+      def refusal: (untyped env, String root, String error) -> String
 
       @git: String
 
