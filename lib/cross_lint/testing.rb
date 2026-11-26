@@ -94,7 +94,7 @@ module CrossLint
       def test_sets_the_ref_of_a_plugin_and_changes_nothing_else
         port = example_configuration_port
         before = port.read(folder("example"))
-        port.set_refs(folder("example"), {"https://github.com/OWNER/REPO" => "v1.3.0"})
+        port.set_refs(folder("example"), {["https://github.com/OWNER/REPO", nil] => "v1.3.0"})
         after = port.read(folder("example"))
 
         assert_equal ["v1.3.0", nil, nil], after.plugins.map(&:ref)
@@ -105,14 +105,14 @@ module CrossLint
         port = example_configuration_port
         before = port.read(folder("example"))
         port.set_refs(folder("example"), {})
-        port.set_refs(folder("example"), {"https://github.com/OWNER/OTHER" => "v2.0.0"})
+        port.set_refs(folder("example"), {["https://github.com/OWNER/OTHER", nil] => "v2.0.0"})
 
         assert_equal before, port.read(folder("example"))
       end
 
       def test_names_the_file_when_the_project_it_sets_refs_in_has_no_configuration
         port = configuration_port({"app" => ["one"]})
-        mistake = assert_raises(Core::Mistake) { port.set_refs(folder("elsewhere"), {"one" => "v1.0.0"}) }
+        mistake = assert_raises(Core::Mistake) { port.set_refs(folder("elsewhere"), {["one", nil] => "v1.0.0"}) }
 
         assert_equal port.file, mistake.file
       end

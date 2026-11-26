@@ -32,11 +32,12 @@ module CrossLint
     def write: (String root, Core::Configuration configuration) -> void
 
     # Sets the ref of each plugin the configuration of `root` lists, by
-    # the plugin's name, that is a key of `refs`, to its value, and
+    # its URL and path (nil for a plugin with none), that is a key of
+    # `refs`, to its value, and
     # changes nothing else of the configuration: with a file, every other
     # byte stays. Raises Core::Mistake, naming the file and the line, when
     # a plugin has no ref it can rewrite, and when the project has none.
-    def set_refs: (String root, Hash[String, String] refs) -> void
+    def set_refs: (String root, Hash[[String, String?], String] refs) -> void
   end
 
   # Where the core reads each plugin's manifest: a format, such as KDL in

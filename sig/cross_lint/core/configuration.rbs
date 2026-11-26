@@ -45,17 +45,30 @@ module CrossLint
       # The tag or commit of a shared plugin, or nil.
       attr_reader ref: String?
 
+      # The folder of the repository that holds a shared plugin, relative
+      # to its root with / between folders, or nil for a plugin at the
+      # root. The plugin's name is the folder's last part.
+      attr_reader path: String?
+
       # The plugin's settings.
       attr_reader settings: Array[Setting]
 
       # The line the plugin is listed on.
       attr_reader line: Integer
 
-      # A listed plugin with these fields.
-      def self.new: (name: String, ref: String?, settings: Array[Setting], line: Integer) -> instance
+      # A listed plugin with these fields, and no path unless given one.
+      def self.new: (name: String, ref: String?, settings: Array[Setting], line: Integer, ?path: String?) -> instance
 
-      # A listed plugin with these fields.
-      def initialize: (name: String, ref: String?, settings: Array[Setting], line: Integer) -> void
+      # A listed plugin with these fields, and no path unless given one.
+      def initialize: (name: String, ref: String?, settings: Array[Setting], line: Integer, ?path: String?) -> void
+
+      # What the plugin is called: the last part of its path, or the name
+      # of its repository.
+      def plugin_name: () -> String?
+
+      # The URL, and the path in parentheses when there is one, as a
+      # message names the plugin.
+      def shown: () -> String
 
       # What kind of plugin the name lists.
       def kind: () -> (:local | :shared | :built_in)

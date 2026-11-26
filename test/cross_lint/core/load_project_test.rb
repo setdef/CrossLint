@@ -103,6 +103,68 @@ class LoadProjectTest < Minitest::Test
     assert_equal [[URL, "v1.2.0"]], shared.fetched
   end
 
+  def test_reads_a_shared_plugin_from_a_folder_of_its_repository_and_names_it_for_the_folder
+    shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+    folder = "#{TOP}cache/a1/signatures/plugins/markdown-links"
+    project = load_project(plugins: [listing(URL, ref: "v1.2.0", path: "plugins/markdown-links", line: 3)],
+      manifests: {folder => tests_manifest("markdown-links")}, shared_plugins: shared)
+
+    assert_equal [["markdown-links", folder]], project.plugins.map { |plugin| [plugin.name, plugin.folder] }
+    assert_equal [[URL, "v1.2.0"]], shared.fetched
+  end
+
+  def test_fetches_a_commit_once_for_every_folder_of_it_that_is_listed
+    shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+    manifests = %w[one two].to_h { |name| ["#{TOP}cache/a1/signatures/plugins/#{name}", tests_manifest(name)] }
+    plugins = [listing(URL, ref: "v1.2.0", path: "plugins/one"), listing(URL, ref: "v1.2.0", path: "plugins/two", line: 2)]
+
+    assert_equal %w[one two], load_project(plugins:, manifests:, shared_plugins: shared).plugins.map(&:name)
+    assert_equal [[URL, "v1.2.0"]], shared.fetched
+  end
+
+  def test_stops_at_a_path_that_names_no_folder_with_a_manifest_and_names_the_url_ref_and_path
+    assert_mistake CONFIG, 1, %(no plugin.kdl in folder "plugins/none" of #{URL} at v1.2.0), shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures"),
+      plugins: [listing(URL, ref: "v1.2.0", path: "plugins/none")]
+  end
+
+  def test_stops_at_a_path_that_could_leave_the_repository_or_isnt_one_without_fetching
+    shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+    {"/etc" => "is absolute", "C:/x" => "is absolute", "../x" => %(has ".."), "a/../x" => %(has ".."), "a\\x" => "has a backslash", "" => "is empty",
+     "a//x" => "has an empty part"}.each do |path, problem|
+      mistake = assert_raises(Mistake) { load_project(plugins: [listing(URL, ref: "v1.2.0", path:, line: 2)], shared_plugins: shared) }
+
+      assert_equal [CONFIG, 2], [mistake.file, mistake.line], path
+      assert_operator mistake.message, :start_with?, %(shared plugin "#{URL}" at v1.2.0 has a path= that #{problem}), path
+      assert_operator mistake.message, :end_with?, ": #{path.dump}", path
+    end
+    assert_empty shared.fetched
+  end
+
+  def test_stops_at_a_path_on_a_plugin_that_isnt_shared
+    assert_mistake CONFIG, 1, "only a shared plugin takes path=", plugins: [listing(".config/crosslint/tests", path: "x")]
+    assert_mistake CONFIG, 1, "only a shared plugin takes path=", plugins: [listing("debt", path: "x")], built_in: {"debt" => "#{TOP}c/plugins/debt"}
+  end
+
+  def test_stops_at_two_folders_of_a_repository_that_give_one_name_and_at_one_folder_listed_twice
+    shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+    manifests = %w[a/same b/same].to_h { |path| ["#{TOP}cache/a1/signatures/plugins/#{path}", tests_manifest("same")] }
+    both = [listing(URL, ref: "v1.2.0", path: "plugins/a/same"), listing(URL, ref: "v1.2.0", path: "plugins/b/same", line: 2)]
+
+    assert_mistake CONFIG, 2, %(plugins "#{URL} (plugins/a/same)" and "#{URL} (plugins/b/same)" are both named "same", since a plugin's name is its folder's name),
+      plugins: both, manifests:, shared_plugins: shared
+    assert_mistake CONFIG, 2, %(plugin "#{URL} (plugins/a/same)" is listed twice; the first is on line 1),
+      plugins: [both.first, both.first.with(ref: "v1.2.1", line: 2)], manifests:, shared_plugins: shared
+  end
+
+  def test_stops_at_a_folder_of_a_repository_with_the_name_of_a_built_in_plugin
+    built_in = {"debt" => "#{TOP}c/plugins/debt"}
+
+    assert_mistake CONFIG, 1, %(plugin "#{URL} (plugins/debt)" is named "debt", the name of a built-in plugin, which no local or shared plugin can have; ) +
+      "rename the plugin's folder, since a plugin's name is its folder's name", built_in:, steps: {"track-debt" => RecordingStep.new},
+      plugins: [listing(URL, ref: "v1.2.0", path: "plugins/debt")], shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures"),
+      manifests: {"#{TOP}cache/a1/signatures/plugins/debt" => debt_manifest("debt")}
+  end
+
   def test_reads_a_shared_plugin_at_a_commit_sha
     sha = "a" * 40
     repository = MemorySharedPlugins::Repository.new(tags: {}, branches: [], commits: {sha => "#{TOP}cache/b2/signatures"})
@@ -784,7 +846,7 @@ class LoadProjectTest < Minitest::Test
     assert_equal [file, line, message], [mistake.file, mistake.line, mistake.message]
   end
 
-  def listing(name, ref: nil, settings: [], line: 1) = ListedPlugin.new(name:, ref:, settings:, line:)
+  def listing(name, ref: nil, settings: [], line: 1, path: nil) = ListedPlugin.new(name:, ref:, path:, settings:, line:)
 
   def setting(name, line:) = Setting.new(name:, arguments: [], properties: {}, children: [], line:)
 

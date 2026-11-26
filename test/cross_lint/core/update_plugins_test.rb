@@ -34,8 +34,19 @@ class UpdatePluginsTest < Minitest::Test
 
     assert_equal [["v1.10.0", false], ["v2.1.1", false]], result.updates.map { |update| [update.newest, update.current?] }
     assert_equal ["v1.10.0", "v2.1.1"], configuration.read(APP).plugins.map(&:ref)
-    assert_equal [{ONE => "v1.10.0", TWO => "v2.1.1"}], configuration.set
+    assert_equal [{[ONE, nil] => "v1.10.0", [TWO, nil] => "v2.1.1"}], configuration.set
     assert_equal ["#{ONE}: moved from v1.0.0 to v1.10.0", "#{TWO}: moved from v2.1.0 to v2.1.1"], result.lines
+  end
+
+  def test_moves_each_folder_listed_from_a_repository_by_itself_keeps_its_path_and_lists_the_tags_once
+    configuration, shared = project([listing(ONE, "v1.0.0", 1, path: "plugins/a"), listing(ONE, "v9.0.0", 2, path: "plugins/b"), listing(ONE, "v1.0.0", 3)],
+      ONE => %w[v1.0.0 v1.2.0])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+
+    assert_equal [{[ONE, "plugins/a"] => "v1.2.0", [ONE, nil] => "v1.2.0"}], configuration.set
+    assert_equal [["v1.2.0", "plugins/a"], ["v9.0.0", "plugins/b"], ["v1.2.0", nil]], configuration.read(APP).plugins.map { |plugin| [plugin.ref, plugin.path] }
+    assert_equal ["#{ONE} (plugins/a): moved from v1.0.0 to v1.2.0", "#{ONE} (plugins/b): is at its newest tag, v9.0.0", "#{ONE}: moved from v1.0.0 to v1.2.0"], result.lines
+    assert_equal ["crosslint: listing the tags of #{ONE}"], @err.string.lines(chomp: true)
   end
 
   def test_lists_what_it_would_move_and_changes_nothing_with_dry_run
@@ -64,7 +75,7 @@ class UpdatePluginsTest < Minitest::Test
     configuration, shared = project([listing(ONE, "v1.0.0"), listing(TWO, "v2.0.0-rc.1", 2)], ONE => %w[v1.1.0 v2.0.0-rc.2], TWO => %w[v2.0.0])
     result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
 
-    assert_equal [{ONE => "v1.1.0"}], configuration.set
+    assert_equal [{[ONE, nil] => "v1.1.0"}], configuration.set
     assert_equal ["v1.1.0", "v2.0.0-rc.1"], configuration.read(APP).plugins.map(&:ref)
     assert_equal ["#{ONE}: moved from v1.0.0 to v1.1.0", "#{TWO}: is at v2.0.0-rc.1, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone"],
       result.lines
@@ -171,5 +182,5 @@ class UpdatePluginsTest < Minitest::Test
 
   def repository(names) = Memory::MemorySharedPlugins::Repository.new(tags: names.to_h { |name| [name, "/cache/#{name}"] }, branches: [], commits: {})
 
-  def listing(name, ref, line = 1) = Core::ListedPlugin.new(name:, ref:, settings: [], line:)
+  def listing(name, ref, line = 1, path: nil) = Core::ListedPlugin.new(name:, ref:, path:, settings: [], line:)
 end

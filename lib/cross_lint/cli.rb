@@ -94,7 +94,7 @@ module CrossLint
       end
 
       commands = found.plugins.flat_map { |plugin| plugin.manifest.commands.map { |command| [plugin.name, command] } } #: Array[[String, Core::CommandDeclaration]]
-      notes = found.unfetched.map { |listed| "#{Core::SharedPlugin.plugin_name(listed.name)} isn't fetched yet, so its commands aren't shown; crosslint check fetches it" }
+      notes = found.unfetched.map { |listed| "#{listed.plugin_name} isn't fetched yet, so its commands aren't shown; crosslint check fetches it" }
       Help::Plugins.new(commands:, notes:)
     end
 
@@ -106,7 +106,7 @@ module CrossLint
     def plugin_help(spec, line)
       commands, found = resolved(spec, line)
       word = line.words.fetch(0)
-      if !found.is_a?(Core::Mistake) && found.unfetched.none? { |listed| Core::SharedPlugin.plugin_name(listed.name) == word }
+      if !found.is_a?(Core::Mistake) && found.unfetched.none? { |listed| listed.plugin_name == word }
         help = Help.new(spec)
         plugin, command = commands.find(line.words, found.plugins)
         @out.write(command ? help.plugin_command(plugin.name, command) : help.plugin(plugin.name, plugin.manifest.commands))

@@ -22,6 +22,27 @@ module CrossLint
 
       def self.ref?(ref) = ref.match?(TAG)
 
+      # What is wrong with `path`, the folder of a repository that holds a
+      # plugin, or nil when nothing is: folders joined by /, none of them
+      # empty, "." or "..", so that the path can't leave the repository,
+      # and no backslash or drive letter, so that it means the same on
+      # every system.
+      def self.path_problem(path)
+        if path.empty?
+          "is empty"
+        elsif path.include?("\\")
+          "has a backslash; write the folders with / between them"
+        elsif path.start_with?("/") || path.match?(/\A[A-Za-z]:/)
+          "is absolute; write it relative to the repository's root"
+        elsif path.end_with?("/") || path.include?("//")
+          "has an empty part; write each folder's name, with a single / between them"
+        elsif (dots = path.split("/").find { |part| part == "." || part == ".." })
+          "has #{dots.dump}; write each folder's name, with a single / between them"
+        elsif !File.basename(path).match?(NAME)
+          "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name"
+        end
+      end
+
       def self.sha?(ref) = ref.match?(SHA)
 
       def self.version?(ref) = ref.match?(VERSION)

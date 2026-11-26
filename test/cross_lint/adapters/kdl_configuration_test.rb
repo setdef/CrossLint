@@ -84,6 +84,23 @@ class KDLConfigurationTest < Minitest::Test
     assert_equal ["https://github.com/OWNER/REPO", "v1.2.0", :shared], [plugin.name, plugin.ref, plugin.kind]
   end
 
+  def test_reads_the_path_of_a_shared_plugin_and_no_path_as_nil
+    plugins = read(%(plugin "#{URL}" ref="v1.2.0" path="plugins/markdown-links"\nplugin "#{URL}" ref="v1.2.0"\n)).plugins
+
+    assert_equal ["plugins/markdown-links", nil], plugins.map(&:path)
+  end
+
+  def test_refuses_a_path_that_is_not_a_string
+    assert_refuses 1, "path= takes a string, not 1", %(plugin "#{URL}" ref="v1" path=1)
+  end
+
+  def test_sets_the_ref_of_the_plugin_with_the_path_it_is_given_and_leaves_the_path_and_the_others_as_they_were
+    text = %(plugin "#{URL}" ref="v1.0.0" path="plugins/a"\nplugin "#{URL}" ref="v1.0.0" path="plugins/b"\nplugin "#{URL}" ref="v1.0.0"\n)
+
+    assert_equal text.sub(%(ref="v1.0.0" path="plugins/b"), %(ref="v1.1.0" path="plugins/b")), set_refs(text, [URL, "plugins/b"] => "v1.1.0")
+    assert_equal text.sub(%(ref="v1.0.0"\n), %(ref="v1.1.0"\n)), set_refs(text, [URL, nil] => "v1.1.0")
+  end
+
   def test_reads_settings_inside_settings
     plugin = read(%(plugin "angular" {\n  role "store" files="{path}.store.ts" {\n    expects "spec"\n  }\n}\n)).plugins.fetch(0)
 
@@ -226,7 +243,7 @@ class KDLConfigurationTest < Minitest::Test
     text = "// A comment, with a ref=\"v1.0.0\" in it\r\n\tplugin   \"#{URL}\"\t ref=\"v1.0.0\"  { \r\n  src-dir \"src\"\r\n}\r\n\r\n" \
       "plugin \"angular\" // ref=\"v1.0.0\"\r\nwarnings \"error\"  \r\n"
 
-    assert_equal text.sub("ref=\"v1.0.0\"  {", "ref=\"v2.0.0\"  {"), set_refs(text, URL => "v2.0.0")
+    assert_equal text.sub("ref=\"v1.0.0\"  {", "ref=\"v2.0.0\"  {"), set_refs(text, [URL, nil] => "v2.0.0")
   end
 
   def test_sets_the_refs_of_every_plugin_it_is_given_wherever_they_are_on_a_line
@@ -235,37 +252,37 @@ class KDLConfigurationTest < Minitest::Test
     # Each ref is longer or shorter than the one it replaces, so that a
     # change made before the one after it would move that one.
     assert_equal text.sub(%(/a" ref="v1"), %(/a" ref="v10.20.30")).sub(%(/b" ref="v1"), %(/b" ref="v")).sub(%(/c"\\\n  ref="v1"), %(/c"\\\n  ref="version-400")),
-      set_refs(text, "#{URL}/a" => "v10.20.30", "#{URL}/b" => "v", "#{URL}/c" => "version-400")
+      set_refs(text, ["#{URL}/a", nil] => "v10.20.30", ["#{URL}/b", nil] => "v", ["#{URL}/c", nil] => "version-400")
   end
 
   def test_counts_columns_in_characters_and_lines_by_every_line_ending_kdl_has
     ["\r\n", "\n", "\u0085", "\u000B", "\u000C", "\u2028", "\u2029"].each do |ending|
       text = "// é#{ending}plugin \"é\" ref=\"v1\"#{ending}"
 
-      assert_equal "// é#{ending}plugin \"é\" ref=\"v2\"#{ending}", set_refs(text, "é" => "v2"), "after #{ending.dump}"
+      assert_equal "// é#{ending}plugin \"é\" ref=\"v2\"#{ending}", set_refs(text, ["é", nil] => "v2"), "after #{ending.dump}"
     end
   end
 
   def test_sets_a_ref_written_as_a_raw_string
-    assert_equal %(plugin "#{URL}" ref=#"v2"#\n), set_refs(%(plugin "#{URL}" ref=#"v1"#\n), URL => "v2")
-    assert_equal %(plugin "#{URL}" ref=##"v2"##\n), set_refs(%(plugin "#{URL}" ref=##"v1"##\n), URL => "v2")
+    assert_equal %(plugin "#{URL}" ref=#"v2"#\n), set_refs(%(plugin "#{URL}" ref=#"v1"#\n), [URL, nil] => "v2")
+    assert_equal %(plugin "#{URL}" ref=##"v2"##\n), set_refs(%(plugin "#{URL}" ref=##"v1"##\n), [URL, nil] => "v2")
   end
 
   def test_sets_a_ref_before_the_argument_and_one_on_a_plugin_with_settings
-    assert_equal %(plugin ref="v2" "#{URL}"\n), set_refs(%(plugin ref="v1" "#{URL}"\n), URL => "v2")
-    assert_equal %(plugin "#{URL}" ref="v2" {\n  ref "v1"\n}\n), set_refs(%(plugin "#{URL}" ref="v1" {\n  ref "v1"\n}\n), URL => "v2")
+    assert_equal %(plugin ref="v2" "#{URL}"\n), set_refs(%(plugin ref="v1" "#{URL}"\n), [URL, nil] => "v2")
+    assert_equal %(plugin "#{URL}" ref="v2" {\n  ref "v1"\n}\n), set_refs(%(plugin "#{URL}" ref="v1" {\n  ref "v1"\n}\n), [URL, nil] => "v2")
   end
 
   def test_leaves_a_plugin_it_is_not_given_a_ref_for_and_a_node_that_is_not_a_plugin
     text = %(plugin "#{URL}" ref="v1"\nplugin "#{URL}/other" ref="v1"\npolicy "#{URL}" severity="error"\nwarnings "all"\n)
 
-    assert_equal text.sub(%(REPO" ref="v1"), %(REPO" ref="v2")), set_refs(text, URL => "v2")
+    assert_equal text.sub(%(REPO" ref="v1"), %(REPO" ref="v2")), set_refs(text, [URL, nil] => "v2")
   end
 
   def test_writes_nothing_when_no_plugin_is_given_a_ref
     path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
     inode = File.stat(path).ino
-    CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "project"), {"https://example.com/other" => "v2"})
+    CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "project"), {["https://example.com/other", nil] => "v2"})
 
     assert_equal [inode, [".config"]], [File.stat(path).ino, Dir.children(File.join(@base, "project"))]
   end
@@ -275,7 +292,7 @@ class KDLConfigurationTest < Minitest::Test
 
     path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
     File.chmod(0o640, path)
-    set_refs_in("project", URL => "v2")
+    set_refs_in("project", [URL, nil] => "v2")
 
     assert_equal [0o640, ["config.kdl"]], [File.stat(path).mode & 0o777, Dir.children(File.dirname(path))]
   end
@@ -284,7 +301,7 @@ class KDLConfigurationTest < Minitest::Test
     path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
     mistake = begin
       Thread.current[:crosslint_config_rename_denied] = true
-      assert_raises(Mistake) { set_refs_in("project", URL => "v2") }
+      assert_raises(Mistake) { set_refs_in("project", [URL, nil] => "v2") }
     ensure
       Thread.current[:crosslint_config_rename_denied] = nil
     end
@@ -297,6 +314,7 @@ class KDLConfigurationTest < Minitest::Test
   def test_writes_the_configuration_as_kdl_with_a_blank_line_between_its_kinds
     core = CrossLint::Core
     plugins = [core::ListedPlugin.new(name: URL, ref: "v1", settings: [], line: 0),
+      core::ListedPlugin.new(name: URL, ref: "v1", path: "plugins/a", settings: [], line: 0),
       core::ListedPlugin.new(name: "angular", ref: nil, line: 0, settings: [
         core::Setting.new(name: "role", arguments: ["store"], properties: {"files" => "{path}.store.ts"}, line: 0,
           children: [core::Setting.new(name: "expects", arguments: [], properties: {}, children: [], line: 0)])
@@ -307,6 +325,7 @@ class KDLConfigurationTest < Minitest::Test
 
     assert_equal <<~KDL, File.binread(File.join(@base, "project", FILE))
       plugin "#{URL}" ref="v1"
+      plugin "#{URL}" ref="v1" path="plugins/a"
       plugin "angular" {
         role "store" files="{path}.store.ts" {
           expects
@@ -396,19 +415,19 @@ class KDLConfigurationTest < Minitest::Test
     text = %(plugin "#{URL}/a" ref="v1"\nplugin "#{URL}/b" ref=1\n)
     path = write(@base, "project/#{FILE}", text)
 
-    assert_raises(Mistake) { set_refs_in("project", "#{URL}/a" => "v2", "#{URL}/b" => "v2") }
+    assert_raises(Mistake) { set_refs_in("project", ["#{URL}/a", nil] => "v2", ["#{URL}/b", nil] => "v2") }
     assert_equal text, File.binread(path)
   end
 
   def test_names_the_file_when_it_sets_a_ref_in_a_project_with_no_configuration
-    mistake = assert_raises(Mistake) { CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "nowhere"), {URL => "v1"}) }
+    mistake = assert_raises(Mistake) { CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "nowhere"), {[URL, nil] => "v1"}) }
 
     assert_equal [FILE, "doesn't exist"], [mistake.file, mistake.message]
   end
 
   def test_refuses_to_set_a_ref_in_a_configuration_that_isnt_valid_kdl
     write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1" {\n))
-    mistake = assert_raises(Mistake) { set_refs_in("project", URL => "v2") }
+    mistake = assert_raises(Mistake) { set_refs_in("project", [URL, nil] => "v2") }
 
     assert_equal [FILE, 2], [mistake.file, mistake.line]
   end
@@ -426,7 +445,7 @@ class KDLConfigurationTest < Minitest::Test
 
   def assert_refuses_to_set(line, message, text)
     write(@base, "project/#{FILE}", text)
-    mistake = assert_raises(Mistake) { set_refs_in("project", URL => "v2") }
+    mistake = assert_raises(Mistake) { set_refs_in("project", [URL, nil] => "v2") }
 
     assert_equal [FILE, line, message], [mistake.file, mistake.line, mistake.message]
     assert_equal text, File.binread(File.join(@base, "project", FILE)), "the file changed"

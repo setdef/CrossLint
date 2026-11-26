@@ -31,7 +31,7 @@ module CrossLint
 
       def set_refs(root, refs)
         configuration = read(root)
-        plugins = configuration.plugins.map { |listing| refs.key?(listing.name) ? listing.with(ref: refs.fetch(listing.name)) : listing }
+        plugins = configuration.plugins.map { |listing| refs.key?([listing.name, listing.path]) ? listing.with(ref: refs.fetch([listing.name, listing.path])) : listing }
         @projects[root] = configuration.with(plugins:)
       end
 

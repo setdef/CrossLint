@@ -85,11 +85,13 @@ module CrossLint
 
       @shared_plugins: _SharedPlugins
 
-      # The tag each of `changes` moves its plugin to, by the plugin's name.
-      def refs: (Array[Update] changes) -> Hash[String, String]
+      # The tag each of `changes` moves its plugin to, by the plugin's URL
+      # and path.
+      def refs: (Array[Update] changes) -> Hash[[String, String?], String]
 
       # The update of the shared plugin `listing`, listed in `file`.
-      def update: (ListedPlugin listing, String file) -> Update
+      # `tags` holds the tags listed so far, by URL.
+      def update: (ListedPlugin listing, String file, Hash[String, Array[String]] tags) -> Update
     end
   end
 end

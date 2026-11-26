@@ -29,6 +29,12 @@ module CrossLint
       # can't, or is "." or "..".
       def self.plugin_name: (String url) -> String?
 
+      # What is wrong with `path`, the folder of a repository that holds a
+      # plugin, said to finish "a path= that", or nil when nothing is:
+      # it is empty, has a backslash, is absolute or has a drive letter,
+      # has an empty part, ".", or "..", or ends in a name that is no plugin's.
+      def self.path_problem: (String path) -> String?
+
       # Whether `ref` is a full commit SHA or a tag name.
       def self.ref?: (String ref) -> bool
 

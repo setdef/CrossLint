@@ -80,8 +80,8 @@ module CrossLint
       def plugin(root, configuration, index, loaded, fetching: true)
         listing = configuration.plugins.fetch(index)
         fail_at = ->(message, line = listing.line) { raise Mistake.new(message, file: configuration.file, line:) }
-        first = configuration.plugins.take(index).find { |other| other.name == listing.name }
-        fail_at.call("plugin #{listing.name.dump} is listed twice; the first is on line #{first.line}") if first
+        first = configuration.plugins.take(index).find { |other| other.name == listing.name && other.path == listing.path }
+        fail_at.call("plugin #{listing.shown.dump} is listed twice; the first is on line #{first.line}") if first
 
         placed = place(root, listing, fail_at, fetching)
         return unless placed
@@ -90,19 +90,21 @@ module CrossLint
         manifest = @manifests.read(base, folder) || fail_at.call("no #{@manifests.file} in #{where(listing, folder)}")
         name = File.basename(File.expand_path(folder, base))
         if (listing.kind == :local || listing.shared?(@shared_plugins)) && @built_in.key?(name)
-          fail_at.call("plugin #{listing.name.dump} is named #{name.dump}, the name of a built-in plugin, which no local or shared plugin " \
+          fail_at.call("plugin #{listing.shown.dump} is named #{name.dump}, the name of a built-in plugin, which no local or shared plugin " \
             "can have; rename the plugin's folder, since a plugin's name is its folder's name")
         end
         same = loaded.find { |plugin| plugin.name == name }
         if same
-          fail_at.call("plugins #{same.listing.name.dump} and #{listing.name.dump} are both named #{name.dump}, " \
+          fail_at.call("plugins #{same.listing.shown.dump} and #{listing.shown.dump} are both named #{name.dump}, " \
             "since a plugin's name is its folder's name")
         end
         Plugin.new(name:, folder: File.expand_path(folder, base), listing:, manifest:)
       end
 
       def where(listing, folder)
-        return "the root of #{listing.name} at #{listing.ref}" if listing.shared?(@shared_plugins)
+        if listing.shared?(@shared_plugins)
+          return listing.path ? "folder #{listing.path.dump} of #{listing.name} at #{listing.ref}" : "the root of #{listing.name} at #{listing.ref}"
+        end
 
         folder.empty? ? "the project's root" : folder
       end
@@ -111,6 +113,7 @@ module CrossLint
         return fetch(listing, fail_at, fetching) if listing.shared?(@shared_plugins)
 
         fail_at.call("only a shared plugin takes ref=") if listing.ref
+        fail_at.call("only a shared plugin takes path=") if listing.path
         return [root, clean(listing.name)] if listing.kind == :local
 
         folder = @built_in.fetch(listing.name) do
@@ -124,15 +127,19 @@ module CrossLint
       def fetch(listing, fail_at, fetching)
         url = listing.name
         ref = listing.ref || fail_at.call("shared plugin #{url.dump} needs ref=, a tag or a full commit SHA")
-        name = SharedPlugin.plugin_name(url) || fail_at.call("can't name a plugin from #{url.dump}, whose last path segment has other characters " \
+        path = listing.path
+        if path && (problem = SharedPlugin.path_problem(path))
+          fail_at.call("shared plugin #{url.dump} at #{ref} has a path= that #{problem}: #{path.dump}")
+        end
+        SharedPlugin.plugin_name(url) || fail_at.call("can't name a plugin from #{url.dump}, whose last path segment has other characters " \
           "than letters, digits, and . _ -; a plugin's name is its repository's name")
 
         folder = begin
           fetching ? @shared_plugins.fetch(url, ref) : @shared_plugins.cached(url, ref)
         rescue FetchError => error
-          fail_at.call("couldn't fetch shared plugin #{name} from #{url} at #{ref}: " + error.message)
+          fail_at.call("couldn't fetch shared plugin #{listing.plugin_name} from #{url} at #{ref}: " + error.message)
         end
-        [folder, ""] if folder
+        [folder, listing.path || ""] if folder
       end
 
       # A name that starts with / is relative to the root too, as the

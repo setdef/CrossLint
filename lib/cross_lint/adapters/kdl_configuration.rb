@@ -80,9 +80,9 @@ module CrossLint
 
         source = File.binread(path).force_encoding(Encoding::UTF_8)
         document = KDLDocument.new(source, FILE)
-        plugins = document.nodes.select { |node| node.name == "plugin" && refs.key?(node.arguments.first) }
+        plugins = document.nodes.select { |node| node.name == "plugin" && refs.key?(identity(node)) }
         # Last first, so that a change doesn't move the ones before it.
-        plugins.map { |node| change(source, node, refs.fetch(node.arguments.first)) }.reverse_each do |at, size, text|
+        plugins.map { |node| change(source, node, refs.fetch(identity(node))) }.reverse_each do |at, size, text|
           source[at, size] = text
         end
         ReplaceFile.call(path, source) unless plugins.empty?
@@ -100,7 +100,8 @@ module CrossLint
       # policy lines, then its modes, a blank line between the kinds.
       def render(configuration)
         plugins = configuration.plugins.map do |listed|
-          node("plugin", [listed.name], listed.ref ? {"ref" => listed.ref} : {}, listed.settings, 0)
+          properties = {"ref" => listed.ref, "path" => listed.path}.compact
+          node("plugin", [listed.name], properties, listed.settings, 0)
         end
         policies = configuration.policies.map do |policy|
           properties = {} #: Hash[String, untyped]
@@ -133,6 +134,9 @@ module CrossLint
         end
       end
 
+      # What a plugin node is listed as: its name, and its path.
+      def identity(node) = [node.arguments.first, node.properties["path"]]
+
       # Where the text of the ref of `node` is in `source`, how long it is,
       # and `ref` to put there. Only the text between the quotes changes.
       def change(source, node, ref)
@@ -162,8 +166,8 @@ module CrossLint
 
       def plugin(document, node)
         name = document.string(node, "plugin NAME { ... }")
-        document.properties(node, ["ref"])
-        Core::ListedPlugin.new(name:, ref: document.string_property(node, "ref"),
+        document.properties(node, %w[ref path])
+        Core::ListedPlugin.new(name:, ref: document.string_property(node, "ref"), path: document.string_property(node, "path"),
           settings: node.children.map { |child| setting(child) }, line: node.line)
       end
 

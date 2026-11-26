@@ -57,6 +57,16 @@ class MemoryConfigurationTest < Minitest::Test
     assert_raises(kind) { port.read("/memory/app") }
   end
 
+  def test_sets_the_ref_of_the_listing_with_the_path_it_is_given_and_keeps_every_path
+    url = "https://github.com/OWNER/REPO"
+    listed = %w[plugins/a plugins/b].map.with_index(1) { |path, line| CrossLint::Core::ListedPlugin.new(name: url, ref: "v1.0.0", path:, settings: [], line:) }
+    port = CrossLint::Adapters::MemoryConfiguration.new({"/memory/app" => CrossLint::Core::Configuration.new(file: FILE, plugins: listed, policies: [],
+      warnings: nil, verbosity: nil)})
+    port.set_refs("/memory/app", {[url, "plugins/b"] => "v1.1.0"})
+
+    assert_equal [["v1.0.0", "plugins/a"], ["v1.1.0", "plugins/b"]], port.read("/memory/app").plugins.map { |plugin| [plugin.ref, plugin.path] }
+  end
+
   def test_names_the_file_it_is_given
     assert_equal "crosslint.json", CrossLint::Adapters::MemoryConfiguration.new(file: "crosslint.json").file
     assert_equal FILE, CrossLint::Adapters::MemoryConfiguration.new.file

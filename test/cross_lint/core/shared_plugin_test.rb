@@ -5,6 +5,7 @@ require "test_helper"
 class SharedPluginTest < Minitest::Test
   cover "CrossLint::Core::SharedPlugin*"
   cover "CrossLint::Core::FetchError*"
+  cover "CrossLint::Core::ListedPlugin*"
 
   SharedPlugin = CrossLint::Core::SharedPlugin
 
@@ -65,6 +66,45 @@ class SharedPluginTest < Minitest::Test
     SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.first(2)))
     assert_equal 4, assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.drop(3))) }.line
     SharedPlugin.refuse_credentials(configuration.with(plugins: []))
+  end
+
+  def test_takes_a_relative_path_of_folders_joined_by_a_slash
+    paths = ["plugins/markdown-links", "a", "a.b/c_d/e-f", "..a/b", "a/b..", "a/.hidden"]
+
+    assert_equal [nil] * paths.size, paths.map { |path| SharedPlugin.path_problem(path) }
+  end
+
+  def test_says_what_is_wrong_with_a_path
+    problems = {
+      "" => "is empty",
+      "a\\b" => "has a backslash; write the folders with / between them",
+      "/a" => "is absolute; write it relative to the repository's root",
+      "C:/a" => "is absolute; write it relative to the repository's root",
+      "c:a" => "is absolute; write it relative to the repository's root",
+      "a//b" => "has an empty part; write each folder's name, with a single / between them",
+      "a/" => "has an empty part; write each folder's name, with a single / between them",
+      "a/b/" => "has an empty part; write each folder's name, with a single / between them",
+      "a/c:y" => "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name",
+      "a/b/." => "has \".\"; write each folder's name, with a single / between them",
+      "a/b/.." => "has \"..\"; write each folder's name, with a single / between them",
+      "." => "has \".\"; write each folder's name, with a single / between them",
+      "a/./b" => "has \".\"; write each folder's name, with a single / between them",
+      "../a" => "has \"..\"; write each folder's name, with a single / between them",
+      "a/../b" => "has \"..\"; write each folder's name, with a single / between them",
+      "a/b c" => "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name",
+      "a\nb" => "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name"
+    }
+
+    assert_equal problems.values, problems.keys.map { |path| SharedPlugin.path_problem(path) }
+  end
+
+  def test_a_listed_plugin_is_named_for_its_path_or_else_its_repository_and_has_no_path_unless_given_one
+    listing = ->(path) { CrossLint::Core::ListedPlugin.new(name: "https://example.com/o/repo.git", ref: "v1", path:, settings: [], line: 1) }
+    bare = CrossLint::Core::ListedPlugin.new(name: "https://example.com/o/repo.git", ref: "v1", settings: [], line: 1)
+
+    assert_equal %w[markdown-links x repo], [listing.call("plugins/markdown-links").plugin_name, listing.call("x").plugin_name, bare.plugin_name]
+    assert_equal [nil, "https://example.com/o/repo.git"], [bare.path, bare.shown]
+    assert_equal "https://example.com/o/repo.git (plugins/x)", listing.call("plugins/x").shown
   end
 
   def test_picks_the_tag_with_the_highest_version_by_number_not_by_text
