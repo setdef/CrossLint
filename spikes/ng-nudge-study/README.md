@@ -82,7 +82,7 @@ Each bug below was reproduced by a case under `fixtures/`, unless marked suspect
 23. **Project extensions fail on Node 18 and early Node 20.** `package.json` says Node 18 or later, and extensions must be ES modules ending in `.js` (`extension-directory.js:18-21`). In a project whose `package.json` has no `"type": "module"`, Node 18.20 and 20.10 load them as CommonJS, and the run stops with "Cannot use import statement outside a module" (`transcript-node-20.10.txt`). Node 22.23 and 26 load them.
 24. **A project's artifact class is checked only if it shares ng-nudge's copy of `Spec`.** `expectsPiece` compares classes by identity (`artifact.js:80-82`). When the ng-nudge that runs is not the copy the project's extension imports (a global install, a second version, or a copied folder), the project's page artifact expects a different `Spec` and nothing checks it. Case 21, and case 19 on Windows.
 25. **The debt file counts as an artifact.** "Checked N artifact(s)" counts every name with a violation (`console-output.js:16, 64`), so `has-debt` violations add one for `debt`. Case 17: three services, "Checked 4 artifact(s)".
-26. **`--warnings=error` fails the run on a warning, but `--quiet` then hides it.** The exit code counts every unexcused violation when `failOnWarnings` is set (`verification-task.js:25-29`), but the printer decides what to show from each violation's own severity, so a warning is a `⚠` that fails the run and, with `--quiet`, is not printed at all (`console-output.js:48-50`). Case 22: exit 1 with no output.
+26. **`--warnings=error` fails the run on a warning, but `--quiet` then hides it.** The exit code counts every unexcused violation when `failOnWarnings` is set (`verification-task.js:25-29`), but the printer decides what to show from each violation's severity alone, so a warning is a `⚠` that fails the run and, with `--quiet`, is not printed at all (`console-output.js:48-50`). Case 22: exit 1 with no output.
 27. **A violation built without a rule can't become debt, and breaks every run that has debt.** `Violation.ruleName` comes from the rule (`violation.js:20`). A violation made as the README's and CONTRIBUTING's custom-rule examples make it, from a subject and a message, has none. `--update-debt` then writes an empty rule name, `Debt` refuses it, and the run stops with "Debt entry 1 has an empty or missing rule" and writes nothing (`debt-file.js:70-75`, `debt.js:4-13`). Once the debt file has any entry, every run stops with "Cannot match a violation without a ruleName" (`debt.js:30-35`). Case 23. A rule that extends `Rule` avoids it, because `Rule.violation()` passes the rule.
 
 ### Documentation errors, found by reading
@@ -114,7 +114,7 @@ This is every behavior, option, exit code, configuration key and message a user 
 ### Installing and running
 
 - Run from the project root; everything is resolved from the working directory.
-- The command is `ng-nudge`, installed as an npm dev dependency from GitHub and run with `npx ng-nudge` or from a `package.json` script.
+- The command is `ng-nudge`, installed as an npm dev dependency and run with `npx ng-nudge` or from a `package.json` script. The package is named `@overthetopmarketing/ng-nudge`. Its README has projects depend on a `git+ssh` URL under the name `ng-nudge`; its `publishConfig` and `.npmrc` also point the `@overthetopmarketing` scope at GitHub Packages. A project may therefore have either, plus registry credentials in its own `.npmrc`.
 - The project needs `tsconfig.json` (path set by `tsConfig`) and a source folder (`srcDir`, default `src`). The tsconfig requirement is a consequence of bug 3 and of ts-morph; only the Angular checks need it.
 
 ### Command line
@@ -147,7 +147,7 @@ Optional; JSON with no comments; described by `rc.schema.json` (`$id` `https://g
 | `artifacts.<role>.pattern` | Glob, relative to `srcDir`, that finds the role's primary files. Default `**/*.<role>.ts`. Overrides a built-in role's pattern, or adds a new role. |
 | `artifacts.<role>.expects` | Companion files the role expects. Broken (bug 4); a replacement has to make it work, since #1 counts on it. |
 | `rules.<name>.enabled` | `false` turns the rule off. |
-| `rules.<name>.severity` | `error` or `warning`. |
+| `rules.<name>.severity` | `error` or `warning`. For `has-debt` it is the severity of every entry before `withComment` lowers it. |
 | `rules.has-debt.withComment` | `true` or `"warning"`: commented entries become warnings. `"none"`: commented entries are not reported. `"error"` or `false`: no cap. `{ "maxSeverity": "none" \| "warning" \| "error", "matching": "<regex>" }`: the cap applies only to comments the regular expression matches, searched anywhere in the comment. Present at all: turns on `has-debt` reporting. |
 | `options.warnings` | Default for `--warnings`: `all`, `none` or `error`. |
 | `options.verbosity` | `normal`, `quiet` or `silent`. |
@@ -156,17 +156,18 @@ Rule names, used as `rules` keys and in the debt file: `spec-exists`, `stub-exis
 
 ### Project extensions
 
-- `.config/ng-nudge/artifacts/<role>.artifact.js`: an ES module whose default export, or else first export, is an artifact class. The file name gives the role. It replaces the class of a built-in role of that name, keeping that role's pattern and any `rc.json` pattern, or adds a role with pattern `**/*.<role>.ts` and the class's static `expects` (case 19).
+- `.config/ng-nudge/artifacts/<role>.artifact.js`: an ES module whose default export, or else first export, is an artifact class. The file name gives the role. It replaces the class of a built-in role of that name, keeping that role's pattern, any `rc.json` pattern and its `expects` (the new class's static `expects` is ignored), or adds a role with pattern `**/*.<role>.ts` and the class's static `expects` (case 19).
 - `.config/ng-nudge/policies/<name>.policy.js`: a class with `applies(artifact)`, `rules(artifact)` and `violations(artifact)`; ng-nudge runs one instance of it on every artifact, after the built-in policies (case 11).
 - `.config/ng-nudge/rules/<name>.rule.js`: loaded, not run (bug 12).
 - Package exports a project's code can import: `@overthetopmarketing/ng-nudge` (`Codebase`), `/artifacts` (`ArtifactFile`, `Artifact`, `Spec`, `Component`, `ComponentClass`, `Stub`, `Interface`, `Directive`, `Pipe`, `Service`, `Guard`, `Resolver`, `Interceptor`, `ComponentApi`) and `/rules` (`Rule`, `SpecExists`, `StubExists`, `InterfaceExists`, `StubMatchesComponent`, `PreferCssOverScss`).
 - What an extension can use on an artifact: `name`, `role`, `basePath`, `primaryPath`, `primary`, `spec`, `hasSpec`, `expects`, `expectsPiece()`, `project` (the ts-morph project), and for a component `stubPath`, `interfacePath`, `cssPath`, `scssPath`, `class`, `stub`, `interface` (each with `path`, `exists`, and `api` for the TypeScript ones), `hasCss`, `hasScss`. On a rule: `artifact`, `severity`, `violation(message)`, `violations`, `check()`.
+- Every module has a `.d.ts` beside it, so a TypeScript project can type-check its extensions against `Rule`, `Policy` and the other types, except `lib/artifact/index`, which has none.
 
 ### Artifacts
 
 - Seven roles, each found by `**/*.<role>.ts` inside `srcDir`: `component`, `directive`, `pipe`, `service`, `guard`, `resolver`, `interceptor`.
 - Every role expects a spec at `<base>.<role>.spec.ts`.
-- A component also has a stub `<base>.component.stub.ts`, an interface `<base>.component.i.d.ts`, and stylesheets `<base>.component.css` and `.scss`.
+- A component also has a stub `<base>.component.stub.ts`, an interface `<base>.component.i.d.ts`, and stylesheets `<base>.component.css` and `.scss`. The stub and the interface are optional: a component with neither gets only the spec and stylesheet checks, and a missing stub or interface is reported only when the other one exists. The `[Spec, Stub, Interface]` that `Component.expects` lists is read for `Spec` only.
 - A component's inputs and outputs: from the first class in the file with a `@Component` decorator, its properties initialized with `input(...)` or `input.<anything>(...)` (inputs), `output(...)` (outputs), or decorated `@Input()` or `@Output()`; following `extends` through every base class, in any file the TypeScript program resolves; a subclass's member hides a base member of the same name; `#private` members skipped. The stub is read the same way. A replacement must also collect what bugs 16 and 17 miss.
 - An interface's members: the property names of the one interface in the file.
 
@@ -195,12 +196,12 @@ An artifact is listed in the output if at least one policy applies to it; otherw
 ### Debt tracking
 
 - The file is `.config/ng-nudge/debt.tsv`. A missing file means no debt.
-- Tab-separated, header row `Rule`, `Artifact`, `Comment`, quoted the way d3-dsv quotes (a field holding a tab, newline or `"` is wrapped in `"` with `"` doubled). The file ends with a newline.
+- Tab-separated, header row `Rule`, `Artifact`, `Comment`, quoted the way d3-dsv quotes (a field holding a tab, newline, carriage return or `"` is wrapped in `"` with `"` doubled). The file ends with a newline.
 - `Rule` is the rule's name; `Artifact` is the base path relative to `srcDir` with the role suffix removed (`app/foo/foo`); `Comment` is the user's, kept across updates.
 - A row with an empty `Rule` or `Artifact` stops the run with `<path>.tsv row <N>: Rule column is empty or missing` (or `Artifact column`), counting the header as row 1.
-- A violation matching an entry's rule and artifact is excused: not printed and not failing. (Matching on base path alone is bugs 5 and 7.)
+- A violation matching an entry's rule and artifact is excused: not printed and not failing. (Matching on base path alone is bugs 5 and 7.) Excusing, stale detection and `--update-debt` consider every violation, whether or not `--warnings` or the verbosity hides it.
 - An entry no violation matches is stale: printed under `★  Debt paid off:` as `   <artifact> no longer owes <rule>`, followed by "Run `npx ng-nudge --update-debt` to update debt.tsv", and the run exits 1.
-- `--update-debt` keeps every entry that still matches, with its comment and in its place; drops stale entries; appends one row per unexcused violation, warnings included, with an empty comment; and prints `Updated <path> (<N> entries)`.
+- `--update-debt` keeps every entry that still matches, with its comment and in its place; drops stale entries; appends one row per unexcused violation, warnings included, with an empty comment (the `has-debt` violations themselves are never written); and prints `Updated <path> (<N> entries)`.
 - The `has-debt` rule and `withComment`, described under configuration, let a team require a comment on every entry, or let commented entries through as warnings or not at all.
 
 ### Output
@@ -265,7 +266,7 @@ Nothing in configuration loading, the run loop or the command line is hard to ca
 
 | Piece | What the project changes |
 |---|---|
-| Installation | Replace the dev dependency with the replacement's install step, and `npx ng-nudge` in `package.json` scripts and CI with its command. Nothing more if it keeps the flags and exit codes above. |
+| Installation | Replace the dev dependency with the replacement's install step, and `npx ng-nudge` in `package.json` scripts and CI with its command. Remove the `@overthetopmarketing` registry line and credentials from `.npmrc` and CI if the project installed from GitHub Packages. Nothing more if it keeps the flags and exit codes above. |
 | `rc.json` | Nothing, if the replacement reads `.config/ng-nudge/rc.json` and its keys. Otherwise one move and a rename of keys, which a conversion command could do. Enabling the Angular and debt plugins is one line each, or none if they are on by default. |
 | `debt.tsv` | Nothing, if the replacement reads the same format, rule names and artifact keys. Fixing bugs 5 and 7 means a key with the role and a detail; a one-time conversion can rewrite each entry from the current violations, but an entry that two artifacts share (bug 5) can't be assigned to one of them, so the conversion has to keep it on both or ask. |
 | New violations | Fixing bugs 1, 3, 14, 16 and 17 makes checks find violations ng-nudge hid, and fixing bug 2 turns `prefer-css-over-scss` into a warning. One `--update-debt` run takes those violations in as debt, so the first run passes. |
