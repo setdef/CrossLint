@@ -35,7 +35,7 @@ module CrossLint
     # The message for `word`, which none of the plugin's `commands` is.
     def missing: (String name, String word, Array[String] commands) -> String
 
-    # The names of CrossLint's own commands.
+    # The names of CrossLint's commands.
     def commands: () -> Array[String]
 
     # The name among `known` that is nearest to `word`, or nil.

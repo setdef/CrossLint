@@ -22,7 +22,7 @@ module CrossLint
       # and fetches shared plugins through `shared_plugins`. `built_in` has
       # the folder of each built-in plugin, by name, and `steps` each step
       # CrossLint has, by name. `reserved` has the name of each command of
-      # CrossLint's own, which no plugin that adds commands can be named.
+      # CrossLint, which no plugin that adds commands can be named.
       def initialize: (configuration: _Configuration, manifests: _PluginManifests, plugin_ruby: _PluginRuby, shared_plugins: _SharedPlugins,
                        ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String]) -> void
 

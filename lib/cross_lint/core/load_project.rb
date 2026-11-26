@@ -190,7 +190,7 @@ module CrossLint
       end
 
       # crosslint PLUGIN COMMAND must never be read two ways, so a command
-      # can't be named as CrossLint's own words are, nor a plugin that adds
+      # can't be named as CrossLint's words are, nor a plugin that adds
       # commands as CrossLint's commands are; and a command with no step
       # to tell its name to would do nothing.
       def check_commands(plugin)

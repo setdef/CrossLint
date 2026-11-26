@@ -31,7 +31,7 @@ module CrossLint
     end
 
     # The help made from `spec`, with `plugins` in the program's help: in a
-    # section of their own, after CrossLint's commands.
+    # section after CrossLint's commands.
     def initialize: (UsageSpec spec, ?plugins: Plugins) -> void
 
     # The help for `command`, or for the program when it is nil.
