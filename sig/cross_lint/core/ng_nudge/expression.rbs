@@ -26,12 +26,77 @@ module CrossLint
         class Unsupported < ArgumentError
         end
 
+        # The code points from `first` to `last`, both included.
+        class Span < Data
+          # The first code point.
+          attr_reader first: Integer
+
+          # The last code point.
+          attr_reader last: Integer
+
+          # A span with these fields.
+          def self.new: (first: Integer, last: Integer) -> instance
+
+          # A span with these fields.
+          def initialize: (first: Integer, last: Integer) -> void
+        end
+
+        # What a class member stands for.
+        class Member < Data
+          # The Ruby text that says it.
+          attr_reader text: String
+
+          # The code points it holds.
+          attr_reader spans: Array[Span]
+
+          # Its code point when it is one character, else nil.
+          attr_reader code: Integer?
+
+          # The text of the source it came from.
+          attr_reader source: String
+
+          # A member with these fields.
+          def self.new: (text: String, spans: Array[Span], code: Integer?, source: String) -> instance
+
+          # A member with these fields.
+          def initialize: (text: String, spans: Array[Span], code: Integer?, source: String) -> void
+        end
+
+        # `code` as `\uHHHH`, or `\u{H...}` above U+FFFF.
+        def self.written: (Integer code) -> String
+
         # The contents of a class for the code points, and ranges of
         # code points, in `codes`, each written as `\uHHHH`.
         def self.escapes: (Array[Integer | Range[Integer]] codes) -> String
 
+        # The spans of the code points, and ranges of code points, in
+        # `codes`.
+        def self.spans: (Array[Integer | Range[Integer]] codes) -> Array[Span]
+
+        # The code points that no span of `taken` has, as spans, leaving out
+        # the surrogates, which no Ruby text holds.
+        def self.complement: (Array[Span] taken) -> Array[Span]
+
+        # What JavaScript's `\s` is, as code points and ranges of them.
+        SPACE_CODES: Array[Integer | Range[Integer]]
+
         # What JavaScript's `\s` stands for, as the contents of a class.
         SPACE: String
+
+        # What JavaScript's `\s` holds.
+        SPACE_SPANS: Array[Span]
+
+        # What JavaScript's `\S` holds.
+        NOT_SPACE_SPANS: Array[Span]
+
+        # What JavaScript's `\d` holds.
+        DIGIT_SPANS: Array[Span]
+
+        # What JavaScript's `\w` holds.
+        WORD_SPANS: Array[Span]
+
+        # What each escape that stands for a set of characters holds.
+        SETS: Hash[String, Array[Span]]
 
         # What JavaScript's `.` leaves out, as the contents of a class.
         LINE_END: String
@@ -119,6 +184,13 @@ module CrossLint
         # Reads the escape that follows a backslash, inside a class or not.
         def escape: (inside: bool) -> String
 
+        # The text for the escape that follows a backslash, which `escape`
+        # writes.
+        def escaped: (inside: bool) -> String
+
+        # `\k<name>` or `\N`, which a class can't have.
+        def back_reference: (String char, bool inside) -> String
+
         # `\b` or `\B`, which a class can't have.
         def boundary: (String char, bool inside) -> String
 
@@ -136,8 +208,21 @@ module CrossLint
         # Reads a class, from the characters after its `[`.
         def set: () -> String
 
-        # Writes the character `char` of a class.
-        def member: (String char) -> String
+        # The member of a class that `char`, the character just read,
+        # stands for.
+        def member: (String char) -> Member
+
+        # The member a backslash in a class stands for.
+        def class_escape: () -> Member
+
+        # `members`, with each `a-b` made one member. Raises Unsupported for
+        # a range that ends before it starts.
+        def ranged: (Array[Member] members) -> Array[Member]
+
+        # What goes between `[` and `]` for `members`: their text as it is,
+        # or, when two of them hold a code point, each code point they hold
+        # written once.
+        def contents: (Array[Member] members) -> String
       end
     end
   end

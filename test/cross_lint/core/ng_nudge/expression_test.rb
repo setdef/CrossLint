@@ -37,7 +37,10 @@ class NgNudgeExpressionTest < Minitest::Test
     assert_equal "[#{SPACE}]", Expression.translate('\s')
     assert_equal "[^#{SPACE}]", Expression.translate('\S')
     assert_equal "[#{SPACE}a]", Expression.translate('[\sa]')
-    assert_equal "[a[^#{SPACE}]]", Expression.translate('[a\S]')
+    # Everything but white space, which holds the a, written once.
+    not_space = [0x00..0x08, 0x0e..0x1f, 0x21..0x9f, 0xa1..0x167f, 0x1681..0x1fff, 0x200b..0x2027, 0x202a..0x202e, 0x2030..0x205e, 0x2060..0x2fff,
+      0x3001..0xd7ff, 0xe000..0xfefe, 0xff00..0x10ffff]
+    assert_equal "[#{Expression.escapes(not_space)}]", Expression.translate('[a\S]')
     assert_equal "[^#{SPACE}x]", Expression.translate('[^\sx]')
   end
 
@@ -181,9 +184,76 @@ class NgNudgeExpressionTest < Minitest::Test
   def test_keeps_an_ampersand_in_a_class_unless_it_is_followed_by_another
     assert_equal "[a&]", Expression.translate("[a&]")
     assert_equal "[&b]", Expression.translate("[&b]")
-    assert_equal "[&a&b]", Expression.translate("[&a&b]")
+    assert_equal "[\\u0026\\u0061-\\u0062]", Expression.translate("[&a&b]")
     assert_raises(Expression::Unsupported) { Expression.translate("[a&&]") }
     assert_raises(Expression::Unsupported) { Expression.translate("[&&a]") }
+  end
+
+  # Ruby warns of a class that holds a range twice, such as [aa], [\w\d],
+  # and [a[^...]] for [a\S], and JavaScript reads each of them without a
+  # word.
+  def test_builds_no_character_class_with_a_duplicated_range_and_matches_what_javascript_does
+    astral = [0x10000, 0x10ffff].map { |code| [code].pack("U") }
+    {
+      "[&a&b]" => [%w[& a b], %w[c d -]],
+      "[aa]" => [%w[a], %w[b]],
+      "[a-cb]" => [%w[a b c], %w[d]],
+      "[b-da-c]" => [%w[a b c d], %w[e `]],
+      '[a\S]' => [["a", "x", "é", "5", *astral], [" ", "\t", " ", " "]],
+      '[\w\d]' => [%w[a Z 5 _], ["-", "é"]],
+      '[\s\n]' => [[" ", "\n", "\t", "　"], %w[a 5]],
+      '[\d0-9]' => [%w[0 9], %w[a]],
+      '[\t\x09\u0009]' => [["\t"], ["\n", " "]],
+      '[\S\S]' => [["a", *astral], [" "]],
+      '[\s\S]' => [[" ", "a", "\n", *astral], []],
+      '[^\S\d]' => [[" ", "\t", " "], %w[a 5 -]],
+      '[^a\Sb]' => [[" ", "\n"], %w[a b c]],
+      "[a-c\\x62-\\x64]" => [%w[a b c d], %w[e]]
+    }.each do |source, (matching, other)|
+      verbose = $VERBOSE
+      $VERBOSE = true
+      translated = nil
+      assert_output("", "") { translated = Regexp.new("\\A#{Expression.translate(source)}\\z") }
+      $VERBOSE = verbose
+
+      assert_equal [matching, []], [matching.select { |text| translated.match?(text) }, other.select { |text| translated.match?(text) }], source
+    end
+  end
+
+  def test_keeps_a_class_with_no_range_twice_as_it_is
+    ["[a-z_\\-.]", "[^abc\\]\\d]", "[a&]", "[&b]", "[a-cd]", "[\\sa]", "[\\d]", "[^\\sx]"].each do |source|
+      translated = Expression.translate(source)
+
+      assert_equal source, translated.gsub(SPACE, "\\s"), source
+    end
+  end
+
+  def test_refuses_a_backreference_in_a_class_where_javascript_reads_characters
+    message = ->(char) { "has \\#{char} in a class, where JavaScript reads it as characters and a reference is meant outside one" }
+
+    assert_equal message.call("1"), assert_raises(Expression::Unsupported) { Expression.translate('(a)[\1]') }.message
+    assert_equal message.call("k"), assert_raises(Expression::Unsupported) { Expression.translate('(?<n>a)[\k<n>]') }.message
+  end
+
+  def test_gives_the_code_points_no_span_has_leaving_out_the_surrogates
+    span = ->(first, last) { Expression::Span.new(first:, last:) }
+
+    assert_equal [span.call(0, 0x10), span.call(0x21, 0xd7ff), span.call(0xe000, 0x10ffff)],
+      Expression.complement([span.call(0x11, 0x20)])
+    assert_empty Expression.complement([span.call(0, 0xd7ff), span.call(0xe000, 0x10ffff)])
+    assert_equal [span.call(5, 0xd7ff), span.call(0xe000, 0x10ffff)], Expression.complement([span.call(0, 4)])
+    assert_equal [span.call(0, 0xd7ff)], Expression.complement([span.call(0xe000, 0x10ffff)])
+    assert_equal [span.call(0, 0xd7ff)], Expression.complement([span.call(0xdc00, 0x10ffff)])
+  end
+
+  def test_writes_a_code_point_above_ffff_as_a_braced_escape
+    assert_equal ['\u00ff', '\uffff', '\u{10000}', '\u{10ffff}'], [0xff, 0xffff, 0x10000, 0x10ffff].map { |code| Expression.written(code) }
+    assert_equal '\\u0061-\u{10000}', Expression.escapes([0x61..0x10000])
+  end
+
+  def test_refuses_a_class_range_that_is_out_of_order
+    assert_equal "has a range in a class that ends before it starts, z-a", assert_raises(Expression::Unsupported) { Expression.translate("[z-a]") }.message
+    assert_equal "has a range in a class that ends before it starts, \\x7a-\\x61", assert_raises(Expression::Unsupported) { Expression.translate(%q([\x7a-\x61])) }.message
   end
 
   def test_reads_the_names_of_groups_by_what_both_languages_allow
