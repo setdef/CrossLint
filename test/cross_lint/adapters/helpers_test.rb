@@ -36,6 +36,7 @@ class ProcessHelpersTest < Minitest::Test
     "talks.sh" => "while read -r line; do echo heard >&2; echo '{}'; done\n",
     "leaves.sh" => "read -r line\nsleep 30 &\necho $! > leaves.pid\necho '{}'\n",
     "lingers.sh" => "read -r line\necho '{}'\nexec 0<&-\nwhile :; do sleep 1; done\n",
+    "escapes.sh" => %(ruby -e 'Process.spawn(RbConfig.ruby, "-e", "sleep 8", pgroup: true)'\nread -r line\necho '{}'\n),
     "finishes.sh" => "while read -r line; do echo '{}'; done\nsleep 0.3\necho bye > finished.txt\n"
   }.freeze
 
@@ -81,6 +82,45 @@ class ProcessHelpersTest < Minitest::Test
 
     assert_equal "called helper hangs, which didn't answer within 0.5 seconds, so CrossLint ended it and everything it started", error.message
     assert_gone(File.read(File.join(@base, "hangs.pid")).strip)
+  end
+
+  def test_ends_a_helper_that_reads_nothing_however_much_it_is_asked
+    running = start("hangs", time_limit: 0.5)
+    error = Timeout.timeout(5) { assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("hangs"), "hangs", {"big" => "x" * 1_000_000}) } }
+
+    assert_equal "called helper hangs, which didn't answer within 0.5 seconds, so CrossLint ended it and everything it started", error.message
+  end
+
+  def test_doesnt_wait_for_a_process_that_left_the_helpers_tree_to_close_standard_error
+    running = start("escapes", time_limit: 0.5)
+    running.call(plugin_of("escapes"), "escapes", {})
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    running.stop
+
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 6
+  end
+
+  def test_reads_a_helpers_standard_error_whatever_becomes_of_crosslints
+    closed = StringIO.new.tap(&:close)
+    error = assert_raises(CrossLint::Core::PluginError) { start("fails", err: closed, debug: true).call(plugin_of("fails"), "fails", {}) }
+    running = start("talks", err: closed, debug: true)
+    answers = [running.call(plugin_of("talks"), "talks", 1), running.call(plugin_of("talks"), "talks", 2)]
+    running.stop
+
+    assert_equal ["called helper fails, which exited with status 3 before it answered, and wrote:\nnope", [{}, {}]], [error.message, answers]
+  end
+
+  def test_writes_everything_a_helper_wrote_to_standard_error_by_the_time_it_stops
+    err = StringIO.new
+    err.define_singleton_method(:puts) do |line|
+      sleep 0.3
+      super(line)
+    end
+    running = start("talks", err:, debug: true)
+    running.call(plugin_of("talks"), "talks", {})
+    running.stop
+
+    assert_equal "crosslint: helper talks: heard\n", err.string
   end
 
   def test_shows_a_short_answer_that_isnt_json_whole

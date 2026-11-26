@@ -92,10 +92,14 @@ module CrossLint
           # A binary string, which JSON reads as UTF-8 whatever the
           # locale's encoding.
           @stdout.binmode
+          @written = +""
           @reader = Thread.new do
-            stderr.each_line.with_object(+"") do |line, written|
-              written << line
+            stderr.each_line do |line|
+              @written << line
               err.puts("crosslint: helper #{name}: #{line}") if debug
+            rescue IOError, SystemCallError
+              # CrossLint's own standard error is closed or broken: the
+              # line is lost, and the helper's standard error is still read.
             end
           end
         end
@@ -115,8 +119,11 @@ module CrossLint
         private
 
         def exchange(input)
-          @stdin.write("#{JSON.generate(input)}\n")
-          Timeout.timeout(@time_limit) { @stdout.gets }
+          # The write too, since a helper that reads nothing fills the pipe.
+          Timeout.timeout(@time_limit) do
+            @stdin.write("#{JSON.generate(input)}\n")
+            @stdout.gets
+          end
         rescue Errno::EPIPE, Errno::EINVAL
           # The helper has exited, so there is no answer.
         rescue Timeout::Error
@@ -134,7 +141,11 @@ module CrossLint
         # standard error.
         def finish
           @tree.kill
-          [@wait.value, @reader.value]
+          status = @wait.value
+          # A process that left the tree keeps standard error open, so the
+          # reader is waited for as long as an answer is, and no longer.
+          @reader.join(@time_limit)
+          [status, @written]
         end
 
         def fail!(what = nil)

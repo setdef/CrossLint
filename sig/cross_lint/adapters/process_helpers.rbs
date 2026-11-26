@@ -115,8 +115,11 @@ module CrossLint
 
         @tree: ProcessGroup | JobObject
 
-        # Reads what the helper writes to standard error, and returns it
-        # once the helper and everything it started have closed it.
+        # What the helper has written to standard error.
+        @written: String
+
+        # Reads what the helper writes to standard error into `@written`,
+        # until the helper and everything it started have closed it.
         @reader: Thread
 
         # The line the helper answers `input` with, or nil when it exits
