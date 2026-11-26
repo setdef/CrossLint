@@ -40,6 +40,13 @@ class SharedPluginTest < Minitest::Test
     assert_equal [false], ["#{"a" * 40}\n"].map { |ref| SharedPlugin.sha?(ref) }
   end
 
+  def test_knows_a_plain_version_tag_from_every_other_ref
+    versions = %w[v1.2.3 1.2.3 v0.0.0 v10.20.30]
+    others = ["v1.2.3-rc.1", "1.2", "v1", "v1.2.3.4", "v1.2.3+b", "latest", "a" * 40, "v1.2.3\n", " 1.2.3", "V1.2.3"]
+
+    assert_equal [[true] * versions.size, [false] * others.size], [versions, others].map { |refs| refs.map { |ref| SharedPlugin.version?(ref) } }
+  end
+
   def test_picks_the_tag_with_the_highest_version_by_number_not_by_text
     assert_equal "v1.10.0", SharedPlugin.newest_tag(%w[v1.2.0 v1.10.0 v1.9.9 v0.99.99])
     assert_equal "2.0.0", SharedPlugin.newest_tag(%w[v1.10.0 2.0.0 v1.99.99])

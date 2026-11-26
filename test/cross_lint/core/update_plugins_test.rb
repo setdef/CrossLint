@@ -47,13 +47,27 @@ class UpdatePluginsTest < Minitest::Test
     assert_equal ["v1.0.0"], configuration.read(APP).plugins.map(&:ref)
   end
 
-  def test_moves_a_plugin_listed_by_commit_sha_to_the_newest_tag
-    sha = "a" * 40
-    configuration, shared = project([listing(ONE, sha)], ONE => %w[v1.0.0])
+  # A tag that isn't a plain version is a choice, such as a prerelease,
+  # and a SHA or a branch name is no version: update moves none of them.
+  def test_leaves_a_plugin_whose_ref_is_not_a_plain_version_tag_alone_and_says_so_without_asking_for_its_tags
+    refs = ["a" * 40, "v1.0.0-rc.1", "2.0.0-beta.2", "latest", "v1.0", "main", "v1.0.0+build.5"]
+    configuration, shared = project(refs.each_with_index.map { |ref, index| listing("#{ONE}#{index}", ref, index + 1) }, {})
     result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
 
-    assert_equal ["#{ONE}: moved from #{sha} to v1.0.0"], result.lines
-    assert_equal ["v1.0.0"], configuration.read(APP).plugins.map(&:ref)
+    assert_equal refs.each_with_index.map { |ref, index| "#{ONE}#{index}: is at #{ref}, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone" },
+      result.lines
+    assert_equal [[true] * refs.size, nil, refs], [result.updates.map(&:pinned?), configuration.set, configuration.read(APP).plugins.map(&:ref)]
+    assert_empty @err.string
+  end
+
+  def test_moves_the_plugins_that_are_at_a_plain_version_tag_and_leaves_the_others_in_one_run
+    configuration, shared = project([listing(ONE, "v1.0.0"), listing(TWO, "v2.0.0-rc.1", 2)], ONE => %w[v1.1.0 v2.0.0-rc.2], TWO => %w[v2.0.0])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+
+    assert_equal [{ONE => "v1.1.0"}], configuration.set
+    assert_equal ["v1.1.0", "v2.0.0-rc.1"], configuration.read(APP).plugins.map(&:ref)
+    assert_equal ["#{ONE}: moved from v1.0.0 to v1.1.0", "#{TWO}: is at v2.0.0-rc.1, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone"],
+      result.lines
   end
 
   def test_leaves_a_plugin_that_is_at_its_newest_tag_and_writes_nothing_for_it
@@ -72,11 +86,11 @@ class UpdatePluginsTest < Minitest::Test
   end
 
   def test_leaves_a_plugin_whose_repository_has_no_version_tag_and_says_so
-    configuration, shared = project([listing(ONE, "v1.0.0-rc.1")], ONE => %w[v1.0.0-rc.1 latest v2])
+    configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.0.0-rc.1 latest v2])
     result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
 
-    assert_equal [true, nil], [result.updates.first.untagged?, configuration.set]
-    assert_equal ["#{ONE}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at v1.0.0-rc.1"], result.lines
+    assert_equal [true, false, nil], [result.updates.first.untagged?, result.updates.first.pinned?, configuration.set]
+    assert_equal ["#{ONE}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at v1.0.0"], result.lines
   end
 
   def test_leaves_local_and_built_in_plugins_alone_and_asks_for_no_tags_of_them
@@ -124,9 +138,11 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_says_what_each_plugin_did
     update = ->(ref, newest) { Core::Update.new(listing: listing(ONE, ref), newest:) }
-    result = Core::UpdateResult.new(updates: [update.call("v1.0.0", "v1.1.0"), update.call("v1.1.0", "v1.1.0"), update.call("main", nil)], dry_run: false)
+    result = Core::UpdateResult.new(updates: [update.call("v1.0.0", "v1.1.0"), update.call("v1.1.0", "v1.1.0"), update.call("v1.0.0", nil), update.call("main", nil), update.call(nil, "v1.0.0")],
+      dry_run: false)
 
-    assert_equal [[false, false], [true, false], [false, true]], result.updates.map { |each| [each.current?, each.untagged?] }
+    assert_equal [[false, false, false], [true, false, false], [false, true, false], [false, false, true], [false, false, true]],
+      result.updates.map { |each| [each.current?, each.untagged?, each.pinned?] }
     assert_equal [result.updates.first], result.changes
   end
 

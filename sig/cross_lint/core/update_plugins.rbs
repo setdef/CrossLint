@@ -20,8 +20,14 @@ module CrossLint
       # Whether the plugin is at its newest tag already.
       def current?: () -> bool
 
-      # Whether no tag of the repository is a version.
+      # Whether the plugin is at a version tag and no tag of its
+      # repository is a version.
       def untagged?: () -> bool
+
+      # Whether the plugin's ref is no plain version tag, vX.Y.Z or X.Y.Z:
+      # a prerelease tag, a branch, or a commit SHA. Update leaves it
+      # alone, and never asks for its repository's tags.
+      def pinned?: () -> bool
     end
 
     # What `crosslint update` found for every shared plugin the
@@ -55,12 +61,15 @@ module CrossLint
       def lines: () -> Array[String]
     end
 
-    # Moves each shared plugin the configuration lists to the newest tag of
-    # its repository that is a version, vX.Y.Z or X.Y.Z, by rewriting its
-    # ref in the configuration. A plugin whose repository has no such tag
-    # stays as it is. Local and built-in plugins are left alone. It raises
-    # Mistake, naming the file and the line, when a shared plugin has no
-    # ref or its tags can't be listed, and changes nothing then.
+    # Moves each shared plugin the configuration lists, whose ref is a
+    # version tag, to the newest tag of its repository that is a version,
+    # vX.Y.Z or X.Y.Z, by rewriting its ref in the configuration, and
+    # never to a lower version than its ref's. A plugin whose ref is no
+    # version tag, a prerelease tag or a commit SHA among them, or whose
+    # repository has no such tag, stays as it is. Local and built-in
+    # plugins are left alone. It raises Mistake, naming the file and the
+    # line, when a shared plugin has no ref or its tags can't be listed,
+    # and changes nothing then.
     class UpdatePlugins
       # A use case that reads the configuration and sets refs through
       # `configuration`, and lists tags through `shared_plugins`.

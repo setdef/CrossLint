@@ -5,16 +5,20 @@ module CrossLint
     class Update < Data.define(:listing, :newest)
       def current? = newest == listing.ref
 
-      def untagged? = newest.nil?
+      def untagged? = newest.nil? && !pinned?
+
+      def pinned? = !SharedPlugin.version?(listing.ref.to_s)
     end
 
     class UpdateResult < Data.define(:updates, :dry_run)
-      def changes = updates.reject { |update| update.current? || update.untagged? }
+      def changes = updates.reject { |update| update.pinned? || update.current? || update.untagged? }
 
       def lines
         updates.map do |update|
           listing = update.listing
-          if update.untagged?
+          if update.pinned?
+            "#{listing.name}: is at #{listing.ref}, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone"
+          elsif update.untagged?
             "#{listing.name}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at #{listing.ref}"
           elsif update.current?
             "#{listing.name}: is at its newest tag, #{listing.ref}"
@@ -53,6 +57,10 @@ module CrossLint
 
       def update(listing, file)
         ref = listing.ref || raise(Mistake.new("shared plugin #{listing.name.dump} needs ref=, a tag or a full commit SHA", file:, line: listing.line))
+        # No request for a ref that is no version: a prerelease or a
+        # commit is somewhere a person put it.
+        return Update.new(listing:, newest: nil) unless SharedPlugin.version?(ref)
+
         Update.new(listing:, newest: SharedPlugin.newest_tag(@shared_plugins.tags(listing.name), keep: ref))
       rescue FetchError => error
         raise Mistake.new("couldn't list the tags of shared plugin #{listing.name}: " + error.message, file:, line: listing.line)

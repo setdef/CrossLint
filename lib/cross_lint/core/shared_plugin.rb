@@ -24,6 +24,8 @@ module CrossLint
 
       def self.sha?(ref) = ref.match?(SHA)
 
+      def self.version?(ref) = ref.match?(VERSION)
+
       # `keep` stands in for the other tags of its version, so that v1.2.0
       # and 1.2.0 on one commit don't send a project from one to the other.
       # A `keep` of a higher version than any tag stays, so that no update

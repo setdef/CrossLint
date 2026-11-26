@@ -35,6 +35,10 @@ module CrossLint
       # Whether `ref` is a full commit SHA.
       def self.sha?: (String ref) -> bool
 
+      # Whether `ref` is a plain version tag, vX.Y.Z or X.Y.Z with
+      # integers, and no prerelease or build part.
+      def self.version?: (String ref) -> bool
+
       # The tag among `tags` with the highest version, or nil when none is
       # a version. Of the tags that have that version, such as v1.2.0 and
       # 1.2.0, `keep` when it is one, else the first by name.
