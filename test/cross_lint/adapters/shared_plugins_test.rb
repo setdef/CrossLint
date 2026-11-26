@@ -142,6 +142,40 @@ module VanishingFolders
 end
 File.singleton_class.prepend(VanishingFolders)
 
+# Stands in for a pipe of Git's output, so that a test controls what a
+# read of it does: each step is a String it gives, an exception class it
+# raises, or :hang, which waits until the thread is ended. It is an IO,
+# for the RBS checker, that closes the pipe it stands in for.
+class ScriptedPipe < IO
+  attr_reader :binmoded
+
+  def initialize(real, *steps)
+    super(real.fileno, autoclose: false)
+    @real = real
+    @steps = steps
+    @binmoded = false
+  end
+
+  def binmode
+    @binmoded = true
+    self
+  end
+
+  def readpartial(_length)
+    step = @steps.shift
+    case step
+    when String then step
+    when Class then raise step
+    else sleep
+    end
+  end
+
+  def close
+    @real.close
+    super
+  end
+end
+
 # The shared-plugins port with Git, against repositories built in a
 # temporary folder and used by file:// URLs, so that no test reaches the
 # network. A fake git is a Ruby script that GitSharedPlugins runs as
@@ -467,11 +501,15 @@ class GitSharedPluginsTest < Minitest::Test
 
   def test_ends_git_when_it_cant_be_put_in_a_tree
     started = []
-    error = assert_raises(Core::FetchError) { port(git: fake("sleeps.rb", "sleep 30\n"), tree: unholding_tree(started) { |_pid| }).tags(repository_url) }
+    joined = []
+    began = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    error = assert_raises(Core::FetchError) { port(git: fake("sleeps.rb", "sleep 30\n"), tree: unholding_tree(started, joined) { |_pid| }).tags(repository_url) }
     *pipes, waiter = started
 
     assert_equal "git couldn't be put in a tree, so CrossLint ended it", error.message
     assert_equal [true, true, true, false], [*pipes.map(&:closed?), waiter.alive?]
+    assert_equal 1, joined.size
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - began, :<, 10
   end
 
   def test_ends_git_when_it_cant_be_put_in_a_tree_and_has_exited_already
@@ -524,6 +562,17 @@ class GitSharedPluginsTest < Minitest::Test
     assert_match(/\Acouldn't run crosslint-no-such-git, which CrossLint fetches shared plugins with, so install Git: /, error.message)
   end
 
+  def test_says_why_it_couldnt_run_git
+    error = assert_raises(Core::FetchError) { port(git: "crosslint-no-such-git").tags(repository_url) }
+    reason = begin
+      Process.spawn("crosslint-no-such-git")
+    rescue SystemCallError => spawned
+      spawned.message
+    end
+
+    assert_equal "couldn't run crosslint-no-such-git, which CrossLint fetches shared plugins with, so install Git: #{reason}", error.message
+  end
+
   def test_reads_what_git_wrote_as_utf_8_whatever_it_is
     printing = fake("bytes.rb", "$stderr.write(\"caf\\xC3\\xA9 \\xFF\".b)\nexit 1\n")
 
@@ -536,6 +585,39 @@ class GitSharedPluginsTest < Minitest::Test
     output = command.run([], @base, Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30)
 
     assert_equal [100_000, 50_000, true], [output.out.size, output.err.size, output.success]
+  end
+
+  def test_waits_a_second_for_what_a_process_that_left_gits_tree_still_writes_unless_it_is_told_otherwise
+    command = Adapters::GitCommand.new(git: ["git"], tree: Adapters::ProcessHelpers::TREE, environment: {})
+
+    assert_equal 1, command.pipe_limit
+  end
+
+  def test_reads_what_git_writes_as_bytes
+    pipes = []
+    command = Adapters::GitCommand.new(git: fake("quits.rb", "exit 0\n"), tree: scripting_tree(pipes, [IOError], [IOError]), environment: {})
+    command.run([], @base, Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30)
+
+    assert_equal [true, true], pipes.map(&:binmoded)
+  end
+
+  def test_keeps_what_git_wrote_when_a_pipe_fails_with_a_system_error
+    pipes = []
+    command = Adapters::GitCommand.new(git: fake("quits.rb", "exit 0\n"), tree: scripting_tree(pipes, ["partial", Errno::EPIPE], [Errno::EIO]), environment: {})
+    output = command.run([], @base, Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30)
+
+    assert_equal ["partial", "", true], [output.out, output.err, output.success]
+  end
+
+  def test_ends_the_threads_that_read_gits_pipes_before_it_returns
+    before = Thread.list
+    command = Adapters::GitCommand.new(git: fake("quits.rb", "exit 0\n"), tree: scripting_tree([], [:hang], [:hang]), environment: {}, pipe_limit: 0.05)
+    command.run([], @base, Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30)
+
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+    sleep 0.01 while (Thread.list - before).any? && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
+
+    assert_empty Thread.list - before
   end
 
   def test_waits_a_little_for_what_a_process_that_left_gits_tree_still_writes
@@ -699,12 +781,33 @@ class GitSharedPluginsTest < Minitest::Test
   # A tree class that holds nothing: it pushes the pipes and waiter of each
   # process it starts to `started`, runs the block with the pid, and
   # raises that it couldn't hold the process.
-  def unholding_tree(started, &before)
+  def unholding_tree(started, joined = [], &before)
     Class.new(Adapters::ProcessHelpers::TREE) do
-      define_singleton_method(:popen3) { |*arguments| super(*arguments, &nil).tap { |started_by_it| started.concat(started_by_it) } }
+      define_singleton_method(:popen3) do |*arguments|
+        super(*arguments, &nil).tap do |started_by_it|
+          started.concat(started_by_it)
+          started_by_it.last.define_singleton_method(:join) do |*limit|
+            joined << limit
+            super(*limit)
+          end
+        end
+      end
       define_method(:initialize) do |pid|
         before.call(pid)
         raise Core::PluginError, "couldn't be put in a tree"
+      end
+    end
+  end
+
+  # A tree class that gives GitCommand a ScriptedPipe for each of git's
+  # output pipes, with the steps for standard output and then standard
+  # error, and keeps them in `pipes`.
+  def scripting_tree(pipes, out, err)
+    Class.new(Adapters::ProcessHelpers::TREE) do
+      define_singleton_method(:popen3) do |*arguments|
+        stdin, stdout, stderr, wait = super(*arguments, &nil)
+        pipes.replace([ScriptedPipe.new(stdout, *out), ScriptedPipe.new(stderr, *err)])
+        [stdin, *pipes, wait]
       end
     end
   end

@@ -59,7 +59,6 @@ module CrossLint
         end
         finished = wait.join([deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0].max)
         tree.kill
-        wait.join
         # A process that left the tree keeps the pipes open, so the readers
         # are waited for a little, and no longer.
         readers.each { |reader| reader.join(@pipe_limit) }
@@ -80,7 +79,7 @@ module CrossLint
           # It has exited already.
         end
         wait.join
-        raise Core::FetchError, "git #{error.message}, so CrossLint ended it"
+        raise Core::FetchError, "git #{error}, so CrossLint ended it"
       end
     end
   end
