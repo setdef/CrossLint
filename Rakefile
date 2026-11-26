@@ -85,8 +85,14 @@ task :reuse do
   sh "reuse", "lint"
 end
 
+desc "Check that every file under lib/ has its signature under sig/, with CrossLint itself (.config/crosslint.kdl)"
+task :crosslint do
+  ruby "exe/crosslint", "check"
+end
+
 desc "Run every check CI runs"
-task check: [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :mutant, "usage:lint", "usage:reference", :reuse]
+task check: [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :mutant, :crosslint, "usage:lint",
+  "usage:reference", :reuse]
 
 task default: :check
 

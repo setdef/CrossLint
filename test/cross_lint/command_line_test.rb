@@ -50,6 +50,11 @@ class CommandLineTest < Minitest::Test
     assert_equal({"color" => "never"}, read("--color", "never").flags)
   end
 
+  def test_tells_a_flag_given_from_one_with_only_its_default
+    assert_equal [false, true, true, false], [read.given?("color"), read("--color", "auto").given?("color"),
+      read("--verbose").given?("verbose"), read("--verbose").given?("auto")]
+  end
+
   def test_checks_a_value_against_the_choices
     assert_error "--color takes auto or never, not bad", "--color=bad"
     assert_error "--mode takes only, not other", "run", "--mode", "other"

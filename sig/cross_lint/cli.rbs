@@ -13,6 +13,9 @@ module CrossLint
 
       # Writes `line`, and a line break.
       def puts: (String line) -> untyped
+
+      # Whether it is a terminal.
+      def tty?: () -> bool
     end
 
     # The environment: `ENV`, or a Hash in the tests.
@@ -26,6 +29,9 @@ module CrossLint
 
     # Where to report a bug.
     ISSUES: String
+
+    # Each value of --warnings, as Core::Check takes it.
+    WARNINGS: Hash[String, :all | :none | :error]
 
     # `argv` is the command line's words, `out` and `err` standard output
     # and standard error, and `env` the environment. `spec` is the usage
@@ -51,10 +57,15 @@ module CrossLint
 
     @app: App?
 
-    # Runs crosslint check: reads the project's configuration and plugins,
-    # reports each rule no policy runs, and stops, since checking files
-    # doesn't work yet.
+    # Runs crosslint check: checks the project, writes the report, and
+    # returns 1 when the check failed and 0 when it passed. Refuses
+    # --update-debt, which needs the debt plugin.
     def check: (CommandLine line) -> Integer
+
+    # Whether to color the report: never with --no-color, a NO_COLOR that
+    # isn't empty, or TERM=dumb; else with a FORCE_COLOR that isn't empty,
+    # or when standard output is a terminal.
+    def color?: (CommandLine line) -> bool
 
     # Writes `message` to standard error, and returns exit status 2.
     def say: (String message) -> Integer

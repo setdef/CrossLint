@@ -50,6 +50,34 @@ class AppTest < Minitest::Test
     assert_equal %(unknown built-in plugin "other"; expected "debt"), mistake.message
   end
 
+  def test_checks_crosslint_itself_with_git
+    result = App.new.check(ROOT)
+
+    assert_equal [false, Dir.glob("lib/**/*.rb", base: ROOT).size], [result.failed, result.summary.artifacts]
+  end
+
+  def test_checks_through_the_ports_it_is_given_with_the_options_given
+    result = memory_app.check("/app", warnings: :error, verbosity: :quiet, all: true)
+
+    assert_equal [:quiet, true, ["a.md"]], [result.verbosity, result.failed, result.violations.map(&:artifact)]
+    assert_equal [:normal, false], memory_app.check("/app").then { |normal| [normal.verbosity, normal.failed] }
+    assert_equal [CrossLint::Core::Artifact], memory_app(files: ["a.md", "a.txt"]).check("/app", all: true).findings.map(&:class)
+    assert_empty memory_app(files: ["a.md", "a.txt"]).check("/app").findings
+  end
+
+  def test_reports_as_text_unless_asked_for_json
+    out = StringIO.new
+    err = StringIO.new
+    result = memory_app.check("/app")
+    App.new.report(out:, err:).write(result)
+    App.new.report(out:, err:, color: true).write(result)
+    App.new.report(out:, err:, json: true).write(result)
+    lines = out.string.lines(chomp: true)
+
+    assert_equal ["a.md: warning: no c file at a.txt (local/p)", "a.md: \e[33mwarning: no c file at a.txt\e[0m (local/p)"], lines.take(2)
+    assert_equal "warning", JSON.parse(lines.last).fetch("findings").first.fetch("severity")
+  end
+
   def test_reads_through_the_ports_it_is_given
     configuration = CrossLint::Core::Configuration.new(file: "crosslint.json", plugins: [], policies: [], warnings: nil, verbosity: nil)
     app = App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}, file: "crosslint.json"),
@@ -57,5 +85,23 @@ class AppTest < Minitest::Test
     mistake = assert_raises(Mistake) { app.load_project("/app") }
 
     assert_equal "crosslint.json", mistake.location
+  end
+
+  private
+
+  # A project at /app whose plugin, local, warns of each a.md with no
+  # a.txt beside it.
+  def memory_app(files: ["a.md"])
+    core = CrossLint::Core
+    configuration = core::Configuration.new(file: ".config/crosslint.kdl", warnings: nil, verbosity: nil, policies: [],
+      plugins: [core::ListedPlugin.new(name: "./local", ref: nil, settings: [], line: 1)])
+    artifact = core::ArtifactDeclaration.new(name: "a", files: core::PathPattern.new(source: "{path}.md"), line: 1,
+      companions: [core::CompanionDeclaration.new(name: "c", pattern: core::PathPattern.new(source: "{path}.txt"), line: 2)])
+    policy = core::Policy.new(name: "p", applies_to: core::AppliesTo.new(artifact: "a", line: 2), condition: nil, line: 1,
+      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "c"}, severity: :warning, line: 3)])
+    manifest = core::Manifest.new(file: "local/plugin.kdl", artifacts: [artifact], policies: [policy], rules: [], helpers: [])
+    App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}),
+      manifests: CrossLint::Adapters::MemoryPluginManifests.new({File.expand_path("/app/local") => manifest}),
+      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"/app" => files}), plugins: @base)
   end
 end

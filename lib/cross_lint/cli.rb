@@ -6,6 +6,8 @@ module CrossLint
 
     ISSUES = "https://github.com/setdef/CrossLint/issues"
 
+    WARNINGS = {"all" => :all, "none" => :none, "error" => :error}.freeze
+
     def initialize(argv, out:, err:, env:, spec: nil, app: nil)
       @argv = argv
       @out = out
@@ -40,15 +42,23 @@ module CrossLint
     private
 
     def check(line)
-      project = (@app || App.new).load_project(line.value("project") || Dir.pwd)
-      quiet = %w[quiet silent].any? { |flag| line.flags.key?(flag) } || %i[quiet silent].include?(project.configuration.verbosity)
-      unless quiet
-        project.unused_rules.each do |plugin, rule|
-          say("#{plugin.manifest.file}:#{rule.line}: warning: no policy runs rule #{rule.name.dump}, so CrossLint doesn't load it")
-        end
-      end
-      count = project.plugins.size
-      say("read #{project.configuration.file} and #{count} #{(count == 1) ? "plugin" : "plugins"}; checking files doesn't work yet")
+      return say("--update-debt needs the debt plugin, which doesn't work yet") if line.flags.key?("update-debt")
+
+      app = @app || App.new
+      given = line.value("warnings") if line.given?("warnings")
+      warnings = WARNINGS.fetch(given) if given
+      verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?
+      result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"))
+      app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line)).write(result)
+      result.failed ? 1 : 0
+    end
+
+    # NO_COLOR, TERM=dumb, and --no-color win over FORCE_COLOR, which
+    # only stands in for a terminal.
+    def color?(line)
+      return false if line.flags.key?("no-color") || !@env.fetch("NO_COLOR", "").empty? || @env.fetch("TERM", "").casecmp?("dumb")
+
+      !@env.fetch("FORCE_COLOR", "").empty? || @out.tty?
     end
 
     def say(message)

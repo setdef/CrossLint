@@ -5,20 +5,33 @@ module CrossLint
     # The folder of CrossLint's built-in plugins, one folder each.
     PLUGINS: String
 
-    # An app that reads the configuration through `configuration` and the
-    # manifests through `manifests`, with the built-in plugins in
-    # `plugins`.
-    def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?plugins: String) -> void
+    # An app that reads the configuration through `configuration`, the
+    # manifests through `manifests`, and the project's files through
+    # `project_files`, with the built-in plugins in `plugins`.
+    def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
+                     ?plugins: String) -> void
 
     # The project whose root is `start` or the nearest folder above it
     # with a configuration, read and checked (Core::LoadProject).
     def load_project: (String start) -> Core::Project
+
+    # The result of checking that project (Core::Check), under the
+    # command line's `warnings` and `verbosity`, nil where it gives none,
+    # with each passing artifact under `all`.
+    def check: (String start, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
+                ?all: bool) -> Core::CheckResult
+
+    # The report that writes to `out` and `err`: JSON with `json`, else
+    # text, in color with `color`.
+    def report: (out: CLI::_Output, err: CLI::_Output, ?json: bool, ?color: bool) -> _Report
 
     private
 
     @configuration: _Configuration
 
     @manifests: _PluginManifests
+
+    @project_files: _ProjectFiles
 
     @built_in: Hash[String, String]
 

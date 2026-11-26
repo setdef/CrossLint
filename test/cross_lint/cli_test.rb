@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "json"
 
 class CLITest < Minitest::Test
   cover "CrossLint::CLI*"
@@ -104,20 +105,81 @@ class CLITest < Minitest::Test
     assert_equal "crosslint: stopped on a bug in CrossLint: RuntimeError: b?om ?\n", err.lines.first
   end
 
-  def test_check_reads_the_project_and_says_checking_files_does_not_work_yet
-    assert_equal ["", "crosslint: read .config/crosslint.kdl and 1 plugin; checking files doesn't work yet\n", 2],
-      check("check", app: app(plugins: ["tests"]))
-    assert_equal "crosslint: read .config/crosslint.kdl and 2 plugins; checking files doesn't work yet\n",
-      check("check", app: app(plugins: ["tests", "other"]))[1]
+  def test_check_prints_each_violation_and_the_summary_and_exits_with_1
+    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n",
+      "crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], check("check", app: app)
+  end
+
+  def test_check_exits_with_0_when_every_check_passes
+    assert_equal ["", "crosslint: checked 1 ruby-file artifact: no violations\n", 0],
+      check("check", app: app(files: ["lib/a.rb", "test/a_test.rb"]))
   end
 
   def test_check_finds_the_project_from_the_project_flag
-    read = "crosslint: read .config/crosslint.kdl and 1 plugin; checking files doesn't work yet\n"
+    summary = "crosslint: checked 2 ruby-file artifacts: 1 error\n"
 
-    assert_equal read, check("check", "-C", "#{WORK}/app/lib", app: app)[1]
-    assert_equal read, check("check", "--project", "#{WORK}/app", app: app)[1]
+    assert_equal summary, check("check", "-C", "#{WORK}/app/lib", app: app)[1]
+    assert_equal summary, check("check", "--project", "#{WORK}/app", app: app)[1]
     assert_match(/\Acrosslint: no \.config\/crosslint\.kdl in .*elsewhere or any folder above it/,
       check("check", "-C", "#{TOP}elsewhere", app: app)[1])
+  end
+
+  def test_check_takes_warnings_from_the_flag_over_the_configuration
+    warned = app(severity: :warning)
+
+    assert_equal ["lib/b.rb: warning: no test file at test/b_test.rb (tests/has-test)\n",
+      "crosslint: checked 2 ruby-file artifacts: 1 warning\n", 0], check("check", app: warned)
+    assert_equal 1, check("check", "--warnings=error", app: warned)[2]
+    assert_equal ["", "crosslint: checked 2 ruby-file artifacts: no errors\n", 0], check("check", "--warnings", "none", app: warned)
+    assert_equal 1, check("check", app: app(severity: :warning, warnings: :error))[2]
+    assert_equal 0, check("check", "--warnings=all", app: app(severity: :warning, warnings: :error))[2]
+  end
+
+  def test_check_prints_only_what_fails_with_quiet
+    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", "-q", app: app)
+    assert_equal ["", "", 0], check("check", "--quiet", app: app(severity: :warning))
+    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", app: app(verbosity: :quiet))
+  end
+
+  def test_check_prints_nothing_with_silent
+    assert_equal ["", "", 1], check("check", "-s", app: app)
+    assert_equal ["", "", 1], check("check", "--silent", "--quiet", app: app)
+    assert_equal ["", "", 1], check("check", app: app(verbosity: :silent))
+  end
+
+  def test_check_lists_passing_artifacts_with_all
+    assert_equal "lib/a.rb: ruby-file passes\nlib/b.rb: no test file at test/b_test.rb (tests/has-test)\n",
+      check("check", "-a", app: app)[0]
+    assert_equal check("check", "-a", app: app), check("check", "--all", app: app)
+  end
+
+  def test_check_prints_json_with_json
+    out, err, status = check("check", "--json", app: app)
+
+    assert_equal [{"path" => "lib/b.rb", "message" => "no test file at test/b_test.rb", "plugin" => "tests", "policy" => "has-test",
+                   "artifact" => "lib/b.rb", "role" => "ruby-file", "severity" => "error", "detail" => nil}], JSON.parse(out).fetch("findings")
+    assert_equal ["crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], [err, status]
+  end
+
+  def test_check_refuses_to_update_the_debt
+    assert_equal ["", "crosslint: --update-debt needs the debt plugin, which doesn't work yet\n", 2],
+      check("check", "--update-debt", app: app)
+  end
+
+  def test_check_colors_the_messages_only_on_a_terminal_or_when_forced
+    red = "lib/b.rb: \e[31mno test file at test/b_test.rb\e[0m (tests/has-test)\n"
+    plain = "lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n"
+
+    assert_equal plain, check("check", app: app)[0]
+    assert_equal red, check("check", app: app, tty: true)[0]
+    assert_equal red, check("check", app: app, env: {"FORCE_COLOR" => "1"})[0]
+    assert_equal plain, check("check", app: app, env: {"FORCE_COLOR" => ""})[0]
+    assert_equal plain, check("check", "--no-color", app: app, tty: true, env: {"FORCE_COLOR" => "1"})[0]
+    assert_equal plain, check("check", app: app, tty: true, env: {"NO_COLOR" => "1", "FORCE_COLOR" => "1"})[0]
+    assert_equal red, check("check", app: app, tty: true, env: {"NO_COLOR" => ""})[0]
+    assert_equal plain, check("check", app: app, tty: true, env: {"TERM" => "dumb", "FORCE_COLOR" => "1"})[0]
+    assert_equal red, check("check", app: app, tty: true, env: {"TERM" => "xterm"})[0]
+    refute_includes check("check", "--json", app: app, tty: true)[0], "\e["
   end
 
   def test_check_warns_of_each_ruby_rule_no_policy_runs
@@ -125,19 +187,23 @@ class CLITest < Minitest::Test
 
     assert_equal warning, check("check", app: app(unused: true))[1].lines.first
     assert_equal warning, check("check", app: app(unused: true, verbosity: :normal))[1].lines.first
-    [["-q"], ["--silent"]].each { |flags| assert_equal 1, check("check", *flags, app: app(unused: true))[1].lines.size }
-    %i[quiet silent].each { |verbosity| assert_equal 1, check("check", app: app(unused: true, verbosity:))[1].lines.size }
+    [["-q"], ["--silent"]].each { |flags| assert_empty check("check", *flags, app: app(unused: true))[1] }
+    assert_equal "crosslint: checked 2 ruby-file artifacts: 1 error\n", check("check", "--warnings=none", app: app(unused: true))[1]
+    %i[quiet silent].each { |verbosity| assert_empty check("check", app: app(unused: true, verbosity:))[1] }
   end
 
   def test_check_reads_the_project_in_the_folder_it_runs_in_or_a_folder_relative_to_it
     Dir.mktmpdir("crosslint") do |folder|
       write(folder, "app/.config/crosslint.kdl", %(plugin "."\n))
       write(folder, "app/plugin.kdl", %(helper "h" command="node" file="h.mjs"\n))
+      # A .git file that points nowhere keeps Git from finding a
+      # repository in a folder above.
+      write(folder, "app/.git", "gitdir: nowhere\n")
       FileUtils.mkdir_p(File.join(folder, "app/lib"))
-      read = ["", "crosslint: read .config/crosslint.kdl and 1 plugin; checking files doesn't work yet\n", 2]
+      outside = ->(root) { "crosslint: #{root} isn't in a Git working tree, and CrossLint lists a project's files with Git; run git init in the project's root\n" }
 
-      assert_equal read, Dir.chdir(File.join(folder, "app/lib")) { check("check") }
-      assert_equal read, Dir.chdir(folder) { check("check", "-C", "app/lib") }
+      Dir.chdir(File.join(folder, "app/lib")) { assert_equal ["", outside.call(File.dirname(Dir.pwd)), 2], check("check") }
+      Dir.chdir(folder) { assert_equal ["", outside.call(File.join(Dir.pwd, "app")), 2], check("check", "-C", "app/lib") }
     end
   end
 
@@ -152,6 +218,11 @@ class CLITest < Minitest::Test
 
   private
 
+  # Standard output on a terminal.
+  class Terminal < StringIO
+    def tty? = true
+  end
+
   def run_cli(*argv, spec: fixture_spec, env: {})
     out = StringIO.new
     err = StringIO.new
@@ -159,23 +230,28 @@ class CLITest < Minitest::Test
     [out.string, err.string, status]
   end
 
-  def check(*argv, app: nil)
+  def check(*argv, app: nil, tty: false, env: {})
     argv += ["-C", "#{WORK}/app"] if app && !argv.include?("-C") && !argv.include?("--project")
-    out = StringIO.new
+    out = tty ? Terminal.new : StringIO.new
     err = StringIO.new
-    status = CrossLint::CLI.new(argv, out:, err:, env: {}, spec: shipped_spec, app:).run
+    status = CrossLint::CLI.new(argv, out:, err:, env:, spec: shipped_spec, app:).run
     [out.string, err.string, status]
   end
 
-  def app(plugins: ["tests"], unused: false, verbosity: nil, broken: nil)
+  # A project with the plugin tests: every lib/{path}.rb has a test at
+  # test/{path}_test.rb, and only lib/a.rb has one.
+  def app(files: ["lib/a.rb", "lib/b.rb", "test/a_test.rb"], severity: nil, unused: false, warnings: nil, verbosity: nil, broken: nil)
     core = CrossLint::Core
-    listed = plugins.each_with_index.map { |name, index| core::ListedPlugin.new(name: "./.config/#{name}", ref: nil, settings: [], line: index + 1) }
+    listed = [core::ListedPlugin.new(name: "./.config/tests", ref: nil, settings: [], line: 1)]
     rules = unused ? [core::RuleDeclaration.new(name: "unused", ruby: "unused.rb", line: 3)] : []
-    manifests = plugins.to_h do |name|
-      ["#{WORK}/app/.config/#{name}", core::Manifest.new(file: ".config/#{name}/plugin.kdl", artifacts: [], policies: [], rules:, helpers: [])]
-    end
-    configuration = core::Configuration.new(file: ".config/crosslint.kdl", plugins: listed, policies: [], warnings: nil, verbosity:)
+    artifact = core::ArtifactDeclaration.new(name: "ruby-file", files: core::PathPattern.new(source: "lib/{path}.rb"), line: 1,
+      companions: [core::CompanionDeclaration.new(name: "test", pattern: core::PathPattern.new(source: "test/{path}_test.rb"), line: 2)])
+    policy = core::Policy.new(name: "has-test", applies_to: core::AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, line: 5,
+      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "test"}, severity:, line: 7)])
+    manifest = core::Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
+    configuration = core::Configuration.new(file: ".config/crosslint.kdl", plugins: listed, policies: [], warnings:, verbosity:)
     CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => broken || configuration}),
-      manifests: CrossLint::Adapters::MemoryPluginManifests.new(manifests))
+      manifests: CrossLint::Adapters::MemoryPluginManifests.new({"#{WORK}/app/.config/tests" => manifest}),
+      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}))
   end
 end

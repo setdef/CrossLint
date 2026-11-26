@@ -24,6 +24,7 @@ module CrossLint
       # mistake after either one is never read and the help still shows.
       read(argv.dup)
       @action ||= :run
+      @given = @flags.keys
       known_flags.each { |flag| @flags[flag.long] ||= flag.default if flag.default }
     end
 
@@ -33,6 +34,8 @@ module CrossLint
       when String then value
       end
     end
+
+    def given?(long) = @given.include?(long)
 
     def known_flags
       command = @command

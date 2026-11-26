@@ -21,9 +21,29 @@ class ExeTest < Minitest::Test
     assert_equal ["", "crosslint: crosslint has no flag --quite; did you mean --quiet?\n", 2], crosslint("--quite")
   end
 
-  def test_reads_crosslints_own_configuration_and_plugin
-    assert_equal ["", "crosslint: read .config/crosslint.kdl and 1 plugin; checking files doesn't work yet\n", 2],
-      crosslint("check", chdir: File.join(ROOT, "lib"))
+  def test_checks_that_every_file_under_lib_has_its_signature
+    count = Dir.glob("lib/**/*.rb", base: ROOT).size
+
+    assert_equal ["", "crosslint: checked #{count} ruby-file artifacts: no violations\n", 0], crosslint("check", chdir: File.join(ROOT, "lib"))
+  end
+
+  def test_runs_the_tutorials_checks_as_it_shows_them
+    plugin, configuration = doc_blocks("docs/getting-started.md", "kdl")
+    first, fixed = doc_blocks("docs/getting-started.md", "console").select { |block| block.start_with?("$ crosslint check\n") }
+    Dir.mktmpdir("crosslint") do |project|
+      write(project, ".config/crosslint/tests/plugin.kdl", plugin)
+      write(project, ".config/crosslint.kdl", configuration.sub(%(plugin "debt"\n), ""))
+      %w[currency customer discount invoice line_item payment pdf tax total].each { |name| write(project, "lib/invoices/#{name}.rb", "") }
+      %w[customer discount invoice line_item payment total].each { |name| write(project, "test/invoices/#{name}_test.rb", "") }
+      Open3.capture3("git", "init", "-q", chdir: project)
+      out, err, status = crosslint("check", chdir: project)
+
+      assert_equal [first.delete_prefix("$ crosslint check\n"), 1], [out + err, status]
+      write(project, "test/invoices/tax_test.rb", "")
+      out, err, status = crosslint("check", chdir: project)
+
+      assert_equal [fixed.delete_prefix("$ crosslint check\n"), 1], [out + err, status]
+    end
   end
 
   def test_stops_at_the_mistake_the_tutorial_shows

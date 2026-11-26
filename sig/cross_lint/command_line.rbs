@@ -38,6 +38,10 @@ module CrossLint
     # flag that takes no value or has none.
     def value: (String long) -> String?
 
+    # Whether the command line gives the flag `long`, as against its
+    # default.
+    def given?: (String long) -> bool
+
     # The flags known where the reading is: the top-level flags before a
     # command, and the command's and the global ones after it, with
     # --help and --version.
@@ -46,6 +50,8 @@ module CrossLint
     private
 
     @spec: UsageSpec
+
+    @given: Array[String]
 
     # Reads `words` until they run out or --help or --version ends the
     # reading.
