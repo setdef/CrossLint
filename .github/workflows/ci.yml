@@ -1,12 +1,14 @@
-# Every push to trunk, and every pull request: on Linux, the whole gate,
-# rake check (Standard, rbs validate, the comment on every public part of
-# sig/, Steep, the tests with their coverage, the tests under RBS's
-# runtime type checker, every Ruby example in the documentation, mutation
-# testing, usage lint, the check that docs/reference/cli.md is what usage
-# generates, and REUSE);
-# and the tests on macOS and Windows, each with the Ruby, the Node, and tools
-# mise.toml pins. The macOS and Windows jobs leave out the Gemfile's check
-# group, which only rake check uses.
+# Every push to trunk, and every pull request: on each system, after
+# installing the tools and the bundle, the packages the test fixtures lock
+# (rake fixtures), a setup step that no test task runs. Then on Linux, the
+# whole gate, rake check (Standard, rbs validate, the comment on every
+# public part of sig/, Steep, the tests with their coverage, the tests
+# under RBS's runtime type checker, every Ruby example in the
+# documentation, mutation testing, usage lint, the check that
+# docs/reference/cli.md is what usage generates, and REUSE); and on macOS
+# and Windows the tests, each with the Ruby, the Node, and tools mise.toml
+# pins. The macOS and Windows jobs leave out the Gemfile's check group,
+# which only rake check uses.
 
 name: CI
 
@@ -66,6 +68,9 @@ jobs:
       - name: Install the bundle
         run: bundle install
 
+      - name: Install the test fixtures' packages
+        run: bundle exec rake fixtures
+
       - name: Run every check
         run: bundle exec rake check
 
@@ -99,6 +104,9 @@ jobs:
 
       - name: Install the bundle
         run: bundle install
+
+      - name: Install the test fixtures' packages
+        run: bundle exec rake fixtures
 
       - name: Run the tests
         run: bundle exec rake test
@@ -143,6 +151,9 @@ jobs:
 
       - name: Install the bundle
         run: bundle install
+
+      - name: Install the test fixtures' packages
+        run: bundle exec rake fixtures
 
       - name: Run the tests
         run: bundle exec rake test

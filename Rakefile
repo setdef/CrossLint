@@ -14,14 +14,12 @@ Minitest::TestTask.create(:test) do |task|
   task.warning = true
 end
 
-# The same tests under RBS's runtime type checker, which raises at every
-# call into CrossLint whose arguments, block, or result differ from
-# sig/.
 # The packages a built-in plugin's test fixture locks in its
-# package-lock.json, installed with npm ci before the tests, which never
-# install anything. A fixture installed from the same lockfile is left as
-# it is. CACHEDIR.TAG marks node_modules as a folder a tool makes, which
-# the Fledge build leaves out of the app.
+# package-lock.json, installed with npm ci. Setup does this, once, after
+# installing the tools: no test task depends on it, and a test whose
+# fixture has no packages fails saying to run it. A fixture installed from
+# the same lockfile is left as it is. CACHEDIR.TAG marks node_modules as
+# a folder a tool makes, which the Fledge build leaves out of the app.
 desc "Install the packages each built-in plugin's test fixtures lock, with npm ci"
 task :fixtures do
   Dir.glob("plugins/*/test/**/package-lock.json").reject { |lock| lock.include?("/node_modules/") }.each do |lock|
@@ -35,9 +33,9 @@ task :fixtures do
   end
 end
 
-task test: :fixtures
-task "test:rbs" => :fixtures
-
+# The same tests under RBS's runtime type checker, which raises at every
+# call into CrossLint whose arguments, block, or result differ from
+# sig/.
 Minitest::TestTask.create("test:rbs") do |task|
   task.test_globs = TESTS
   task.warning = true

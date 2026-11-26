@@ -55,6 +55,7 @@ class AngularFixtureTest < Minitest::Test
   ].sort.freeze
 
   def test_reports_what_ng_nudge_reports_and_what_its_defects_hid
+    packages_installed
     result = CrossLint::App.new.check(FIXTURE)
 
     assert_equal REPORTED, result.violations.map { |violation| "#{violation.artifact}: #{violation.message} (#{violation.plugin}/#{violation.policy})" }
@@ -68,6 +69,7 @@ class AngularFixtureTest < Minitest::Test
   # foo's spec excuses the component and the service both, as ng-nudge's
   # does (lib/debt.js:30-35).
   def test_excuses_what_a_debt_file_moved_from_ng_nudge_excuses
+    packages_installed
     result = CrossLint::App.new.check(FIXTURE)
 
     assert_empty result.violations.map(&:artifact).grep(%r{/(foo|pipes)/})
@@ -80,6 +82,7 @@ class AngularFixtureTest < Minitest::Test
   # docs/design/plugins.md: a project without the helper's command gets
   # exit status 2, naming the plugin and the command.
   def test_stops_with_2_naming_the_plugin_and_node_when_node_isnt_on_the_path
+    packages_installed
     app = CrossLint::App.new(helpers: CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env: {"PATH" => ""}))
     err = StringIO.new
     status = CrossLint::CLI.new(["check", "-C", FIXTURE], out: StringIO.new, err:, env: {}, app:).run
@@ -105,5 +108,13 @@ class AngularFixtureTest < Minitest::Test
     assert_equal ["raised RuntimeError: found no typescript package for tsconfig.json; install the project's packages, as with npm ci"], found.uniq
   ensure
     FileUtils.rm_rf(root)
+  end
+
+  private
+
+  # Installing the fixture's packages is a setup step (rake fixtures),
+  # which no test runs.
+  def packages_installed
+    flunk "plugins/angular/test/fixture/node_modules doesn't exist; run rake fixtures, which installs the packages the fixture locks" unless File.directory?(File.join(FIXTURE, "node_modules"))
   end
 end
