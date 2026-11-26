@@ -35,12 +35,30 @@ class MemoryPluginManifestsTest < Minitest::Test
   private
 
   def example_manifest(folder)
-    artifact = ArtifactDeclaration.new(name: "ruby-file", files: PathPattern.new(source: "lib/{path}.rb"),
-      companions: [CompanionDeclaration.new(name: "signature", pattern: PathPattern.new(source: "sig/{path}.rbs"), line: 3)], line: 1)
-    policy = Policy.new(name: "has-signature", applies_to: AppliesTo.new(artifact: "ruby-file", line: 7), condition: nil,
-      rules: [PolicyRule.new(name: "companion-exists", arguments: {"companion" => "signature"}, severity: :warning, line: 8)], line: 6)
-    Manifest.new(file: folder.empty? ? "plugin.kdl" : "#{folder}/plugin.kdl", artifacts: [artifact], policies: [policy],
-      rules: [RuleDeclaration.new(name: "names-class", ruby: "rules/names_class.rb", line: 11)],
-      helpers: [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 12)])
+    companions = [CompanionDeclaration.new(name: "signature", pattern: PathPattern.new(source: "sig/{path}.rbs"), line: 3),
+      CompanionDeclaration.new(name: "test", pattern: PathPattern.new(source: "test/{path}_test.rb"), line: 4)]
+    artifact = ArtifactDeclaration.new(name: "ruby-file", files: PathPattern.new(source: "lib/{path}.rb"), companions:, line: 1)
+    Manifest.new(file: folder.empty? ? "plugin.kdl" : "#{folder}/plugin.kdl", artifacts: [artifact], policies: example_policies,
+      rules: [RuleDeclaration.new(name: "names-class", ruby: "rules/names_class.rb", line: 33)],
+      helpers: [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 34)])
+  end
+
+  def example_policies
+    applies = AppliesTo.new(artifact: "ruby-file", line: 8)
+    signature = Condition::CompanionExists.new(companion: "signature", line: 20)
+    test = Condition::CompanionExists.new(companion: "test", line: 20)
+    [
+      Policy.new(name: "has-signature", applies_to: applies, condition: nil, line: 7,
+        rules: [PolicyRule.new(name: "companion-exists", arguments: {"companion" => "signature"}, severity: :warning, line: 9)]),
+      Policy.new(name: "names-match", applies_to: applies, line: 12,
+        condition: Condition::Not.new(condition: test, line: 14),
+        rules: [PolicyRule.new(name: "names-class", arguments: {}, severity: nil, line: 15)]),
+      Policy.new(name: "covered", applies_to: applies, line: 18,
+        condition: Condition::All.new(conditions: [signature, test], line: 20),
+        rules: [PolicyRule.new(name: "companion-exists", arguments: {"companion" => "test"}, severity: :error, line: 21)]),
+      Policy.new(name: "either", applies_to: applies, line: 24,
+        condition: Condition::Any.new(conditions: [signature, Condition::Not.new(condition: test, line: 27)], line: 26),
+        rules: [PolicyRule.new(name: "companion-absent", arguments: {"companion" => "signature"}, severity: nil, line: 29)])
+    ]
   end
 end

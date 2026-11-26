@@ -24,6 +24,25 @@ class KDLConfigurationTest < Minitest::Test
     CrossLint::Adapters::KDLConfiguration.new
   end
 
+  def example_configuration_port
+    write(@base, "example/#{FILE}", <<~KDL)
+      plugin "https://github.com/OWNER/REPO" ref="v1.2.0"
+      plugin "angular" {
+        src-dir "src"
+        role "store" files="{path}.store.ts" {
+          expects "spec"
+        }
+      }
+      plugin ".config/crosslint/signatures"
+      policy "angular/prefer-css-over-scss" severity="error"
+      policy "angular/spec-exists" severity="warning"
+      policy "signatures/has-test" enabled=#false
+      warnings "error"
+      verbosity "silent"
+    KDL
+    CrossLint::Adapters::KDLConfiguration.new
+  end
+
   def folder(path) = File.join(@base, path).tap { |full| FileUtils.mkdir_p(full) }
 
   # The tests may run inside a project, such as CrossLint's own checkout.

@@ -11,6 +11,17 @@ module CrossLint
       # a mistake on line 2.
       def configuration_port: (Hash[String, Array[String]] projects, ?broken: String?) -> _Configuration
 
+      # A port whose project in `folder("example")` has a configuration
+      # that lists, in this order, the plugins "https://github.com/OWNER/REPO"
+      # at ref "v1.2.0", "angular" with the settings `src-dir "src"` and
+      # `role "store" files="{path}.store.ts"` holding `expects "spec"`,
+      # and ".config/crosslint/signatures"; then the policy lines
+      # "angular/prefer-css-over-scss" at severity error,
+      # "angular/spec-exists" at severity warning, and
+      # "signatures/has-test" disabled; and sets warnings to "error" and
+      # verbosity to "silent".
+      def example_configuration_port: () -> _Configuration
+
       # The absolute path of `path`, relative to the test's base, which
       # exists as a folder for an adapter that needs it to.
       def folder: (String path) -> String
@@ -32,26 +43,59 @@ module CrossLint
       # find_root returns nil when no folder above has a configuration.
       def test_finds_no_root_when_no_folder_above_has_a_configuration: () -> void
 
-      # read returns the listed plugins in order, each with its line.
+      # read returns the listed plugins in order, each with its line, and
+      # no ref, settings, policy lines, warnings, or verbosity when the
+      # configuration has none.
       def test_reads_the_plugins_in_the_order_they_are_listed: () -> void
+
+      # read returns each plugin's ref, and whether it is a built-in,
+      # local, or shared plugin.
+      def test_reads_the_ref_and_kind_of_each_plugin: () -> void
+
+      # read returns a plugin's settings, and the settings inside them.
+      def test_reads_the_settings_block_of_a_plugin: () -> void
+
+      # read returns each policy line's name, whether it enables or
+      # disables the policy, and its severity.
+      def test_reads_what_a_policy_line_changes: () -> void
+
+      # read returns the warnings and verbosity modes.
+      def test_reads_warnings_and_verbosity: () -> void
 
       # read raises a mistake naming the file and the line.
       def test_names_the_file_and_line_of_a_mistake: () -> void
 
       # read raises a mistake naming the file when there is none.
       def test_names_the_file_when_the_project_has_no_configuration: () -> void
+
+      private
+
+      # The configuration `example_configuration_port` holds.
+      def example_configuration: () -> Core::Configuration
     end
 
     # What a test of a plugin-manifest adapter defines.
     interface _PluginManifestsTest
       # A port with a manifest in each folder of `example`, relative to
       # `base`, that declares the artifact "ruby-file" (files
-      # "lib/{path}.rb", companion "signature" at "sig/{path}.rbs"), the
-      # policy "has-signature" (applies to "ruby-file", runs
-      # "companion-exists" with companion "signature" at severity
-      # "warning"), the rule "names-class" in "rules/names_class.rb", and
-      # the helper "members" running "helpers/members.mjs" on "node"; and
-      # a manifest with a mistake on line 2 in each folder of `broken`.
+      # "lib/{path}.rb", companions "signature" at "sig/{path}.rbs" and
+      # "test" at "test/{path}_test.rb"); the rule "names-class" in
+      # "rules/names_class.rb"; the helper "members" running
+      # "helpers/members.mjs" on "node"; and, each applying to
+      # "ruby-file", the policies
+      #
+      # * "has-signature", with no condition, running "companion-exists"
+      #   with companion "signature" at severity "warning";
+      # * "names-match", when not companion-exists "test", running
+      #   "names-class" with no severity;
+      # * "covered", when all of companion-exists "signature" and
+      #   companion-exists "test", running "companion-exists" with
+      #   companion "test" at severity "error";
+      # * "either", when any of companion-exists "signature" and not
+      #   companion-exists "test", running "companion-absent" with
+      #   companion "signature" and no severity.
+      #
+      # A manifest with a mistake on line 2 is in each folder of `broken`.
       def manifests_port: (?example: Array[String], ?broken: Array[String]) -> _PluginManifests
 
       # The absolute path the folders are relative to.
@@ -60,8 +104,20 @@ module CrossLint
 
     # The tests every adapter of the plugin-manifest port passes.
     module PluginManifestsContract : _PluginManifestsTest, Minitest::Assertions
-      # read returns everything the manifest declares.
-      def test_reads_the_artifacts_policies_rules_and_helpers_a_manifest_declares: () -> void
+      # read returns the artifacts, with their companions, the rules, and
+      # the helpers the manifest declares.
+      def test_reads_the_artifacts_rules_and_helpers_a_manifest_declares: () -> void
+
+      # read returns each policy's name, artifact, and rules with their
+      # arguments.
+      def test_reads_what_each_policy_applies_to_and_runs: () -> void
+
+      # read returns each policy's `when` condition, with `not`, `all`,
+      # and `any` nested, and nil for a policy with none.
+      def test_reads_the_when_condition_of_a_policy: () -> void
+
+      # read returns a rule line's severity, and nil when it has none.
+      def test_reads_the_severity_of_a_rule_line_when_it_has_one: () -> void
 
       # read finds a manifest in the root folder itself.
       def test_reads_the_manifest_of_the_root_folder_itself: () -> void
@@ -76,6 +132,15 @@ module CrossLint
 
       # The manifest `port` reads in `folder`, which has one.
       def read_manifest: (_PluginManifests port, String folder) -> Core::Manifest
+
+      # The manifest of the "plugins/signatures" folder of the example.
+      def signatures_manifest: () -> Core::Manifest
+
+      # A condition that the companion exists.
+      def exists: (String companion) -> Core::Condition::CompanionExists
+
+      # The condition's inspection without its lines.
+      def without_lines: (untyped condition) -> String
     end
   end
 end

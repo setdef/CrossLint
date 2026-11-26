@@ -23,6 +23,40 @@ class KDLPluginManifestsTest < Minitest::Test
     helper "members" command="node" file="helpers/members.mjs"
   KDL
 
+  CONTRACT_EXAMPLE = <<~KDL
+    artifact "ruby-file" {
+      files "lib/{path}.rb"
+      companion "signature" "sig/{path}.rbs"
+      companion "test" "test/{path}_test.rb"
+    }
+
+    policy "has-signature" {
+      applies-to "ruby-file"
+      rule "companion-exists" companion="signature" severity="warning"
+    }
+
+    policy "names-match" {
+      applies-to "ruby-file"
+      when not { companion-exists "test"; }
+      rule "names-class"
+    }
+
+    policy "covered" {
+      applies-to "ruby-file"
+      when all { companion-exists "signature"; companion-exists "test"; }
+      rule "companion-exists" companion="test" severity="error"
+    }
+
+    policy "either" {
+      applies-to "ruby-file"
+      when any { companion-exists "signature"; not { companion-exists "test"; }; }
+      rule "companion-absent" companion="signature"
+    }
+
+    rule "names-class" ruby="rules/names_class.rb"
+    helper "members" command="node" file="helpers/members.mjs"
+  KDL
+
   def setup
     @base = Dir.mktmpdir("crosslint")
   end
@@ -34,7 +68,7 @@ class KDLPluginManifestsTest < Minitest::Test
   attr_reader :base
 
   def manifests_port(example: [], broken: [])
-    example.each { |folder| write(@base, File.join(folder, "plugin.kdl"), EXAMPLE) }
+    example.each { |folder| write(@base, File.join(folder, "plugin.kdl"), CONTRACT_EXAMPLE) }
     broken.each { |folder| write(@base, File.join(folder, "plugin.kdl"), %(artifact "a" {\n  file "b"\n}\n)) }
     CrossLint::Adapters::KDLPluginManifests.new
   end
