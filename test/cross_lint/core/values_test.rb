@@ -11,8 +11,37 @@ class CoreValuesTest < Minitest::Test
   cover "CrossLint::Core::ListedPlugin*"
   cover "CrossLint::Core::BuiltInRule*"
   cover "CrossLint::Core::Project*"
+  cover "CrossLint::Core::Policy*"
+  cover "CrossLint::Core::Plugin*"
 
   include CrossLint::Core
+
+  def test_a_policy_names_each_companion_its_condition_and_rules_name_once
+    exists = ->(name) { Condition::CompanionExists.new(companion: name, line: 2) }
+    rule = ->(arguments) { PolicyRule.new(name: "r", arguments:, severity: nil, line: 3) }
+    policy = Policy.new(name: "p", applies_to: nil, condition: Condition::All.new(conditions: [exists.call("stub"), exists.call("css")], line: 2),
+      rules: [rule.call({"companion" => "stub"}), rule.call({}), rule.call({"companion" => "spec"})], line: 1)
+
+    assert_equal %w[stub css spec], policy.companions
+    assert_equal ["spec"], policy.with(condition: nil, rules: [rule.call({"companion" => "spec"})]).companions
+  end
+
+  def test_a_plugin_applies_a_policy_to_what_its_applies_to_names_or_else_to_each_artifact_with_its_companions
+    declaration = ->(name, *companions) do
+      ArtifactDeclaration.new(name:, files: PathPattern.new(source: "{path}.#{name}"), line: 1,
+        companions: companions.map { |companion| CompanionDeclaration.new(name: companion, pattern: PathPattern.new(source: "{path}.#{companion}"), line: 2) })
+    end
+    manifest = Manifest.new(file: "plugin.kdl", artifacts: [declaration.call("a", "spec"), declaration.call("b"), declaration.call("c", "spec", "stub")],
+      policies: [], rules: [], helpers: [])
+    plugin = Plugin.new(name: "tests", folder: "/tests", listing: ListedPlugin.new(name: "./tests", ref: nil, settings: [], line: 1), manifest:)
+    rule = PolicyRule.new(name: "companion-exists", arguments: {"companion" => "spec"}, severity: nil, line: 3)
+    policy = Policy.new(name: "p", applies_to: nil, condition: nil, rules: [rule], line: 1)
+
+    assert_equal [%w[tests a], %w[tests c]], plugin.targets(policy)
+    assert_equal [%w[tests c]], plugin.targets(policy.with(condition: Condition::CompanionExists.new(companion: "stub", line: 2)))
+    assert_equal [%w[tests b]], plugin.targets(policy.with(applies_to: AppliesTo.new(artifact: "b", line: 2)))
+    assert_equal [%w[other b]], plugin.targets(policy.with(applies_to: AppliesTo.new(artifact: "other/b", line: 2)))
+  end
 
   def test_a_mistake_names_where_it_is
     assert_equal ["plugin.kdl:2", "unknown"], [Mistake.new("unknown", file: "plugin.kdl", line: 2).location, Mistake.new("unknown").message]

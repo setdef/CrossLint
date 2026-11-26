@@ -97,8 +97,10 @@ module CrossLint
       # carry.
       attr_reader name: String
 
-      # The artifact the policy covers.
-      attr_reader applies_to: AppliesTo
+      # The artifact the policy covers, or nil when it has no applies-to,
+      # for each of its plugin's artifacts that has every companion it
+      # names.
+      attr_reader applies_to: AppliesTo?
 
       # The condition an artifact meets for the policy to apply, or nil
       # for every artifact.
@@ -111,12 +113,16 @@ module CrossLint
       attr_reader line: Integer
 
       # A policy with these fields.
-      def self.new: (name: String, applies_to: AppliesTo, condition: condition?, rules: Array[PolicyRule],
+      def self.new: (name: String, applies_to: AppliesTo?, condition: condition?, rules: Array[PolicyRule],
                      line: Integer) -> instance
 
       # A policy with these fields.
-      def initialize: (name: String, applies_to: AppliesTo, condition: condition?, rules: Array[PolicyRule],
+      def initialize: (name: String, applies_to: AppliesTo?, condition: condition?, rules: Array[PolicyRule],
                        line: Integer) -> void
+
+      # The names of the companions its condition and its rules name,
+      # each once.
+      def companions: () -> Array[untyped]
     end
 
     # A rule written in Ruby that a plugin declares.

@@ -16,7 +16,10 @@ module CrossLint
 
     class PolicyRule < Data.define(:name, :arguments, :severity, :line); end
 
-    class Policy < Data.define(:name, :applies_to, :condition, :rules, :line); end
+    class Policy < Data.define(:name, :applies_to, :condition, :rules, :line)
+      # Only a built-in rule takes arguments, and companion= is its only one.
+      def companions = ((condition&.companion_conditions || []).map(&:companion) + rules.filter_map { |rule| rule.arguments["companion"] }).uniq
+    end
 
     class RuleDeclaration < Data.define(:name, :ruby, :line); end
 

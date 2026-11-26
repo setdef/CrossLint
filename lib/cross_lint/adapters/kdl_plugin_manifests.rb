@@ -77,14 +77,16 @@ module CrossLint
         name = document.string(node, "policy NAME { ... }")
         document.properties(node, [])
         document.children(node, %w[applies-to when rule])
-        applies_to = document.required_child(node, "applies-to")
-        artifact = document.string(applies_to, "applies-to ARTIFACT")
-        no_more(document, applies_to)
+        applies_to = document.optional_child(node, "applies-to")&.then do |child|
+          artifact = document.string(child, "applies-to ARTIFACT")
+          no_more(document, child)
+          Core::AppliesTo.new(artifact:, line: child.line)
+        end
         condition = document.optional_child(node, "when")
         rules = node.children.select { |child| child.name == "rule" }
         raise document.mistake("policy #{name.dump} has no rule", node) if rules.empty?
 
-        Core::Policy.new(name:, applies_to: Core::AppliesTo.new(artifact:, line: applies_to.line),
+        Core::Policy.new(name:, applies_to:,
           condition: condition && when_condition(document, condition), rules: rules.map { |rule| policy_rule(document, rule) },
           line: node.line)
       end

@@ -107,15 +107,8 @@ module CrossLint
         end
       end
 
-      # The artifact a policy applies to, as [plugin, artifact], by the
-      # names LoadProject has checked.
-      def target(plugin, policy)
-        owner, slash, name = policy.applies_to.artifact.partition("/")
-        slash.empty? ? [plugin.name, owner] : [owner, name]
-      end
-
       def checked_kinds(project, policies)
-        targets = policies.map { |plugin, policy| target(plugin, policy) }
+        targets = policies.flat_map { |plugin, policy| plugin.targets(policy) }
         kinds = project.plugins.flat_map do |plugin|
           plugin.manifest.artifacts.map do |declaration|
             [plugin.name, declaration.name] #: [String, String]
@@ -125,9 +118,8 @@ module CrossLint
       end
 
       def run(project, plugin, policy, kinds, rules, read)
-        owner, name = target(plugin, policy)
         override = setting(project, plugin, policy)&.severity
-        kinds.fetch(owner).fetch(name).flat_map do |artifact|
+        plugin.targets(policy).flat_map { |owner, name| kinds.fetch(owner).fetch(name) }.flat_map do |artifact|
           next [] unless policy.condition.nil? || policy.condition.holds?(artifact)
 
           policy.rules.flat_map do |rule|

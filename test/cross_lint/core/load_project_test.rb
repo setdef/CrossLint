@@ -222,6 +222,23 @@ class LoadProjectTest < Minitest::Test
     assert_equal ["tests", "other"], project.plugins.map(&:name)
   end
 
+  def test_reads_a_policy_with_no_applies_to_that_some_artifact_of_its_plugin_has_the_companions_for
+    exists = Condition::CompanionExists.new(companion: "test", line: 7)
+    project = load_project(manifest: tests_manifest(policies: [policy(applies_to: nil, condition: exists)]))
+
+    assert_nil project.plugins.first.manifest.policies.first.applies_to
+  end
+
+  def test_stops_at_a_policy_with_no_applies_to_that_no_artifact_of_its_plugin_has_the_companions_for
+    stub = Condition::CompanionExists.new(companion: "stub", line: 7)
+    assert_mistake "rules/tests/plugin.kdl", 5, %(policy "has-test" has no applies-to, and plugin tests has no artifact with "stub" and "test", the companions it names),
+      manifest: tests_manifest(policies: [policy(applies_to: nil, condition: stub)])
+    assert_mistake "rules/tests/plugin.kdl", 5, %(policy "has-test" has no applies-to, and plugin tests declares no artifact),
+      manifest: tests_manifest(artifacts: [], policies: [policy(applies_to: nil, rules: [policy_rule("names-class")])], rules: [RuleDeclaration.new(name: "names-class", ruby: "a.rb", line: 2)])
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "companion-exist", did you mean "companion-exists"?),
+      manifest: tests_manifest(policies: [policy(applies_to: nil, rules: [policy_rule("companion-exist", arguments: {})])])
+  end
+
   def test_stops_at_a_policy_for_an_artifact_no_listed_plugin_declares
     assert_mistake "rules/tests/plugin.kdl", 6, %(unknown artifact "rubyfile", did you mean "ruby-file"?),
       manifest: tests_manifest(policies: [policy(applies_to: "rubyfile")])
@@ -462,7 +479,7 @@ class LoadProjectTest < Minitest::Test
   end
 
   def policy(applies_to: "ruby-file", condition: nil, rules: [policy_rule], line: 5)
-    Policy.new(name: "has-test", applies_to: AppliesTo.new(artifact: applies_to, line: 6), condition:, rules:, line:)
+    Policy.new(name: "has-test", applies_to: applies_to && AppliesTo.new(artifact: applies_to, line: 6), condition:, rules:, line:)
   end
 
   def policy_rule(name = "companion-exists", arguments: BuiltInRule.named(name) ? {"companion" => "test"} : {})

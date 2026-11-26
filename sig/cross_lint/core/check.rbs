@@ -63,9 +63,6 @@ module CrossLint
       # The artifacts `declaration` finds among `files`, in their order.
       def find: (Project project, Plugin plugin, ArtifactDeclaration declaration, Array[String] files) -> Array[Artifact]
 
-      # The plugin and artifact names of the artifact a policy applies to.
-      def target: (Plugin plugin, Policy policy) -> [String, String]
-
       # The kinds of artifact an enabled policy applies to, as plugin and
       # artifact names, in the order the plugins declare them.
       def checked_kinds: (Project project, Array[[Plugin, Policy]] policies) -> Array[[String, String]]

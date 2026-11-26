@@ -19,6 +19,12 @@ module CrossLint
 
       # A plugin with these fields.
       def initialize: (name: String, folder: String, listing: ListedPlugin, manifest: Manifest) -> void
+
+      # The artifacts `policy`, one of this plugin's, applies to, as plugin
+      # and artifact names: the one its applies-to names, or without
+      # applies-to, each of this plugin's artifacts that has every
+      # companion the policy's condition and rules name.
+      def targets: (Policy policy) -> Array[[String, String]]
     end
 
     # A project whose configuration and plugins CrossLint has read and

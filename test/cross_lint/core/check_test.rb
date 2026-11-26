@@ -220,6 +220,17 @@ class CheckTest < Minitest::Test
     assert_equal "checked 1 ruby-file artifact: 1 error", result.summary.line
   end
 
+  def test_applies_a_policy_with_no_applies_to_to_each_artifact_of_its_plugin_with_the_companions_it_names
+    artifacts = [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"), declaration("rake-file", "{path}.rake"),
+      declaration("doc", "{path}.md", "test" => "test/{path}_test.md", "note" => "{path}.txt")]
+    has_note = policy("note", rules: [rule(companion: "test")], applies_to: nil, condition: Condition::CompanionExists.new(companion: "note", line: 7))
+    plugin = plugin("tests", artifacts:, policies: [policy("has-test", rules: [rule], applies_to: nil), has_note])
+    result = check(project(plugin), files: ["lib/a.rb", "a.rake", "a.md", "a.txt"])
+
+    assert_equal [["a.md", "has-test"], ["a.md", "note"], ["lib/a.rb", "has-test"]], result.findings.map { [_1.artifact, _1.policy] }
+    assert_equal "checked 1 ruby-file and 1 doc artifacts: 3 errors", result.summary.line
+  end
+
   def test_finds_a_file_two_artifacts_match_as_a_primary_file_of_each
     plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
       declaration("library", "lib/{name}.rb", "test" => "spec/{name}_spec.rb")],
@@ -429,7 +440,7 @@ class CheckTest < Minitest::Test
   end
 
   def policy(name, rules:, applies_to: "ruby-file", condition: nil)
-    Policy.new(name:, applies_to: AppliesTo.new(artifact: applies_to, line: 6), condition:, rules:, line: 5)
+    Policy.new(name:, applies_to: applies_to && AppliesTo.new(artifact: applies_to, line: 6), condition:, rules:, line: 5)
   end
 
   def plugin(name, artifacts:, policies:, ruby: [])

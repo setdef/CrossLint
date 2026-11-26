@@ -114,7 +114,7 @@ module CrossLint
         policies = signatures_manifest.policies
 
         assert_equal ["has-signature", "names-match", "covered", "either"], policies.map(&:name)
-        assert_equal ["ruby-file"], policies.map { |policy| policy.applies_to.artifact }.uniq
+        assert_equal ["ruby-file"] * 4, policies.filter_map(&:applies_to).map(&:artifact)
         rules = policies.map { |policy| policy.rules.fetch(0) }
 
         assert_equal [1, 1, 1, 1], policies.map { |policy| policy.rules.size }

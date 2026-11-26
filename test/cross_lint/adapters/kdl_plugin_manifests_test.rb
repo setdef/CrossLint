@@ -162,8 +162,11 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 3, %(path pattern "" is empty), %(artifact "a" {\n  files "x"\n  companion "b" ""\n}\n)
   end
 
+  def test_reads_a_policy_with_no_applies_to
+    assert_equal [["p", nil, ["r"]]], read(%(policy "p" { rule "r"; })).policies.map { |policy| [policy.name, policy.applies_to, policy.rules.map(&:name)] }
+  end
+
   def test_refuses_a_policy_written_wrong
-    assert_refuses 1, %(policy "p" has no applies-to), %(policy "p" { rule "r"; })
     assert_refuses 3, "policy has applies-to twice; the first is on line 2", %(policy "p" {\n  applies-to "a"\n  applies-to "b"\n  rule "r"\n}\n)
     assert_refuses 1, %(policy "p" has no rule), %(policy "p" { applies-to "a"; })
     assert_refuses 2, "applies-to has 3 where a string goes; write it as applies-to ARTIFACT", %(policy "p" {\n  applies-to 3\n  rule "r"\n}\n)

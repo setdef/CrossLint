@@ -154,7 +154,17 @@ module CrossLint
 
       def check_policy(plugin, policy, plugins)
         file = plugin.manifest.file
-        artifact = target(plugin, policy.applies_to, plugins)
+        applies_to = policy.applies_to
+        unless applies_to
+          policy.rules.each { |rule| check_rule(plugin, nil, rule) }
+          return unless plugin.targets(policy).empty?
+
+          named = policy.companions.map(&:dump)
+          having = named.empty? ? "declares no artifact" : "has no artifact with #{Spelling.list(named, "and")}, the companions it names"
+          raise Mistake.new("policy #{policy.name.dump} has no applies-to, and plugin #{plugin.name} #{having}", file:, line: policy.line)
+        end
+
+        artifact = target(plugin, applies_to, plugins)
         policy.condition&.companion_conditions&.each { |exists| companion(artifact, exists.companion, file, exists.line) }
         policy.rules.each { |rule| check_rule(plugin, artifact, rule) }
       end
@@ -187,7 +197,7 @@ module CrossLint
         fail_at.call("rule #{rule.name.dump} needs #{missing.first}=NAME") unless missing.empty?
         name = rule.arguments.fetch("companion")
         fail_at.call("companion= takes the name of a companion, as a string") unless name.is_a?(String)
-        companion(artifact, name, plugin.manifest.file, rule.line)
+        companion(artifact, name, plugin.manifest.file, rule.line) if artifact
       end
 
       def companion(artifact, name, file, line)
