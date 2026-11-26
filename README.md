@@ -1,5 +1,7 @@
 # CrossLint
 
+[![CI](https://github.com/setdef/CrossLint/actions/workflows/ci.yml/badge.svg?branch=trunk)](https://github.com/setdef/CrossLint/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/setdef/CrossLint)](https://github.com/setdef/CrossLint/releases) [![License](https://img.shields.io/badge/license-MIT-a2c93e)](LICENSE) [![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-a2c93e)](#compatibility) [![Certified Shovelware](https://justin.searls.co/img/shovelware.svg)](https://justin.searls.co/shovelware/)
+
 Check the rules that span files: every source file has its test, every component has its template, every Ruby file has its signature file.
 
 ## Introduction
@@ -59,8 +61,6 @@ Each finding is one line on standard output, with the file, the message, and the
 
 ## Compatibility
 
-CrossLint is not released yet; this README specifies what its first release does.
-
 | What | Supported |
 | --- | --- |
 | Where `crosslint` runs | macOS on Apple silicon; Linux on x86-64, with glibc 2.39 or later; Windows on x86-64 |
@@ -72,7 +72,7 @@ CrossLint is not released yet; this README specifies what its first release does
 
 Download the archive for your computer from [the releases page](https://github.com/setdef/CrossLint/releases), check it against the release's `SHA256SUMS` file, unpack it anywhere, and put `crosslint` on your `PATH`. The archive contains everything CrossLint needs, so you install no Ruby or other runtime. CrossLint sends no usage data anywhere.
 
-To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugin, also delete the cache folder CrossLint fetched it into: `$XDG_CACHE_HOME/crosslint`, or `~/.cache/crosslint` when `XDG_CACHE_HOME` isn't set, or `%LOCALAPPDATA%\crosslint\cache` on Windows.
+To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugin, also delete the cache folder CrossLint fetched it into: `$XDG_CACHE_HOME/crosslint`, or `~/.cache/crosslint` when `XDG_CACHE_HOME` isn't set to an absolute path, or `%LOCALAPPDATA%\crosslint\cache` on Windows.
 
 ## Usage
 
@@ -83,6 +83,8 @@ To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugi
 5. **Run it in CI** as you run the project's tests, so a pull request with a new violation fails.
 
 ### Moving from ng-nudge
+
+`crosslint init --from-ng-nudge` isn't available yet; until it is, keep using ng-nudge.
 
 In the project's root, `crosslint init --from-ng-nudge` writes `.config/crosslint/config.kdl` from `.config/ng-nudge/rc.json`, with the Angular plugin and the debt plugin listed, and moves the debt file to `.config/crosslint/debt.tsv` with every comment kept. With `--dry-run`, it lists the changes and makes none. Then replace ng-nudge's dev dependency and each `npx ng-nudge` in the project's scripts and CI with `crosslint check`.
 

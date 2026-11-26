@@ -16,8 +16,6 @@ If you get stuck, [open an issue](https://github.com/setdef/CrossLint/issues) wi
 
 You don't need Ruby installed; CrossLint carries the Ruby it runs on.
 
-<!-- Placeholder: replace the output of crosslint init with that of a real run once init works (#11). -->
-
 ## Write a configuration
 
 From the project's root, ask CrossLint for a configuration:
@@ -96,7 +94,6 @@ crosslint: checked 9 ruby-file artifacts: 2 errors
 
 The other two will take longer. Rather than leave the check failing until they're done, record them as **debt** with the debt plugin's command:
 
-<!-- Placeholder: replace this output with that of a real run of crosslint debt update once the command works (#20). -->
 ```console
 $ crosslint debt update
 crosslint: wrote .config/crosslint/debt.tsv: 2 entries added, 0 removed
