@@ -5,13 +5,9 @@
 - **License:** MIT
 - **Repository:** https://github.com/setdef/CrossLint
 
-CrossLint checks how a project's files relate to each other: that each group of files that belong
-together has the files it should, and that a component and its stub agree. Its plugins declare
-which files belong together and what to check, and the project's configuration,
-.config/crosslint.kdl, lists the plugins it runs.
+CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint.kdl, lists the plugins it runs.
 
-Findings go to standard output, one per line. The lines CrossLint prints about itself go to
-standard error, and each begins with "crosslint:".
+Findings go to standard output, one per line. The lines CrossLint prints about itself go to standard error, and each begins with "crosslint:".
 
 
 ## Examples
@@ -67,12 +63,9 @@ crosslint init --from-ng-nudge
 - **Usage:** `crosslint check [FLAGS]`
 - **Effect:** read-only
 
-Runs every plugin the project's configuration lists, on the whole project, and prints each
-violation on a line of its own: the file, the message, and the plugin and policy it comes from. Ends
-with a summary of how many artifacts it checked and what it found.
+Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the file, the message, and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
 
-Violations listed in the debt file don't fail the check. An entry that no violation matches any
-more does, until --update-debt removes it.
+Violations listed in the debt file don't fail the check. An entry that no violation matches any more does, until --update-debt removes it.
 
 ### Flags
 - **`--warnings <mode>`** — Show warnings, hide them, or let them fail the check
@@ -124,13 +117,9 @@ crosslint check --update-debt
 - **Usage:** `crosslint init [FLAGS]`
 - **Effect:** modifies state
 
-Writes .config/crosslint.kdl in the current folder, listing the recommended plugins. If the
-file exists, changes nothing unless you pass --force.
+Writes .config/crosslint.kdl in the current folder, listing the recommended plugins. If the file exists, changes nothing unless you pass --force.
 
-With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a configuration with the
-Angular plugin, the debt plugin, and every setting rc.json had. Moves ng-nudge's debt file to
-.config/crosslint/debt.tsv with every entry and comment kept. Lists every change before it makes
-any.
+With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a configuration with the Angular plugin, the debt plugin, and every setting rc.json had. Moves ng-nudge's debt file to .config/crosslint/debt.tsv with every entry and comment kept. Lists every change before it makes any.
 
 ### Flags
 - **`--from-ng-nudge`** — Write the configuration from this project's ng-nudge setup, and move its debt file
