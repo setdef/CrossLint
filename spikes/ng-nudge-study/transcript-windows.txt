@@ -1,0 +1,630 @@
+npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+v22.23.5
+=== 01-scss-check-never-fires
+$ ls src/app/card
+card.component.scss
+card.component.spec.ts
+card.component.ts
+$ ng-nudge 
+✓ app\card\card
+
+Checked 1 artifact(s).
+[exit 0]
+$ ng-nudge 
+✗ app\card\card:
+   ✗ uses SCSS instead of CSS
+
+Checked 1 artifact(s).
+[exit 1]
+
+=== 02-spec-outside-tsconfig
+$ ls src/app
+api.service.spec.ts
+api.service.ts
+$ cat tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "experimentalDecorators": true
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts"
+  ]
+}
+$ ng-nudge 
+✗ app\api:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+[exit 1]
+
+=== 03-rc-artifact-expects
+$ cat .config/ng-nudge/rc.json
+{
+  "artifacts": {
+    "store": {
+      "pattern": "**/*.store.ts"
+    }
+  }
+}
+$ ng-nudge 
+✓ app\api
+✗ app\cart:
+   ✗ spec file missing
+
+Checked 2 artifact(s).
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "artifacts": { "store": { "pattern": "**/*.store.ts", "expects": ["spec"] } } }
+$ ng-nudge 
+✓ app\api
+
+Checked 1 artifact(s).
+[exit 0]
+$ cat .config/ng-nudge/rc.json
+{ "artifacts": { "service": { "expects": [] } } }
+$ ng-nudge 
+✗ app\api:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+[exit 1]
+
+=== 04-debt-shared-base-path
+$ ng-nudge --update-debt
+✗ app\foo\foo:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+
+Updated $PROJECT\.config\ng-nudge\debt (1 entries)
+[exit 1]
+$ cat .config/ng-nudge/debt.tsv
+Rule	Artifact	Comment
+spec-exists	app\foo\foo	
+$ ls src/app/foo
+foo.component.ts
+foo.service.ts
+$ ng-nudge 
+✓ app\foo\foo
+
+Checked 1 artifact(s).
+[exit 0]
+
+=== 05-output-merges-same-name
+$ find src -name *.ts
+src/app/a/widget/widget.component.spec.ts
+src/app/a/widget/widget.component.ts
+src/app/b/widget/widget.component.ts
+$ ng-nudge 
+✗ app\b\widget\widget:
+   ✗ spec file missing
+✓ app\a\widget\widget
+
+Checked 2 artifact(s).
+[exit 1]
+
+=== 06-debt-ignores-message
+$ ng-nudge 
+✗ app\profile\profile:
+   ✗ stub missing input: name
+   ✗ stub missing input: age
+
+Checked 1 artifact(s).
+[exit 1]
+$ ng-nudge --update-debt
+✗ app\profile\profile:
+   ✗ stub missing input: name
+   ✗ stub missing input: age
+
+Checked 1 artifact(s).
+
+Updated $PROJECT\.config\ng-nudge\debt (2 entries)
+[exit 1]
+$ cat .config/ng-nudge/debt.tsv
+Rule	Artifact	Comment
+stub-matches-component	app\profile\profile	
+stub-matches-component	app\profile\profile	
+$ cat src/app/profile/profile.component.ts
+import { Component, input } from '@angular/core';
+
+@Component({ selector: 'app-profile', template: '' })
+export class ProfileComponent {
+  name = input<string>();
+  age = input<number>();
+  email = input<string>();
+}
+$ ng-nudge 
+✓ app\profile\profile
+
+Checked 1 artifact(s).
+[exit 0]
+
+=== 07-update-debt-without-config-dir
+$ ng-nudge --update-debt
+ENOENT: no such file or directory, open '$PROJECT\.config\ng-nudge\debt.tsv'
+[exit 1]
+$ ls -a .config
+ls: cannot access '.config': No such file or directory
+
+=== 08-update-debt-reports-old-state
+$ ng-nudge 
+✓ app\api\api
+
+Checked 1 artifact(s).
+
+★  Debt paid off:
+   app/api/api no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ ng-nudge --update-debt
+✓ app\api\api
+
+Checked 1 artifact(s).
+
+★  Debt paid off:
+   app/api/api no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+
+Updated $PROJECT\.config\ng-nudge\debt (0 entries)
+[exit 1]
+$ od -c .config/ng-nudge/debt.tsv
+0000000  \n
+0000001
+$ ng-nudge 
+✓ app\api\api
+
+Checked 1 artifact(s).
+[exit 0]
+
+=== 09-disabled-rule-pays-debt
+$ ng-nudge 
+✗ app\api\api:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+
+★  Debt paid off:
+   app/api/api no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "spec-exists": { "enabled": false } } }
+$ ng-nudge 
+✓ app\api\api
+
+Checked 1 artifact(s).
+
+★  Debt paid off:
+   app/api/api no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+
+=== 10-custom-rules-folder-unused
+$ cat .config/ng-nudge/rules/always-fails.rule.js
+import { Rule } from '@overthetopmarketing/ng-nudge/rules';
+
+export class AlwaysFails extends Rule {
+  static name = 'always-fails';
+
+  check() {
+    return [this.violation('this rule always fails')];
+  }
+}
+$ ng-nudge 
+✓ app\api
+
+Checked 1 artifact(s).
+[exit 0]
+
+=== 11-custom-policy-ignores-rc
+$ cat .config/ng-nudge/rc.json
+{
+  "rules": {
+    "readme-exists": {
+      "severity": "warning"
+    }
+  }
+}
+$ ng-nudge 
+✗ app\api:
+   ✗ readme missing
+
+Checked 1 artifact(s).
+[exit 1]
+$ ng-nudge 
+✗ app\api:
+   ✗ readme missing
+
+Checked 1 artifact(s).
+[exit 1]
+
+=== 12-interface-file
+$ cat src/app/card/card.component.i.d.ts
+import { Titled } from './titled';
+
+export interface CardApi extends Titled {}
+$ ng-nudge 
+✗ app\card\card:
+   ✗ interface missing input: title
+✗ app\other\other:
+   ✗ spec file missing
+
+Checked 2 artifact(s).
+[exit 1]
+$ ng-nudge 
+Expected exactly 1 interface in app\card\card.component.i.d.ts, found 2
+[exit 1]
+
+=== 13-component-api-gaps
+$ cat src/app/field/field.component.ts
+import { Component, Input, input, model } from '@angular/core';
+import { outputFromObservable } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { Labelled } from './labelled';
+
+@Component({ selector: 'app-field', template: '' })
+export class FieldComponent extends Labelled {
+  label = input('', { alias: 'caption' });
+  @Input() hint: string;
+  value = model<string>();
+  @Input() set size(size: number) {}
+  changed = outputFromObservable(new Subject<string>());
+}
+$ cat src/app/field/field.component.stub.ts
+import { Component, input } from '@angular/core';
+
+@Component({ selector: 'app-field', template: '' })
+export class FieldStubComponent {
+  caption = input('');
+}
+$ ng-nudge 
+✗ app\field\field:
+   ✗ stub missing input: label
+   ✗ stub missing input: id
+   ✗ stub missing input: tone
+
+Checked 1 artifact(s).
+[exit 1]
+$ ng-nudge 
+✓ app\field\field
+
+Checked 1 artifact(s).
+[exit 0]
+
+=== 14-invalid-rc-json
+$ ng-nudge 
+<anonymous_script>:2
+
+
+SyntaxError: Expected ',' or '}' after property value in JSON at position 15 (line 2 column 1)
+    at JSON.parse (<anonymous>)
+...
+[exit 1]
+
+=== 15-misconfigured-paths
+$ cat .config/ng-nudge/rc.json
+{ "srcDir": "source" }
+$ ng-nudge 
+No artifacts require verification.
+[exit 0]
+$ cat .config/ng-nudge/rc.json
+{ "rule": { "spec-exists": { "enabled": false } } }
+$ ng-nudge 
+✗ app\api:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "spec-exists": { "severity": "warn" } } }
+$ ng-nudge 
+✗ app\api:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+[exit 1]
+$ ng-nudge --warnings=eror
+⚠ app\api:
+   ⚠ spec file missing
+
+Checked 1 artifact(s).
+[exit 0]
+$ ng-nudge --quite
+⚠ app\api:
+   ⚠ spec file missing
+
+Checked 1 artifact(s).
+[exit 0]
+$ ng-nudge 
+File not found: $PROJECT/tsconfig.json
+[exit 1]
+
+=== 16-warning-streams
+$ ng-nudge 2>/dev/null
+✓ app\db
+⚠ app\api:
+
+Checked 2 artifact(s).
+$ ng-nudge >/dev/null
+   ⚠ spec file missing
+
+=== 17-debt-with-comment
+$ cat .config/ng-nudge/debt.tsv
+Rule	Artifact	Comment
+spec-exists	app/a	
+spec-exists	app/b	legacy, refactor planned
+spec-exists	app/c	TODO later
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+
+Checked 3 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "has-debt": { "withComment": "warning" } } }
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+✗ $PROJECT\.config\ng-nudge\debt:
+   ✗ spec-exists	app/a
+   ⚠ spec-exists	app/b	legacy, refactor planned
+   ⚠ spec-exists	app/c	TODO later
+
+Checked 4 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "has-debt": { "withComment": true } } }
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+✗ $PROJECT\.config\ng-nudge\debt:
+   ✗ spec-exists	app/a
+   ⚠ spec-exists	app/b	legacy, refactor planned
+   ⚠ spec-exists	app/c	TODO later
+
+Checked 4 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "has-debt": { "withComment": "none" } } }
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+✗ $PROJECT\.config\ng-nudge\debt:
+   ✗ spec-exists	app/a
+
+Checked 4 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "has-debt": { "withComment": "error" } } }
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+✗ $PROJECT\.config\ng-nudge\debt:
+   ✗ spec-exists	app/a
+   ✗ spec-exists	app/b	legacy, refactor planned
+   ✗ spec-exists	app/c	TODO later
+
+Checked 4 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "has-debt": { "withComment": false } } }
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+✗ $PROJECT\.config\ng-nudge\debt:
+   ✗ spec-exists	app/a
+   ✗ spec-exists	app/b	legacy, refactor planned
+   ✗ spec-exists	app/c	TODO later
+
+Checked 4 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "has-debt": { "withComment": { "maxSeverity": "none", "matching": "^legacy" } } } }
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+✗ $PROJECT\.config\ng-nudge\debt:
+   ✗ spec-exists	app/a
+   ✗ spec-exists	app/c	TODO later
+
+Checked 4 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+$ cat .config/ng-nudge/rc.json
+{ "rules": { "has-debt": { "withComment": true, "severity": "warning" } } }
+$ ng-nudge 
+✗ app\c:
+   ✗ spec file missing
+✗ app\b:
+   ✗ spec file missing
+✗ app\a:
+   ✗ spec file missing
+⚠ $PROJECT\.config\ng-nudge\debt:
+   ⚠ spec-exists	app/a
+   ⚠ spec-exists	app/b	legacy, refactor planned
+   ⚠ spec-exists	app/c	TODO later
+
+Checked 4 artifact(s).
+
+★  Debt paid off:
+   app/a no longer owes spec-exists
+   app/b no longer owes spec-exists
+   app/c no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+
+=== 18-happy-path
+$ ng-nudge 
+✗ app\plain:
+   ✗ spec file missing
+✓ app\card\card
+✓ app\api
+✗ app\auth:
+   ✗ spec file missing
+
+Checked 4 artifact(s).
+[exit 1]
+$ ng-nudge --quiet
+✗ app\plain:
+   ✗ spec file missing
+✗ app\auth:
+   ✗ spec file missing
+[exit 1]
+$ ng-nudge --silent
+[exit 1]
+$ ng-nudge --help
+ng-nudge - A Custom Linter to Nudge Your Angular App Toward Quality
+
+USAGE
+  npx ng-nudge [OPTIONS]
+
+DESCRIPTION
+  ng-nudge is a custom linter for Angular applications that enforces
+  best practices and coding standards. It checks relationships between
+  files that ESLint cannot verify.
+
+CONFIGURATION
+  Create .config/ng-nudge/rc.json to configure artifact types, rules,
+  and policies. Custom extensions go in .config/ng-nudge/artifacts/,
+  .config/ng-nudge/rules/, and .config/ng-nudge/policies/.
+
+  In rc.json, you can set default options:
+    "options": {
+      "warnings": "all",      // all | none | error
+      "verbosity": "normal"   // normal | quiet | silent
+    }
+
+OPTIONS
+  --warnings=MODE   Set warning behavior:
+                      all    - show all warnings (default)
+                      none   - suppress warnings
+                      error  - treat warnings as errors
+
+  -q, --quiet       Only report failures (no passing artifacts, no summary)
+  -s, --silent      No output, only exit code
+  -d, --update-debt Run all checks, then update debt.tsv with current violations
+  -h, --help        Show this help message
+
+EXIT CODES
+  0   All checks passed
+  1   One or more violations detected
+[exit 0]
+
+=== 19-custom-artifact-class
+$ ng-nudge 
+No artifacts require verification.
+[exit 0]
+
+=== 20-path-separators
+$ ng-nudge --update-debt
+✗ app\api\api:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+
+Updated $PROJECT\.config\ng-nudge\debt (1 entries)
+[exit 1]
+$ cat .config/ng-nudge/debt.tsv
+Rule	Artifact	Comment
+spec-exists	app\api\api	
+$ cat .config/ng-nudge/debt.tsv
+Rule	Artifact	Comment
+spec-exists	app/api/api	
+$ ng-nudge 
+✗ app\api\api:
+   ✗ spec file missing
+
+Checked 1 artifact(s).
+
+★  Debt paid off:
+   app/api/api no longer owes spec-exists
+
+Run `npx ng-nudge --update-debt` to update debt.tsv
+[exit 1]
+
+

@@ -1,0 +1,45 @@
+v20.10.0
+=== 10-custom-rules-folder-unused
+$ cat .config/ng-nudge/rules/always-fails.rule.js
+import { Rule } from '@overthetopmarketing/ng-nudge/rules';
+
+export class AlwaysFails extends Rule {
+  static name = 'always-fails';
+
+  check() {
+    return [this.violation('this rule always fails')];
+  }
+}
+$ ng-nudge 
+(node:PID) Warning: To load an ES module, set "type": "module" in the package.json or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Cannot use import statement outside a module
+[exit 1]
+
+=== 11-custom-policy-ignores-rc
+$ cat .config/ng-nudge/rc.json
+{
+  "rules": {
+    "readme-exists": {
+      "severity": "warning"
+    }
+  }
+}
+$ ng-nudge 
+(node:PID) Warning: To load an ES module, set "type": "module" in the package.json or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Cannot use import statement outside a module
+[exit 1]
+$ ng-nudge 
+(node:PID) Warning: To load an ES module, set "type": "module" in the package.json or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Cannot use import statement outside a module
+[exit 1]
+
+=== 19-custom-artifact-class
+$ ng-nudge 
+(node:PID) Warning: To load an ES module, set "type": "module" in the package.json or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Cannot use import statement outside a module
+[exit 1]
+

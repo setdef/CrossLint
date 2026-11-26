@@ -1,0 +1,7 @@
+{
+  "artifacts": {
+    "store": {
+      "pattern": "**/*.store.ts"
+    }
+  }
+}
