@@ -26,7 +26,8 @@ module CrossLint
       # plugin, or nil when nothing is: folders joined by /, none of them
       # empty, "." or "..", so that the path can't leave the repository,
       # and no backslash or drive letter, so that it means the same on
-      # every system.
+      # every system. The last folder is cut at the last /, not by
+      # File.basename, which on Windows drops a drive letter such as "c:".
       def self.path_problem(path)
         if path.empty?
           "is empty"
@@ -38,7 +39,7 @@ module CrossLint
           "has an empty part; write each folder's name, with a single / between them"
         elsif (dots = path.split("/").find { |part| part == "." || part == ".." })
           "has #{dots.dump}; write each folder's name, with a single / between them"
-        elsif !File.basename(path).match?(NAME)
+        elsif !path.split("/").last.match?(NAME)
           "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name"
         end
       end
