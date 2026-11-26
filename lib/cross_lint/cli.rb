@@ -55,6 +55,8 @@ module CrossLint
       0
     rescue CommandLine::Error => error
       say(error.message)
+    rescue Core::Mistakes => mistakes
+      mistakes.all.map { |mistake| say(text(mistake)) }.max
     rescue Core::Mistake => mistake
       say(text(mistake))
     rescue Interrupt

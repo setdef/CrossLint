@@ -1,0 +1,22 @@
+module CrossLint
+  module Core
+    # Every mistake found in one pass, for a command that lists them all
+    # before it stops, such as `crosslint init --from-ng-nudge`.
+    #
+    # ```ruby
+    # first = CrossLint::Core::Mistake.new("is wrong", file: "a.json")
+    # second = CrossLint::Core::Mistake.new("is wrong too", file: "b.json", line: 3)
+    # CrossLint::Core::Mistakes.of([first, second]).message # => "2 mistakes: a.json: is wrong; b.json:3: is wrong too"
+    # ```
+    class Mistakes < Mistake
+      # Each mistake, in the order they were found.
+      attr_reader all: Array[Mistake]
+
+      # The one mistake when `mistakes` has one, else all of them as Mistakes.
+      def self.of: (Array[Mistake] mistakes) -> Mistake
+
+      # Mistakes for `all`, whose message says how many and what each is.
+      def initialize: (Array[Mistake] all) -> void
+    end
+  end
+end

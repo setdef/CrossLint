@@ -266,8 +266,8 @@ class NgNudgeRcTest < Minitest::Test
     assert_refused %(#{key}: is "all", and it takes "none", "warning", or "error"), with_comment("all")
     assert_refused %(#{key}.maxSeverity: is missing, and withComment as an object takes it, as "none", "warning", or "error"), with_comment({"matching" => "x"})
     assert_refused %(#{key}.maxSeverity: is "fatal", and it takes "none", "warning", or "error"), with_comment({"maxSeverity" => "fatal"})
-    assert_refused %(#{key}.maxSeverty: unknown key "maxSeverty", did you mean "maxSeverity"?; ng-nudge reads only these, so remove it),
-      with_comment({"maxSeverty" => "none"})
+    assert_refused_all [%(#{key}.maxSeverty: unknown key "maxSeverty", did you mean "maxSeverity"?; ng-nudge reads only these, so remove it),
+      %(#{key}.maxSeverity: is missing, and withComment as an object takes it, as "none", "warning", or "error")], with_comment({"maxSeverty" => "none"})
     assert_refused %(#{key}.matching: is 5, and it takes a JavaScript regular expression as a string), with_comment({"maxSeverity" => "none", "matching" => 5})
   end
 
@@ -295,6 +295,48 @@ class NgNudgeRcTest < Minitest::Test
     assert_refused %(srcDirr: unknown key "srcDirr", did you mean "srcDir"?; ng-nudge reads only these keys, so remove it), {"srcDirr" => "x"}
     assert_refused %(zzzzzzzz: unknown key "zzzzzzzz"; expected "$schema", "srcDir", "tsConfig", "artifacts", "rules", or "options"; ng-nudge reads only these keys, so remove it),
       {"zzzzzzzz" => 1}
+  end
+
+  def test_lists_every_key_it_cannot_carry_in_the_order_of_the_file_not_only_the_first
+    assert_refused_all [%(srcDir: is "../x", which is outside the project; write a path inside it, relative to the project's root),
+      %(tsConfig: is 5, and it takes a path as a string, such as "tsconfig.json"),
+      %(artifacts.store.pattern: is "app/?.ts", which has ?, which CrossLint's path patterns don't have),
+      %(artifacts.store.expects: is ["a"], and CrossLint's Angular plugin takes [] or ["spec"] only; in ng-nudge 0.3.0 any expects list turned the role's ) +
+        "checks off, so the setting never did what it says. Remove it, or write one of those",
+      %(artifacts.my store: has a role name with a character other than a letter, digit, - or _, which a CrossLint role can't have; rename it),
+      %(rules.nope: unknown rule "nope"; expected "spec-exists", "stub-exists", "interface-exists", "stub-matches-component", ) +
+        %("interface-matches-component", "prefer-css-over-scss", or "has-debt"; ng-nudge has no other, so remove it),
+      %(rules.spec-exists.enabled: is "no", and it takes true or false),
+      %(rules.spec-exists.severity: is "fatal", and it takes "error" or "warning"),
+      %(rules.has-debt.withComment.matching: is "\\\\p{L}", which has \\p, which CrossLint doesn't translate; write it another way, or remove it),
+      %(options.warnings: is "some", and it takes "all", "none", or "error"),
+      %(options.verbosity: is "loud", and it takes "normal", "quiet", or "silent")],
+      {"srcDir" => "../x", "tsConfig" => 5,
+       "artifacts" => {"store" => {"pattern" => "app/?.ts", "expects" => ["a"]}, "my store" => {}},
+       "rules" => {"nope" => {}, "spec-exists" => {"enabled" => "no", "severity" => "fatal"},
+                   "has-debt" => {"withComment" => {"maxSeverity" => "none", "matching" => "\\p{L}"}}},
+       "options" => {"warnings" => "some", "verbosity" => "loud"}}
+  end
+
+  def test_lists_every_key_of_an_object_it_does_not_carry
+    assert_refused_all [%(zzzzzzzz: unknown key "zzzzzzzz"; expected "$schema", "srcDir", "tsConfig", "artifacts", "rules", or "options"; ng-nudge reads only these keys, so remove it),
+      %(srcDirr: unknown key "srcDirr", did you mean "srcDir"?; ng-nudge reads only these keys, so remove it)], {"zzzzzzzz" => 1, "srcDirr" => "x"}
+    assert_refused_all [%(artifacts.store.patern: unknown key "patern", did you mean "pattern"?; ng-nudge reads only these, so remove it),
+      %(artifacts.store.exp: unknown key "exp"; expected "pattern" or "expects"; ng-nudge reads only these, so remove it)],
+      {"artifacts" => {"store" => {"patern" => "x", "exp" => []}}}
+    assert_refused_all [%(options.verbosty: unknown key "verbosty", did you mean "verbosity"?; ng-nudge reads only these, so remove it),
+      %(options.zzzzzzzz: unknown key "zzzzzzzz"; expected "warnings" or "verbosity"; ng-nudge reads only these, so remove it)],
+      {"options" => {"verbosty" => "quiet", "zzzzzzzz" => 1}}
+  end
+
+  def test_lists_a_problem_of_every_role_and_every_rule
+    assert_refused_all [%(artifacts.a.pattern: is 1, and it takes a glob pattern as a string), %(artifacts.b.pattern: is 2, and it takes a glob pattern as a string),
+      "rules.spec-exists: is true, and it takes an object in braces", "rules.stub-exists: is false, and it takes an object in braces"],
+      {"artifacts" => {"a" => {"pattern" => 1}, "b" => {"pattern" => 2}}, "rules" => {"spec-exists" => true, "stub-exists" => false}}
+  end
+
+  def test_still_stops_at_once_for_a_file_that_is_not_an_object_or_not_json_since_there_is_nothing_else_to_read
+    assert_raises(Core::Mistake) { Core::NgNudge::Rc.new("[1]").call }.then { |mistake| refute_kind_of Core::Mistakes, mistake }
   end
 
   def test_refuses_a_file_that_is_not_an_object_or_not_json
@@ -336,6 +378,14 @@ class NgNudgeRcTest < Minitest::Test
   def convert(data) = Core::NgNudge::Rc.new(JSON.generate(data)).call
 
   def with_comment(value) = {"rules" => {"has-debt" => {"withComment" => value}}}
+
+  # Each of `messages`, in order, and no other, as one refusal.
+  def assert_refused_all(messages, data)
+    mistakes = assert_raises(Core::Mistakes) { Core::NgNudge::Rc.new(JSON.generate(data)).call }
+
+    assert_equal messages, mistakes.all.map { |mistake| mistake.message }
+    assert_equal [FILE], mistakes.all.map(&:file).uniq
+  end
 
   def assert_refused(message, data)
     mistake = assert_raises(Core::Mistake, message) { Core::NgNudge::Rc.new(data.is_a?(String) ? data : JSON.generate(data)).call }

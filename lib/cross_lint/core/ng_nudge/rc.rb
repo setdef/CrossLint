@@ -3,6 +3,7 @@
 require "json"
 require_relative "../configuration"
 require_relative "../mistake"
+require_relative "../mistakes"
 require_relative "../spelling"
 require_relative "files"
 require_relative "glob"
@@ -66,6 +67,7 @@ module CrossLint
           @file = file
           @changes = [] #: Array[String]
           @globs = {} #: Hash[String, String]
+          @problems = [] #: Array[Mistake]
         end
 
         def call
@@ -81,17 +83,34 @@ module CrossLint
         def convert(data)
           refuse_unknown(data, KEYS, "ng-nudge reads only these keys")
           @changes << "drop $schema, which CrossLint doesn't read" if data.key?("$schema")
-          src_dir = location(data, "srcDir", "src-dir", "src")
-          tsconfig = location(data, "tsConfig", "tsconfig", "tsconfig.json")
+          src_dir = attempt { location(data, "srcDir", "src-dir", "src") } || "src"
+          tsconfig = attempt { location(data, "tsConfig", "tsconfig", "tsconfig.json") } || "tsconfig.json"
           angular = [folder("src-dir", src_dir, "src"), folder("tsconfig", tsconfig, "tsconfig.json"), *roles(data)].compact
           policies, report = rules(data)
           options = options(data)
+          raise Mistakes.of(@problems) unless @problems.empty?
+
           plugins = [plugin("angular", angular), plugin("debt", [report&.setting].compact)]
           Result.new(configuration: Configuration.new(file: FILE, plugins:, policies:, warnings: options["warnings"]&.to_sym, verbosity: options["verbosity"]&.to_sym),
             changes: @changes, matching: report&.matching, src_dir:, roles: found_roles)
         end
 
-        def refuse(key, message) = raise(Mistake.new("#{key}: #{message}", file: @file))
+        def mistake(key, message) = Mistake.new("#{key}: #{message}", file: @file)
+
+        def refuse(key, message) = raise(mistake(key, message))
+
+        # Keeps a mistake to list with the others, and goes on.
+        def problem(key, message) = @problems << mistake(key, message)
+
+        # What the block gives, or nil after keeping the Mistake it
+        # raised, so that every mistake in the file is found before the
+        # conversion stops.
+        def attempt
+          yield
+        rescue Mistake => mistake
+          @problems << mistake
+          nil
+        end
 
         def parse
           JSON.parse(@text)
@@ -99,13 +118,12 @@ module CrossLint
           raise Mistake.new("isn't valid JSON; fix it, as ng-nudge's schema says: " + error.message, file: @file)
         end
 
-        # Refuses the first key of `given` that isn't one of `known`, with
-        # the nearest spelling.
+        # Keeps a mistake for each key of `given` that isn't one of
+        # `known`, with the nearest spelling.
         def refuse_unknown(given, known, why, within: nil)
-          key = (given.keys - known).first
-          return unless key
-
-          refuse([within, key].compact.join("."), "#{Spelling.unknown("key", key, known)}; #{why}, so remove it")
+          (given.keys - known).each do |key|
+            problem([within, key].compact.join("."), "#{Spelling.unknown("key", key, known)}; #{why}, so remove it")
+          end
         end
 
         def object(value, key)
@@ -161,17 +179,23 @@ module CrossLint
         end
 
         def roles(data)
-          object(data.fetch("artifacts", NONE), "artifacts").map { |name, given| role(name, object(given, "artifacts.#{name}")) }
+          given = attempt { object(data.fetch("artifacts", NONE), "artifacts") } || NONE
+          given.filter_map { |name, entry| role(name, entry) }
         end
 
-        def role(name, given)
+        def role(name, entry)
           key = "artifacts.#{name}"
-          refuse(key, "has a role name with a character other than a letter, digit, - or _, which a CrossLint role can't have; rename it") unless name.match?(ROLE)
+          given = attempt { object(entry, key) }
+          return unless given
+
+          problem(key, "has a role name with a character other than a letter, digit, - or _, which a CrossLint role can't have; rename it") unless name.match?(ROLE)
           refuse_unknown(given, %w[pattern expects], "ng-nudge reads only these", within: key)
-          pattern = string(given.fetch("pattern", ""), "#{key}.pattern", "a glob pattern as a string")
-          properties = pattern.empty? ? {} : {"files" => files("#{key}.pattern", pattern)} #: Hash[String, untyped]
+          pattern = attempt { string(given.fetch("pattern", ""), "#{key}.pattern", "a glob pattern as a string") } || ""
+          properties = {} #: Hash[String, untyped]
+          converted = attempt { files("#{key}.pattern", pattern) } unless pattern.empty?
+          properties["files"] = converted if converted
           @globs[name] = pattern.empty? ? "**/*.#{name}.ts" : pattern
-          setting("role", [name], properties, given.slice("expects").map { |_, value| expects("#{key}.expects", value) })
+          setting("role", [name], properties, given.slice("expects").filter_map { |_, value| attempt { expects("#{key}.expects", value) } })
         end
 
         # Each built-in role and each role the configuration adds or changes.
@@ -198,16 +222,21 @@ module CrossLint
         # The policy lines of the rules, and the report-entries setting the
         # debt rule's withComment gives.
         def rules(data)
-          given = object(data.fetch("rules", NONE), "rules")
-          unknown = (given.keys - RULES - [DEBT_RULE]).first
-          refuse("rules.#{unknown}", "#{Spelling.unknown("rule", unknown, RULES + [DEBT_RULE])}; ng-nudge has no other, so remove it") if unknown
+          given = attempt { object(data.fetch("rules", NONE), "rules") } || NONE
+          known = RULES + [DEBT_RULE]
+          (given.keys - known).each { |unknown| problem("rules.#{unknown}", "#{Spelling.unknown("rule", unknown, known)}; ng-nudge has no other, so remove it") }
           report = nil #: Report?
           policies = given.filter_map do |name, rule|
             key = "rules.#{name}"
-            body = object(rule, key)
+            next unless known.include?(name)
+
+            body = attempt { object(rule, key) } || next
             body.slice("withComment").each_value do |with_comment|
-              refuse("#{key}.withComment", "is a setting of #{DEBT_RULE} only; remove it") unless name == DEBT_RULE
-              report = report_entries("#{key}.withComment", with_comment)
+              if name == DEBT_RULE
+                report = attempt { report_entries("#{key}.withComment", with_comment) }
+              else
+                problem("#{key}.withComment", "is a setting of #{DEBT_RULE} only; remove it")
+              end
             end
             policy(key, name, body)
           end
@@ -219,10 +248,12 @@ module CrossLint
         def policy(key, name, body)
           refuse_unknown(body, %w[enabled severity withComment], "ng-nudge reads only these", within: key)
           enabled = body.fetch("enabled", true)
-          refuse("#{key}.enabled", "is #{JSON.generate(enabled)}, and it takes true or false") unless [true, false].include?(enabled)
+          enabled_ok = [true, false].include?(enabled)
+          problem("#{key}.enabled", "is #{JSON.generate(enabled)}, and it takes true or false") unless enabled_ok
           severity = body.fetch("severity", nil)
-          refuse("#{key}.severity", "is #{JSON.generate(severity)}, and it takes \"error\" or \"warning\"") unless [nil, *SEVERITIES].include?(severity)
-          return if enabled && severity.nil?
+          severity_ok = [nil, *SEVERITIES].include?(severity)
+          problem("#{key}.severity", "is #{JSON.generate(severity)}, and it takes \"error\" or \"warning\"") unless severity_ok
+          return if !enabled_ok || !severity_ok || (enabled && severity.nil?)
 
           PolicySetting.new(name: "#{(name == DEBT_RULE) ? "debt" : "angular"}/#{name}", enabled: (false unless enabled), severity: severity&.to_sym, line: LINE)
         end
@@ -238,10 +269,13 @@ module CrossLint
           when String then report(ceiling(key, given))
           when Hash
             refuse_unknown(given, %w[maxSeverity matching], "ng-nudge reads only these", within: key)
-            maximum = given.fetch("maxSeverity") { refuse("#{key}.maxSeverity", "is missing, and withComment as an object takes it, as \"none\", \"warning\", or \"error\"") }
-            expression = string(given.fetch("matching", ""), "#{key}.matching", "a JavaScript regular expression as a string")
-            maximum = ceiling("#{key}.maxSeverity", maximum)
-            report(maximum, matching_of(maximum, "#{key}.matching", expression))
+            maximum = attempt do
+              ceiling("#{key}.maxSeverity", given.fetch("maxSeverity") do
+                refuse("#{key}.maxSeverity", "is missing, and withComment as an object takes it, as \"none\", \"warning\", or \"error\"")
+              end)
+            end
+            expression = attempt { string(given.fetch("matching", ""), "#{key}.matching", "a JavaScript regular expression as a string") } || ""
+            report(maximum || "error", attempt { matching_of(maximum, "#{key}.matching", expression) })
           else
             refuse(key, "is #{JSON.generate(given)}, and it takes true, false, \"none\", \"warning\", \"error\", or an object with maxSeverity and matching")
           end
@@ -285,11 +319,11 @@ module CrossLint
         end
 
         def options(data)
-          options = object(data.fetch("options", NONE), "options")
+          options = attempt { object(data.fetch("options", NONE), "options") } || NONE
           refuse_unknown(options, OPTIONS.keys, "ng-nudge reads only these", within: "options")
-          options.each do |name, value|
+          options.slice(*OPTIONS.keys).each do |name, value|
             choices = OPTIONS.fetch(name)
-            refuse("options.#{name}", "is #{JSON.generate(value)}, and it takes #{Spelling.list(choices.map(&:dump))}") unless choices.include?(value)
+            problem("options.#{name}", "is #{JSON.generate(value)}, and it takes #{Spelling.list(choices.map(&:dump))}") unless choices.include?(value)
           end
         end
       end

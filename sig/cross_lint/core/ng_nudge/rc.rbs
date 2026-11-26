@@ -136,7 +136,8 @@ module CrossLint
         def initialize: (String text, ?file: String) -> void
 
         # The configuration and the changes. Raises Mistake, naming the key,
-        # for a key or a value it doesn't carry.
+        # when the text isn't a JSON object, and Mistakes, one for each key
+        # or value it doesn't carry, when it is but has any.
         def call: () -> Result
 
         private
@@ -149,17 +150,31 @@ module CrossLint
 
         @globs: Hash[String, String]
 
+        @problems: Array[Mistake]
+
         # The conversion of the object `data`.
         def convert: (Hash[String, untyped] data) -> Result
+
+        # A Mistake that names `key` and says `message`.
+        def mistake: (String key, String message) -> Mistake
 
         # Raises a Mistake that names `key` and says `message`.
         def refuse: (String key, String message) -> bot
 
+        # Keeps a Mistake that names `key` and says `message`, to list with
+        # the others, and goes on.
+        def problem: (String key, String message) -> untyped
+
+        # What the block gives, or nil after keeping the Mistake it raised,
+        # so that every mistake in the file is found before the conversion
+        # stops.
+        def attempt: [T] () { () -> T } -> T?
+
         # The text parsed as JSON. Raises Mistake when it isn't.
         def parse: () -> untyped
 
-        # Refuses the first key of `given` that isn't one of `known`, naming
-        # the nearest spelling, and saying `why`; the key is named inside
+        # Keeps a Mistake for each key of `given` that isn't one of `known`,
+        # naming the nearest spelling, and saying `why`; the key is named inside
         # `within`, the key of the object it is in, unless that is nil.
         def refuse_unknown: (Hash[String, untyped] given, Array[String] known, String why, ?within: String?) -> void
 
@@ -191,8 +206,9 @@ module CrossLint
         # The `role` of each of `artifacts`.
         def roles: (Hash[String, untyped] data) -> Array[Setting]
 
-        # The `role` setting for `name`, from its entry `given`.
-        def role: (String name, Hash[String, untyped] given) -> Setting
+        # The `role` setting for `name`, from its entry `entry`, or nil when
+        # the entry is no object.
+        def role: (String name, untyped entry) -> Setting?
 
         # Each built-in role and each role the configuration adds or
         # changes, with its node-glob pattern and the path pattern it
@@ -226,7 +242,7 @@ module CrossLint
         # The translation of `expression`, which `key` names, or nil when
         # there is none to carry, or the ceiling is "error", which any
         # expression leaves as it is.
-        def matching_of: (String ceiling, String key, String expression) -> Matching?
+        def matching_of: (String? ceiling, String key, String expression) -> Matching?
 
         # The matching for the JavaScript expression `expression`, which
         # `key` names.

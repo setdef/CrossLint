@@ -5,6 +5,7 @@ require "test_helper"
 # The value objects of the core that have behavior beyond their fields.
 class CoreValuesTest < Minitest::Test
   cover "CrossLint::Core::Mistake*"
+  cover "CrossLint::Core::Mistakes*"
   cover "CrossLint::Core::Spelling*"
   cover "CrossLint::Core::Condition*"
   cover "CrossLint::Core::ArtifactDeclaration*"
@@ -70,6 +71,17 @@ class CoreValuesTest < Minitest::Test
     assert_equal ["plugin.kdl:2", "unknown"], [Mistake.new("unknown", file: "plugin.kdl", line: 2).location, Mistake.new("unknown").message]
     assert_equal "plugin.kdl", Mistake.new("x", file: "plugin.kdl").location
     assert_equal "", Mistake.new("x").location
+  end
+
+  def test_one_mistake_stands_alone_and_several_are_listed_together
+    first = Mistake.new("is wrong", file: "a.json")
+    second = Mistake.new("is wrong too", file: "b.json", line: 3)
+
+    assert_same first, Mistakes.of([first])
+    many = Mistakes.of([first, second])
+
+    assert_kind_of Mistake, many
+    assert_equal [[first, second], "2 mistakes: a.json: is wrong; b.json:3: is wrong too", nil, nil], [many.all, many.message, many.file, many.line]
   end
 
   def test_spelling_names_the_nearest_known_word

@@ -728,6 +728,14 @@ class CLITest < Minitest::Test
     refute configuration.exist?("#{WORK}/app")
   end
 
+  def test_init_from_ng_nudge_says_every_problem_on_a_line_of_its_own_and_exits_with_2
+    app, configuration, = ng_nudge_app({"srcDir" => "../x", "options" => {"verbosity" => "loud"}})
+
+    assert_equal ["", "crosslint: .config/ng-nudge/rc.json: srcDir: is \"../x\", which is outside the project; write a path inside it, relative to the project's root\n" \
+      "crosslint: .config/ng-nudge/rc.json: options.verbosity: is \"loud\", and it takes \"normal\", \"quiet\", or \"silent\"\n", 2], init("init", "--from-ng-nudge", app:)
+    refute configuration.exist?("#{WORK}/app")
+  end
+
   def test_init_from_ng_nudge_moves_a_project_with_the_real_files_and_node
     Dir.mktmpdir do |project|
       rc = {"srcDir" => "./app/", "artifacts" => {"store" => {"pattern" => "**/*.store.ts", "expects" => ["spec"]}},

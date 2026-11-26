@@ -6,6 +6,7 @@ module CrossLint
 end
 
 require_relative "core/mistake"
+require_relative "core/mistakes"
 require_relative "core/spelling"
 require_relative "core/path_pattern"
 require_relative "core/condition"

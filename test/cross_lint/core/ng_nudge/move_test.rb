@@ -81,6 +81,50 @@ class NgNudgeMoveTest < Minitest::Test
     end
   end
 
+  def test_lists_every_artifact_and_policy_file_of_ng_nudges_not_only_the_first
+    files = {".config/ng-nudge/artifacts/store.artifact.js" => "", ".config/ng-nudge/policies/x.policy.js" => "", ".config/ng-nudge/artifacts/page.artifact.js" => "",
+             ".config/ng-nudge/rules/a.rule.js" => ""}
+    world = world({}, files:)
+    mistakes = assert_raises(Core::Mistakes) { world.move }
+
+    assert_equal [".config/ng-nudge/artifacts/page.artifact.js", ".config/ng-nudge/artifacts/store.artifact.js", ".config/ng-nudge/policies/x.policy.js"],
+      mistakes.all.map(&:file)
+    assert_equal [true], mistakes.all.map(&:message).uniq.map { |message| message.start_with?("is a file ng-nudge loads to change what it checks") }
+    assert_unchanged world
+  end
+
+  def test_lists_the_problems_of_rc_json_and_of_the_extension_files_and_the_files_it_would_replace_before_it_stops
+    files = {".config/ng-nudge/artifacts/store.artifact.js" => ""}
+    world = world({"srcDir" => "../x", "tsConfig" => 5}, files:, existing: true, own_debt: true)
+    mistakes = assert_raises(Core::Mistakes) { world.move }
+
+    assert_equal [[CONFIG, "already exists, and crosslint init --from-ng-nudge changes nothing in the configuration; crosslint init --from-ng-nudge --force replaces it"],
+      [RC, %(srcDir: is "../x", which is outside the project; write a path inside it, relative to the project's root)],
+      [RC, %(tsConfig: is 5, and it takes a path as a string, such as "tsconfig.json")],
+      [".config/ng-nudge/artifacts/store.artifact.js", "is a file ng-nudge loads to change what it checks, which CrossLint can't run; declare the same check in a local plugin " \
+        "(docs/reference/plugin.md), then move the file out of .config/ng-nudge"],
+      [DEBT, "already exists, and crosslint init --from-ng-nudge changes nothing in the debt file; crosslint init --from-ng-nudge --force replaces it"]],
+      mistakes.all.map { |mistake| [mistake.file, mistake.message] }
+    assert_empty world.configuration.read(APP).plugins
+    assert world.debt_files.exist?(APP, NG_DEBT)
+  end
+
+  def test_lists_a_matching_that_javascript_and_the_translation_disagree_on_with_the_files_it_refuses
+    json = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "warning", "matching" => "^TODO"}}}}
+    world = world(json, comments: ["later"], expressions: {"^TODO" => ->(_) { true }}, files: {".config/ng-nudge/policies/x.policy.js" => ""})
+    mistakes = assert_raises(Core::Mistakes) { world.move }
+
+    assert_equal [".config/ng-nudge/policies/x.policy.js", RC], mistakes.all.map(&:file)
+    assert_match(/JavaScript matches the comment "later" of line 2/, mistakes.all.last.message)
+  end
+
+  def test_lists_a_debt_file_it_cannot_read_with_the_other_problems
+    broken = Core::Mistake.new("has an entry with no rule", file: NG_DEBT, line: 3)
+    mistakes = assert_raises(Core::Mistakes) { world({"srcDir" => "../x"}, debt_file: broken).move }
+
+    assert_equal [[RC, nil], [NG_DEBT, 3]], mistakes.all.map { |mistake| [mistake.file, mistake.line] }
+  end
+
   def test_refuses_to_replace_a_configuration_unless_forced
     world = world({}, existing: true)
     mistake = assert_raises(Core::Mistake) { world.move }

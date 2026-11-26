@@ -2,6 +2,7 @@
 
 require_relative "../javascript_error"
 require_relative "../mistake"
+require_relative "../mistakes"
 require_relative "../track_debt"
 require_relative "differences"
 require_relative "files"
@@ -40,17 +41,23 @@ module CrossLint
         end
 
         def call(root, force: false, dry_run: false, planned: nil)
+          problems = [] #: Array[Mistake]
           replaced = @configuration.exist?(root)
-          refuse_existing(@configuration.file, "the configuration") if replaced && !force
+          attempt(problems) { refuse_existing(@configuration.file, "the configuration") } if replaced && !force
           text = @ng_nudge.settings(root)
-          converted = Rc.new(text || EMPTY).call
+          found = attempt(problems) { Rc.new(text || EMPTY).call }
           paths = @ng_nudge.extensions(root)
-          refuse_code(paths)
-          debt = @debt_files.read(root, DEBT_FILE)
+          problems.concat(code_files(paths))
+          read = attempt(problems) { @debt_files.read(root, DEBT_FILE) }
           moves = @debt_files.exist?(root, DEBT_FILE)
           replaces = moves && @debt_files.exist?(root, TrackDebt::FILE)
-          refuse_existing(TrackDebt::FILE, "the debt file") if replaces && !force
-          agree(converted.matching, debt) if converted.matching
+          attempt(problems) { refuse_existing(TrackDebt::FILE, "the debt file") } if replaces && !force
+          matching = found&.matching
+          attempt(problems) { agree(matching, read) } if read && matching
+          raise Mistakes.of(problems) unless problems.empty?
+
+          converted = found #: Rc::Result
+          debt = read #: DebtFile
           changes = [*assumed(text), *moved(replaced, converted, moves, debt, replaces), *converted.changes, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
           notes = compare(root, converted)
           planned&.call(changes, notes)
@@ -93,14 +100,27 @@ module CrossLint
           raise Mistake.new("already exists, and crosslint init --from-ng-nudge changes nothing in #{what}; crosslint init --from-ng-nudge --force replaces it", file:)
         end
 
-        # A file of artifacts or policies is loaded by ng-nudge to change what it checks, and
-        # CrossLint carries no code of ng-nudge's.
-        def refuse_code(paths)
-          path = paths.find { |each| !each.include?("/rules/") }
-          return unless path
+        # What the block gives, or nil after adding the Mistake or Mistakes
+        # it raised to `problems`, so that every problem is found before the
+        # move stops.
+        def attempt(problems)
+          yield
+        rescue Mistakes => mistakes
+          problems.concat(mistakes.all)
+          nil
+        rescue Mistake => mistake
+          problems << mistake
+          nil
+        end
 
-          raise Mistake.new("is a file ng-nudge loads to change what it checks, which CrossLint can't run; declare the same check in a local plugin " \
-            "(docs/reference/plugin.md), then move the file out of .config/ng-nudge", file: path)
+        # A mistake for each file of artifacts or policies, which ng-nudge
+        # loads to change what it checks, and CrossLint carries no code of
+        # ng-nudge's.
+        def code_files(paths)
+          paths.reject { |each| each.include?("/rules/") }.map do |path|
+            Mistake.new("is a file ng-nudge loads to change what it checks, which CrossLint can't run; declare the same check in a local plugin " \
+              "(docs/reference/plugin.md), then move the file out of .config/ng-nudge", file: path)
+          end
         end
 
         def moved(replaced, converted, moves, debt, replaces)
