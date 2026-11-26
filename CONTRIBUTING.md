@@ -29,7 +29,7 @@ Every public class, module, method, and constant is documented in its RBS signat
 
 ## Landing a change
 
-Commit straight to `trunk`, one change at a time, each one complete and releasable. Run the checks that apply to the change before you push, and rebase and run them again when a push is refused because `trunk` moved.
+Commit straight to `trunk`, one change at a time, each one complete and releasable. A spike, an experiment written to answer a question, is throwaway code and stays off `trunk`; its answer goes in the issue it serves. Run the checks that apply to the change before you push, and rebase and run them again when a push is refused because `trunk` moved.
 
 ## Licensing
 
