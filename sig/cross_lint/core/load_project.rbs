@@ -30,6 +30,14 @@ module CrossLint
       # with a configuration.
       def call: (String start) -> Project
 
+      # The plugins the configuration at `start`, or the nearest folder
+      # above it with one, lists, whose manifests are on disk. It fetches
+      # nothing: a shared plugin not in the cache is in `unfetched`, and
+      # no plugin's Ruby runs, no plugin is checked against another, and a
+      # configuration that lists no plugin is no mistake. Raises Mistake
+      # for a configuration or a manifest it can't read, as `call` does.
+      def listed: (String start) -> PluginListing
+
       private
 
       @configuration: _Configuration
@@ -46,22 +54,24 @@ module CrossLint
 
       # The plugin listed at `index`, with its manifest, checked against
       # the plugins `loaded` before it. A local or shared plugin can't have
-      # the name of a built-in one.
-      def plugin: (String root, Configuration configuration, Integer index, Array[Plugin] loaded) -> Plugin
+      # the name of a built-in one. Without `fetching`, nil for a shared
+      # plugin not in the cache.
+      def plugin: (String root, Configuration configuration, Integer index, Array[Plugin] loaded, ?fetching: bool) -> Plugin?
 
       # What a message calls the place `listing`'s manifest should be in,
       # `folder` for a plugin in a folder.
       def where: (ListedPlugin listing, String folder) -> String
 
       # The folder the listed plugin is in, as a base folder and a path
-      # relative to it.
-      def place: (String root, ListedPlugin listing, ^(String message, ?Integer line) -> bot fail_at) -> [String, String]
+      # relative to it, or nil for a shared plugin not in the cache when
+      # `fetching` is false.
+      def place: (String root, ListedPlugin listing, ^(String message, ?Integer line) -> bot fail_at, bool fetching) -> [String, String]?
 
       # The cache folder of the shared plugin `listing`, as a base folder
-      # and an empty path from it. Fetches the plugin the first time. Fails
-      # at the listing when it has no ref, can't be named, or can't be
-      # fetched.
-      def fetch: (ListedPlugin listing, ^(String message, ?Integer line) -> bot fail_at) -> [String, String]
+      # and an empty path from it. With `fetching`, fetches the plugin the
+      # first time; without, nil for a plugin not in the cache. Fails at the
+      # listing when it has no ref, can't be named, or can't be fetched.
+      def fetch: (ListedPlugin listing, ^(String message, ?Integer line) -> bot fail_at, bool fetching) -> [String, String]?
 
       # A local plugin's path with no `.`, no `..` that can go, and no
       # empty segment, such as "x" for "./a/../x/".

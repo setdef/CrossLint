@@ -29,6 +29,8 @@ module CrossLint
         end
       end
 
+      def cached(url, ref) = @saved[[url, ref]]
+
       def tags(url)
         check(url)
         @err.puts("crosslint: listing the tags of #{url}")

@@ -174,6 +174,12 @@ module CrossLint
     # saves nothing then.
     def fetch: (String url, String ref) -> String
 
+    # The folder `fetch` returned for `url` at `ref` before, or nil when it
+    # hasn't fetched that plugin, or when `url` or `ref` is one it
+    # wouldn't fetch. It makes no request, says nothing, and saves
+    # nothing, so a help that must not touch the network can ask it.
+    def cached: (String url, String ref) -> String?
+
     # The names of the repository's tags at `url`. Raises Core::FetchError
     # when the repository can't be reached within the time limit.
     def tags: (String url) -> Array[String]

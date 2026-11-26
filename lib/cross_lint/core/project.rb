@@ -17,6 +17,8 @@ module CrossLint
       end
     end
 
+    class PluginListing < Data.define(:file, :plugins, :unfetched); end
+
     class Project < Data.define(:root, :configuration, :plugins)
       def unused_rules
         plugins.flat_map do |plugin|

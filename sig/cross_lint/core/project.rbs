@@ -27,6 +27,28 @@ module CrossLint
       def targets: (Policy policy) -> Array[[String, String]]
     end
 
+    # The plugins a configuration lists that are on disk, read and not
+    # checked against each other: the configuration's path, the plugins
+    # whose manifests were read, and the shared plugins listed that have
+    # not been fetched.
+    class PluginListing < Data
+      # The configuration's path, relative to the project's root.
+      attr_reader file: String
+
+      # The plugins read, in the order they are listed.
+      attr_reader plugins: Array[Plugin]
+
+      # The shared plugins listed that aren't in the cache yet, as the
+      # configuration lists them.
+      attr_reader unfetched: Array[ListedPlugin]
+
+      # A listing with these fields.
+      def self.new: (file: String, plugins: Array[Plugin], unfetched: Array[ListedPlugin]) -> instance
+
+      # A listing with these fields.
+      def initialize: (file: String, plugins: Array[Plugin], unfetched: Array[ListedPlugin]) -> void
+    end
+
     # A project whose configuration and plugins CrossLint has read and
     # checked against each other.
     class Project < Data

@@ -421,6 +421,17 @@ module CrossLint
       # accept, before any request.
       def test_refuses_a_url_it_doesnt_accept_without_a_request: () -> void
 
+      # cached gives nil for a plugin not fetched yet, and says nothing.
+      def test_gives_no_folder_for_a_plugin_it_hasnt_fetched_and_makes_no_request_for_it: () -> void
+
+      # cached gives the folder fetch gave, with no request, though the
+      # repository is gone.
+      def test_gives_the_folder_it_fetched_without_a_request_even_when_the_repository_is_gone: () -> void
+
+      # cached gives nil, and doesn't raise, for a URL the port doesn't
+      # accept and a ref that is no tag name or SHA.
+      def test_gives_no_folder_for_a_url_or_ref_it_would_refuse_to_fetch: () -> void
+
       # tags lists the names of every tag of the repository.
       def test_lists_the_names_of_the_repositorys_tags: () -> void
 

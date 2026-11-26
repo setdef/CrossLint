@@ -540,6 +540,36 @@ module CrossLint
         assert_empty said
       end
 
+      def test_gives_no_folder_for_a_plugin_it_hasnt_fetched_and_makes_no_request_for_it
+        port = shared_plugins_port
+
+        assert_nil port.cached(repository_url, "v1.0.0")
+        assert_nil port.cached(repository_url, commit_sha)
+        assert_empty said
+        port.fetch(repository_url, "v1.0.0")
+        assert_nil port.cached(repository_url, "v1.2.0")
+        assert_equal "crosslint: fetching #{repository_url} at v1.0.0\n", said
+      end
+
+      def test_gives_the_folder_it_fetched_without_a_request_even_when_the_repository_is_gone
+        port = shared_plugins_port
+        folder = port.fetch(repository_url, "v1.0.0")
+        remove_repository
+        said_before = said
+
+        assert_equal folder, port.cached(repository_url, "v1.0.0")
+        assert_equal said_before, said
+      end
+
+      def test_gives_no_folder_for_a_url_or_ref_it_would_refuse_to_fetch
+        port = shared_plugins_port
+
+        assert_nil port.cached("ext::sh -c id", "v1.0.0")
+        assert_nil port.cached(repository_url, "main^")
+        assert_nil port.cached(repository_url, "")
+        assert_empty said
+      end
+
       def test_lists_the_names_of_the_repositorys_tags
         assert_equal TAGS.sort, shared_plugins_port.tags(repository_url).sort
       end

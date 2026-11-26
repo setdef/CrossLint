@@ -80,6 +80,15 @@ module CrossLint
         folder
       end
 
+      def cached(url, ref)
+        return unless accepts?(url) && Core::SharedPlugin.ref?(ref)
+
+        found = folder(url, ref)
+        found if File.directory?(found)
+      rescue Core::FetchError
+        nil
+      end
+
       def tags(url)
         check(url)
         @err.puts("crosslint: listing the tags of #{url}")

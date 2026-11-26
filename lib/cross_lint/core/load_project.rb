@@ -28,6 +28,23 @@ module CrossLint
         @reserved = reserved
       end
 
+      # The plugins whose manifests are on disk, for a person who asks what
+      # commands the project's plugins add: nothing is fetched, a shared
+      # plugin not fetched yet is only listed, and no plugin's Ruby runs.
+      def listed(start)
+        root = @configuration.find_root(start)
+        raise Mistake.no_configuration(@configuration.file, start) unless root
+
+        configuration = @configuration.read(root)
+        loaded = [] #: Array[Plugin]
+        unfetched = [] #: Array[ListedPlugin]
+        configuration.plugins.each_index do |index|
+          found = plugin(root, configuration, index, loaded, fetching: false)
+          found ? loaded << found : unfetched << configuration.plugins.fetch(index)
+        end
+        PluginListing.new(file: configuration.file, plugins: loaded, unfetched:)
+      end
+
       def call(start)
         root = @configuration.find_root(start)
         raise Mistake.no_configuration(@configuration.file, start) unless root
@@ -55,13 +72,16 @@ module CrossLint
 
       private
 
-      def plugin(root, configuration, index, loaded)
+      def plugin(root, configuration, index, loaded, fetching: true)
         listing = configuration.plugins.fetch(index)
         fail_at = ->(message, line = listing.line) { raise Mistake.new(message, file: configuration.file, line:) }
         first = configuration.plugins.take(index).find { |other| other.name == listing.name }
         fail_at.call("plugin #{listing.name.dump} is listed twice; the first is on line #{first.line}") if first
 
-        base, folder = place(root, listing, fail_at)
+        placed = place(root, listing, fail_at, fetching)
+        return unless placed
+
+        base, folder = placed
         manifest = @manifests.read(base, folder) || fail_at.call("no #{@manifests.file} in #{where(listing, folder)}")
         name = File.basename(File.expand_path(folder, base))
         if (listing.kind == :local || listing.shared?(@shared_plugins)) && @built_in.key?(name)
@@ -82,8 +102,8 @@ module CrossLint
         folder.empty? ? "the project's root" : folder
       end
 
-      def place(root, listing, fail_at)
-        return fetch(listing, fail_at) if listing.shared?(@shared_plugins)
+      def place(root, listing, fail_at, fetching)
+        return fetch(listing, fail_at, fetching) if listing.shared?(@shared_plugins)
 
         fail_at.call("only a shared plugin takes ref=") if listing.ref
         return [root, clean(listing.name)] if listing.kind == :local
@@ -96,18 +116,18 @@ module CrossLint
 
       # The shared plugin's folder in the user's cache is the base, so that
       # the plugin's name is the name of that folder, as for any plugin.
-      def fetch(listing, fail_at)
+      def fetch(listing, fail_at, fetching)
         url = listing.name
         ref = listing.ref || fail_at.call("shared plugin #{url.dump} needs ref=, a tag or a full commit SHA")
         name = SharedPlugin.plugin_name(url) || fail_at.call("can't name a plugin from #{url.dump}, whose last path segment has other characters " \
           "than letters, digits, and . _ -; a plugin's name is its repository's name")
 
         folder = begin
-          @shared_plugins.fetch(url, ref)
+          fetching ? @shared_plugins.fetch(url, ref) : @shared_plugins.cached(url, ref)
         rescue FetchError => error
           fail_at.call("couldn't fetch shared plugin #{name} from #{url} at #{ref}: " + error.message)
         end
-        [folder, ""]
+        [folder, ""] if folder
       end
 
       # A name that starts with / is relative to the root too, as the

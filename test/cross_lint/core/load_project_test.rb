@@ -611,6 +611,51 @@ class LoadProjectTest < Minitest::Test
         Condition::CompanionExists.new(companion: "zzz", line: 8)], line: 7))])
   end
 
+  def test_lists_the_plugins_on_disk_without_checking_them_against_each_other_or_running_their_ruby
+    broken = tests_manifest("rules/two", policies: [policy.with(applies_to: AppliesTo.new(artifact: "nope", line: 6))])
+      .with(artifacts_ruby: ArtifactsRuby.new(ruby: "missing.rb", line: 9))
+    manifests = {"#{APP}/rules/tests" => tests_manifest, "#{APP}/rules/two" => broken}
+    plugins = [listing("./rules/tests"), listing("./rules/two", line: 2)]
+    listing = load_project(plugins:, manifests:, listed: true)
+
+    assert_equal [CONFIG, ["tests", "two"], []], [listing.file, listing.plugins.map(&:name), listing.unfetched]
+    assert_kind_of PluginListing, listing
+    assert_raises(Mistake) { load_project(plugins:, manifests:) }
+  end
+
+  def test_lists_a_project_that_lists_no_plugin
+    listing = load_project(plugins: [], listed: true)
+
+    assert_equal [[], []], [listing.plugins, listing.unfetched]
+  end
+
+  def test_lists_a_shared_plugin_only_once_it_is_in_the_cache_and_fetches_nothing
+    shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
+    manifests = {"#{TOP}cache/a1/signatures" => tests_manifest("signatures"), "#{APP}/rules/tests" => tests_manifest}
+    plugins = [listing(URL, ref: "v1.2.0", line: 3), listing("./rules/tests", line: 4)]
+    before = load_project(plugins:, manifests:, shared_plugins: shared, listed: true)
+
+    assert_equal [["tests"], [plugins.first]], [before.plugins.map(&:name), before.unfetched]
+    assert_empty shared.fetched
+    shared.fetch(URL, "v1.2.0")
+    after = load_project(plugins:, manifests:, shared_plugins: shared, listed: true)
+
+    assert_equal [["signatures", "tests"], []], [after.plugins.map(&:name), after.unfetched]
+    assert_equal [[URL, "v1.2.0"]], shared.fetched
+  end
+
+  def test_lists_with_the_mistakes_a_listing_can_have_and_no_other
+    assert_raises(Mistake) { load_project(plugins: [listing(URL)], listed: true) }.then do |mistake|
+      assert_equal %(shared plugin "#{URL}" needs ref=, a tag or a full commit SHA), mistake.message
+    end
+    assert_raises(Mistake) { load_project(plugins: [listing(".x")], start: "/elsewhere/lib", listed: true) }.then do |mistake|
+      assert_match(/\Ano \.config\/crosslint\/config\.kdl in \/elsewhere\/lib/, mistake.message)
+    end
+    mistake = assert_raises(Mistake) { load_project(plugins: [listing("./rules/missing")], listed: true) }
+
+    assert_equal [CONFIG, 1, "no plugin.kdl in rules/missing"], [mistake.file, mistake.line, mistake.message]
+  end
+
   def test_names_the_first_of_two_listings_when_a_plugin_is_listed_again
     assert_mistake CONFIG, 4, %(plugin "./rules/tests" is listed twice; the first is on line 1),
       plugins: [listing("./rules/tests"), listing(".config/other", line: 2), listing("./rules/tests", line: 4)],
@@ -688,11 +733,12 @@ class LoadProjectTest < Minitest::Test
   end
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
-    shared_plugins: shared_plugins({}), reserved: [])
+    shared_plugins: shared_plugins({}), reserved: [], listed: false)
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
-    LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, reserved:).call(start)
+    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
+      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, reserved:)
+    listed ? use_case.listed(start) : use_case.call(start)
   end
 
   # A port with one repository, at URL, that has these tags and a branch
