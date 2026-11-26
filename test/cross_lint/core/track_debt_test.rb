@@ -106,7 +106,7 @@ class TrackDebtTest < Minitest::Test
     result = step(violations, [entry("tests/has-test", "app/other"), entry("tests/has-test", "app/card", "both")])
 
     assert_equal violations, result.excused
-    assert_equal [Notice.new(file: FILE, line: 3, message: "the entry for tests/has-test on app/card accepts the violations of 2 artifacts, " \
+    assert_equal [Notice.new(file: FILE, line: 3, message: "the entry for tests/has-test on app/card matches the violations of 2 artifacts, " \
       "app/card as component and app/card as service; crosslint check --update-debt writes one entry for each")], result.notices
   end
 
@@ -125,7 +125,7 @@ class TrackDebtTest < Minitest::Test
     result = step(violations, [entry("has-test", "app/card", "legacy"), entry("tests/has-test", "app/list", line: 3)])
 
     assert_equal violations, result.excused
-    assert_equal [Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it accepts every " \
+    assert_equal [Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it matches every " \
       "violation of tests/has-test on it; crosslint check --update-debt writes one entry for each, with its detail")], result.notices
   end
 
@@ -207,8 +207,8 @@ class TrackDebtTest < Minitest::Test
     entries = [entry("tests/has-test", "lib/a.rb", "why"), entry("tests/has-test", "lib/b.rb", line: 3)]
     result = step([violation("lib/a.rb"), violation("lib/b.rb")], entries, settings: [setting("report-entries")])
 
-    assert_equal [debt_violation("line 2 accepts tests/has-test on lib/a.rb: why", :error, "2"),
-      debt_violation("line 3 accepts tests/has-test on lib/b.rb, with no comment", :error, "3")], result.violations
+    assert_equal [debt_violation("line 2 lists tests/has-test on lib/a.rb as debt: why", :error, "2"),
+      debt_violation("line 3 lists tests/has-test on lib/b.rb as debt, with no comment", :error, "3")], result.violations
     assert_equal [:warning, :warning], step([], entries, settings: [setting("report-entries")], severity: :warning).violations.map(&:severity)
   end
 

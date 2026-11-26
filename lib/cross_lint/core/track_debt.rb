@@ -162,11 +162,11 @@ module CrossLint
         artifacts = matched.map { |identity| [identity.artifact, identity.role] }.uniq
         name = rule.join("/")
         if artifacts.size > 1
-          "the entry for #{name} on #{entry.artifact} accepts the violations of #{artifacts.size} artifacts, " \
+          "the entry for #{name} on #{entry.artifact} matches the violations of #{artifacts.size} artifacts, " \
             "#{Spelling.list(artifacts.map { |artifact, role| "#{artifact} as #{role}" }, "and")}; " \
             "crosslint check --update-debt writes one entry for each"
         elsif !matched.all? { |identity| identity.detail == entry.detail.to_s }
-          "the entry for #{name} on #{entry.artifact} has no detail, so it accepts every violation of #{name} on it; " \
+          "the entry for #{name} on #{entry.artifact} has no detail, so it matches every violation of #{name} on it; " \
             "crosslint check --update-debt writes one entry for each, with its detail"
         end
       end
@@ -228,7 +228,7 @@ module CrossLint
 
           said = comment.empty? ? ", with no comment" : ": #{comment}"
           Violation.new(plugin: input.plugin.name, policy: POLICY, artifact: debt.file, role: "debt-file", severity: level,
-            message: "line #{entry.line} accepts #{entry.rule} on #{entry.artifact}#{said}", detail: entry.line.to_s)
+            message: "line #{entry.line} lists #{entry.rule} on #{entry.artifact} as debt#{said}", detail: entry.line.to_s)
         end
       end
     end
