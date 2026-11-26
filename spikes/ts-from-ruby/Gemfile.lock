@@ -1,0 +1,58 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    oppen (1.0.0)
+    ruby_tree_sitter (2.1.1-aarch64-linux-gnu)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.1-aarch64-linux-musl)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.1-arm64-darwin)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.1-x86_64-darwin)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.1-x86_64-linux-gnu)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.1-x86_64-linux-musl)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    sorbet-runtime (0.6.13728)
+    zeitwerk (2.8.3)
+
+PLATFORMS
+  aarch64-linux
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux
+  x86_64-linux-gnu
+  x86_64-linux-musl
+
+DEPENDENCIES
+  ruby_tree_sitter (= 2.1.1)
+
+CHECKSUMS
+  bundler (4.0.22) sha256=d8d5ec84c8555e0af71db63ed7aee4d1a8fb839ec46d84212d61979242a5d75a
+  oppen (1.0.0) sha256=379bf0b35c5e87c5f4139927721fd6c9f561e344a73ce3f658726a609034ddee
+  ruby_tree_sitter (2.1.1-aarch64-linux-gnu) sha256=a5d93b676b69b7c0f0421b8a947c41b8c44d7d626b66537d458d066ff8ab8970
+  ruby_tree_sitter (2.1.1-aarch64-linux-musl) sha256=a7c7cae91d58ff98ff5ec43ab10798547080dce2fdc0c65b591aea35758278e5
+  ruby_tree_sitter (2.1.1-arm64-darwin) sha256=3589d94bd6f960f14a39b225e1e57c8a56ad6150a176ebf8afaa6de08bf1c6f4
+  ruby_tree_sitter (2.1.1-x86_64-darwin) sha256=09324ce89e8323db61436b8288ee68b877883c21d6346f19cc8ec2af59d834f5
+  ruby_tree_sitter (2.1.1-x86_64-linux-gnu) sha256=a3010251d56edaecf1ef7162fbf18204dde1fda853b2e41c19db7a25cd811f7a
+  ruby_tree_sitter (2.1.1-x86_64-linux-musl) sha256=e74069896ca6a0a68d6ceea261f02e56c78481b2127eadbf0d84849e7cc236f0
+  sorbet-runtime (0.6.13728) sha256=90db0140031c7b06a5dca2ffe06d27872ebe56e39cdd8cba5835dec09e44cd7f
+  zeitwerk (2.8.3) sha256=2c85125a8467ce069e20123d1e709a08955c9d29c118c25b46b7b7fafdbb92e5
+
+BUNDLED WITH
+  4.0.22

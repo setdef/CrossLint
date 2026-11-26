@@ -1,0 +1,11 @@
+{
+  // Paths live in the base file, as in an Nx workspace.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@app/*": ["src/app/*"],
+      "@shared": ["src/shared/index.ts"], /* barrel */
+      "@lib/ui": ["libs/ui/src/index.ts"],
+    },
+  },
+}

@@ -1,0 +1,524 @@
+{
+  "c01-decorators": {
+    "component": {
+      "inputs": [
+        "aliased",
+        "noInit",
+        "req",
+        "viaSetter",
+        "withInit"
+      ],
+      "outputs": [
+        "changed",
+        "noInitOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "aliased",
+        "withInit"
+      ],
+      "outputs": [
+        "changed"
+      ]
+    },
+    "interface": [
+      "aliased",
+      "changed",
+      "noInit",
+      "withInit"
+    ],
+    "violations": [
+      "stub missing input: noInit",
+      "stub missing input: req",
+      "stub missing input: viaSetter",
+      "stub missing output: noInitOut",
+      "interface missing input: req",
+      "interface missing input: viaSetter",
+      "interface missing output: noInitOut"
+    ]
+  },
+  "c02-signals": {
+    "component": {
+      "inputs": [
+        "a",
+        "b",
+        "c",
+        "e",
+        "f",
+        "i",
+        "k"
+      ],
+      "outputs": [
+        "d",
+        "eChange",
+        "fChange",
+        "j"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "a",
+        "b",
+        "c"
+      ],
+      "outputs": [
+        "d"
+      ]
+    },
+    "interface": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "i"
+    ],
+    "violations": [
+      "stub missing input: e",
+      "stub missing input: f",
+      "stub missing input: i",
+      "stub missing input: k",
+      "stub missing output: eChange",
+      "stub missing output: fChange",
+      "stub missing output: j",
+      "interface missing input: e",
+      "interface missing input: f",
+      "interface missing input: k",
+      "interface missing output: eChange",
+      "interface missing output: fChange",
+      "interface missing output: j"
+    ]
+  },
+  "c03-relative": {
+    "component": {
+      "inputs": [
+        "baseAInit",
+        "baseANoInit",
+        "baseASig",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "baseAInit",
+        "baseASig",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "interface": [
+      "baseAInit",
+      "own"
+    ],
+    "violations": [
+      "stub missing input: baseANoInit",
+      "interface missing input: baseANoInit",
+      "interface missing input: baseASig",
+      "interface missing input: shared",
+      "interface missing output: baseAEvt",
+      "interface missing output: baseAOut"
+    ]
+  },
+  "c04-path-alias": {
+    "component": {
+      "inputs": [
+        "bDec",
+        "bModel",
+        "bReq",
+        "x"
+      ],
+      "outputs": [
+        "bModelChange"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "bDec",
+        "bReq",
+        "x"
+      ],
+      "outputs": []
+    },
+    "interface": [
+      "x"
+    ],
+    "violations": [
+      "stub missing input: bModel",
+      "stub missing output: bModelChange",
+      "interface missing input: bDec",
+      "interface missing input: bModel",
+      "interface missing input: bReq",
+      "interface missing output: bModelChange"
+    ]
+  },
+  "c05-barrel-alias": {
+    "component": {
+      "inputs": [
+        "cDec",
+        "cOwn",
+        "cSig"
+      ],
+      "outputs": []
+    },
+    "stub": {
+      "inputs": [
+        "cDec",
+        "cOwn",
+        "cSig"
+      ],
+      "outputs": []
+    },
+    "interface": [
+      "cDec",
+      "cOwn",
+      "cSig"
+    ],
+    "violations": []
+  },
+  "c06-renamed-export": {
+    "component": {
+      "inputs": [],
+      "outputs": [
+        "dOut"
+      ]
+    },
+    "stub": {
+      "inputs": [],
+      "outputs": [
+        "dOut"
+      ]
+    },
+    "interface": [],
+    "violations": [
+      "interface missing output: dOut"
+    ]
+  },
+  "c07-local-import-rename": {
+    "component": {
+      "inputs": [
+        "baseAInit",
+        "baseANoInit",
+        "baseASig",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "baseAInit",
+        "baseASig",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "interface": [
+      "baseAEvt",
+      "baseAInit",
+      "baseAOut",
+      "baseASig",
+      "own",
+      "shared"
+    ],
+    "violations": [
+      "stub missing input: baseANoInit",
+      "interface missing input: baseANoInit"
+    ]
+  },
+  "c08-default-export-base": {
+    "component": {
+      "inputs": [
+        "defIn"
+      ],
+      "outputs": []
+    },
+    "stub": {
+      "inputs": [],
+      "outputs": []
+    },
+    "interface": [
+      "defIn"
+    ],
+    "violations": [
+      "stub missing input: defIn"
+    ]
+  },
+  "c09-two-levels": {
+    "component": {
+      "inputs": [
+        "baseAInit",
+        "baseANoInit",
+        "baseASig",
+        "midIn",
+        "shared",
+        "top"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "baseAInit",
+        "baseASig",
+        "midIn",
+        "shared",
+        "top"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "interface": [
+      "midIn",
+      "top"
+    ],
+    "violations": [
+      "stub missing input: baseANoInit",
+      "interface missing input: baseAInit",
+      "interface missing input: baseANoInit",
+      "interface missing input: baseASig",
+      "interface missing input: shared",
+      "interface missing output: baseAEvt",
+      "interface missing output: baseAOut"
+    ]
+  },
+  "c10-node-modules-base": {
+    "component": {
+      "inputs": [
+        "ownP",
+        "pkgDecIn",
+        "pkgSignalIn"
+      ],
+      "outputs": [
+        "pkgEvt",
+        "pkgOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "ownP"
+      ],
+      "outputs": []
+    },
+    "interface": [
+      "ownP"
+    ],
+    "violations": [
+      "stub missing input: pkgDecIn",
+      "stub missing input: pkgSignalIn",
+      "stub missing output: pkgEvt",
+      "stub missing output: pkgOut",
+      "interface missing input: pkgDecIn",
+      "interface missing input: pkgSignalIn",
+      "interface missing output: pkgEvt",
+      "interface missing output: pkgOut"
+    ]
+  },
+  "c11-library-alias": {
+    "component": {
+      "inputs": [
+        "libIn",
+        "ownL"
+      ],
+      "outputs": []
+    },
+    "stub": {
+      "inputs": [
+        "ownL"
+      ],
+      "outputs": []
+    },
+    "interface": [
+      "libIn",
+      "ownL"
+    ],
+    "violations": [
+      "stub missing input: libIn"
+    ]
+  },
+  "c12-same-file-base": {
+    "component": {
+      "inputs": [
+        "localIn",
+        "own"
+      ],
+      "outputs": []
+    },
+    "stub": {
+      "inputs": [
+        "localIn",
+        "own"
+      ],
+      "outputs": []
+    },
+    "interface": [
+      "localIn",
+      "own"
+    ],
+    "violations": []
+  },
+  "c13-default-export-class": {
+    "component": {
+      "inputs": [
+        "own"
+      ],
+      "outputs": []
+    },
+    "stub": {
+      "inputs": [
+        "own"
+      ],
+      "outputs": []
+    },
+    "interface": [
+      "own"
+    ],
+    "violations": []
+  },
+  "c14-directory-import": {
+    "component": {
+      "inputs": [
+        "baseAInit",
+        "baseANoInit",
+        "baseASig",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "baseAInit",
+        "baseASig",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "interface": [
+      "baseAEvt",
+      "baseAInit",
+      "baseAOut",
+      "baseASig",
+      "own",
+      "shared"
+    ],
+    "violations": [
+      "stub missing input: baseANoInit",
+      "interface missing input: baseANoInit"
+    ]
+  },
+  "c15-mixin-base": {
+    "component": {
+      "inputs": [
+        "baseAInit",
+        "baseANoInit",
+        "baseASig",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "baseAInit",
+        "baseASig",
+        "mixIn",
+        "own",
+        "shared"
+      ],
+      "outputs": [
+        "baseAEvt",
+        "baseAOut"
+      ]
+    },
+    "interface": [
+      "own"
+    ],
+    "violations": [
+      "stub missing input: baseANoInit",
+      "interface missing input: baseAInit",
+      "interface missing input: baseANoInit",
+      "interface missing input: baseASig",
+      "interface missing input: shared",
+      "interface missing output: baseAEvt",
+      "interface missing output: baseAOut"
+    ]
+  },
+  "c16-namespace-import": {
+    "component": {
+      "inputs": [
+        "nsIn",
+        "own"
+      ],
+      "outputs": []
+    },
+    "stub": {
+      "inputs": [
+        "nsIn",
+        "own"
+      ],
+      "outputs": []
+    },
+    "interface": [
+      "nsIn",
+      "own"
+    ],
+    "violations": []
+  },
+  "c17-generic-base": {
+    "component": {
+      "inputs": [
+        "genIn",
+        "own"
+      ],
+      "outputs": [
+        "genOut"
+      ]
+    },
+    "stub": {
+      "inputs": [
+        "own"
+      ],
+      "outputs": [
+        "genOut"
+      ]
+    },
+    "interface": [
+      "genIn",
+      "genOut",
+      "own"
+    ],
+    "violations": [
+      "stub missing input: genIn"
+    ]
+  }
+}
