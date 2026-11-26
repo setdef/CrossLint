@@ -33,13 +33,24 @@ require "securerandom"
 require "stringio"
 require "tmpdir"
 
-# CrossLint keeps what it fetches in the user's cache. A test gives its
-# own folder to every port it makes, and these point the ones it doesn't
-# at a folder that goes with the run, so that a mistake in CrossLint, or a
-# mutation of it, writes nowhere in the user's cache.
-CACHE = Dir.mktmpdir("crosslint-cache")
+# CrossLint keeps what it fetches in the user's cache, and Git reads the
+# user's home folder. A test gives its own folder to every port it makes,
+# and these point the ones it doesn't, and every program a test starts,
+# at folders that go with the run, so that a mistake in CrossLint, or a
+# mutation of it, reads and writes nowhere in the user's home. Git's
+# settings for the tests are in one file, which is all of Git's
+# configuration: no system file, and no file in the home folder.
+SANDBOX = Dir.mktmpdir("crosslint-sandbox")
+SANDBOX_HOME = File.join(SANDBOX, "home")
+CACHE = File.join(SANDBOX, "cache")
+FileUtils.mkdir_p([SANDBOX_HOME, CACHE])
+File.binwrite(File.join(SANDBOX, "gitconfig"), "[user]\n\tname = Test\n\temail = test@example.com\n[commit]\n\tgpgsign = false\n[tag]\n\tgpgsign = false\n" \
+  "[core]\n\tautocrlf = false\n[init]\n\tdefaultBranch = main\n")
+ENV["HOME"] = ENV["USERPROFILE"] = SANDBOX_HOME
 ENV["XDG_CACHE_HOME"] = ENV["LOCALAPPDATA"] = CACHE
-Minitest.after_run { FileUtils.rm_rf(CACHE) }
+ENV["GIT_CONFIG_GLOBAL"] = File.join(SANDBOX, "gitconfig")
+ENV["GIT_CONFIG_NOSYSTEM"] = "1"
+Minitest.after_run { FileUtils.rm_rf(SANDBOX) }
 
 require "cross_lint"
 require "cross_lint/testing"
@@ -67,9 +78,8 @@ module TestHelper
   # Its file URL.
   def repository_at(folder, files, tags: [])
     files.each { |path, text| write(folder, path, text) }
-    settings = %w[-c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false -c tag.gpgsign=false]
     [%w[init -q -b main], %w[add -A], %w[commit -q -m one], *tags.map { |tag| ["tag", tag] }].each do |arguments|
-      _, error, status = Open3.capture3("git", *settings, *arguments, chdir: folder)
+      _, error, status = Open3.capture3("git", *arguments, chdir: folder)
       raise error unless status.success?
     end
     file_url(folder)

@@ -96,8 +96,7 @@ module Origin
     end
 
     def git(folder, *arguments)
-      settings = %w[-c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false -c tag.gpgsign=false -c core.autocrlf=false]
-      out, status = Open3.capture2e("git", *settings, *arguments, chdir: folder)
+      out, status = Open3.capture2e("git", *arguments, chdir: folder)
       raise "git #{arguments.join(" ")} failed: #{out}" unless status.success?
 
       out
