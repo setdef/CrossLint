@@ -21,6 +21,19 @@ case "$(uname -s)" in
 esac
 opts="${MISE_OPTS-strip_components = 1, bin_path = \".\"}"
 
+# Drop every PATH folder that holds a Ruby, so the check runs with none. A
+# stock Mac's /usr/bin/ruby (Ruby 2.6) stays: /usr/bin holds everything else.
+clean=""
+IFS=: read -ra dirs <<< "$PATH"
+for d in "${dirs[@]}"; do
+  if [ "$d" != /usr/bin ] && { [ -e "$d/ruby" ] || [ -e "$d/ruby.exe" ]; }; then
+    echo "== dropped from PATH (holds a ruby): $d"
+  else
+    clean="${clean:+$clean:}$d"
+  fi
+done
+export PATH="$clean"
+
 work="$(mktemp -d "${TMPDIR:-/tmp}/install-check.XXXXXX")"
 export MISE_DATA_DIR="$work/data" MISE_CACHE_DIR="$work/cache" MISE_STATE_DIR="$work/state" \
   MISE_CONFIG_DIR="$work/config" MISE_GLOBAL_CONFIG_FILE="$work/config/config.toml" \
