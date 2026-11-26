@@ -42,6 +42,11 @@ module CrossLint
           found = plugin(root, configuration, index, loaded, fetching: false)
           found ? loaded << found : unfetched << configuration.plugins.fetch(index)
         end
+        # A command that no run could take is not listed.
+        loaded.each do |found|
+          once(found.manifest.commands, "command", found.manifest.file)
+          check_commands(found)
+        end
         PluginListing.new(file: configuration.file, plugins: loaded, unfetched:)
       end
 

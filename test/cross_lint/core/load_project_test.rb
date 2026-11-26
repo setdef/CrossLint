@@ -623,6 +623,23 @@ class LoadProjectTest < Minitest::Test
     assert_raises(Mistake) { load_project(plugins:, manifests:) }
   end
 
+  def test_lists_no_command_that_a_run_would_refuse
+    steps = {"track-debt" => RecordingStep.new}
+    folder = "#{APP}/rules/fix"
+    mistake = assert_raises(Mistake) { load_project(plugins: [listing("./rules/fix")], manifests: {folder => debt_manifest("rules/fix")}, steps:, listed: true) }
+
+    assert_equal ["rules/fix/plugin.kdl", 8], [mistake.file, mistake.line]
+    assert_includes mistake.message, "plugin fix in #{folder} adds commands, and fix is reserved"
+    twice = debt_manifest("rules/tests").with(commands: [CommandDeclaration.new(name: "go", help: "A", line: 7), CommandDeclaration.new(name: "go", help: "B", line: 8)])
+
+    duplicate = assert_raises(Mistake) { load_project(manifest: twice, steps:, listed: true) }
+
+    assert_equal ["rules/tests/plugin.kdl", %(command "go" is declared twice; the first is on line 7)], [duplicate.file, duplicate.message]
+    named = debt_manifest("rules/tests").with(commands: [CommandDeclaration.new(name: "Go", help: "A", line: 7)])
+
+    assert_equal "command \"Go\" has other characters than lowercase letters, digits, and -", assert_raises(Mistake) { load_project(manifest: named, steps:, listed: true) }.message
+  end
+
   def test_lists_a_project_that_lists_no_plugin
     listing = load_project(plugins: [], listed: true)
 
