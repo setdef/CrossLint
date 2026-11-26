@@ -30,7 +30,7 @@ module CrossLint
 
       POLICY = "has-debt"
 
-      FLAG = "update-debt"
+      COMMAND = "update"
 
       SEVERITIES = %w[error warning none].freeze
 
@@ -92,7 +92,7 @@ module CrossLint
         debt = debt.with(entries: debt.entries.map { |entry| slashed(entry) })
         identities = input.violations.map { |violation| Identity.of(violation) }.uniq
         wrote = [] #: Array[String]
-        if input.flags.include?(FLAG)
+        if input.command == COMMAND
           wrote << update(project, input, settings, debt, identities)
           debt = @debt_files.read(project.root, settings.file)
         end
@@ -118,7 +118,7 @@ module CrossLint
           line = entry.line #: Integer
           if matched.empty?
             stale << Stale.new(plugin: rule.first, policy: rule.last, artifact: entry.artifact, file: debt.file, line:,
-              message: "no violation is left for the debt entry at #{debt.file}:#{entry.line}; crosslint check --update-debt removes it")
+              message: "no violation is left for the debt entry at #{debt.file}:#{entry.line}; crosslint debt update removes it")
           end
           warning = coarse(entry, rule, matched)
           notices << Notice.new(file: debt.file, line:, message: warning) if warning
@@ -169,10 +169,10 @@ module CrossLint
         if artifacts.size > 1
           "the entry for #{name} on #{entry.artifact} matches the violations of #{artifacts.size} artifacts, " \
             "#{Spelling.list(artifacts.map { |artifact, role| "#{artifact} as #{role}" }, "and")}; " \
-            "crosslint check --update-debt writes one entry for each"
+            "crosslint debt update writes one entry for each"
         elsif !matched.all? { |identity| identity.detail == entry.detail.to_s }
           "the entry for #{name} on #{entry.artifact} has no detail, so it matches every violation of #{name} on it; " \
-            "crosslint check --update-debt writes one entry for each, with its detail"
+            "crosslint debt update writes one entry for each, with its detail"
         end
       end
 

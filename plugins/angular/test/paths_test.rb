@@ -198,7 +198,7 @@ class AngularPathsTest < Minitest::Test
     assert_empty result.violations
     assert_equal "checked 1 component, 1 pipe, and 1 service artifacts: 3 accepted as debt", result.summary.line
     assert_equal [%(the entry for angular/spec-exists on app/foo/foo matches the violations of 2 artifacts, ) +
-      %(src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint check --update-debt writes one entry for each)],
+      %(src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint debt update writes one entry for each)],
       result.notices.map(&:message)
   end
 

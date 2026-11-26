@@ -34,14 +34,14 @@ module CrossLint
 
     class SettingDeclaration < Data.define(:name, :line); end
 
-    class FlagDeclaration < Data.define(:name, :line); end
+    class CommandDeclaration < Data.define(:name, :help, :line); end
 
     class StepDeclaration < Data.define(:name, :line); end
 
     class ArtifactsRuby < Data.define(:ruby, :line); end
 
-    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers, :step_policies, :settings, :flags, :steps, :artifacts_ruby)
-      def initialize(step_policies: [], settings: [], flags: [], steps: [], artifacts_ruby: nil, **declared) = super
+    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers, :step_policies, :settings, :commands, :steps, :artifacts_ruby)
+      def initialize(step_policies: [], settings: [], commands: [], steps: [], artifacts_ruby: nil, **declared) = super
     end
   end
 end

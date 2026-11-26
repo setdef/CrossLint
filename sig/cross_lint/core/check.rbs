@@ -24,14 +24,15 @@ module CrossLint
       # the findings include each artifact checked that has no violation.
       # Raises Mistake for a root outside a Git working tree, for a helper
       # whose command isn't on the PATH, and for a Ruby rule whose file
-      # isn't there, each before any rule runs, and for a flag in `flags`,
-      # each without its dashes, that no listed plugin takes. Each step
-      # gets the flags its plugin takes. Ends every helper before it
-      # returns. At the normal verbosity, calls `started` with the counts
-      # of the artifacts it will check once it has found them, before any
-      # rule runs or any helper starts.
+      # isn't there, each before any rule runs. With `command`, a plugin's
+      # name and the name of one of its commands, the plugin's steps get
+      # the command's name, and the check doesn't fail for a violation or
+      # a stale entry, since a command is not a judgment of the check.
+      # Ends every helper before it returns. At the normal verbosity,
+      # calls `started` with the counts of the artifacts it will check
+      # once it has found them, before any rule runs or any helper starts.
       def call: (Project project, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                 ?all: bool, ?flags: Array[String], ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> CheckResult
+                 ?all: bool, ?command: [String, String]?, ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> CheckResult
 
       private
 
@@ -77,7 +78,7 @@ module CrossLint
 
       # What each step of each plugin that didn't stop at a fault does with
       # every violation.
-      def run_steps: (Project project, Array[Violation] violations, Array[Fault] faults, Array[String] flags) -> Array[StepResult]
+      def run_steps: (Project project, Array[Violation] violations, Array[Fault] faults, [String, String]? command) -> Array[StepResult]
 
       # The result: violations the steps didn't excuse and those they add,
       # stale entries, notices, and passing artifacts, filtered by
@@ -85,7 +86,7 @@ module CrossLint
       # steps wrote. A nil `warnings` is `:all`.
       def report: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
                    Array[Violation] violations, Array[Fault] faults, Array[StepResult] steps, warnings: (:all | :none | :error)?,
-                   verbosity: (:normal | :quiet | :silent), all: bool) -> CheckResult
+                   verbosity: (:normal | :quiet | :silent), all: bool, command: [String, String]?) -> CheckResult
 
       # Whether the configuration disables the policy of `violation`.
       def disabled?: (Project project, Violation violation) -> bool

@@ -31,7 +31,7 @@ class TrackDebtTest < Minitest::Test
     result = step([], [entry("tests/has-test", "lib/b.rb"), entry("tests/has-test", "lib/a.rb")])
 
     assert_equal Stale.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", file: FILE, line: 3,
-      message: "no violation is left for the debt entry at #{FILE}:3; crosslint check --update-debt removes it"), result.stale.last
+      message: "no violation is left for the debt entry at #{FILE}:3; crosslint debt update removes it"), result.stale.last
     assert_equal [[], []], [result.excused, result.summary]
   end
 
@@ -136,7 +136,7 @@ class TrackDebtTest < Minitest::Test
 
     assert_equal violations, result.excused
     assert_equal [Notice.new(file: FILE, line: 3, message: "the entry for tests/has-test on app/card matches the violations of 2 artifacts, " \
-      "app/card as component and app/card as service; crosslint check --update-debt writes one entry for each")], result.notices
+      "app/card as component and app/card as service; crosslint debt update writes one entry for each")], result.notices
   end
 
   def test_rewrites_an_entry_two_artifacts_match_as_one_for_each_keyed_with_its_role
@@ -155,7 +155,7 @@ class TrackDebtTest < Minitest::Test
 
     assert_equal violations, result.excused
     assert_equal [Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it matches every " \
-      "violation of tests/has-test on it; crosslint check --update-debt writes one entry for each, with its detail")], result.notices
+      "violation of tests/has-test on it; crosslint debt update writes one entry for each, with its detail")], result.notices
   end
 
   def test_rewrites_an_entry_ng_nudge_wrote_as_one_for_each_violation_with_its_detail_and_comment
@@ -215,10 +215,11 @@ class TrackDebtTest < Minitest::Test
     assert_equal ["other/names-class"], written.map(&:rule)
   end
 
-  def test_takes_the_update_only_from_its_flag
-    result = step([violation("lib/a.rb")], nil, flags: ["other"])
+  def test_takes_the_update_only_from_the_command_update
+    result = step([violation("lib/a.rb")], nil, command: "other")
 
     assert_equal [[], nil], [result.wrote, @files.read(ROOT, FILE).header]
+    assert_equal [[], nil], [step([violation("lib/a.rb")], nil).wrote, @files.read(ROOT, FILE).header]
   end
 
   def test_reads_the_debt_file_the_settings_give
@@ -394,7 +395,7 @@ class TrackDebtTest < Minitest::Test
     Plugin.new(name:, folder: "#{ROOT}/#{name}", manifest:, listing: ListedPlugin.new(name: "./#{name}", ref: nil, settings: [], line: 1))
   end
 
-  def step(violations, entries, plugins: %w[tests], settings: [], disabled: [], faulted: [], update: false, flags: [], severity: nil, extra: [])
+  def step(violations, entries, plugins: %w[tests], settings: [], disabled: [], faulted: [], update: false, command: nil, severity: nil, extra: [])
     @files.write(ROOT, FILE, DebtFile.new(file: FILE, entries:, header: nil)) if entries
     debt = plugin("debt", []).then { |found| found.with(listing: found.listing.with(name: "debt", settings:)) }
     listed = {"tests" => %w[has-test has-signature], "other" => %w[has-test names-class]}.slice(*plugins).map { |name, owned| plugin(name, owned) }
@@ -403,6 +404,6 @@ class TrackDebtTest < Minitest::Test
     policies.concat(extra)
     configuration = Configuration.new(file: CONFIG, plugins: [debt, *listed].map(&:listing), policies:, warnings: nil, verbosity: nil)
     project = Project.new(root: ROOT, configuration:, plugins: [debt, *listed])
-    TrackDebt.new(debt_files: @files).call(StepInput.new(project:, plugin: debt, violations:, faulted:, flags: update ? ["update-debt", *flags] : flags))
+    TrackDebt.new(debt_files: @files).call(StepInput.new(project:, plugin: debt, violations:, faulted:, command: update ? "update" : command))
   end
 end

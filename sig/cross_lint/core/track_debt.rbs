@@ -3,7 +3,7 @@ module CrossLint
     # The debt plugin's step, `track-debt`, built into CrossLint: it reads
     # the debt file through `debt_files`, excuses each violation an entry
     # matches, reports each entry no violation matches as stale, and,
-    # with --update-debt, rewrites the file to list the current
+    # when it is told update, rewrites the file to list the current
     # violations and reports the state it left. With `report-entries`, it
     # reports each entry as a violation of `has-debt`.
     #
@@ -93,8 +93,8 @@ module CrossLint
       # The policy whose violations report entries.
       POLICY: String
 
-      # The flag that rewrites the debt file.
-      FLAG: String
+      # The command that rewrites the debt file.
+      COMMAND: String
 
       # The values of `commented=`.
       SEVERITIES: Array[String]

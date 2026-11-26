@@ -25,9 +25,9 @@ module CrossLint
         built_in: @built_in, steps: @steps).call(start)
     end
 
-    def check(start, warnings: nil, verbosity: nil, all: false, flags: [], started: nil)
+    def check(start, warnings: nil, verbosity: nil, all: false, command: nil, started: nil)
       Core::Check.new(project_files: @project_files, plugin_ruby: @plugin_ruby, helpers: @helpers, steps: @steps)
-        .call(load_project(start), warnings:, verbosity:, all:, flags:, started:)
+        .call(load_project(start), warnings:, verbosity:, all:, command:, started:)
     end
 
     def update(start, dry_run: false)

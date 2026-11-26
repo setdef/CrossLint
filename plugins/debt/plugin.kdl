@@ -9,4 +9,6 @@ policy "has-debt"
 setting "file"
 setting "report-entries"
 
-flag "update-debt"
+// Rewrites the debt file to list the current violations: CrossLint runs the
+// check, then tells track-debt the command's name.
+command "update" help="Rewrite the debt file to list the current violations"

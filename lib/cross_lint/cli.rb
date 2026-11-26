@@ -8,10 +8,6 @@ module CrossLint
 
     WARNINGS = {"all" => :all, "none" => :none, "error" => :error}.freeze
 
-    # The flags of check the command line reads itself; a plugin takes
-    # each of the others.
-    CHECK_FLAGS = %w[warnings all json].freeze
-
     def initialize(argv, out:, err:, env:, spec: nil, app: nil)
       @argv = argv
       @out = out
@@ -66,11 +62,10 @@ module CrossLint
       given = line.value("warnings") if line.given?("warnings")
       warnings = WARNINGS.fetch(given) if given
       verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?
-      flags = command.flags.map(&:long).select { |flag| line.given?(flag) } - CHECK_FLAGS
       report = app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line), debug: debug?)
       # Steep reads a lambda's one argument, an array of pairs, as one pair,
       # so the argument goes untyped.
-      result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"), flags:,
+      result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"),
         started: ->(kinds) { report.start(_ = kinds) })
       report.write(result)
       return 2 unless result.faults.empty?

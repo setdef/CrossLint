@@ -37,8 +37,7 @@ module CrossLint
       # The line the entry is on.
       attr_reader line: Integer
 
-      # What to do about it, such as "crosslint check --update-debt
-      # removes it".
+      # What to do about it, such as "crosslint debt update removes it".
       attr_reader message: String
 
       # A stale entry with these fields.
@@ -49,8 +48,8 @@ module CrossLint
     end
 
     # What a step sees: the project, its own plugin, every violation the
-    # rules reported, the plugins that stopped at a fault, and the flags
-    # given that its plugin takes.
+    # rules reported, the plugins that stopped at a fault, and the name of
+    # the command the person ran, if it is one of its plugin's.
     class StepInput < Data
       # The project checked.
       attr_reader project: Project
@@ -65,17 +64,18 @@ module CrossLint
       # no violation.
       attr_reader faulted: Array[String]
 
-      # The flags given on the command line that the plugin takes,
-      # without their dashes.
-      attr_reader flags: Array[String]
+      # The name of the command given on the command line, such as
+      # "update", when the plugin declares it, and nil when the check runs
+      # on its own or runs another plugin's command.
+      attr_reader command: String?
 
       # A step's input with these fields.
       def self.new: (project: Project, plugin: Plugin, violations: Array[Violation], faulted: Array[String],
-                     flags: Array[String]) -> instance
+                     command: String?) -> instance
 
       # A step's input with these fields.
       def initialize: (project: Project, plugin: Plugin, violations: Array[Violation], faulted: Array[String],
-                       flags: Array[String]) -> void
+                       command: String?) -> void
     end
 
     # What a step did: the violations it excuses, those it adds, the

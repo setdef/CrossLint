@@ -15,12 +15,7 @@ module CrossLint
         @steps = steps
       end
 
-      def call(project, warnings: nil, verbosity: nil, all: false, flags: [], started: nil)
-        flags.each do |flag|
-          next if project.plugins.any? { |plugin| plugin.manifest.flags.any? { |declared| declared.name == flag } }
-
-          raise Mistake.new("lists no plugin that takes --#{flag}", file: project.configuration.file)
-        end
+      def call(project, warnings: nil, verbosity: nil, all: false, command: nil, started: nil)
         warnings ||= project.configuration.warnings
         verbosity ||= project.configuration.verbosity || :normal
         policies = enabled_policies(project)
@@ -41,8 +36,8 @@ module CrossLint
         ensure
           helpers.stop
         end
-        steps = run_steps(project, violations, faults, flags)
-        report(project, kinds, checked_kinds(project, policies), violations, faults, steps, warnings:, verbosity:, all:)
+        steps = run_steps(project, violations, faults, command)
+        report(project, kinds, checked_kinds(project, policies), violations, faults, steps, warnings:, verbosity:, all:, command:)
       end
 
       private
@@ -137,17 +132,18 @@ module CrossLint
       end
 
       # Each step of each plugin that didn't stop, run on every violation.
-      def run_steps(project, violations, faults, flags)
+      def run_steps(project, violations, faults, command)
         faulted = faults.map(&:plugin)
+        owner, name = command
         project.plugins.reject { |plugin| faulted.include?(plugin.name) }.flat_map do |plugin|
-          taken = flags.select { |flag| plugin.manifest.flags.any? { |declared| declared.name == flag } }
+          given = (name if owner == plugin.name)
           plugin.manifest.steps.map do |declaration|
-            @steps.fetch(declaration.name).call(StepInput.new(project:, plugin:, violations:, faulted:, flags: taken))
+            @steps.fetch(declaration.name).call(StepInput.new(project:, plugin:, violations:, faulted:, command: given))
           end
         end
       end
 
-      def report(project, kinds, checked, violations, faults, steps, warnings:, verbosity:, all:)
+      def report(project, kinds, checked, violations, faults, steps, warnings:, verbosity:, all:, command:)
         hidden = warnings == :none
         excused = steps.flat_map(&:excused)
         left = violations.reject { |violation| excused.include?(violation) }
@@ -157,8 +153,8 @@ module CrossLint
         notices = notices(project, kinds)
         fails = ->(violation) { violation.severity == :error || warnings == :error }
         wrote = steps.flat_map(&:wrote)
-        # A check that writes, as --update-debt does, did what it was asked.
-        failed = wrote.empty? && (shown.any?(&fails) || !stale.empty? || (warnings == :error && !notices.empty?))
+        # A command is not a judgment of the check: it did what it was asked.
+        failed = command.nil? && (shown.any?(&fails) || !stale.empty? || (warnings == :error && !notices.empty?))
         findings = (verbosity == :quiet) ? shown.select(&fails) : shown
         findings += passed(kinds, checked, left) if all && verbosity == :normal
         # Every notice is a warning, so --quiet reports one only when it

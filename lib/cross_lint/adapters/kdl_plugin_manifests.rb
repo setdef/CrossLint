@@ -7,11 +7,14 @@ module CrossLint
     class KDLPluginManifests
       FILE = "plugin.kdl"
 
-      NODES = %w[artifact artifacts policy rule helper setting flag step].freeze
+      NODES = %w[artifact artifacts policy rule helper setting command step].freeze
 
       CONDITIONS = %w[companion-exists not all any].freeze
 
       SEVERITIES = %w[error warning].freeze
+
+      FLAG_MISTAKE = "flag isn't a node CrossLint reads: a plugin adds commands under its own name, as in command NAME help=TEXT, " \
+        "and no flag to crosslint check"
 
       def file = FILE
 
@@ -22,6 +25,7 @@ module CrossLint
         document = KDLDocument.load(path, folder.empty? ? FILE : "#{folder}/#{FILE}")
         document.nodes.each do |node|
           next if NODES.include?(node.name)
+          raise document.mistake(FLAG_MISTAKE, node) if node.name == "flag"
 
           raise document.mistake(Core::Spelling.unknown("node", node.name, NODES), node)
         end
@@ -32,7 +36,7 @@ module CrossLint
           helpers: nodes(document, "helper") { |node| helper(document, node) },
           step_policies: blockless.map { |node| Core::StepPolicy.new(name: named(document, node, "policy NAME { ... }"), line: node.line) },
           settings: named_nodes(document, "setting") { |name, line| Core::SettingDeclaration.new(name:, line:) },
-          flags: named_nodes(document, "flag") { |name, line| Core::FlagDeclaration.new(name:, line:) },
+          commands: nodes(document, "command") { |node| command(document, node) },
           steps: named_nodes(document, "step") { |name, line| Core::StepDeclaration.new(name:, line:) },
           artifacts_ruby: artifacts_ruby(document))
       end
@@ -158,6 +162,16 @@ module CrossLint
         raise document.mistake("artifacts has no ruby=, the file that declares them", first) unless ruby
 
         Core::ArtifactsRuby.new(ruby:, line: first.line)
+      end
+
+      def command(document, node)
+        name = document.string(node, "command NAME help=TEXT")
+        document.properties(node, ["help"])
+        no_children(document, node)
+        help = document.string_property(node, "help")
+        raise document.mistake("command #{name.dump} has no help=, its line in --help", node) if help.nil? || help.strip.empty?
+
+        Core::CommandDeclaration.new(name:, help:, line: node.line)
       end
 
       def helper(document, node)

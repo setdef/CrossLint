@@ -214,20 +214,24 @@ module CrossLint
       def initialize: (name: String, line: Integer) -> void
     end
 
-    # A flag of `crosslint check` the plugin takes, declared as
-    # `flag NAME`, without its dashes.
-    class FlagDeclaration < Data
-      # The flag's name, such as "update-debt".
+    # A command the plugin adds under its own name, declared as
+    # `command NAME help=TEXT`, which a project runs as
+    # `crosslint PLUGIN NAME`.
+    class CommandDeclaration < Data
+      # The command's name, such as "update".
       attr_reader name: String
+
+      # The command's one line of help.
+      attr_reader help: String
 
       # The line it is declared on.
       attr_reader line: Integer
 
-      # A flag declaration with these fields.
-      def self.new: (name: String, line: Integer) -> instance
+      # A command declaration with these fields.
+      def self.new: (name: String, help: String, line: Integer) -> instance
 
-      # A flag declaration with these fields.
-      def initialize: (name: String, line: Integer) -> void
+      # A command declaration with these fields.
+      def initialize: (name: String, help: String, line: Integer) -> void
     end
 
     # A step the plugin runs after every rule has run, declared as
@@ -247,7 +251,7 @@ module CrossLint
     end
 
     # What a plugin's manifest declares: its artifacts, policies, rules,
-    # helpers, the policies its steps report, its settings, its flags,
+    # helpers, the policies its steps report, its settings, its commands,
     # and its steps.
     class Manifest < Data
       # The manifest's path, relative to its project's root, as messages
@@ -272,8 +276,8 @@ module CrossLint
       # The settings it takes, in the order they are declared.
       attr_reader settings: Array[SettingDeclaration]
 
-      # The flags it takes, in the order they are declared.
-      attr_reader flags: Array[FlagDeclaration]
+      # The commands it adds, in the order they are declared.
+      attr_reader commands: Array[CommandDeclaration]
 
       # Its steps, in the order they are declared.
       attr_reader steps: Array[StepDeclaration]
@@ -286,14 +290,14 @@ module CrossLint
       # given.
       def self.new: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
                      rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration], ?step_policies: Array[StepPolicy],
-                     ?settings: Array[SettingDeclaration], ?flags: Array[FlagDeclaration], ?steps: Array[StepDeclaration],
+                     ?settings: Array[SettingDeclaration], ?commands: Array[CommandDeclaration], ?steps: Array[StepDeclaration],
                      ?artifacts_ruby: ArtifactsRuby?) -> instance
 
       # A manifest with these fields, and none of the last five unless
       # given.
       def initialize: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
                        rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration], ?step_policies: Array[StepPolicy],
-                       ?settings: Array[SettingDeclaration], ?flags: Array[FlagDeclaration], ?steps: Array[StepDeclaration],
+                       ?settings: Array[SettingDeclaration], ?commands: Array[CommandDeclaration], ?steps: Array[StepDeclaration],
                        ?artifacts_ruby: ArtifactsRuby?) -> void
     end
 

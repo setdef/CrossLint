@@ -10,13 +10,17 @@ module CrossLint
     class LoadProject
       DECLARER = :Artifacts
 
-      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, built_in: {}, steps: {})
+      # What a command of a plugin is called: lowercase letters, digits, and -.
+      COMMAND = /\A[a-z0-9-]+\z/
+
+      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, built_in: {}, steps: {}, reserved: [])
         @configuration = configuration
         @manifests = manifests
         @plugin_ruby = plugin_ruby
         @shared_plugins = shared_plugins
         @built_in = built_in
         @steps = steps
+        @reserved = reserved
       end
 
       def call(start)
@@ -151,8 +155,40 @@ module CrossLint
         once(manifest.helpers, "helper", manifest.file)
         once(manifest.policies + manifest.step_policies, "policy", manifest.file)
         manifest.policies.each { |policy| check_policy(plugin, policy, plugins) }
-        %i[settings flags steps].each { |kind| once(manifest.public_send(kind), kind.to_s.chomp("s"), manifest.file) }
+        %i[settings commands steps].each { |kind| once(manifest.public_send(kind), kind.to_s.chomp("s"), manifest.file) }
         check_steps(manifest)
+        check_commands(plugin)
+      end
+
+      # crosslint PLUGIN COMMAND must never be read two ways, so a command
+      # can't be named as CrossLint's own words are, nor a plugin that adds
+      # commands as CrossLint's commands are; and a command with no step
+      # to tell its name to would do nothing.
+      def check_commands(plugin)
+        manifest = plugin.manifest
+        first = manifest.commands.first
+        return unless first
+
+        manifest.commands.each { |command| check_command(command, manifest.file) }
+        if @reserved.include?(plugin.name)
+          raise Mistake.new("plugin #{plugin.name} in #{plugin.folder} adds commands, and #{plugin.name} is a command of CrossLint, so " \
+            "crosslint #{plugin.name} would not run them; rename the plugin's folder, since a plugin's name is its folder's name",
+            file: manifest.file, line: first.line)
+        end
+        return unless manifest.steps.empty?
+
+        raise Mistake.new("command #{first.name.dump} has no step to do its work, and the plugin declares none; declare one with step NAME",
+          file: manifest.file, line: first.line)
+      end
+
+      def check_command(command, file)
+        unless command.name.match?(COMMAND)
+          raise Mistake.new("command #{command.name.dump} has other characters than lowercase letters, digits, and -", file:, line: command.line)
+        end
+        return unless command.name == "help"
+
+        raise Mistake.new("command \"help\" is the name of CrossLint's command help, which a plugin can't take; name the command something else",
+          file:, line: command.line)
       end
 
       # Each step is one CrossLint has, and reports exactly the policies

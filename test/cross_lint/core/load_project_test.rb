@@ -217,16 +217,62 @@ class LoadProjectTest < Minitest::Test
       steps: {"track-debt" => RecordingStep.new}
   end
 
-  def test_stops_at_a_setting_flag_step_or_policy_declared_twice
-    twice = ->(kind, field, made) { debt_manifest("rules/tests").with(field => [made.new(name: "a", line: 2), made.new(name: "a", line: 3)]) }
-    {"setting" => [:settings, SettingDeclaration], "flag" => [:flags, FlagDeclaration]}.each do |kind, (field, made)|
-      assert_mistake "rules/tests/plugin.kdl", 3, %(#{kind} "a" is declared twice; the first is on line 2), manifest: twice.call(kind, field, made),
+  def test_stops_at_a_setting_command_step_or_policy_declared_twice
+    twice = ->(field, made) { debt_manifest("rules/tests").with(field => [made.call(2), made.call(3)]) }
+    {"setting" => [:settings, ->(line) { SettingDeclaration.new(name: "a", line:) }],
+     "command" => [:commands, ->(line) { CommandDeclaration.new(name: "a", help: "A", line:) }]}.each do |kind, (field, made)|
+      assert_mistake "rules/tests/plugin.kdl", 3, %(#{kind} "a" is declared twice; the first is on line 2), manifest: twice.call(field, made),
         steps: {"track-debt" => RecordingStep.new}
     end
     assert_mistake "rules/tests/plugin.kdl", 9, %(step "track-debt" is declared twice; the first is on line 9),
       manifest: debt_manifest("rules/tests").then { |manifest| manifest.with(steps: manifest.steps * 2) }, steps: {"track-debt" => RecordingStep.new}
     assert_mistake "rules/tests/plugin.kdl", 3, %(policy "has-test" is declared twice; the first is on line 5),
       manifest: debt_manifest("rules/tests", step_policies: [StepPolicy.new(name: "has-test", line: 3)]), steps: {"track-debt" => RecordingStep.new}
+  end
+
+  def test_reads_the_commands_of_a_plugin_that_has_a_step
+    manifest = debt_manifest("rules/tests").with(commands: [CommandDeclaration.new(name: "a-1", help: "A", line: 7), CommandDeclaration.new(name: "update", help: "U", line: 8)])
+    project = load_project(manifest:, steps: {"track-debt" => RecordingStep.new}, reserved: %w[check init update help])
+
+    assert_equal %w[a-1 update], project.plugins.first.manifest.commands.map(&:name)
+  end
+
+  def test_stops_at_a_command_whose_name_isnt_lowercase_letters_digits_and_dashes
+    ["Update", "up date", "up_date", "update!", "", "up\ndate"].each do |name|
+      commands = [CommandDeclaration.new(name: "ok", help: "A", line: 7), CommandDeclaration.new(name:, help: "A", line: 8)]
+      assert_mistake "rules/tests/plugin.kdl", 8, "command #{name.dump} has other characters than lowercase letters, digits, and -",
+        manifest: debt_manifest("rules/tests").with(commands:), steps: {"track-debt" => RecordingStep.new}
+    end
+  end
+
+  def test_stops_at_a_command_named_help
+    message = %(command "help" is the name of CrossLint's command help, which a plugin can't take; name the command something else)
+
+    assert_mistake "rules/tests/plugin.kdl", 8, message, steps: {"track-debt" => RecordingStep.new},
+      manifest: debt_manifest("rules/tests").with(commands: [CommandDeclaration.new(name: "help", help: "H", line: 8)])
+  end
+
+  def test_stops_at_a_plugin_that_adds_commands_and_is_named_for_a_command_of_crosslint
+    folder = "#{APP}/rules/check"
+    message = "plugin check in #{folder} adds commands, and check is a command of CrossLint, so crosslint check would not run them; " \
+      "rename the plugin's folder, since a plugin's name is its folder's name"
+
+    assert_mistake "rules/check/plugin.kdl", 8, message, plugins: [listing("./rules/check")], reserved: %w[init check],
+      manifests: {folder => debt_manifest("rules/check")}, steps: {"track-debt" => RecordingStep.new}
+  end
+
+  def test_takes_a_plugin_named_for_a_command_of_crosslint_when_it_adds_no_commands
+    manifest = debt_manifest("rules/check").with(commands: [])
+    project = load_project(plugins: [listing("./rules/check")], reserved: %w[check], manifests: {"#{APP}/rules/check" => manifest},
+      steps: {"track-debt" => RecordingStep.new})
+
+    assert_equal ["check"], project.plugins.map(&:name)
+  end
+
+  def test_stops_at_commands_with_no_step_to_do_their_work
+    manifest = debt_manifest("rules/tests").with(steps: [], step_policies: [])
+
+    assert_mistake "rules/tests/plugin.kdl", 8, %(command "update" has no step to do its work, and the plugin declares none; declare one with step NAME), manifest:
   end
 
   def test_lets_the_configuration_change_a_policy_a_step_reports
@@ -609,11 +655,11 @@ class LoadProjectTest < Minitest::Test
   end
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
-    shared_plugins: shared_plugins({}))
+    shared_plugins: shared_plugins({}), reserved: [])
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:).call(start)
+      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, reserved:).call(start)
   end
 
   # A port with one repository, at URL, that has these tags and a branch
@@ -654,7 +700,7 @@ class LoadProjectTest < Minitest::Test
 
   def debt_manifest(folder = "debt", step: "track-debt", step_policies: [StepPolicy.new(name: "has-debt", line: 3)])
     tests_manifest(folder).with(step_policies:, settings: [SettingDeclaration.new(name: "file", line: 4)],
-      flags: [FlagDeclaration.new(name: "update-debt", line: 8)], steps: [StepDeclaration.new(name: step, line: 9)])
+      commands: [CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 8)], steps: [StepDeclaration.new(name: step, line: 9)])
   end
 
   def artifact(name = "ruby-file", companions: [companion("test", line: 3)], line: 1)

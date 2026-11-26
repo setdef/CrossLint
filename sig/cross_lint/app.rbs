@@ -24,11 +24,11 @@ module CrossLint
 
     # The result of checking that project (Core::Check), under the
     # command line's `warnings` and `verbosity`, nil where it gives none,
-    # with each passing artifact under `all`, and with `flags`, the
-    # plugins' flags given, without their dashes. `started` hears the
-    # counts of the artifacts before any rule runs.
+    # with each passing artifact under `all`, and as the command `command`
+    # names, a plugin and one of its commands, when it is given.
+    # `started` hears the counts of the artifacts before any rule runs.
     def check: (String start, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                ?all: bool, ?flags: Array[String], ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
+                ?all: bool, ?command: [String, String]?, ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
 
     # The result of moving each shared plugin in that project's
     # configuration to the newest tag of its repository

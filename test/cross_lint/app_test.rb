@@ -47,7 +47,7 @@ class AppTest < Minitest::Test
     write(@base, "lib/b.md", "")
     Open3.capture3("git", "init", "-q", chdir: @base)
     before = App.new.check(@base)
-    updated = App.new.check(@base, flags: ["update-debt"])
+    updated = App.new.check(@base, command: ["debt", "update"])
     debt = File.binread(File.join(@base, ".config/crosslint/debt.tsv"))
 
     assert_equal [true, 2, false], [before.failed, before.violations.size, updated.failed]

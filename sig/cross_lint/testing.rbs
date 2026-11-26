@@ -108,7 +108,8 @@ module CrossLint
       #   companion "signature" and no severity;
       #
       # then the policy "has-debt", which a step reports, the settings
-      # "file" and "report-entries", the flag "update-debt", and the step
+      # "file" and "report-entries", the command "update" with the help
+      # "Rewrite the debt file to list the current violations", and the step
       # "track-debt".
       #
       # A manifest with a mistake on line 2 is in each folder of `broken`.
@@ -137,7 +138,7 @@ module CrossLint
 
       # read returns the policies a step reports apart from the others,
       # and the settings, flags, and steps, each in order.
-      def test_reads_the_settings_flags_and_steps_a_manifest_declares: () -> void
+      def test_reads_the_settings_commands_and_steps_a_manifest_declares: () -> void
 
       # read finds a manifest in the root folder itself.
       def test_reads_the_manifest_of_the_root_folder_itself: () -> void

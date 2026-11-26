@@ -36,10 +36,6 @@ module CrossLint
     # Each value of --warnings, as Core::Check takes it.
     WARNINGS: Hash[String, :all | :none | :error]
 
-    # The flags of check the command line reads itself. It hands each
-    # other flag of check given to the plugins, without its dashes.
-    CHECK_FLAGS: Array[String]
-
     # `argv` is the command line's words, `out` and `err` standard output
     # and standard error, and `env` the environment. `spec` is the usage
     # spec, which is read from UsageSpec::PATH when it is nil; and `app` is

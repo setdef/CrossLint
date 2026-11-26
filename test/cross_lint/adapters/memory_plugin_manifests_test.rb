@@ -43,7 +43,7 @@ class MemoryPluginManifestsTest < Minitest::Test
       helpers: [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 34)],
       step_policies: [StepPolicy.new(name: "has-debt", line: 36)],
       settings: [SettingDeclaration.new(name: "file", line: 37), SettingDeclaration.new(name: "report-entries", line: 38)],
-      flags: [FlagDeclaration.new(name: "update-debt", line: 39)], steps: [StepDeclaration.new(name: "track-debt", line: 40)])
+      commands: [CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 39)], steps: [StepDeclaration.new(name: "track-debt", line: 40)])
   end
 
   def example_policies

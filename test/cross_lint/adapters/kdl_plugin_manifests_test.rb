@@ -59,7 +59,7 @@ class KDLPluginManifestsTest < Minitest::Test
     policy "has-debt"
     setting "file"
     setting "report-entries"
-    flag "update-debt"
+    command "update" help="Rewrite the debt file to list the current violations"
     step "track-debt"
   KDL
 
@@ -88,8 +88,9 @@ class KDLPluginManifestsTest < Minitest::Test
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
     assert_equal Condition::CompanionExists.new(companion: "signature", line: 5), ruby_rule.policies.first.condition
     assert_equal [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 1)], helper.helpers
-    assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update-debt"]],
-      [steps.steps, steps.step_policies, steps.settings, steps.flags].map { |list| list.map(&:name) }
+    assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update"]],
+      [steps.steps, steps.step_policies, steps.settings, steps.commands].map { |list| list.map(&:name) }
+    assert_equal [CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 8)], steps.commands
   end
 
   def test_reads_the_plugins_in_the_readme_and_the_tutorial
@@ -139,7 +140,7 @@ class KDLPluginManifestsTest < Minitest::Test
   def test_refuses_a_node_it_does_not_know
     assert_refuses 2, %(unknown node "file", did you mean "files"?), %(artifact "a" {\n  file "lib/{path}.rb"\n}\n)
     assert_refuses 1, %(unknown node "artefact", did you mean "artifact"?), %(artefact "a")
-    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "artifacts", "policy", "rule", "helper", "setting", "flag", or "step"), %(zzz)
+    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "artifacts", "policy", "rule", "helper", "setting", "command", or "step"), %(zzz)
     assert_refuses 2, %(unknown node "polcy", did you mean "policy"?), %(rule "r" ruby="r.rb"\npolcy "p")
   end
 
@@ -223,8 +224,8 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_equal [[["has-debt", 1]], ["p"]], [manifest.step_policies.map { |policy| [policy.name, policy.line] }, manifest.policies.map(&:name)]
   end
 
-  def test_refuses_a_setting_flag_or_step_written_wrong
-    %w[setting flag step].each do |kind|
+  def test_refuses_a_setting_or_step_written_wrong
+    %w[setting step].each do |kind|
       assert_refuses 1, "#{kind} has 0 arguments; write it as #{kind} NAME", kind
       assert_refuses 1, %(unknown property "x"; #{kind} takes none), %(#{kind} "a" x=1)
       assert_refuses 1, %(unknown node "x"; #{kind} takes no children), %(#{kind} "a" { x; })
@@ -238,6 +239,31 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 1, %(unknown property "rubby", did you mean "ruby"?), %(rule "r" rubby="r.rb")
     assert_refuses 1, %(unknown node "x"; rule takes no children), %(rule "r" ruby="r.rb" { x; })
     assert_refuses 1, "ruby= takes a string, not 1", %(rule "r" ruby=1)
+  end
+
+  def test_reads_a_command_with_its_help
+    manifest = read(%(step "s"\ncommand "update" help="Rewrite it"\ncommand "check-all" help="Check all"\n))
+
+    assert_equal [CommandDeclaration.new(name: "update", help: "Rewrite it", line: 2), CommandDeclaration.new(name: "check-all", help: "Check all", line: 3)],
+      manifest.commands
+    assert_empty read(%(step "s")).commands
+  end
+
+  def test_refuses_a_command_written_wrong
+    assert_refuses 1, %(command "update" has no help=, its line in --help), %(command "update")
+    assert_refuses 1, %(command "update" has no help=, its line in --help), %(command "update" help="")
+    assert_refuses 1, %(command "update" has no help=, its line in --help), %(command "update" help=" ")
+    assert_refuses 1, "command has 0 arguments; write it as command NAME help=TEXT", %(command help="Help")
+    assert_refuses 1, %(unknown property "hlp", did you mean "help"?), %(command "update" hlp="Help")
+    assert_refuses 1, %(unknown node "x"; command takes no children), %(command "update" help="Help" { x; })
+    assert_refuses 1, "help= takes a string, not 1", %(command "update" help=1)
+  end
+
+  def test_refuses_a_flag_as_a_mistake_that_says_what_to_write_instead
+    message = "flag isn't a node CrossLint reads: a plugin adds commands under its own name, as in command NAME help=TEXT, and no flag to crosslint check"
+
+    assert_refuses 1, message, %(flag "update-debt")
+    assert_refuses 2, message, %(step "s"\nflag "update-debt" help="x"\n)
   end
 
   def test_refuses_a_helper_written_wrong

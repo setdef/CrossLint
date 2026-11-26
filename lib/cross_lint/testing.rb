@@ -164,12 +164,13 @@ module CrossLint
         assert_equal [[:warning], [nil], [:error], [nil]], severities
       end
 
-      def test_reads_the_settings_flags_and_steps_a_manifest_declares
+      def test_reads_the_settings_commands_and_steps_a_manifest_declares
         manifest = signatures_manifest
-        names = [manifest.step_policies, manifest.settings, manifest.flags, manifest.steps].map { |each| each.map(&:name) }
-        lines = [manifest.step_policies, manifest.settings, manifest.flags, manifest.steps].flat_map { |each| each.map(&:line) }
+        names = [manifest.step_policies, manifest.settings, manifest.commands, manifest.steps].map { |each| each.map(&:name) }
+        lines = [manifest.step_policies, manifest.settings, manifest.commands, manifest.steps].flat_map { |each| each.map(&:line) }
 
-        assert_equal [["has-debt"], ["file", "report-entries"], ["update-debt"], ["track-debt"]], names
+        assert_equal [["has-debt"], ["file", "report-entries"], ["update"], ["track-debt"]], names
+        assert_equal ["Rewrite the debt file to list the current violations"], manifest.commands.map(&:help)
         assert_equal lines.sort, lines.uniq
         assert_operator lines.first, :>, manifest.policies.last.line
       end

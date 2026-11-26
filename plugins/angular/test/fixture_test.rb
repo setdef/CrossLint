@@ -84,7 +84,7 @@ class AngularFixtureTest < Minitest::Test
     assert_empty result.violations.map(&:artifact).grep(%r{/(foo|pipes)/})
     assert_equal ["3 accepted as debt"], result.summary.steps
     assert_equal [".config/crosslint/debt.tsv:2: the entry for angular/spec-exists on app/foo/foo matches the violations of 2 artifacts, " \
-      "src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint check --update-debt writes one entry for each"],
+      "src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint debt update writes one entry for each"],
       result.notices.map { |notice| "#{notice.file}:#{notice.line}: #{notice.message}" }
   end
 

@@ -9,13 +9,17 @@ module CrossLint
       # The name of the class a plugin's artifacts file defines.
       DECLARER: Symbol
 
+      # What the name of a plugin's command is made of.
+      COMMAND: Regexp
+
       # A use case that reads through `configuration` and `manifests`, runs
       # the Ruby that declares a plugin's artifacts through `plugin_ruby`,
       # and fetches shared plugins through `shared_plugins`. `built_in` has
       # the folder of each built-in plugin, by name, and `steps` each step
-      # CrossLint has, by name.
+      # CrossLint has, by name. `reserved` has the name of each command of
+      # CrossLint's own, which no plugin that adds commands can be named.
       def initialize: (configuration: _Configuration, manifests: _PluginManifests, plugin_ruby: _PluginRuby, shared_plugins: _SharedPlugins,
-                       ?built_in: Hash[String, String], ?steps: Hash[String, _Step]) -> void
+                       ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String]) -> void
 
       # The project whose root is `start` or the nearest folder above it
       # with a configuration.
@@ -32,6 +36,8 @@ module CrossLint
       @built_in: Hash[String, String]
 
       @steps: Hash[String, _Step]
+
+      @reserved: Array[String]
 
       # The plugin listed at `index`, with its manifest, checked against
       # the plugins `loaded` before it.
@@ -74,8 +80,19 @@ module CrossLint
 
       # Checks that no two of `declarations` have the same name.
       def once: (Array[ArtifactDeclaration | CompanionDeclaration | RuleDeclaration | HelperDeclaration | Policy | StepPolicy |
-                       SettingDeclaration | FlagDeclaration | StepDeclaration] declarations,
+                       SettingDeclaration | CommandDeclaration | StepDeclaration] declarations,
                  String kind, String file) -> void
+
+      # Checks that the plugin's commands have names that CrossLint reads
+      # as a word and none of its own, that the plugin has a name no
+      # command of CrossLint's has, and that it declares a step to do its
+      # commands' work. Raises Mistake at the first command that breaks
+      # one.
+      def check_commands: (Plugin plugin) -> void
+
+      # Checks that `command`, declared in the manifest at `file`, is
+      # named by lowercase letters, digits, and -, and isn't "help".
+      def check_command: (CommandDeclaration command, String file) -> void
 
       # Checks that each step is one CrossLint has, that each policy it
       # reports is declared with no block, and that each policy declared

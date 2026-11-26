@@ -217,9 +217,11 @@ class CLITest < Minitest::Test
     assert_equal ["crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], [err, status]
   end
 
-  def test_check_hands_a_flag_it_doesnt_read_to_the_plugins
-    assert_equal ["", "crosslint: .config/crosslint/config.kdl: lists no plugin that takes --update-debt\n", 2],
+  def test_check_takes_only_the_flags_the_usage_spec_gives_it
+    assert_equal ["", "crosslint: crosslint check has no flag --update-debt; crosslint check --help lists them\n", 2],
       check("check", "--update-debt", app: app)
+    assert_equal ["", "crosslint: crosslint check has no flag --upate; crosslint check --help lists them\n", 2], check("check", "--upate", app: app)
+    assert_equal 1, check("check", "--warnings=error", "--all", "--json", "--quiet", app: app)[2]
   end
 
   def test_check_colors_the_messages_only_on_a_terminal_or_when_forced

@@ -345,9 +345,9 @@ class CheckTest < Minitest::Test
     end
   end
 
-  def stepped(name = "debt", flags: [])
+  def stepped(name = "debt", commands: [])
     manifest = Manifest.new(file: "#{name}/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [],
-      step_policies: [StepPolicy.new(name: "has-debt", line: 1)], flags: flags.map { |flag| FlagDeclaration.new(name: flag, line: 2) },
+      step_policies: [StepPolicy.new(name: "has-debt", line: 1)], commands: commands.map { |command| CommandDeclaration.new(name: command, help: "Does #{command}", line: 2) },
       steps: [StepDeclaration.new(name: "track-debt", line: 3)])
     Plugin.new(name:, folder: "#{ROOT}/#{name}", manifest:, listing: ListedPlugin.new(name:, ref: nil, settings: [], line: 1))
   end
@@ -364,7 +364,7 @@ class CheckTest < Minitest::Test
     check(project(mixed_plugin, stepped), files:, warnings: :none, steps: {"track-debt" => step})
     input = step.inputs.fetch(0)
 
-    assert_equal [4, "debt", [], []], [input.violations.size, input.plugin.name, input.faulted, input.flags]
+    assert_equal [4, "debt", [], nil], [input.violations.size, input.plugin.name, input.faulted, input.command]
     assert_equal ROOT, input.project.root
   end
 
@@ -414,19 +414,27 @@ class CheckTest < Minitest::Test
     assert_equal [false] * 4, results.map(&:failed)
   end
 
-  def test_passes_a_check_that_wrote_and_says_what_it_wrote_unless_silent
+  def test_passes_a_command_that_wrote_and_says_what_it_wrote_unless_silent
     step = ScriptedStep.new(wrote: ["wrote debt.tsv"], violations: [debt_violation], stale: [stale("lib/a.rb")])
-    result = check(project(stepped), files: [], steps: {"track-debt" => step})
+    result = check(project(stepped), files: [], command: ["debt", "update"], steps: {"track-debt" => step})
 
     assert_equal [false, ["wrote debt.tsv"]], [result.failed, result.wrote]
-    assert_empty check(project(stepped), files: [], verbosity: :silent, steps: {"track-debt" => step}).wrote
+    assert_empty check(project(stepped), files: [], command: ["debt", "update"], verbosity: :silent, steps: {"track-debt" => step}).wrote
   end
 
-  def test_gives_each_step_only_the_flags_its_plugin_takes
-    step = ScriptedStep.new
-    check(project(stepped(flags: ["update-debt"]), stepped("other")), files: [], flags: ["update-debt"], steps: {"track-debt" => step})
+  def test_passes_a_command_whatever_the_check_found_and_fails_the_same_check_without_it
+    step = ScriptedStep.new(stale: [stale("lib/a.rb")])
+    errors = ->(**options) { check(project(tests_plugin, stepped), files: ["lib/a.rb"], steps: {"track-debt" => step}, **options) }
 
-    assert_equal [["debt", ["update-debt"]], ["other", []]], step.inputs.map { |input| [input.plugin.name, input.flags] }
+    assert_equal [true, false], [errors.call.failed, errors.call(command: ["debt", "update"]).failed]
+    assert_equal [true, false], [errors.call(warnings: :error).failed, errors.call(warnings: :error, command: ["debt", "update"]).failed]
+  end
+
+  def test_tells_only_the_step_of_the_plugin_a_command_belongs_to_the_commands_name
+    step = ScriptedStep.new
+    check(project(stepped(commands: ["update"]), stepped("other", commands: ["update"])), files: [], command: ["debt", "update"], steps: {"track-debt" => step})
+
+    assert_equal [["debt", "update"], ["other", nil]], step.inputs.map { |input| [input.plugin.name, input.command] }
   end
 
   def test_runs_no_step_of_a_plugin_that_stopped_and_tells_the_others_which_stopped
@@ -453,23 +461,6 @@ class CheckTest < Minitest::Test
     result = check(project(stepped, policies:), files: [], steps: {"track-debt" => ScriptedStep.new(violations: [debt_violation, kept])})
 
     assert_equal [kept], result.findings
-  end
-
-  def test_gives_each_step_the_flags_its_plugin_takes_among_others
-    step = ScriptedStep.new
-    check(project(stepped(flags: ["x", "update-debt"]), stepped("other", flags: ["x"])), files: [], flags: ["update-debt", "x"],
-      steps: {"track-debt" => step})
-
-    assert_equal [["debt", ["update-debt", "x"]], ["other", ["x"]]], step.inputs.map { |input| [input.plugin.name, input.flags] }
-    mistake = assert_raises(Mistake) { check(project(stepped("other", flags: ["x"]), stepped(flags: ["y"])), files: [], flags: ["y", "nope"]) }
-
-    assert_equal "lists no plugin that takes --nope", mistake.message
-  end
-
-  def test_stops_at_a_flag_no_listed_plugin_takes
-    mistake = assert_raises(Mistake) { check(project(stepped), files: [], flags: ["update-debt"]) }
-
-    assert_equal [".config/crosslint/config.kdl", "lists no plugin that takes --update-debt"], [mistake.location, mistake.message]
   end
 
   private
