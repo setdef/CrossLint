@@ -122,10 +122,9 @@ module CrossLint
     # such plugin is refused before any check runs.
     def plugin_command(spec, line)
       app = application(spec)
-      commands, found = resolved(spec, line)
-      raise found if found.is_a?(Core::Mistake)
-
-      # Only a word that names a shared plugin not fetched yet fetches it.
+      commands, = resolved(spec, line)
+      # Only a word that names a shared plugin not fetched yet fetches it,
+      # and a project that can't be read raises its own mistake here.
       project = app.load_project(line.value("project") || Dir.pwd)
       plugin, command = commands.find(line.words, project.plugins)
       # Two words or more name a command, which find has found.
