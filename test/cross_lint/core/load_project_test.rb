@@ -254,11 +254,44 @@ class LoadProjectTest < Minitest::Test
 
   def test_stops_at_a_plugin_that_adds_commands_and_is_named_for_a_command_of_crosslint
     folder = "#{APP}/rules/check"
-    message = "plugin check in #{folder} adds commands, and check is a command of CrossLint, so crosslint check would not run them; " \
+    message = "plugin check in #{folder} adds commands, and check is reserved, as a command of CrossLint or a name CrossLint keeps for one; " \
       "rename the plugin's folder, since a plugin's name is its folder's name"
 
     assert_mistake "rules/check/plugin.kdl", 8, message, plugins: [listing("./rules/check")], reserved: %w[init check],
       manifests: {folder => debt_manifest("rules/check")}, steps: {"track-debt" => RecordingStep.new}
+  end
+
+  def test_reserves_each_name_crosslint_keeps_for_a_command_it_may_add
+    assert_equal %w[version completion config plugin plugins list cache doctor explain fix self], LoadProject::RESERVED
+    LoadProject::RESERVED.each do |name|
+      folder = "#{APP}/rules/#{name}"
+      message = "plugin #{name} in #{folder} adds commands, and #{name} is reserved, as a command of CrossLint or a name CrossLint keeps for one; " \
+        "rename the plugin's folder, since a plugin's name is its folder's name"
+
+      assert_mistake "rules/#{name}/plugin.kdl", 8, message, plugins: [listing("./rules/#{name}")], manifests: {folder => debt_manifest("rules/#{name}")},
+        steps: {"track-debt" => RecordingStep.new}
+      assert_equal [name], load_project(plugins: [listing("./rules/#{name}")], manifests: {folder => debt_manifest("rules/#{name}").with(commands: [])},
+        steps: {"track-debt" => RecordingStep.new}).plugins.map(&:name)
+    end
+  end
+
+  def test_stops_at_a_local_or_shared_plugin_with_the_name_of_a_built_in_one
+    built_in = {"debt" => "#{TOP}c/plugins/debt", "angular" => "#{TOP}c/plugins/angular"}
+    steps = {"track-debt" => RecordingStep.new}
+    %w[debt angular].each do |name|
+      message = ->(listed) {
+        "plugin #{listed.dump} is named #{name.dump}, the name of a built-in plugin, which no local or shared plugin can have; " \
+          "rename the plugin's folder, since a plugin's name is its folder's name"
+      }
+      assert_mistake CONFIG, 2, message.call("./rules/#{name}"), plugins: [listing("./rules/tests"), listing("./rules/#{name}", line: 2)], built_in:, steps:,
+        manifests: {"#{APP}/rules/tests" => tests_manifest, "#{APP}/rules/#{name}" => debt_manifest("rules/#{name}")}
+      url = "https://example.com/o/#{name}"
+      repository = MemorySharedPlugins::Repository.new(tags: {"v1.0.0" => "#{TOP}cache/c3/#{name}"}, branches: [], commits: {})
+      assert_mistake CONFIG, 1, message.call(url), plugins: [listing(url, ref: "v1.0.0")], built_in:, steps:,
+        shared_plugins: MemorySharedPlugins.new({url => repository}, err: StringIO.new), manifests: {"#{TOP}cache/c3/#{name}" => debt_manifest(name)}
+    end
+    assert_equal %w[debt tests], load_project(plugins: [listing("debt"), listing("./rules/tests", line: 2)], built_in:, steps:,
+      manifests: {"#{TOP}c/plugins/debt" => debt_manifest("debt"), "#{APP}/rules/tests" => tests_manifest}).plugins.map(&:name)
   end
 
   def test_takes_a_plugin_named_for_a_command_of_crosslint_when_it_adds_no_commands

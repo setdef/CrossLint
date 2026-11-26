@@ -13,6 +13,11 @@ module CrossLint
       # What a command of a plugin is called: lowercase letters, digits, and -.
       COMMAND = /\A[a-z0-9-]+\z/
 
+      # The names CrossLint keeps for commands it may add, as well as the
+      # names of the commands it has: no plugin that adds commands has one,
+      # so adding the command breaks no plugin.
+      RESERVED = %w[version completion config plugin plugins list cache doctor explain fix self].freeze
+
       def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, built_in: {}, steps: {}, reserved: [])
         @configuration = configuration
         @manifests = manifests
@@ -59,6 +64,10 @@ module CrossLint
         base, folder = place(root, listing, fail_at)
         manifest = @manifests.read(base, folder) || fail_at.call("no #{@manifests.file} in #{where(listing, folder)}")
         name = File.basename(File.expand_path(folder, base))
+        if (listing.kind == :local || listing.shared?(@shared_plugins)) && @built_in.key?(name)
+          fail_at.call("plugin #{listing.name.dump} is named #{name.dump}, the name of a built-in plugin, which no local or shared plugin " \
+            "can have; rename the plugin's folder, since a plugin's name is its folder's name")
+        end
         same = loaded.find { |plugin| plugin.name == name }
         if same
           fail_at.call("plugins #{same.listing.name.dump} and #{listing.name.dump} are both named #{name.dump}, " \
@@ -170,9 +179,9 @@ module CrossLint
         return unless first
 
         manifest.commands.each { |command| check_command(command, manifest.file) }
-        if @reserved.include?(plugin.name)
-          raise Mistake.new("plugin #{plugin.name} in #{plugin.folder} adds commands, and #{plugin.name} is a command of CrossLint, so " \
-            "crosslint #{plugin.name} would not run them; rename the plugin's folder, since a plugin's name is its folder's name",
+        if (@reserved + RESERVED).include?(plugin.name)
+          raise Mistake.new("plugin #{plugin.name} in #{plugin.folder} adds commands, and #{plugin.name} is reserved, as a command of CrossLint " \
+            "or a name CrossLint keeps for one; rename the plugin's folder, since a plugin's name is its folder's name",
             file: manifest.file, line: first.line)
         end
         return unless manifest.steps.empty?

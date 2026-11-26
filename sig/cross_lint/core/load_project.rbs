@@ -12,6 +12,11 @@ module CrossLint
       # What the name of a plugin's command is made of.
       COMMAND: Regexp
 
+      # The names CrossLint keeps for commands it may add, which no plugin
+      # that adds commands can have, besides the names of the commands it
+      # has.
+      RESERVED: Array[String]
+
       # A use case that reads through `configuration` and `manifests`, runs
       # the Ruby that declares a plugin's artifacts through `plugin_ruby`,
       # and fetches shared plugins through `shared_plugins`. `built_in` has
@@ -40,7 +45,8 @@ module CrossLint
       @reserved: Array[String]
 
       # The plugin listed at `index`, with its manifest, checked against
-      # the plugins `loaded` before it.
+      # the plugins `loaded` before it. A local or shared plugin can't have
+      # the name of a built-in one.
       def plugin: (String root, Configuration configuration, Integer index, Array[Plugin] loaded) -> Plugin
 
       # What a message calls the place `listing`'s manifest should be in,
@@ -85,7 +91,8 @@ module CrossLint
 
       # Checks that the plugin's commands have names that CrossLint reads
       # as a word and none of its own, that the plugin has a name no
-      # command of CrossLint's has, and that it declares a step to do its
+      # command of CrossLint's has, or a name CrossLint reserves
+      # (`RESERVED`), and that it declares a step to do its
       # commands' work. Raises Mistake at the first command that breaks
       # one.
       def check_commands: (Plugin plugin) -> void
