@@ -264,6 +264,23 @@ class TSVDebtFilesTest < Minitest::Test
     assert_equal 0o640, File.stat(File.join(@root, "debt.tsv")).mode & 0o777 unless WINDOWS
   end
 
+  def test_leaves_alone_a_file_that_has_the_fixed_temporary_name
+    write(@root, "debt.tsv", "Rule\tArtifact\tComment\n")
+    write(@root, "debt.tsv.tmp", "someone else's file")
+    rewrite(port.read(@root, "debt.tsv"), [fresh("lib/a.rb")])
+
+    assert_equal ["debt.tsv", "debt.tsv.tmp"], Dir.children(@root).sort
+    assert_equal "someone else's file", File.binread(File.join(@root, "debt.tsv.tmp"))
+  end
+
+  def test_writes_through_a_different_temporary_file_each_time
+    froms = renamed do
+      2.times { port.write(@root, "debt.tsv", Core::DebtFile.new(file: "debt.tsv", entries: [], header: nil)) }
+    end.map(&:first)
+
+    assert_equal 2, froms.uniq.size
+  end
+
   def test_leaves_no_file_beside_it_when_the_write_fails
     FileUtils.mkdir_p(File.join(@root, "debt.tsv", "inside"))
 

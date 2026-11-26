@@ -262,6 +262,12 @@ class TrackDebtTest < Minitest::Test
     assert_equal ["d.tsv", /x/], [settings.file, settings.report&.matching]
   end
 
+  def test_accepts_a_path_whose_names_merely_contain_two_dots
+    path = "a..b/..c/d..tsv"
+
+    assert_equal path, TrackDebt.settings([setting("file", path)], CONFIG).file
+  end
+
   def test_stops_at_a_setting_it_cant_use_naming_the_line
     {
       [setting("file", "a.tsv"), setting("file", "b.tsv", line: 3)] => "file is set twice; the first is on line 2",
@@ -272,6 +278,9 @@ class TrackDebtTest < Minitest::Test
       [setting("file", "a", x: "y")] => %(file takes one path and nothing else, as in file "#{FILE}"),
       [setting("file", "")] => %(file takes a path relative to the project's root, not ""),
       [setting("file", "/tmp/debt.tsv")] => %(file takes a path relative to the project's root, not "/tmp/debt.tsv"),
+      [setting("file", "../debt.tsv")] => %(file takes a path relative to the project's root, not "../debt.tsv"),
+      [setting("file", "a/../../debt.tsv")] => %(file takes a path relative to the project's root, not "a/../../debt.tsv"),
+      [setting("file", "a\\..\\debt.tsv")] => %(file takes a path relative to the project's root, not "a\\\\..\\\\debt.tsv"),
       [setting("report-entries", "x")] => "report-entries takes no arguments, only commented= and matching=",
       [setting("report-entries", comented: "none", maching: "x")] => %(unknown property "comented", did you mean "commented"? for report-entries),
       [setting("report-entries", commented: "warn")] => %(commented= takes "error", "warning", or "none", not "warn"),
