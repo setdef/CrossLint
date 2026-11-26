@@ -20,6 +20,16 @@ class ArchitectureTest < Minitest::Test
     assert_empty outside
   end
 
+  # So that the Angular plugin can move to a repository of its own; the
+  # documents describe it, and its own folder holds its tests.
+  def test_no_code_outside_the_angular_plugins_folder_refers_to_it
+    folder = ["plugins", "angular"].join("/")
+    code = Dir.glob(["{lib,test,tasks,exe,.github,.config}/**/*", "build/*", "*"], File::FNM_DOTMATCH, base: ROOT)
+      .reject { |file| file.start_with?("docs/") || file.end_with?(".md") || !File.file?(File.join(ROOT, file)) }
+
+    assert_empty code.select { |file| File.binread(File.join(ROOT, file)).include?(folder) }
+  end
+
   def test_every_file_under_lib_has_a_signature_at_the_matching_path_under_sig
     missing = Dir.glob("lib/**/*.rb", base: ROOT).map { |file| file.sub(%r{\Alib/(.*)\.rb\z}, 'sig/\1.rbs') }
       .reject { |signature| File.file?(File.join(ROOT, signature)) }

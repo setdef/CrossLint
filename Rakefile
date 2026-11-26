@@ -4,9 +4,13 @@ require "minitest/test_task"
 require "rbconfig"
 require "tmpdir"
 
+# CrossLint's tests, and each built-in plugin's in its own folder, so a
+# plugin can move to a repository of its own with its tests.
+TESTS = ["test/**/*_test.rb", "plugins/*/test/**/*_test.rb"].freeze
+
 # The tests, with the coverage test/test_helper.rb checks.
 Minitest::TestTask.create(:test) do |task|
-  task.test_globs = ["test/**/*_test.rb"]
+  task.test_globs = TESTS
   task.warning = true
 end
 
@@ -14,7 +18,7 @@ end
 # call into CrossLint whose arguments, block, or result differ from
 # sig/.
 Minitest::TestTask.create("test:rbs") do |task|
-  task.test_globs = ["test/**/*_test.rb"]
+  task.test_globs = TESTS
   task.warning = true
   task.test_prelude = [
     'ENV["RBS_TEST_TARGET"] = "CrossLint::*"',
@@ -111,7 +115,8 @@ task :build do
   end
 end
 
-desc "Run the built app with nothing on PATH, and check its --version and --help, its rules in Ruby and helpers, and the environment of a helper"
+desc "Run the built app with nothing on PATH, and check its --version and --help, its rules in Ruby and helpers, the environment of a helper, " \
+  "and its built-in plugins"
 task "build:check" do
   require_relative "lib/cross_lint"
   app = Dir["build/dist/*/crosslint{,.exe}"].first || abort("rake build:check: no app in build/dist; run rake build")
@@ -131,6 +136,38 @@ task "build:check" do
   Rake::Task["build:check:plugins"].invoke(app)
   Rake::Task["build:check:environment"].invoke(app)
   Rake::Task["build:check:debt"].invoke(app)
+  Rake::Task["build:check:angular"].invoke(app)
+end
+
+# A project that lists the built-in Angular plugin, which the app
+# carries, with a component that has SCSS and no spec. PATH holds only
+# Git's folder.
+task "build:check:angular", [:app] do |_, arguments|
+  app = File.expand_path(arguments.fetch(:app))
+  files = {
+    ".config/crosslint/config.kdl" => %(plugin "angular"\n),
+    "src/app/card/card.component.ts" => "",
+    "src/app/card/card.component.scss" => ""
+  }
+  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  git = File.dirname(finder.find("git") || abort("rake build:check: no git on the PATH"))
+  Dir.mktmpdir do |project|
+    files.each do |file, text|
+      FileUtils.mkdir_p(File.dirname(File.join(project, file)))
+      File.binwrite(File.join(project, file), text)
+    end
+    Bundler.with_unbundled_env do
+      system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
+      actual = IO.popen({"PATH" => git}, [app, "check", "-C", project], err: %i[child out], &:read)
+      expected = "src/app/card/card.component.ts: warning: scss file exists at src/app/card/card.component.scss (angular/prefer-css-over-scss)\n" \
+        "src/app/card/card.component.ts: no spec file at src/app/card/card.component.spec.ts (angular/spec-exists)\n" \
+        "crosslint: checked 1 component artifact: 1 error, 1 warning\n"
+      abort "rake build:check: #{app} check exited with #{$?.exitstatus}, not 1:\n#{actual}" unless $?.exitstatus == 1
+      abort "rake build:check: #{app} check printed:\n#{actual}" unless actual == expected
+
+      puts "#{app} check: runs the built-in Angular plugin"
+    end
+  end
 end
 
 # A project that lists the built-in debt plugin, which the app carries,

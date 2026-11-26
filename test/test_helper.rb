@@ -10,7 +10,9 @@ unless defined?(Mutant)
     root File.expand_path("..", __dir__)
     enable_coverage :branch
     track_files "lib/**/*.rb"
-    add_filter %r{\A/(test|tasks|vendor)/}
+    # A plugin's Ruby loads anew into each check, which starts its
+    # coverage again each time, so only lib/ is counted.
+    add_filter %r{\A/(test|tasks|vendor|plugins)/}
     # A helper's process tree is a job object on Windows and a process
     # group elsewhere, and each system runs only its own.
     add_filter(RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/) ? "lib/cross_lint/adapters/process_group.rb" : "lib/cross_lint/adapters/job_object.rb")

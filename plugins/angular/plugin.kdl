@@ -1,0 +1,36 @@
+// The Angular plugin: ng-nudge's checks of an Angular project. Each policy
+// has the name of the ng-nudge rule it runs, as configurations and debt
+// files name them.
+setting "src-dir"
+setting "tsconfig"
+setting "role"
+
+// The roles component, directive, pipe, service, guard, resolver, and
+// interceptor, inside src-dir, and each role the configuration changes or
+// adds, declared from the settings.
+artifacts ruby="artifacts.rb"
+
+// Each artifact whose role expects a spec has one.
+policy "spec-exists" {
+  rule "companion-exists" companion="spec"
+}
+
+// A stub and an interface are optional, but a component with either has
+// both.
+policy "stub-exists" {
+  applies-to "component"
+  when companion-exists "interface"
+  rule "companion-exists" companion="stub"
+}
+
+policy "interface-exists" {
+  applies-to "component"
+  when companion-exists "stub"
+  rule "companion-exists" companion="interface"
+}
+
+policy "prefer-css-over-scss" {
+  applies-to "component"
+  when not { companion-exists "css"; }
+  rule "companion-absent" companion="scss" severity="warning"
+}

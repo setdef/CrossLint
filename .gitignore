@@ -9,3 +9,6 @@
 /coverage/
 /.mutant/
 /build/dist/
+
+# The packages a plugin's tests install into their fixtures.
+/plugins/*/test/**/node_modules/

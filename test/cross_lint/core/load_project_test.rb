@@ -87,7 +87,7 @@ class LoadProjectTest < Minitest::Test
 
   def test_stops_at_a_built_in_plugin_crosslint_does_not_have
     assert_mistake CONFIG, 1, %(unknown built-in plugin "dept", did you mean "debt"?), plugins: [listing("dept")],
-      built_in: {"debt" => "#{TOP}c/plugins/debt", "angular" => "#{TOP}c/plugins/angular"}
+      built_in: {"debt" => "#{TOP}c/plugins/debt", "docs" => "#{TOP}c/plugins/docs"}
     assert_mistake CONFIG, 1, %(unknown built-in plugin "zzz"; expected "debt"), plugins: [listing("zzz")],
       built_in: {"debt" => "#{TOP}c/plugins/debt"}
     assert_mistake CONFIG, 1, %(unknown built-in plugin "debt"; this CrossLint has none), plugins: [listing("debt")]
