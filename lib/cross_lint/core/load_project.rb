@@ -155,7 +155,7 @@ module CrossLint
       def check_policy(plugin, policy, plugins)
         file = plugin.manifest.file
         artifact = target(plugin, policy.applies_to, plugins)
-        policy.condition&.companion_tests&.each { |test| companion(artifact, test.companion, file, test.line) }
+        policy.condition&.companion_conditions&.each { |exists| companion(artifact, exists.companion, file, exists.line) }
         policy.rules.each { |rule| check_rule(plugin, artifact, rule) }
       end
 

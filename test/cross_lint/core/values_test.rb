@@ -33,15 +33,15 @@ class CoreValuesTest < Minitest::Test
     assert_equal ["a", "a or b", "a, b, or c", "a, b, c, or d"], [["a"], %w[a b], %w[a b c], %w[a b c d]].map { |words| Spelling.list(words) }
   end
 
-  def test_a_condition_holds_its_companion_tests
+  def test_a_condition_holds_its_companion_conditions
     a = Condition::CompanionExists.new(companion: "a", line: 1)
     b = Condition::CompanionExists.new(companion: "b", line: 2)
     c = Condition::CompanionExists.new(companion: "c", line: 3)
     condition = Condition::All.new(conditions: [a, Condition::Not.new(condition: Condition::Any.new(conditions: [b, c], line: 2), line: 2)], line: 1)
 
-    assert_equal [a, b, c], condition.companion_tests
-    assert_equal [b, c], Condition::Any.new(conditions: [Condition::All.new(conditions: [b, c], line: 2)], line: 1).companion_tests
-    assert_equal [a], a.companion_tests
+    assert_equal [a, b, c], condition.companion_conditions
+    assert_equal [b, c], Condition::Any.new(conditions: [Condition::All.new(conditions: [b, c], line: 2)], line: 1).companion_conditions
+    assert_equal [a], a.companion_conditions
   end
 
   def test_an_artifact_finds_its_companion_by_name

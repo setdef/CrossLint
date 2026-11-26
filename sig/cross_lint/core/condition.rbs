@@ -20,8 +20,8 @@ module CrossLint
         # A condition on the companion `companion`, on `line`.
         def initialize: (companion: String, line: Integer) -> void
 
-        # Itself, the one companion test it holds.
-        def companion_tests: () -> Array[CompanionExists]
+        # Itself, the one companion-exists condition it holds.
+        def companion_conditions: () -> Array[CompanionExists]
 
         # Whether `artifact`'s companion of this name exists.
         def holds?: (Artifact artifact) -> bool
@@ -41,8 +41,8 @@ module CrossLint
         # The opposite of `condition`, on `line`.
         def initialize: (condition: Core::condition, line: Integer) -> void
 
-        # The companion tests the condition inside holds.
-        def companion_tests: () -> Array[CompanionExists]
+        # The companion-exists conditions the condition inside holds.
+        def companion_conditions: () -> Array[CompanionExists]
 
         # Whether the condition inside doesn't hold for `artifact`.
         def holds?: (Artifact artifact) -> bool
@@ -62,8 +62,8 @@ module CrossLint
         # Every one of `conditions`, on `line`.
         def initialize: (conditions: Array[Core::condition], line: Integer) -> void
 
-        # The companion tests the conditions inside hold.
-        def companion_tests: () -> Array[CompanionExists]
+        # The companion-exists conditions the conditions inside hold.
+        def companion_conditions: () -> Array[CompanionExists]
 
         # Whether every condition inside holds for `artifact`.
         def holds?: (Artifact artifact) -> bool
@@ -83,8 +83,8 @@ module CrossLint
         # At least one of `conditions`, on `line`.
         def initialize: (conditions: Array[Core::condition], line: Integer) -> void
 
-        # The companion tests the conditions inside hold.
-        def companion_tests: () -> Array[CompanionExists]
+        # The companion-exists conditions the conditions inside hold.
+        def companion_conditions: () -> Array[CompanionExists]
 
         # Whether at least one condition inside holds for `artifact`.
         def holds?: (Artifact artifact) -> bool
