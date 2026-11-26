@@ -26,7 +26,7 @@ The command's name and the names of CrossLint's packages are chosen once the lan
 
 ### `-d` and `--update-debt`
 
-ng-nudge gives `-d` to `--update-debt` ([`bin/ng-nudge:32`][ngn-bin-32]). The guides give `-d` to `--debug` ([clig, Arguments and flags][clig-args]; [BetterCLI, Debugging][bcli-debug]). CrossLint keeps `-d` as an alias of `--update-debt` for the number of releases that its documentation states. Each use prints a deprecation notice on stderr ([clig, Future-proofing][clig-future]). Afterward `-d` is an error whose message points to `--update-debt`. A project's scripts run unchanged during the transition and break once, with a message, afterward, and the fix is one word.
+ng-nudge gives `-d` to `--update-debt` ([`bin/ng-nudge:32`][ngn-bin-32]). The guides give `-d` to `--debug` ([clig, Arguments and flags][clig-args]; [BetterCLI, Debugging][bcli-debug]). CrossLint keeps `-d` as an alias of `--update-debt` through the next two minor releases (`0.X`). Each use prints a deprecation notice on stderr ([clig, Future-proofing][clig-future]). Afterward `-d` is an error whose message points to `--update-debt`. A project's scripts run unchanged during the transition and break once, with a message, afterward, and the fix is one word.
 
 `-d` never changes meaning without a release in between that rejects it or warns about it. A script that runs `-d` would otherwise run a check that updates nothing and still succeeds, and clig says to warn in the program before such a change ([clig, Future-proofing][clig-future]).
 
@@ -59,8 +59,8 @@ CrossLint never ignores a mistake silently ([clig, Robustness guidelines][clig-r
 ## Output on success
 
 - The default report doesn't list artifacts that pass, where ng-nudge lists each with `✓` ([`lib/console-output.js:52-53`][ngn-out-52-53]). Both guides lean toward printing less on success ([clig, Output][clig-output]; [BetterCLI, Messaging, "Success message"][bcli-success]), and how ng-nudge's output looks is free to change. A flag lists every artifact checked, passing ones included, so no information ng-nudge prints is lost. The flag is `--verbose`.
-- `-q`/`--quiet` prints only what fails the run, with no summary. `-s`/`--silent` prints nothing but errors that stop the run. Both keep their meanings from ng-nudge ([ng-nudge-compatibility.md](ng-nudge-compatibility.md#command-line)).
-- A clean run prints a one-line summary with the number of artifacts checked, because silence can look like a hang ([clig, Output][clig-output]). BetterCLI suggests printing nothing ([BetterCLI, Messaging, "Success message"][bcli-success]). A run with findings ends with the same summary.
+- `-q`/`--quiet` prints only what fails the run, with no summary and no progress line, and keeps deprecation notices. `-s`/`--silent` prints nothing but errors that stop the run, so it prints no deprecation notice and no progress line. Both keep their meanings from ng-nudge ([ng-nudge-compatibility.md](ng-nudge-compatibility.md#command-line)).
+- A clean run prints a one-line summary on stdout, as part of the report, with the number of artifacts checked, because silence can look like a hang ([clig, Output][clig-output]). BetterCLI suggests printing nothing ([BetterCLI, Messaging, "Success message"][bcli-success]). A run with findings ends with the same summary.
 
 ## Machine-readable output
 
@@ -71,9 +71,9 @@ CrossLint never ignores a mistake silently ([clig, Robustness guidelines][clig-r
 
 ## Color
 
-ng-nudge uses no color. CrossLint uses color only on a terminal, and only to show severity, because clig says to use color sparingly and with a purpose ([clig, Output][clig-output]). These rules apply:
+ng-nudge uses no color. CrossLint uses color only to show severity, because clig says to use color sparingly and with a purpose ([clig, Output][clig-output]). These rules apply:
 
-- It turns color off on a stream that is not a terminal (checked per stream), when `NO_COLOR` is set to a value that is not empty, when `TERM` is `dumb`, and when `--no-color` is given ([clig, Output][clig-output]; [BetterCLI, Colors and formatting][bcli-color]). `FORCE_COLOR` turns it on and skips the checks ([clig, Environment variables][clig-env]). An empty `NO_COLOR` leaves color on, which is the [NO_COLOR standard's](https://no-color.org/) rule and clig's; BetterCLI says to turn color off whenever `NO_COLOR` is present.
+- Color is on when the stream is a terminal (checked per stream), unless `NO_COLOR` is set to a value that is not empty, `TERM` is `dumb`, or `--no-color` is given ([clig, Output][clig-output]; [BetterCLI, Colors and formatting][bcli-color]). `FORCE_COLOR` turns it on even when the stream is not a terminal ([clig, Environment variables][clig-env]). An empty `NO_COLOR` leaves color on, which is the [NO_COLOR standard's](https://no-color.org/) rule and clig's; BetterCLI says to turn color off whenever `NO_COLOR` is present.
 - It sets a text color whenever it sets a background color ([BetterCLI, Colors and formatting][bcli-color]).
 - It shows no animation on a stream that is not a terminal ([clig, Output][clig-output]).
 
@@ -135,7 +135,7 @@ These depend on the language CrossLint is written in, and are settled with [#4](
 
 | Conflict | Status | Section |
 |---|---|---|
-| `-d` is `--update-debt`, and the guides' `--debug` | Settled: `-d` stays an alias for a stated number of releases, with a notice on stderr, then is an error; `--debug` has no short form | [`-d` and `--update-debt`](#-d-and---update-debt) |
+| `-d` is `--update-debt`, and the guides' `--debug` | Settled: `-d` stays an alias through the next two minor releases (`0.X`), with a notice on stderr, then is an error; `--debug` has no short form | [`-d` and `--update-debt`](#-d-and---update-debt) |
 | Mistakes in flags and configuration are ignored | Settled: never silent; an unknown flag, argument or key, and a value CrossLint can't interpret, are errors reported before any check runs | [Mistakes in flags and configuration](#mistakes-in-flags-and-configuration) |
 | Warnings on stderr, everything else on stdout | Settled: findings go to stdout; messages about CrossLint go to stderr | [Streams](#streams) |
 | Exit 1 for violations and for errors that stop the run | Settled: 1 for violations and stale debt, 2 for an error that stops the run, 0 after a successful `--update-debt` | [Exit codes](#exit-codes) |

@@ -43,14 +43,15 @@ No plugin runs until the project lists it in its configuration, and that include
 - A plugin on the recommended list does nothing in a project that lacks what it reads. The debt plugin reports nothing and fails nothing without a debt file, as ng-nudge's debt tracking does.
 - The Angular plugin is not on by default. An Angular project lists it.
 - A configuration that lists no plugin is an error, because no check would run, and the message points to the recommended list.
+- A project lists its plugins under a `plugins` key in `.config/ng-nudge/rc.json`. CrossLint defines that key, so it is a known key. The form of CrossLint's configuration for a project without an `rc.json` waits on [#4](https://github.com/setdef/CrossLint/issues/4).
 
-A project migrating from ng-nudge lists the Angular plugin and the debt plugin ([ng-nudge-compatibility.md](ng-nudge-compatibility.md#migrating-in-30-minutes-or-less)).
+A project migrating from ng-nudge adds a `plugins` key to its `rc.json` that lists the Angular plugin and the debt plugin ([ng-nudge-compatibility.md](ng-nudge-compatibility.md#migrating-in-30-minutes-or-less)).
 
 ## Configuring rules
 
 - Every rule is configured the same way, whichever plugin supplies it, the project's local plugin included: it can be turned off, and its severity can be set. ng-nudge ignores both settings for the rules of the policies a project writes. A rule with no severity in the configuration has the default severity its plugin declares, where ng-nudge gives every such rule `error`. Both are in [ng-nudge-compatibility.md, Bugs not kept](ng-nudge-compatibility.md#bugs-not-kept).
 - ng-nudge's rule names, such as `spec-exists` and `has-debt`, keep working in a project's configuration and debt file, because both hold them ([ng-nudge-compatibility.md](ng-nudge-compatibility.md#policies-and-rules)).
-- A rule's full name is `plugin/rule`, as in ESLint, so rules of the same name from different plugins stay apart. A bare name stands for the Angular plugin's or the debt plugin's rule of that name, so ng-nudge's names keep working.
+- A rule's full name is `plugin/rule`, as in ESLint, so rules of the same name from different plugins stay apart. A bare name is accepted for the rule of any listed plugin when exactly one listed plugin has a rule of that name, so ng-nudge's names keep working. When more than one listed plugin has a rule of that name, a bare name is an error that lists the full names.
 
 ## A rule no policy runs
 
