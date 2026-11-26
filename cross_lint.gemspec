@@ -4,7 +4,7 @@
 # program and gems for Bundler, and for Fledge, which builds the app from
 # it.
 Gem::Specification.new do |spec|
-  spec.name = "crosslint"
+  spec.name = "cross_lint"
   # The version crosslint.usage.kdl gives, read with a pattern so that
   # evaluating the gemspec loads no gem.
   spec.version = File.read(File.expand_path("crosslint.usage.kdl", __dir__))[/^version "([^"]+)"$/, 1]

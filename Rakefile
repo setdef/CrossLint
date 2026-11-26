@@ -65,7 +65,7 @@ end
 
 desc "Run the built app with nothing on PATH, and check its --version and --help"
 task "build:check" do
-  require_relative "lib/crosslint"
+  require_relative "lib/cross_lint"
   app = Dir["build/dist/*/crosslint{,.exe}"].first || abort("rake build:check: no app in build/dist; run rake build")
   spec = CrossLint::UsageSpec.load
   expected = {"--version" => "#{spec.bin} #{spec.version}\n", "--help" => CrossLint::Help.new(spec).render}

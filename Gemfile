@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-# CrossLint's gems, from crosslint.gemspec.
+# CrossLint's gems, from cross_lint.gemspec.
 gemspec
 
 # For contributors only. The Fledge build leaves these groups out of the

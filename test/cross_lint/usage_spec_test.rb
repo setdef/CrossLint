@@ -86,7 +86,7 @@ class UsageSpecTest < Minitest::Test
 
   def test_the_shipped_spec_has_the_version_the_gemspec_reads
     assert_equal File.read(Spec::PATH)[/^version "([^"]+)"$/, 1], shipped_spec.version
-    assert_equal Gem::Specification.load(File.join(ROOT, "crosslint.gemspec")).version.to_s, shipped_spec.version
+    assert_equal Gem::Specification.load(File.join(ROOT, "cross_lint.gemspec")).version.to_s, shipped_spec.version
   end
 
   def test_the_shipped_spec_has_three_commands_and_global_flags

@@ -22,7 +22,7 @@ end
 
 require "mutant/minitest/coverage"
 require "stringio"
-require "crosslint"
+require "cross_lint"
 
 # What the tests share.
 module TestHelper

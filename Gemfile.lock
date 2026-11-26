@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    crosslint (0.1.0)
+    cross_lint (0.1.0)
       kdl (~> 2.2)
 
 GEM
@@ -84,7 +84,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  crosslint!
+  cross_lint!
   erb (~> 6.0.7)
   minitest (~> 6.1)
   mutant-minitest (~> 0.17.1)
@@ -96,7 +96,7 @@ CHECKSUMS
   base64 (0.2.0) sha256=0f25e9b21a02a0cc0cea8ef92b2041035d39350946e8789c562b2d1a3da01507
   bigdecimal (3.1.9) sha256=2ffc742031521ad69c2dfc815a98e426a230a3d22aeac1995826a75dabfad8cc
   bundler (4.1.0.beta2) sha256=ffd80c244e3c080cbc403b194e7b386668c69275561f81b7a801f08772a6e2d6
-  crosslint (0.1.0)
+  cross_lint (0.1.0)
   diff-lcs (2.0.0) sha256=708a5d52ec2945b50f8f53a181174aa1ef2c496edf81c05957fe956dabb363d5
   docile (1.4.1) sha256=96159be799bfa73cdb721b840e9802126e4e03dfc26863db73647204c727f21e
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
