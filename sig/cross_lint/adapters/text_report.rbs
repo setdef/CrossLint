@@ -1,0 +1,52 @@
+module CrossLint
+  module Adapters
+    # The report port as lines of text: each finding on a line of
+    # standard output, and each notice and the summary on standard error,
+    # beginning with "crosslint: ". Every line is ASCII, with "?" for any
+    # other character.
+    #
+    # A violation's line is its path, its message, and its plugin and
+    # policy, with "warning: " before the message of a warning:
+    #
+    #     lib/a.rb: no test file at test/a_test.rb (tests/has-test)
+    #     lib/a.rb: warning: no signature file at sig/a.rbs (tests/has-signature)
+    #
+    # A passing artifact's line, under --all, is its path and role:
+    # `lib/b.rb: ruby-file passes`. With color, a violation's message is
+    # red for an error and yellow for a warning, and nothing else is
+    # colored.
+    class TextReport
+      include _Report
+
+      # What begins each line CrossLint writes about itself.
+      PREFIX: String
+
+      # The ANSI escape that starts each severity's color.
+      COLORS: Hash[Core::severity, String]
+
+      # The ANSI escape that ends a color.
+      RESET: String
+
+      # A report that writes findings to `out` and the rest to `err`, in
+      # color when `color` is true.
+      def initialize: (out: CLI::_Output, err: CLI::_Output, ?color: bool) -> void
+
+      private
+
+      @out: CLI::_Output
+
+      @err: CLI::_Output
+
+      @color: bool
+
+      # Writes the result's findings to standard output.
+      def write_findings: (Core::CheckResult result) -> void
+
+      # Writes `line` to standard error, after PREFIX.
+      def say: (String line) -> void
+
+      # `text` in ASCII, with "?" for each character that isn't.
+      def ascii: (String text) -> String
+    end
+  end
+end

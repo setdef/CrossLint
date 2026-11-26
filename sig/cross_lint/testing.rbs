@@ -169,5 +169,45 @@ module CrossLint
       # files raises a mistake for a root outside a Git working tree.
       def test_stops_at_a_root_outside_a_git_working_tree: () -> void
     end
+
+    # What a report adapter's test defines.
+    interface _ReportTest
+      # A port that writes where `reported` reads.
+      def report_port: () -> _Report
+
+      # What the port wrote: each violation as its path, message, plugin,
+      # policy, and severity; each notice as its file, line, and message;
+      # and the summary line without "crosslint: ", or nil for none.
+      def reported: () -> {findings: Array[[String, String, String, String, Core::severity]],
+                           notices: Array[[String, Integer, String]], summary: String?}
+    end
+
+    # The tests every adapter of the report port passes.
+    module ReportContract : _ReportTest, Minitest::Assertions
+      # write reports the violations in the order the result has them.
+      def test_reports_each_violation_in_order: () -> void
+
+      # write reports notices, and none of them as a finding.
+      def test_reports_each_notice_apart_from_the_findings: () -> void
+
+      # write reports the summary at the normal verbosity.
+      def test_reports_the_summary_unless_quiet_or_silent: () -> void
+
+      # write reports the findings and no summary under --quiet.
+      def test_reports_no_summary_when_quiet: () -> void
+
+      # write writes nothing under --silent.
+      def test_reports_nothing_when_silent: () -> void
+
+      private
+
+      # A violation of tests/has-test on the ruby-file at `path`.
+      def violation: (String path, String message, ?Core::severity severity) -> Core::Violation
+
+      # A result with these findings, notices, and verbosity, and a summary
+      # of two ruby-file artifacts with no violations.
+      def result: (Array[Core::Violation | Core::Artifact] findings, ?notices: Array[Core::Notice],
+                   ?verbosity: (:normal | :quiet | :silent)) -> Core::CheckResult
+    end
   end
 end

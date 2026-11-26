@@ -1,0 +1,17 @@
+module CrossLint
+  module Adapters
+    # The report port as JSON: one object on a line of standard output,
+    # with the violations and the summary, and nothing else there. Notices
+    # and the summary line go to standard error as for TextReport. Under
+    # --silent it writes nothing; passing artifacts aren't in the object.
+    #
+    #     {"findings":[{"path":"lib/a.rb","message":"no test file at test/a_test.rb","plugin":"tests",
+    #       "policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null}],
+    #      "summary":{"artifacts":9,"errors":1,"warnings":0}}
+    #
+    # The keys are in that order, and every character that isn't ASCII is
+    # escaped.
+    class JSONReport < TextReport
+    end
+  end
+end

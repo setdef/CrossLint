@@ -1,0 +1,15 @@
+module CrossLint
+  module Adapters
+    # The report port in memory, for the tests: every result written to
+    # it, in order.
+    class MemoryReport
+      include _Report
+
+      # The results written, in order.
+      attr_reader results: Array[Core::CheckResult]
+
+      # A report that holds no result yet.
+      def initialize: () -> void
+    end
+  end
+end

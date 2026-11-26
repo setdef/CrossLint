@@ -51,4 +51,15 @@ module CrossLint
     # Git ignores counts.
     def exist?: (String root, String path) -> bool
   end
+
+  # Where a check's result goes: a format, such as lines of text or JSON,
+  # and where it is written. Adapters::TextReport and Adapters::JSONReport
+  # write to standard output and standard error, and Adapters::MemoryReport
+  # holds results in memory; all three pass Testing::ReportContract.
+  interface _Report
+    # Reports `result`: its findings and notices as they are, in their
+    # order, and its summary unless its verbosity is `:quiet` or
+    # `:silent`. Under `:silent`, writes nothing at all.
+    def write: (Core::CheckResult result) -> void
+  end
 end

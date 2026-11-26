@@ -190,5 +190,57 @@ module CrossLint
           "run git init in the project's root", mistake.message
       end
     end
+
+    module ReportContract
+      def test_reports_each_violation_in_order
+        port = report_port
+        port.write(result([violation("lib/b.rb", "no test file at test/b_test.rb"), violation("lib/a.rb", "no sig", :warning)]))
+
+        assert_equal [["lib/b.rb", "no test file at test/b_test.rb", "tests", "has-test", :error], ["lib/a.rb", "no sig", "tests", "has-test", :warning]],
+          reported.fetch(:findings)
+      end
+
+      def test_reports_each_notice_apart_from_the_findings
+        port = report_port
+        port.write(result([], notices: [Core::Notice.new(file: ".config/tests/plugin.kdl", line: 3, message: "no file matches")]))
+
+        assert_empty reported.fetch(:findings)
+        assert_equal [[".config/tests/plugin.kdl", 3, "no file matches"]], reported.fetch(:notices)
+      end
+
+      def test_reports_the_summary_unless_quiet_or_silent
+        port = report_port
+        port.write(result([]))
+
+        assert_equal "checked 2 ruby-file artifacts: no violations", reported.fetch(:summary)
+      end
+
+      def test_reports_no_summary_when_quiet
+        port = report_port
+        port.write(result([violation("lib/a.rb", "no test")], verbosity: :quiet))
+
+        assert_equal [1, nil], [reported.fetch(:findings).size, reported.fetch(:summary)]
+      end
+
+      def test_reports_nothing_when_silent
+        port = report_port
+        port.write(result([], verbosity: :silent))
+
+        assert_empty reported.fetch(:findings)
+        assert_empty reported.fetch(:notices)
+        assert_nil reported.fetch(:summary)
+      end
+
+      private
+
+      def violation(path, message, severity = :error)
+        Core::Violation.new(plugin: "tests", policy: "has-test", artifact: path, role: "ruby-file", message:, severity:, detail: nil)
+      end
+
+      def result(findings, notices: [], verbosity: :normal)
+        summary = Core::Summary.new(kinds: [["ruby-file", 2]], errors: 0, warnings: 0, warnings_shown: true)
+        Core::CheckResult.new(notices:, findings:, summary:, verbosity:, failed: false)
+      end
+    end
   end
 end
