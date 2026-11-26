@@ -171,9 +171,18 @@ FLEDGE_ENV = {
 
 desc "Build the app for this computer with Fledge, into build/dist"
 task :build do
+  # build/Gemfile.lock names the Bundler that locked it, and a Bundler of
+  # another version rewrites that name in the lock. Bundler switches to
+  # the locked version when it finds that version among the gems it can
+  # see. Where BUNDLE_PATH holds the bundle, the project's bundle has
+  # installed the locked Bundler there, and with_unbundled_env drops the
+  # variables that point to it, so a Bundler that comes with a newer Ruby
+  # (RubyInstaller's, on Windows) would not find it. GEM_PATH points the
+  # build's Bundler to the same gems that this rake task sees.
+  env = FLEDGE_ENV.merge("GEM_PATH" => (Gem.path + [Gem.default_dir]).uniq.join(File::PATH_SEPARATOR))
   Bundler.with_unbundled_env do
-    sh FLEDGE_ENV, "bundle", "install", chdir: "build"
-    sh FLEDGE_ENV, "bundle", "exec", "fledge", "build", "..", chdir: "build"
+    sh env, "bundle", "install", chdir: "build"
+    sh env, "bundle", "exec", "fledge", "build", "..", chdir: "build"
   end
 end
 
