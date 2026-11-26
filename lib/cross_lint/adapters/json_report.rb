@@ -7,9 +7,7 @@ module CrossLint
   module Adapters
     class JSONReport < TextReport
       def write(result)
-        return write_faults(result) if result.verbosity == :silent
-
-        super
+        super unless result.verbosity == :silent
       end
 
       private

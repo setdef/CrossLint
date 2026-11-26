@@ -57,29 +57,14 @@ module CrossLint
     def read: (String root, String path) -> String
   end
 
-  # Where the core loads a plugin's Ruby files, such as its rules.
-  # Adapters::FilePluginRuby runs the files in the plugin's folder, and
-  # Adapters::MemoryPluginRuby holds code in memory; both pass
-  # Testing::PluginRubyContract.
-  interface _PluginRuby
-    # Runs the Ruby file `file`, relative to `plugin`'s folder, with its
-    # constants in `namespace` rather than at the top level, so that two
-    # plugins' classes of one name stay apart. Raises Core::Mistake,
-    # naming the plugin's manifest and `line`, the line that names the
-    # file, when the folder has no such file; raises whatever the file
-    # raises.
-    def load: (Core::Plugin plugin, String file, Integer line, Module namespace) -> void
-  end
-
   # Where a check's result goes: a format, such as lines of text or JSON,
   # and where it is written. Adapters::TextReport and Adapters::JSONReport
   # write to standard output and standard error, and Adapters::MemoryReport
   # holds results in memory; all three pass Testing::ReportContract.
   interface _Report
     # Reports `result`: its findings and notices as they are, in their
-    # order, its summary unless its verbosity is `:quiet` or `:silent`,
-    # and its faults whatever the verbosity. Under `:silent`, writes
-    # nothing but the faults.
+    # order, and its summary unless its verbosity is `:quiet` or
+    # `:silent`. Under `:silent`, writes nothing at all.
     def write: (Core::CheckResult result) -> void
   end
 end

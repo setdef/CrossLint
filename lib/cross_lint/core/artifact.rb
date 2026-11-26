@@ -13,7 +13,5 @@ module CrossLint
     end
 
     class Violation < Data.define(:plugin, :policy, :artifact, :role, :message, :severity, :detail); end
-
-    class RuleResult < Data.define(:path, :role, :message, :detail); end
   end
 end

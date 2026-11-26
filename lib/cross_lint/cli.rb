@@ -49,9 +49,7 @@ module CrossLint
       warnings = WARNINGS.fetch(given) if given
       verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?
       result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"))
-      app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line), debug: debug?).write(result)
-      return 2 unless result.faults.empty?
-
+      app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line)).write(result)
       result.failed ? 1 : 0
     end
 

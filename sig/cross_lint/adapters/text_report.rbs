@@ -1,11 +1,10 @@
 module CrossLint
   module Adapters
     # The report port as lines of text: each finding on a line of
-    # standard output, and each notice, each fault, and the summary on
-    # standard error, beginning with "crosslint: ". The words CrossLint
-    # writes are ASCII. A path or other text from the project is written
-    # as it is, in UTF-8, and the bytes of text that isn't valid UTF-8 are
-    # written unchanged.
+    # standard output, and each notice and the summary on standard error,
+    # beginning with "crosslint: ". The words CrossLint writes are ASCII.
+    # A path or other text from the project is written as it is, in UTF-8,
+    # and the bytes of text that isn't valid UTF-8 are written unchanged.
     #
     # A violation's line is its path, its message, and its plugin and
     # policy, with "warning: " before the message of a warning:
@@ -17,13 +16,6 @@ module CrossLint
     # `lib/b.rb: ruby-file passes`. With color, a violation's message is
     # red for an error and yellow for a warning, and nothing else is
     # colored.
-    #
-    # A fault's line is its plugin, its rule, the artifact if any, and the
-    # message, whatever the verbosity; with `debug`, its trace follows,
-    # one `  from` line each, and without, unless under --silent, one
-    # line says to run with --debug to see the traces:
-    #
-    #     fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom
     class TextReport
       include _Report
 
@@ -37,9 +29,8 @@ module CrossLint
       RESET: String
 
       # A report that writes findings to `out` and the rest to `err`, in
-      # color when `color` is true, and with each fault's trace when
-      # `debug` is true.
-      def initialize: (out: CLI::_Output, err: CLI::_Output, ?color: bool, ?debug: bool) -> void
+      # color when `color` is true.
+      def initialize: (out: CLI::_Output, err: CLI::_Output, ?color: bool) -> void
 
       private
 
@@ -48,11 +39,6 @@ module CrossLint
       @err: CLI::_Output
 
       @color: bool
-
-      @debug: bool
-
-      # Writes the result's faults to standard error.
-      def write_faults: (Core::CheckResult result) -> void
 
       # Writes the result's findings to standard output.
       def write_findings: (Core::CheckResult result) -> void

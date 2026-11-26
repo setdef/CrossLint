@@ -20,12 +20,12 @@ module CrossLint
       # another.
       attr_reader severity: severity
 
-      # What the rule reports on `artifact` with `arguments`, its messages
-      # as results; it reads no file, so it leaves `read` alone.
-      def results: (Artifact artifact, Hash[String, untyped] arguments, ^(String path) -> String read) -> Array[RuleResult]
-
       # The built-in rule called `name`, or nil.
       def self.named: (String name) -> BuiltInRule?
+
+      # The built-in rule called `name`. Raises KeyError when there is
+      # none.
+      def self.fetch: (String name) -> BuiltInRule
 
       # The messages of the violations the rule reports for `artifact`,
       # given a policy's `arguments`: for companion-exists, one when the

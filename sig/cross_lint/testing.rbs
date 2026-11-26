@@ -175,37 +175,6 @@ module CrossLint
       def test_stops_at_a_root_outside_a_git_working_tree: () -> void
     end
 
-    # What a test of a plugin-Ruby adapter defines.
-    interface _PluginRubyTest
-      # A port that holds `files`, each Ruby source by its path relative
-      # to plugin_base, with `/`.
-      def plugin_ruby_port: (Hash[String, String] files) -> _PluginRuby
-
-      # The absolute path of the folder that holds each plugin's folder.
-      def plugin_base: () -> String
-    end
-
-    # The tests every adapter of the plugin-Ruby port passes.
-    module PluginRubyContract : _PluginRubyTest, Minitest::Assertions
-      # load defines a file's classes in the namespace, not at the top level.
-      def test_puts_a_files_constants_in_the_namespace_it_is_given: () -> void
-
-      # load keeps classes of one name in two plugins apart.
-      def test_keeps_two_plugins_classes_of_one_name_apart: () -> void
-
-      # load raises a mistake naming the manifest and the line for a file
-      # that isn't there.
-      def test_stops_at_a_file_the_plugins_folder_lacks: () -> void
-
-      # load raises what the file raises.
-      def test_raises_what_the_file_raises: () -> void
-
-      private
-
-      # A local plugin named `name`, in that folder of plugin_base.
-      def ruby_plugin: (String name) -> Core::Plugin
-    end
-
     # What a report adapter's test defines.
     interface _ReportTest
       # A port that writes where `reported` reads.
@@ -213,11 +182,9 @@ module CrossLint
 
       # What the port wrote: each violation as its path, message, plugin,
       # policy, and severity; each notice as its file, line, and message;
-      # each fault as its plugin, rule, artifact, and message; and the
-      # summary line without "crosslint: ", or nil for none.
+      # and the summary line without "crosslint: ", or nil for none.
       def reported: () -> {findings: Array[[String, String, String, String, Core::severity]],
-                           notices: Array[[String, Integer, String]], faults: Array[[String, String, String?, String]],
-                           summary: String?}
+                           notices: Array[[String, Integer, String]], summary: String?}
     end
 
     # The tests every adapter of the report port passes.
@@ -234,21 +201,18 @@ module CrossLint
       # write reports the findings and no summary under --quiet.
       def test_reports_no_summary_when_quiet: () -> void
 
-      # write writes nothing under --silent for a result with no faults.
+      # write writes nothing under --silent.
       def test_reports_nothing_when_silent: () -> void
-
-      # write reports each fault, even under --silent.
-      def test_reports_each_fault_even_when_silent: () -> void
 
       private
 
       # A violation of tests/has-test on the ruby-file at `path`.
       def violation: (String path, String message, ?Core::severity severity) -> Core::Violation
 
-      # A result with these findings, notices, verbosity, and faults, and a
-      # summary of two ruby-file artifacts with no violations.
+      # A result with these findings, notices, and verbosity, and a summary
+      # of two ruby-file artifacts with no violations.
       def result: (Array[Core::Violation | Core::Artifact] findings, ?notices: Array[Core::Notice],
-                   ?verbosity: (:normal | :quiet | :silent), ?faults: Array[Core::Fault]) -> Core::CheckResult
+                   ?verbosity: (:normal | :quiet | :silent)) -> Core::CheckResult
     end
   end
 end

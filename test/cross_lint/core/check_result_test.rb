@@ -32,14 +32,9 @@ class CheckResultTest < Minitest::Test
     companion = Companion.new(name: "test", path: "test/a_test.rb", exists: true)
     artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, companions: [companion])
     violation = Violation.new(plugin: "tests", policy: "p", artifact: "lib/b.rb", role: "ruby-file", message: "m", severity: :error, detail: nil)
-    result = CheckResult.new(notices: [], findings: [artifact, violation], summary: summary([]), verbosity: :normal, failed: true, faults: [])
+    result = CheckResult.new(notices: [], findings: [artifact, violation], summary: summary([]), verbosity: :normal, failed: true)
 
     assert_equal [violation], result.violations
-  end
-
-  def test_counts_faults_before_errors_and_warnings
-    assert_equal ["checked 1 a artifact: 1 fault", "checked 1 a artifact: 2 faults, 1 error"],
-      [summary([["a", 1]], faults: 1).line, summary([["a", 1]], faults: 2, errors: 1, warnings_shown: false).line]
   end
 
   def test_finds_an_artifacts_companion_by_name
@@ -57,5 +52,5 @@ class CheckResultTest < Minitest::Test
 
   private
 
-  def summary(kinds, faults: 0, errors: 0, warnings: 0, warnings_shown: true) = Summary.new(kinds:, faults:, errors:, warnings:, warnings_shown:)
+  def summary(kinds, errors: 0, warnings: 0, warnings_shown: true) = Summary.new(kinds:, errors:, warnings:, warnings_shown:)
 end

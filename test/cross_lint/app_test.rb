@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "open3"
 
 class AppTest < Minitest::Test
   cover "CrossLint::App*"
@@ -79,36 +78,6 @@ class AppTest < Minitest::Test
     assert_equal "warning", JSON.parse(lines.last).fetch("findings").first.fetch("severity")
   end
 
-  def test_runs_a_ruby_rule_from_its_file_in_the_plugins_folder
-    write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r"\n))
-    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n}\nrule "says-hi" ruby="hi.rb"\n) +
-      %(policy "p" {\n  applies-to "a"\n  rule "says-hi"\n}\n))
-    write(@base, ".config/crosslint/r/hi.rb", %(class SaysHi < CrossLint::Rule\n  def check(artifact) = [violation(artifact, "hi")]\nend\n))
-    write(@base, "a.md", "")
-    Open3.capture3("git", "init", "-q", chdir: @base)
-
-    assert_equal [["a.md", "hi"]], App.new.check(@base).violations.map { |violation| [violation.artifact, violation.message] }
-  end
-
-  def test_loads_ruby_rules_through_the_port_it_is_given
-    rule = ->(namespace) { namespace.const_set(:SaysHi, Class.new(CrossLint::Rule) { define_method(:check) { |artifact| [violation(artifact, "hi")] } }) }
-    app = memory_app(ruby: {File.expand_path("/app/local/hi.rb") => rule})
-
-    assert_equal ["hi", "no c file at a.txt"], app.check("/app").violations.map(&:message)
-  end
-
-  def test_shows_each_faults_trace_only_with_debug
-    fault = CrossLint::Core::Fault.new(plugin: "p", rule: "r", artifact: nil, message: "raised RuntimeError: boom", trace: ["hi.rb:1"])
-    result = memory_app.check("/app").with(faults: [fault])
-    lines = [{}, {debug: true}, {json: true}, {json: true, debug: true}].map do |options|
-      err = StringIO.new
-      App.new.report(out: StringIO.new, err:, **options).write(result)
-      err.string.lines.grep(/hi\.rb:1/).size
-    end
-
-    assert_equal [0, 1, 0, 1], lines
-  end
-
   def test_reads_through_the_ports_it_is_given
     configuration = CrossLint::Core::Configuration.new(file: "crosslint.json", plugins: [], policies: [], warnings: nil, verbosity: nil)
     app = App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}, file: "crosslint.json"),
@@ -122,20 +91,17 @@ class AppTest < Minitest::Test
 
   # A project at /app whose plugin, local, warns of each a.md with no
   # a.txt beside it.
-  def memory_app(files: ["a.md"], ruby: nil)
+  def memory_app(files: ["a.md"])
     core = CrossLint::Core
     configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", warnings: nil, verbosity: nil, policies: [],
       plugins: [core::ListedPlugin.new(name: "./local", ref: nil, settings: [], line: 1)])
     artifact = core::ArtifactDeclaration.new(name: "a", files: core::PathPattern.new(source: "{path}.md"), line: 1,
       companions: [core::CompanionDeclaration.new(name: "c", pattern: core::PathPattern.new(source: "{path}.txt"), line: 2)])
     policy = core::Policy.new(name: "p", applies_to: core::AppliesTo.new(artifact: "a", line: 2), condition: nil, line: 1,
-      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "c"}, severity: :warning, line: 3)] +
-        (ruby ? [core::PolicyRule.new(name: "says-hi", arguments: {}, severity: nil, line: 4)] : []))
-    rules = ruby ? [core::RuleDeclaration.new(name: "says-hi", ruby: "hi.rb", line: 5)] : []
-    manifest = core::Manifest.new(file: "local/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
+      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "c"}, severity: :warning, line: 3)])
+    manifest = core::Manifest.new(file: "local/plugin.kdl", artifacts: [artifact], policies: [policy], rules: [], helpers: [])
     App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}),
       manifests: CrossLint::Adapters::MemoryPluginManifests.new({File.expand_path("/app/local") => manifest}),
-      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"/app" => files}), plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(ruby || {}),
-      plugins: @base)
+      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"/app" => files}), plugins: @base)
   end
 end

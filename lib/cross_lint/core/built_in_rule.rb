@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "artifact"
-
 module CrossLint
   module Core
     class BuiltInRule < Data.define(:name, :arguments, :severity)
@@ -12,9 +10,7 @@ module CrossLint
 
       def self.named(name) = ALL.find { |rule| rule.name == name }
 
-      def results(artifact, arguments, _read)
-        messages(artifact, arguments).map { |message| RuleResult.new(path: artifact.path, role: artifact.role, message:, detail: nil) }
-      end
+      def self.fetch(name) = named(name) || raise(KeyError, "no built-in rule #{name.dump}")
 
       def messages(artifact, arguments)
         companion = artifact.companion(arguments.fetch("companion"))

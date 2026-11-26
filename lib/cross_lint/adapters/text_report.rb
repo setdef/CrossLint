@@ -11,11 +11,10 @@ module CrossLint
 
       RESET = "\e[0m"
 
-      def initialize(out:, err:, color: false, debug: false)
+      def initialize(out:, err:, color: false)
         @out = out
         @err = err
         @color = color
-        @debug = debug
       end
 
       def write(result)
@@ -25,21 +24,10 @@ module CrossLint
         # both streams go to one log, as in CI, the summary would come
         # before the findings.
         @out.flush
-        write_faults(result)
         say(result.summary.line) if result.verbosity == :normal
       end
 
       private
-
-      def write_faults(result)
-        result.faults.each do |fault|
-          fault.line.each_line { |line| say(line) }
-          fault.trace.each { |line| say("  from #{line}") } if @debug
-        end
-        return if @debug || result.verbosity == :silent || result.faults.all? { |fault| fault.trace.empty? }
-
-        say("run it again with --debug to see where each fault was raised")
-      end
 
       def write_findings(result)
         result.findings.each do |finding|

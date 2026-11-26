@@ -15,8 +15,6 @@ module ReportTestHelper
 
   def own_lines = @err.string.lines(chomp: true).map { |line| line.delete_prefix("crosslint: ") }
 
-  def faults = own_lines.filter_map { |line| line.match(/\Afault in plugin (\S+): rule (\S+)(?: on (\S+))? (.*)\z/)&.captures }
-
   def notices = own_lines.filter_map { |line| line.match(/\A(.+):(\d+): warning: (.*)\z/)&.captures&.then { |file, line, message| [file, line.to_i, message] } }
 
   def summary_line = own_lines.grep(/\Achecked /).first
@@ -25,13 +23,9 @@ module ReportTestHelper
     Violation.new(plugin:, policy: "has-test", artifact: path, role: "ruby-file", message:, severity:, detail:)
   end
 
-  def result_of(findings, verbosity: :normal, notices: [], faults: [])
-    summary = Summary.new(kinds: [["ruby-file", 9]], faults: 0, errors: 1, warnings: 1, warnings_shown: true)
-    CheckResult.new(notices:, findings:, summary:, verbosity:, failed: true, faults:)
-  end
-
-  def fault_of(trace: ["rules/a.rb:3:in 'check'"])
-    Fault.new(plugin: "tests", rule: "names-class", artifact: "lib/a.rb", message: "raised RuntimeError: boom", trace:)
+  def result_of(findings, verbosity: :normal, notices: [])
+    summary = Summary.new(kinds: [["ruby-file", 9]], errors: 1, warnings: 1, warnings_shown: true)
+    CheckResult.new(notices:, findings:, summary:, verbosity:, failed: true)
   end
 end
 
@@ -50,40 +44,7 @@ class TextReportTest < Minitest::Test
       message, plugin, policy = rest.match(/\A(.*) \(([^\/]+)\/(.+)\)\z/).captures
       [path, message, plugin, policy, warning ? :warning : :error]
     end
-    {findings:, notices:, faults:, summary: summary_line}
-  end
-
-  def test_writes_each_fault_after_the_findings_and_says_how_to_see_its_trace
-    report_port.write(result_of([violation_of("lib/b.rb", "no test")], faults: [fault_of, fault_of(trace: [])]))
-
-    assert_equal ["fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom"] * 2 +
-      ["run it again with --debug to see where each fault was raised", "checked 9 ruby-file artifacts: 1 error, 1 warning"], own_lines
-  end
-
-  def test_writes_each_faults_trace_with_debug
-    CrossLint::Adapters::TextReport.new(out: @out, err: @err, debug: true).write(result_of([], verbosity: :quiet, faults: [fault_of]))
-
-    assert_equal "crosslint: fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom\n" \
-      "crosslint:   from rules/a.rb:3:in 'check'\n", @err.string
-  end
-
-  def test_writes_only_the_faults_when_silent
-    report_port.write(result_of([], verbosity: :silent, faults: [fault_of]))
-
-    assert_equal "crosslint: fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom\n", @err.string
-  end
-
-  def test_writes_each_line_of_a_faults_message_as_a_line_of_its_own
-    report_port.write(result_of([], verbosity: :silent, faults: [fault_of.with(message: "called helper h, which wrote:\none\ntwo")]))
-
-    assert_equal "crosslint: fault in plugin tests: rule names-class on lib/a.rb called helper h, which wrote:\ncrosslint: one\ncrosslint: two\n",
-      @err.string
-  end
-
-  def test_says_nothing_of_traces_for_faults_that_have_none
-    report_port.write(result_of([], verbosity: :quiet, faults: [fault_of(trace: [])]))
-
-    assert_equal ["fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom"], own_lines
+    {findings:, notices:, summary: summary_line}
   end
 
   def test_writes_each_finding_on_a_line_of_standard_output
@@ -180,7 +141,7 @@ class JSONReportTest < Minitest::Test
     findings = object.fetch("findings").map do |finding|
       [finding.fetch("path"), finding.fetch("message"), finding.fetch("plugin"), finding.fetch("policy"), finding.fetch("severity").to_sym]
     end
-    {findings:, notices:, faults:, summary: summary_line}
+    {findings:, notices:, summary: summary_line}
   end
 
   def test_writes_one_object_with_its_keys_in_order
@@ -213,13 +174,6 @@ class JSONReportTest < Minitest::Test
     assert_equal ["", ""], [@out.string, @err.string]
   end
 
-  def test_writes_only_the_faults_when_silent
-    fault = Fault.new(plugin: "tests", rule: "r", artifact: nil, message: "requires rainbow", trace: ["a.rb:1"])
-    report_port.write(result_of([], verbosity: :silent, faults: [fault]))
-
-    assert_equal ["", "crosslint: fault in plugin tests: rule r requires rainbow\n"], [@out.string, @err.string]
-  end
-
   def test_escapes_what_isnt_ascii
     report_port.write(result_of([violation_of("lib/café.rb", "no test")]))
 
@@ -241,9 +195,8 @@ class MemoryReportTest < Minitest::Test
       [violation.artifact, violation.message, violation.plugin, violation.policy, violation.severity]
     end
     notices = results.flat_map(&:notices).map { |notice| [notice.file, notice.line, notice.message] }
-    faults = @port.results.flat_map(&:faults).map { |fault| [fault.plugin, fault.rule, fault.artifact, fault.message] }
     summary = results.find { |result| result.verbosity == :normal }&.summary&.line
-    {findings:, notices:, faults:, summary:}
+    {findings:, notices:, summary:}
   end
 
   def test_holds_every_result_written_in_order

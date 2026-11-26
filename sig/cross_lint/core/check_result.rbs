@@ -20,25 +20,21 @@ module CrossLint
       def initialize: (file: String, line: Integer, message: String) -> void
     end
 
-    # How many artifacts of each kind a check checked, how many plugins
-    # stopped at a fault, and how many errors and warnings it reports.
+    # How many artifacts of each kind a check checked, and how many errors
+    # and warnings it reports.
     #
     # ```ruby
-    # summary = CrossLint::Core::Summary.new(kinds: [["ruby-file", 9]], faults: 0, errors: 3, warnings: 0, warnings_shown: true)
+    # summary = CrossLint::Core::Summary.new(kinds: [["ruby-file", 9]], errors: 3, warnings: 0, warnings_shown: true)
     # summary.line # => "checked 9 ruby-file artifacts: 3 errors"
     # summary.with(kinds: [["ruby-file", 9], ["adr", 1]], errors: 0, warnings: 1).line
     # # => "checked 9 ruby-file and 1 adr artifacts: 1 warning"
     # summary.with(errors: 0).line # => "checked 9 ruby-file artifacts: no violations"
-    # summary.with(faults: 1).line # => "checked 9 ruby-file artifacts: 1 fault, 3 errors"
     # ```
     class Summary < Data
       # Each kind of artifact a policy applies to, by its name, or by
       # PLUGIN/NAME when two plugins have one of that name, with how many
       # artifacts of it there are, in the order the plugins declare them.
       attr_reader kinds: Array[[String, Integer]]
-
-      # How many plugins stopped at a fault.
-      attr_reader faults: Integer
 
       # How many violations of severity error the check reports.
       attr_reader errors: Integer
@@ -50,10 +46,10 @@ module CrossLint
       attr_reader warnings_shown: bool
 
       # A summary with these fields.
-      def self.new: (kinds: Array[[String, Integer]], faults: Integer, errors: Integer, warnings: Integer, warnings_shown: bool) -> instance
+      def self.new: (kinds: Array[[String, Integer]], errors: Integer, warnings: Integer, warnings_shown: bool) -> instance
 
       # A summary with these fields.
-      def initialize: (kinds: Array[[String, Integer]], faults: Integer, errors: Integer, warnings: Integer, warnings_shown: bool) -> void
+      def initialize: (kinds: Array[[String, Integer]], errors: Integer, warnings: Integer, warnings_shown: bool) -> void
 
       # How many artifacts the check checked, of every kind.
       def artifacts: () -> Integer
@@ -63,9 +59,8 @@ module CrossLint
 
       private
 
-      # The faults, errors, and warnings, as words: "1 fault, 3 errors, 1
-      # warning", or "no violations", or "no errors" when warnings are
-      # hidden.
+      # The errors and warnings, as words: "3 errors, 1 warning", or "no
+      # violations", or "no errors" when warnings are hidden.
       def found: () -> String
     end
 
@@ -91,19 +86,13 @@ module CrossLint
       # --warnings=error.
       attr_reader failed: bool
 
-      # The fault each plugin that stopped stopped at, whatever the
-      # verbosity. A plugin with a fault reports nothing else, and a check
-      # with a fault ends with exit status 2, since some of its rules
-      # didn't run.
-      attr_reader faults: Array[Fault]
-
       # A result with these fields.
       def self.new: (notices: Array[Notice], findings: Array[Violation | Artifact], summary: Summary,
-                     verbosity: (:normal | :quiet | :silent), failed: bool, faults: Array[Fault]) -> instance
+                     verbosity: (:normal | :quiet | :silent), failed: bool) -> instance
 
       # A result with these fields.
       def initialize: (notices: Array[Notice], findings: Array[Violation | Artifact], summary: Summary,
-                       verbosity: (:normal | :quiet | :silent), failed: bool, faults: Array[Fault]) -> void
+                       verbosity: (:normal | :quiet | :silent), failed: bool) -> void
 
       # The findings that are violations.
       def violations: () -> Array[Violation]
