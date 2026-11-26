@@ -509,6 +509,46 @@ module CrossLint
 
         assert_equal ["debt.tsv", 3], [mistake.file, mistake.line]
       end
+
+      def test_says_whether_a_file_exists
+        port = debt_files_port
+        port.write(debt_root, "kept/debt.tsv", Core::DebtFile.new(file: "kept/debt.tsv", entries: [], header: nil))
+
+        assert port.exist?(debt_root, "kept/debt.tsv")
+        refute port.exist?(debt_root, "kept/other.tsv")
+        refute port.exist?(debt_root, "elsewhere/debt.tsv")
+      end
+
+      def test_moves_a_file_with_every_entry_as_it_is_and_leaves_nothing_where_it_was
+        port = debt_files_port
+        entries = [Core::DebtEntry.fresh(rule: "spec-exists", artifact: "app/card", comment: "later, \"quoted\"\twith a tab"),
+          Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/a.rb", detail: "name")]
+        port.write(debt_root, "old/debt.tsv", Core::DebtFile.new(file: "old/debt.tsv", entries:, header: nil))
+        before = port.read(debt_root, "old/debt.tsv")
+        port.move(debt_root, "old/debt.tsv", "new/folder/debt.tsv")
+        after = port.read(debt_root, "new/folder/debt.tsv")
+
+        assert_equal ["new/folder/debt.tsv", before.header, before.entries], [after.file, after.header, after.entries]
+        refute port.exist?(debt_root, "old/debt.tsv")
+        assert_empty port.read(debt_root, "old/debt.tsv").entries
+      end
+
+      def test_moves_a_file_over_the_file_at_its_new_path
+        port = debt_files_port
+        port.write(debt_root, "a.tsv", Core::DebtFile.new(file: "a.tsv", entries: [Core::DebtEntry.fresh(rule: "r", artifact: "new")], header: nil))
+        port.write(debt_root, "b.tsv", Core::DebtFile.new(file: "b.tsv", entries: [Core::DebtEntry.fresh(rule: "r", artifact: "old")], header: nil))
+        port.move(debt_root, "a.tsv", "b.tsv")
+
+        assert_equal ["new"], port.read(debt_root, "b.tsv").entries.map(&:artifact)
+      end
+
+      def test_names_the_file_it_is_asked_to_move_when_there_is_none
+        port = debt_files_port
+        mistake = assert_raises(Core::Mistake) { port.move(debt_root, "missing.tsv", "debt.tsv") }
+
+        assert_equal ["missing.tsv", "doesn't exist"], [mistake.file, mistake.message]
+        refute port.exist?(debt_root, "debt.tsv")
+      end
     end
 
     module SharedPluginsContract
@@ -638,6 +678,62 @@ module CrossLint
 
       def test_refuses_to_list_the_tags_of_a_repository_that_isnt_there
         assert_raises(Core::FetchError) { shared_plugins_port.tags(missing_repository_url) }
+      end
+    end
+
+    module NgNudgeContract
+      def test_reads_the_text_of_rc_json_as_it_is
+        text = "{\r\n  \"srcDir\": \"café\"\r\n}"
+        port = ng_nudge_port({".config/ng-nudge/rc.json" => text})
+
+        assert_equal text, port.settings(ng_nudge_root)
+      end
+
+      def test_reads_no_text_when_there_is_no_rc_json
+        port = ng_nudge_port({".config/ng-nudge/debt.tsv" => "Rule\tArtifact\tComment\n"})
+
+        assert_nil port.settings(ng_nudge_root)
+        assert_nil port.settings(File.join(ng_nudge_root, "elsewhere"))
+      end
+
+      def test_lists_the_files_ng_nudge_loads_in_the_order_of_folder_and_name
+        files = %w[rules/b.rule.js artifacts/z.artifact.js rules/a.rule.js policies/p.policy.js artifacts/.hidden.artifact.js].to_h { |path| [".config/ng-nudge/#{path}", ""] }
+        port = ng_nudge_port(files)
+
+        assert_equal %w[artifacts/.hidden.artifact.js artifacts/z.artifact.js policies/p.policy.js rules/a.rule.js rules/b.rule.js].map { |path| ".config/ng-nudge/#{path}" },
+          port.extensions(ng_nudge_root)
+      end
+
+      def test_lists_no_file_ng_nudge_does_not_load
+        files = %w[rules/a.artifact.js rules/readme.md rules/sub/b.rule.js artifacts/a.rule.js policies/a.policy.json other/c.rule.js].to_h { |path| [".config/ng-nudge/#{path}", ""] }
+        port = ng_nudge_port(files.merge("rules/d.rule.js" => "", "e.rule.js" => "", ".config/f.rule.js" => ""))
+
+        assert_empty port.extensions(ng_nudge_root)
+        assert_empty port.extensions(File.join(ng_nudge_root, "elsewhere"))
+      end
+    end
+
+    module JavaScriptContract
+      def test_says_which_texts_a_regular_expression_matches_anywhere_in
+        assert_equal [true, false, true, false], javascript_port.matches("b", ["abc", "xyz", "b", ""])
+      end
+
+      def test_matches_the_start_of_the_whole_text_only_with_a_caret
+        assert_equal [true, false, false], javascript_port.matches("^a", ["a", "ba", "b\na"])
+      end
+
+      def test_reads_texts_with_new_lines_and_characters_beyond_ascii
+        assert_equal [true, false, true], javascript_port.matches("é", ["café", "cafe", "é\n"])
+      end
+
+      def test_answers_for_no_texts_with_no_matches
+        assert_empty javascript_port.matches("b", [])
+      end
+
+      def test_raises_the_reason_for_an_expression_javascript_does_not_accept
+        error = assert_raises(Core::JavaScriptError) { javascript_port.matches("(", ["a"]) }
+
+        assert_includes error.message, "("
       end
     end
   end

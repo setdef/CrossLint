@@ -1,0 +1,50 @@
+module CrossLint
+  module Adapters
+    # The JavaScript port that runs Node, with a script that tests the
+    # expression on each text, and gives the program a time limit. The
+    # program is whatever `node` the PATH finds, the project's Node.
+    class NodeJavaScript
+      include _JavaScript
+
+      # The JavaScript program that reads `{"source": ..., "texts": [...]}`
+      # from standard input, and writes `{"matches": [...]}`, or
+      # `{"error": MESSAGE}` for an expression it doesn't accept.
+      SCRIPT: String
+
+      # How many seconds the program has to answer.
+      LIMIT: Integer
+
+      # How many seconds the program has to answer.
+      attr_reader limit: Numeric
+
+      # A port that runs `command`, with `script` as its `-e` argument,
+      # and ends it after `limit` seconds.
+      def initialize: (?command: String, ?script: String, ?limit: Numeric) -> void
+
+      private
+
+      @command: String
+
+      @script: String
+
+      @limit: Numeric
+
+      # The program's answer to `input`, a JSON text, as parsed JSON.
+      # Raises Core::JavaScriptError when it fails or answers with
+      # something that isn't JSON.
+      def ask: (String input) -> Hash[String, untyped]
+
+      # What the program wrote to standard output and standard error, and
+      # its status, once it has read `input`. Raises Core::JavaScriptError
+      # when it can't be started, or doesn't answer within the limit.
+      def run: (String input) -> [String, String, Process::Status]
+
+      # Writes `input` to the program, and closes its input. A program that
+      # has ended without reading it is no error here.
+      def write: (IO stdin, String input) -> void
+
+      # What the pipe holds, as UTF-8, with a byte that isn't replaced.
+      def text: (IO pipe) -> String
+    end
+  end
+end

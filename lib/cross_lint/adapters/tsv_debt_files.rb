@@ -48,6 +48,20 @@ module CrossLint
         replace(full, path, contents(debt))
       end
 
+      def exist?(root, path) = File.file?(File.join(root, path))
+
+      def move(root, from, to)
+        source = File.join(root, from)
+        raise Core::Mistake.new("doesn't exist", file: from) unless File.file?(source)
+
+        target = File.join(root, to)
+        FileUtils.mkdir_p(File.dirname(target))
+        replace(target, to, File.binread(source))
+        File.delete(source)
+      rescue SystemCallError => error
+        raise Core::Mistake.new("couldn't be removed once it was written to #{to}: " + error.message, file: from)
+      end
+
       private
 
       def empty(path) = Core::DebtFile.new(file: path, entries: [], header: nil)

@@ -1,0 +1,22 @@
+module CrossLint
+  module Adapters
+    # The ng-nudge port in memory, for the use cases' tests: the files of
+    # each project, by its root, each by its path relative to the root and
+    # its text.
+    #
+    # ```ruby
+    # port = CrossLint::Adapters::MemoryNgNudge.new({"/app" => {".config/ng-nudge/rc.json" => "{}"}})
+    # port.settings("/app") # => "{}"
+    # ```
+    class MemoryNgNudge
+      include _NgNudge
+
+      # A port that holds the files of `projects`.
+      def initialize: (?Hash[String, Hash[String, String]] projects) -> void
+
+      private
+
+      @projects: Hash[String, Hash[String, String]]
+    end
+  end
+end

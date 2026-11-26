@@ -161,6 +161,19 @@ module CrossLint
     # the file's folder when there is none, and leaves the file as it was
     # when the write fails.
     def write: (String root, String path, Core::DebtFile debt) -> void
+
+    # Whether a file exists at `path`, relative to `root` with `/` between
+    # folders.
+    def exist?: (String root, String path) -> bool
+
+    # Moves the file at `from` to `to`, both relative to `root`, as it
+    # is, byte for byte, without reading it as entries, so that a file with
+    # a mistake moves too. Replaces a file at `to`, makes the folder it is
+    # in when there is none, and leaves nothing at `from`. Raises
+    # Core::Mistake, naming `from`, when there is no file there, and
+    # naming the file when the system denies the move; the file at `to` is
+    # as it was then.
+    def move: (String root, String from, String to) -> void
   end
 
   # Where the core fetches shared plugins from: Git repositories, and the
@@ -196,5 +209,41 @@ module CrossLint
     # The names of the repository's tags at `url`. Raises Core::FetchError
     # when the repository can't be reached within the time limit.
     def tags: (String url) -> Array[String]
+  end
+
+  # Where the core finds what ng-nudge 0.3.0 keeps in a project:
+  # `.config/ng-nudge/rc.json`, and the files in its `artifacts/`,
+  # `policies/`, and `rules/` folders. Adapters::FileNgNudge reads the
+  # files, and Adapters::MemoryNgNudge holds them in memory; both pass
+  # Testing::NgNudgeContract. The debt file is read through the
+  # debt-files port.
+  interface _NgNudge
+    # The text of `.config/ng-nudge/rc.json` in `root`, or nil when
+    # there is none. Raises Core::Mistake, naming the file, when it isn't
+    # valid UTF-8.
+    def settings: (String root) -> String?
+
+    # The paths, relative to `root` with `/` between folders and sorted
+    # by folder and then by name, of the files ng-nudge loads from its
+    # extension folders: names ending in `.artifact.js` in
+    # `.config/ng-nudge/artifacts/`, in `.config/ng-nudge/policies/` those
+    # ending in `.policy.js`, and in `.config/ng-nudge/rules/` those ending
+    # in `.rule.js`, a name that starts with a dot among them, and nothing
+    # in a folder below those.
+    def extensions: (String root) -> Array[String]
+  end
+
+  # Where the core asks JavaScript a question that only JavaScript
+  # answers, so that a conversion from ng-nudge doesn't depend on a
+  # translation alone. Adapters::NodeJavaScript runs Node, and
+  # Adapters::MemoryJavaScript answers from procs in memory; both pass
+  # Testing::JavaScriptContract.
+  interface _JavaScript
+    # Which of `texts` the JavaScript regular expression `source`, with
+    # no flags, matches anywhere in, as `new RegExp(source).test(text)`
+    # says, in the order of `texts`. Raises Core::JavaScriptError, with
+    # the reason, when JavaScript can't be run, doesn't answer, or says
+    # `source` isn't a valid expression.
+    def matches: (String source, Array[String] texts) -> Array[bool]
   end
 end

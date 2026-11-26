@@ -1,0 +1,16 @@
+module CrossLint
+  module Adapters
+    # The ng-nudge port that reads a project's files: `rc.json`, and the
+    # names ng-nudge loads from its extension folders.
+    class FileNgNudge
+      include _NgNudge
+
+      # ng-nudge's folder in a project's root.
+      FOLDER: String
+
+      # The folder of each kind of extension, with the suffix of the names
+      # ng-nudge loads in it.
+      SUFFIXES: Hash[String, String]
+    end
+  end
+end

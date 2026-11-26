@@ -1,0 +1,11 @@
+module CrossLint
+  module Core
+    module NgNudge
+      # Where ng-nudge 0.3.0 keeps its configuration, in a project's root.
+      SETTINGS_FILE: String
+
+      # Where ng-nudge 0.3.0 keeps its debt file, in a project's root.
+      DEBT_FILE: String
+    end
+  end
+end

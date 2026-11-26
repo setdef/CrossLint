@@ -1,0 +1,10 @@
+module CrossLint
+  module Core
+    # JavaScript that couldn't answer: Node isn't there, doesn't answer in
+    # time, exits with a failure, or says the expression isn't valid. What
+    # went wrong is the message; the use case that asked says which
+    # setting it was for.
+    class JavaScriptError < StandardError
+    end
+  end
+end

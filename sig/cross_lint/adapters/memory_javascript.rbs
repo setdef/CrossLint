@@ -1,0 +1,23 @@
+module CrossLint
+  module Adapters
+    # The JavaScript port in memory, for the use cases' tests: what each
+    # expression `matches`, as a proc of one text, or the
+    # Core::JavaScriptError that JavaScript would raise for it. An
+    # expression it doesn't hold raises one too.
+    #
+    # ```ruby
+    # port = CrossLint::Adapters::MemoryJavaScript.new({"TODO" => ->(text) { text.include?("TODO") }})
+    # port.matches("TODO", ["TODO: fix", "done"]) # => [true, false]
+    # ```
+    class MemoryJavaScript
+      include _JavaScript
+
+      # A port that answers for `expressions`, by source.
+      def initialize: (?Hash[String, ^(String) -> bool | Core::JavaScriptError] expressions) -> void
+
+      private
+
+      @expressions: Hash[String, ^(String) -> bool | Core::JavaScriptError]
+    end
+  end
+end

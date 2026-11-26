@@ -371,6 +371,19 @@ module CrossLint
 
       # read raises a mistake naming the file and the line.
       def test_names_the_file_and_line_of_a_mistake: () -> void
+
+      # exist? is true for a file written and false for any other path.
+      def test_says_whether_a_file_exists: () -> void
+
+      # move leaves each entry and the header as they were, at the new
+      # path, makes its folder, and leaves nothing at the old one.
+      def test_moves_a_file_with_every_entry_as_it_is_and_leaves_nothing_where_it_was: () -> void
+
+      # move replaces the file at the new path.
+      def test_moves_a_file_over_the_file_at_its_new_path: () -> void
+
+      # move raises a mistake naming the file to move when there is none.
+      def test_names_the_file_it_is_asked_to_move_when_there_is_none: () -> void
     end
 
     # What a test of a shared-plugins adapter defines.
@@ -463,6 +476,59 @@ module CrossLint
 
       # tags raises Core::FetchError for a repository that isn't there.
       def test_refuses_to_list_the_tags_of_a_repository_that_isnt_there: () -> void
+    end
+
+    # What a test of an ng-nudge adapter defines.
+    interface _NgNudgeTest
+      # A port for a project in `ng_nudge_root` that has these files, each
+      # by its path relative to the root and its text. No other project
+      # has any.
+      def ng_nudge_port: (Hash[String, String] files) -> _NgNudge
+
+      # The absolute path of the project's root.
+      def ng_nudge_root: () -> String
+    end
+
+    # The tests every adapter of the ng-nudge port passes.
+    module NgNudgeContract : _NgNudgeTest, Minitest::Assertions
+      # settings gives the text of rc.json as it is.
+      def test_reads_the_text_of_rc_json_as_it_is: () -> void
+
+      # settings gives nil when there is no rc.json.
+      def test_reads_no_text_when_there_is_no_rc_json: () -> void
+
+      # extensions lists the files ng-nudge loads, by folder and name.
+      def test_lists_the_files_ng_nudge_loads_in_the_order_of_folder_and_name: () -> void
+
+      # extensions lists no file ng-nudge doesn't load.
+      def test_lists_no_file_ng_nudge_does_not_load: () -> void
+    end
+
+    # What a test of a JavaScript adapter defines.
+    interface _JavaScriptTest
+      # A port that answers for the expressions "b", "^a", and "é" as
+      # JavaScript's `RegExp#test` does with no flags, and raises
+      # Core::JavaScriptError, naming "(", for the expression "(".
+      def javascript_port: () -> _JavaScript
+    end
+
+    # The tests every adapter of the JavaScript port passes.
+    module JavaScriptContract : _JavaScriptTest, Minitest::Assertions
+      # matches finds the expression anywhere in each text.
+      def test_says_which_texts_a_regular_expression_matches_anywhere_in: () -> void
+
+      # matches reads a caret as the start of the whole text.
+      def test_matches_the_start_of_the_whole_text_only_with_a_caret: () -> void
+
+      # matches reads texts with new lines and characters beyond ASCII.
+      def test_reads_texts_with_new_lines_and_characters_beyond_ascii: () -> void
+
+      # matches gives nothing for no texts.
+      def test_answers_for_no_texts_with_no_matches: () -> void
+
+      # matches raises Core::JavaScriptError, with the reason, for an
+      # expression JavaScript doesn't accept.
+      def test_raises_the_reason_for_an_expression_javascript_does_not_accept: () -> void
     end
   end
 end
