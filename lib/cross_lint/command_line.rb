@@ -20,7 +20,8 @@ module CrossLint
     def initialize(spec, argv)
       @spec = spec
       @flags = {}
-      # @action stays nil while reading, until --help or --version ends it.
+      # --help and --version set @action, which stops the reading there, so a
+      # mistake after either one is never read and the help still shows.
       read(argv.dup)
       @action ||= :run
       known_flags.each { |flag| @flags[flag.long] ||= flag.default if flag.default }

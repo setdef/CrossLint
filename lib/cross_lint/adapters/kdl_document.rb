@@ -20,7 +20,8 @@ module CrossLint
           end
         end
 
-        # The parser reads only these of a name's or string's token.
+        # Stands in for the gem's Token: the grammar reads only a name's or
+        # string's value, and an error message reads its line and column.
         class WordToken < Data.define(:value, :line, :column); end
 
         WORDS = %i[IDENT STRING RAWSTRING].freeze
