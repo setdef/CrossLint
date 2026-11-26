@@ -24,14 +24,26 @@ module CrossLint
       # PROCESS_SET_QUOTA and PROCESS_TERMINATE, which
       # AssignProcessToJobObject needs of the process's handle, and
       # SYNCHRONIZE, which WaitForSingleObject needs to tell whether the
-      # process has exited.
-      ASSIGN = 0x0101 | 0x00100000
+      # process has exited, and PROCESS_QUERY_LIMITED_INFORMATION, which
+      # GetProcessTimes needs.
+      ASSIGN = 0x0101 | 0x00100000 | 0x1000
+
+      # Seconds from 1601, which a FILETIME counts from, to 1970.
+      EPOCH = 11_644_473_600
+
+      # FILETIME counts 100-nanosecond ticks.
+      TICKS = 10_000_000
+
+      # When popen3 started each child that no job holds yet, by pid. A
+      # pid is free once its process has exited and been reaped, and
+      # another process can take it before the job holds it.
+      SPAWNED = {}
 
       # What OpenProcess answers for a pid no process has, as a process that
       # has exited and been reaped.
       INVALID_PARAMETER = 87
 
-      def initialize(pid)
+      def initialize(pid, spawned: SPAWNED.delete(pid))
         # Ruby 4.1 has fiddle as a bundled gem, which the Gemfile asks for
         # on Windows.
         require "fiddle"
@@ -43,7 +55,7 @@ module CrossLint
           limits = "\0" * LIMITS_SIZE
           limits[LIMIT_FLAGS, 4] = [KILL_ON_JOB_CLOSE].pack("L")
           checked("SetInformationJobObject", [pointer, int, pointer, int], int, @job, EXTENDED_LIMIT_INFORMATION, limits, LIMITS_SIZE)
-          hold(pid)
+          hold(pid, spawned)
         rescue Core::PluginError
           kill
           raise
@@ -54,7 +66,13 @@ module CrossLint
       # into "\r\n".
       def self.popen3(command, root, environment)
         env = environment #: untyped
-        Open3.popen3(env, *command, chdir: root).tap { |input, *| input.binmode }
+        Open3.popen3(env, *command, chdir: root).tap do |input, _, _, wait|
+          input.binmode
+          # After the spawn, not before: Windows rounds a creation time
+          # down to its clock's tick, so a time before the spawn could
+          # fall after the child's.
+          SPAWNED[wait.pid] = Time.now
+        end
       end
 
       def self.close_input(input)
@@ -76,8 +94,11 @@ module CrossLint
 
       private
 
-      # Puts the process `pid` in the job.
-      def hold(pid)
+      # Puts the process `pid` in the job, unless it was created after
+      # `spawned`, when the child that had the pid has exited and been
+      # reaped and another process took it: that process is no child's,
+      # and the child has nothing to hold.
+      def hold(pid, spawned)
         pointer = Fiddle::TYPE_VOIDP
         int = Fiddle::TYPE_INT
         process = call("OpenProcess", [int, int, int], pointer, ASSIGN, 0, pid)
@@ -89,6 +110,8 @@ module CrossLint
           raise failed("OpenProcess")
         end
         begin
+          return if spawned && created(process) > spawned
+
           checked("AssignProcessToJobObject", [pointer, pointer], int, @job, process)
         rescue Core::PluginError
           # Windows refuses to put a process that has exited, but has not
@@ -97,6 +120,14 @@ module CrossLint
         ensure
           call("CloseHandle", [pointer], int, process)
         end
+      end
+
+      # When the process that `process` is a handle of was created.
+      def created(process)
+        pointer = Fiddle::TYPE_VOIDP
+        creation = "\0" * 8
+        checked("GetProcessTimes", [pointer] * 5, Fiddle::TYPE_INT, process, creation, "\0" * 8, "\0" * 8, "\0" * 8)
+        Time.at(Rational(creation.unpack1("Q"), TICKS) - EPOCH)
       end
 
       # What the call `name` returns, or an error when Windows returns

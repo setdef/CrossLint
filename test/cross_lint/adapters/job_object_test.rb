@@ -53,6 +53,32 @@ class JobObjectTest < Minitest::Test
     Process.wait(pid) if pid
   end
 
+  # A reaped child's pid is free, and another process can take it. The job
+  # then has to leave that process alone: it was created after the child
+  # was started, which here is a minute ago.
+  def test_leaves_a_process_alone_that_was_created_after_the_child_was_started
+    pid = Process.spawn("sh", "-c", "sleep 30")
+    waiter = Process.detach(pid)
+    job = CrossLint::Adapters::JobObject.new(pid, spawned: Time.now - 60)
+    job.kill
+
+    assert_nil waiter.join(2)
+  ensure
+    Process.kill("KILL", pid) if pid
+    waiter&.join(5)
+  end
+
+  # What popen3 records is the time of the spawn, which the child was
+  # created at or before.
+  def test_holds_a_process_that_was_created_by_the_time_of_the_spawn
+    script = write(@base, "sleeps.sh", "sleep 30\n")
+    _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})
+    sleep 0.3
+    CrossLint::Adapters::JobObject.new(wait.pid).kill
+
+    refute_nil wait.join(5)
+  end
+
   def test_stops_at_each_call_windows_refuses_and_closes_what_it_made
     script = write(@base, "sleeps.sh", "sleep 30\n")
     _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})

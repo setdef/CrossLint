@@ -27,8 +27,18 @@ module CrossLint
       # JobObjectExtendedLimitInformation.
       EXTENDED_LIMIT_INFORMATION: Integer
 
-      # PROCESS_SET_QUOTA, PROCESS_TERMINATE, and SYNCHRONIZE.
+      # PROCESS_SET_QUOTA, PROCESS_TERMINATE, SYNCHRONIZE, and
+      # PROCESS_QUERY_LIMITED_INFORMATION.
       ASSIGN: Integer
+
+      # The seconds from 1601, which a FILETIME counts from, to 1970.
+      EPOCH: Integer
+
+      # The ticks of a FILETIME in a second.
+      TICKS: Integer
+
+      # When popen3 started each child that no job holds yet, by pid.
+      SPAWNED: Hash[Integer, Time]
 
       # What OpenProcess answers for a pid no process has.
       INVALID_PARAMETER: Integer
@@ -38,7 +48,10 @@ module CrossLint
       # error, and closes the job, when Windows doesn't create the job,
       # set its limits, or put the process in it. A process that has
       # exited and been reaped has nothing to hold, and raises nothing.
-      def initialize: (Integer pid) -> void
+      # Nor does a process that was created after `spawned`, which
+      # defaults to when popen3 started `pid`: it took the pid of a child
+      # that exited and was reaped, and the job leaves it alone.
+      def initialize: (Integer pid, ?spawned: Time?) -> void
 
       # Ends every process in the job and closes the job, the first time;
       # does nothing after.
@@ -53,8 +66,12 @@ module CrossLint
       # Puts the process `pid` in the job, or does nothing when no process
       # has that pid, as one that has exited. Raises Core::PluginError when
       # Windows doesn't open the process for another reason, or put it in
-      # while it is running.
-      def hold: (Integer pid) -> void
+      # while it is running. Does nothing when the process was created after
+      # `spawned`, if that is given.
+      def hold: (Integer pid, Time? spawned) -> void
+
+      # When the process `process`, a handle, was created.
+      def created: (untyped process) -> Time
 
       # What kernel32's function `name`, of `arguments` and `result`
       # Fiddle types, returns for `values`. Raises Core::PluginError, as
