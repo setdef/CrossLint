@@ -24,7 +24,7 @@ What the debt plugin must guarantee, and the traps known so far. The file's sett
 - `crosslint debt update` keeps each entry that still matches, with its comment, in its place; drops stale entries; adds one entry per new violation, warnings included, with an empty comment, never a duplicate; and never records the debt plugin's `has-debt` violations.
 - New entries are written in an order that doesn't depend on the order the filesystem lists files in.
 - After an update, report the state the update left, and exit with 0.
-- `crosslint debt update --dry-run` lists each entry the update would add, remove, or replace, in the order it would write them, then the summary, and writes nothing: no debt file, no folder. It exits with 0.
+- `crosslint debt update --dry-run` lists each entry the update would add, remove, or replace, each replaced entry followed by the entry it becomes, in the order it would write them, then the summary, and writes nothing: no debt file, no folder. It exits with 0.
 
 ## Defects not to copy
 
