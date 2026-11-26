@@ -29,6 +29,15 @@ class NgNudgeMoveTest < Minitest::Test
     refute world.debt_files.exist?(APP, NG_DEBT)
   end
 
+  def test_lists_each_policy_setting_and_the_report_entries_the_configuration_gets_after_the_files
+    json = {"rules" => {"spec-exists" => {"enabled" => false, "severity" => "warning"}, "has-debt" => {"severity" => "warning", "withComment" => true}}}
+    result = world(json, comments: []).move
+
+    assert_equal ["write #{CONFIG}, with the plugins angular and debt", "move #{NG_DEBT} to #{DEBT}, byte for byte, with 0 entries",
+      %(set policy "angular/spec-exists" enabled=#false severity="warning"), %(set report-entries commented="warning" in the debt plugin),
+      %(set policy "debt/has-debt" severity="warning")], result.changes
+  end
+
   def test_says_how_many_entries_it_moves
     assert_includes world({}, comments: %w[a b]).move.changes, "move #{NG_DEBT} to #{DEBT}, byte for byte, with 2 entries"
     assert_includes world({}, comments: []).move.changes, "move #{NG_DEBT} to #{DEBT}, byte for byte, with 0 entries"
