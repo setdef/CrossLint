@@ -4,7 +4,7 @@
 # runtime type checker, every Ruby example in the documentation, mutation
 # testing, usage lint, the check that docs/reference/cli.md is what usage
 # generates, and REUSE);
-# and the tests on macOS and Windows, each with the Ruby and tools
+# and the tests on macOS and Windows, each with the Ruby, the Node, and tools
 # mise.toml pins. The macOS and Windows jobs leave out the Gemfile's check
 # group, which only rake check uses.
 
@@ -84,7 +84,7 @@ jobs:
         with:
           cache_save: ${{ github.ref == 'refs/heads/trunk' }}
           version: 2026.10.11
-          install_args: ruby
+          install_args: ruby node
 
       - name: Place Bundler outside the checkout
         id: paths
@@ -123,7 +123,7 @@ jobs:
         with:
           cache_save: ${{ github.ref == 'refs/heads/trunk' }}
           version: 2026.10.11
-          install_args: http:rubyinstaller-head http:msys2-zlib http:msys2-libgcc http:msys2
+          install_args: http:rubyinstaller-head http:msys2-zlib http:msys2-libgcc http:msys2 node
           add_shims_to_path: false
           mise_dir: ${{ runner.temp }}\mise
 

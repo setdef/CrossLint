@@ -17,6 +17,27 @@ end
 # The same tests under RBS's runtime type checker, which raises at every
 # call into CrossLint whose arguments, block, or result differ from
 # sig/.
+# The packages a built-in plugin's test fixture locks in its
+# package-lock.json, installed with npm ci before the tests, which never
+# install anything. A fixture installed from the same lockfile is left as
+# it is. CACHEDIR.TAG marks node_modules as a folder a tool makes, which
+# the Fledge build leaves out of the app.
+desc "Install the packages each built-in plugin's test fixtures lock, with npm ci"
+task :fixtures do
+  Dir.glob("plugins/*/test/**/package-lock.json").reject { |lock| lock.include?("/node_modules/") }.each do |lock|
+    modules = File.join(File.dirname(lock), "node_modules")
+    installed = File.join(modules, ".crosslint-package-lock.json")
+    next if File.file?(installed) && File.binread(installed) == File.binread(lock)
+
+    sh "npm", "ci", "--no-audit", "--no-fund", chdir: File.dirname(lock)
+    File.binwrite(File.join(modules, "CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n# rake fixtures makes this folder again with npm ci.\n")
+    File.binwrite(installed, File.binread(lock))
+  end
+end
+
+task test: :fixtures
+task "test:rbs" => :fixtures
+
 Minitest::TestTask.create("test:rbs") do |task|
   task.test_globs = TESTS
   task.warning = true
@@ -140,32 +161,43 @@ task "build:check" do
 end
 
 # A project that lists the built-in Angular plugin, which the app
-# carries, with a component that has SCSS and no spec. PATH holds only
-# Git's folder.
-task "build:check:angular", [:app] do |_, arguments|
+# carries, with a component that has SCSS and no spec, and a stub that
+# lacks its input, which the plugin's helper reads on Node with the
+# typescript rake fixtures installed for a plugin's tests. PATH holds only
+# the folders of Git and Node.
+task "build:check:angular", [:app] => :fixtures do |_, arguments|
   app = File.expand_path(arguments.fetch(:app))
+  component = %(import { Component, input } from '@angular/core';\n\n@Component({ selector: 'app-card', template: '' })\n)
   files = {
     ".config/crosslint/config.kdl" => %(plugin "angular"\n),
-    "src/app/card/card.component.ts" => "",
+    ".gitignore" => "node_modules/\n",
+    "tsconfig.json" => %({"include": ["src/**/*.ts"]}\n),
+    "src/app/card/card.component.ts" => %(#{component}export class CardComponent {\n  title = input('');\n}\n),
+    "src/app/card/card.component.stub.ts" => %(#{component}export class CardComponentStub {}\n),
+    "src/app/card/card.component.i.d.ts" => %(export interface CardApi {\n  title: unknown;\n}\n),
     "src/app/card/card.component.scss" => ""
   }
+  typescript = Dir.glob("plugins/*/test/*/node_modules/typescript").first || abort("rake build:check: no typescript; run rake fixtures")
   finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
-  git = File.dirname(finder.find("git") || abort("rake build:check: no git on the PATH"))
+  path = %w[git node].map { |command| File.dirname(finder.find(command) || abort("rake build:check: no #{command} on the PATH")) }.uniq
   Dir.mktmpdir do |project|
     files.each do |file, text|
       FileUtils.mkdir_p(File.dirname(File.join(project, file)))
       File.binwrite(File.join(project, file), text)
     end
+    FileUtils.mkdir_p(File.join(project, "node_modules"))
+    FileUtils.cp_r(typescript, File.join(project, "node_modules"))
     Bundler.with_unbundled_env do
       system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
-      actual = IO.popen({"PATH" => git}, [app, "check", "-C", project], err: %i[child out], &:read)
+      actual = IO.popen({"PATH" => path.join(File::PATH_SEPARATOR)}, [app, "check", "-C", project], err: %i[child out], &:read)
       expected = "src/app/card/card.component.ts: warning: scss file exists at src/app/card/card.component.scss (angular/prefer-css-over-scss)\n" \
         "src/app/card/card.component.ts: no spec file at src/app/card/card.component.spec.ts (angular/spec-exists)\n" \
-        "crosslint: checked 1 component artifact: 1 error, 1 warning\n"
+        "src/app/card/card.component.ts: stub missing input: title (angular/stub-matches-component)\n" \
+        "crosslint: checked 1 component artifact: 2 errors, 1 warning\n"
       abort "rake build:check: #{app} check exited with #{$?.exitstatus}, not 1:\n#{actual}" unless $?.exitstatus == 1
       abort "rake build:check: #{app} check printed:\n#{actual}" unless actual == expected
 
-      puts "#{app} check: runs the built-in Angular plugin"
+      puts "#{app} check: runs the built-in Angular plugin and its helper"
     end
   end
 end

@@ -1,0 +1,8 @@
+{
+  "name": "crosslint-angular-fixture",
+  "private": true,
+  "description": "An Angular-shaped project for the Angular plugin's tests. It installs no Angular package: the helper reads decorators by name.",
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

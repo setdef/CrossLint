@@ -1,0 +1,6 @@
+plugin "angular" {
+  role "store" files="{path}.store.ts" {
+    expects "spec"
+  }
+}
+plugin "debt"

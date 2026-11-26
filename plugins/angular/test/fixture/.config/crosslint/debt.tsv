@@ -1,0 +1,3 @@
+Rule	Artifact	Comment
+spec-exists	app/foo/foo	the foo feature has no tests yet
+spec-exists	app/pipes/currency	

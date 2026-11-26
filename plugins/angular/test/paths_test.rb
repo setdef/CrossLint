@@ -38,9 +38,11 @@ class AngularPathsTest < Minitest::Test
     write(@root, "src/c/c.component.ts", "")
     write(@root, "src/c/c.component.i.d.ts", "")
     %w[a b c].each { |name| write(@root, "src/#{name}/#{name}.component.spec.ts", "") }
+    # The policies that read TypeScript are the fixture's tests'.
+    reading = %(policy "angular/stub-matches-component" enabled=#false\npolicy "angular/interface-matches-component" enabled=#false\n)
 
     assert_equal [["src/b/b.component.ts", "component", "interface-exists", "no interface file at src/b/b.component.i.d.ts"],
-      ["src/c/c.component.ts", "component", "stub-exists", "no stub file at src/c/c.component.stub.ts"]], findings(check)
+      ["src/c/c.component.ts", "component", "stub-exists", "no stub file at src/c/c.component.stub.ts"]], findings(check(lines: reading))
   end
 
   # ng-nudge looked for stylesheets relative to the working directory, so
@@ -196,9 +198,9 @@ class AngularPathsTest < Minitest::Test
 
   private
 
-  def check(settings = nil, debt: false)
+  def check(settings = nil, debt: false, lines: "")
     block = settings ? " {\n  #{settings}\n}" : ""
-    write(@root, ".config/crosslint/config.kdl", %(plugin "angular"#{block}\n#{%(plugin "debt"\n) if debt}))
+    write(@root, ".config/crosslint/config.kdl", %(plugin "angular"#{block}\n#{%(plugin "debt"\n) if debt}#{lines}))
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
     CrossLint::App.new.check(@root)
   end

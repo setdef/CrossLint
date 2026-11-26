@@ -29,6 +29,24 @@ policy "interface-exists" {
   rule "companion-exists" companion="interface"
 }
 
+// A component's stub and its interface have each input and output the
+// component has, which the helper reads with the project's typescript.
+rule "stub-matches-component" ruby="rules/stub_matches_component.rb"
+rule "interface-matches-component" ruby="rules/interface_matches_component.rb"
+helper "members" command="node" file="helpers/members.mjs"
+
+policy "stub-matches-component" {
+  applies-to "component"
+  when companion-exists "stub"
+  rule "stub-matches-component"
+}
+
+policy "interface-matches-component" {
+  applies-to "component"
+  when companion-exists "interface"
+  rule "interface-matches-component"
+}
+
 policy "prefer-css-over-scss" {
   applies-to "component"
   when not { companion-exists "css"; }

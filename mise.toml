@@ -21,6 +21,10 @@ ruby.compile = false
 # and RubyInstaller builds no preview, so the tables at the end of this
 # file install the Ruby that Fledge's Windows runtimes carry instead.
 ruby = { version = "4.1.0-preview1", os = ["linux", "macos"] }
+# Node runs the Angular plugin's helper in its tests, an LTS release, and
+# npm installs the typescript its test fixture's package-lock.json locks
+# (rake fixtures). CrossLint itself needs no Node.
+node = "26.13.1"
 # usage lints crosslint.usage.kdl and generates docs/reference/cli.md
 # from it (rake usage:lint, rake usage:reference).
 usage = "7.4.1"
