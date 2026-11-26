@@ -150,11 +150,12 @@ end
 
 # The checks to run before a push, which are CI's build cut to what a
 # push can wait for: every quick check, cheapest first, and mutation
-# testing of only the subjects the change touches. The runtime check of
-# signatures (test:rbs) runs the tests a second time and is left to CI,
-# which runs `rake check` after the push.
-desc "Run the quick checks, and mutation testing of the subjects changed since origin/trunk, before a push"
-task gate: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :reuse, :steep, :test, "gate:mutant"]
+# testing of only the subjects the change touches. The tests run a second
+# time under RBS's runtime type checker (test:rbs), since a call that
+# breaks sig/ is otherwise found only after the push; CI then runs
+# `rake check`.
+desc "Run the quick checks, the tests under RBS's runtime checker, and mutation testing of the subjects changed since origin/trunk, before a push"
+task gate: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :reuse, :steep, :test, "test:rbs", "gate:mutant"]
 
 desc "Run every check CI runs"
 task check: ["check:without_mutant", :mutant]
