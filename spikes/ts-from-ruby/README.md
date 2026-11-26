@@ -65,7 +65,7 @@ Each approach runs in two modes. The default mode copies ng-nudge's rules, quirk
 | every Angular form, against `expected/angular.json` | 16 of 17 | 17 of 17 |
 | every Angular form, A with `--mixin-heuristic` | 17 of 17 | |
 
-Each count is components whose inputs, outputs, stub, interface and violations all match. A's one miss is `c15-mixin-base`, in both modes.
+Each count is components whose inputs, outputs, stub, interface and violations all match. A's one miss is `c15-mixin-base`, in both modes. The counts are the same on macOS (arm64) and Linux (x86_64).
 
 ## Approach A: Ruby with Tree-sitter
 
