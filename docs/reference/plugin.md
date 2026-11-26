@@ -33,7 +33,7 @@ A plugin's name is its folder's name, here `signatures`. CrossLint names each vi
 | `files PATTERN` | The path pattern that finds the primary files, relative to the project's root. Required, once. |
 | `companion NAME PATTERN` | A companion called `NAME`, at the path `PATTERN` gives for each primary file. Any number, each name once. |
 
-A path pattern is a path with placeholders in braces. In `files`, `{path}` matches one or more folders and a file name, and `{name}` matches one segment of a path, with no `/`. In a companion's pattern, each placeholder stands for what it matched in `files`. For `lib/fledge/archive.rb`, the pattern `lib/{path}.rb` matches with `{path}` as `fledge/archive`, so the companion `sig/{path}.rbs` is `sig/fledge/archive.rbs`.
+A path pattern is a path with placeholders in braces. In `files`, `{path}` matches a file name and the folders before it, if any, and `{name}` matches one segment of a path, with no `/`. In a companion's pattern, each placeholder stands for what it matched in `files`. For `lib/fledge/archive.rb`, the pattern `lib/{path}.rb` matches with `{path}` as `fledge/archive`, so the companion `sig/{path}.rbs` is `sig/fledge/archive.rbs`; for `lib/fledge.rb`, `{path}` is `fledge`.
 
 - A pattern uses `/` on every system, and matches case-sensitively.
 - Files that Git ignores, and anything under `.git/`, never match.

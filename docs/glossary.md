@@ -11,10 +11,11 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **artifact** | A set of files that belong together, such as a component with its template, its test, and its stub. An artifact's declaration gives the pattern that finds its primary files, and the path of each companion. | group, unit, module |
 | **primary file** | The file an artifact is found by, such as `card.component.ts` for a component. | main file, source |
 | **companion** | A file that belongs with an artifact's primary file, at a path the artifact gives, such as its test or its signature file. A companion may or may not exist; checking that is a rule's work. | sibling, related file, partner |
-| **path pattern** | A path with a placeholder in braces, such as `lib/{path}.rb`. In an artifact's `files`, `{path}` matches one or more folders and a file name; in a companion's path, it stands for what it matched. | glob (a path pattern is not a glob), template |
+| **path pattern** | A path with a placeholder in braces, such as `lib/{path}.rb`. In an artifact's `files`, `{path}` matches a file name and the folders before it, if any; in a companion's path, it stands for what it matched. | glob (a path pattern is not a glob), template |
 | **policy** | A declaration of when rules apply: to which artifacts, and under what condition, such as "every component whose stub exists". | check, linter config |
 | **rule** | One check of one artifact, such as "the companion exists" or "the stub declares every input the component has". A rule runs only where a policy applies it. | lint, assertion, test |
 | **violation** | What a rule reports when an artifact fails it: the rule, the artifact, a message, and a severity. | error (an error is one severity), offense, problem |
+| **built-in rule** | A rule that ships inside CrossLint, such as `companion-exists`, which any plugin's policy can run without code. | core rule, standard rule |
 | **severity** | `error`, which fails the check, or `warning`, which is reported and fails the check only with `--warnings=error`. | level |
 
 ## Plugins
@@ -25,7 +26,10 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | **local plugin** | A plugin kept in the project's repository, for that project's rules. It is a plugin in every way; only where it lives differs. | custom rules, project rules |
 | **shared plugin** | A plugin kept in a separate Git repository, which projects list by its URL and a tag or commit. CrossLint fetches it into the user's cache. | remote plugin, package |
 | **built-in plugin** | A plugin that ships inside CrossLint, such as `angular` and `debt`. It runs only when the configuration lists it, like any other. | core plugin, default plugin |
+| **manifest** | A plugin's `plugin.kdl`, which declares the plugin's artifacts, policies, rules, and helpers. | plugin config, descriptor |
 | **configuration** | `.config/crosslint.kdl` in a project's root. It lists the plugins CrossLint runs, and settings for their rules. | config file, rc file, settings |
+| **setting** | One value in the configuration, such as a plugin's `src-dir` or a policy's `severity`. | option (an option is on the command line), preference |
+| **mistake** | Something in the configuration or a manifest that CrossLint can't use, such as a node it doesn't know. A mistake stops CrossLint with exit status 2 before it checks anything, naming the file and the line. | error (an error is a severity), invalid config |
 | **helper** | A program in another language that a plugin carries to read files of that language, such as the Angular plugin's JavaScript that asks the project's TypeScript compiler for a component's inputs. It runs on the runtime for that language that the project already has. | adapter, bridge, sidecar |
 
 ## Debt

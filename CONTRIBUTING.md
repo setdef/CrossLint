@@ -20,8 +20,8 @@ What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/RE
 - the test suite, covering every line and branch of `lib/`;
 - the same suite under RBS's runtime type checker, which compares every call into CrossLint with `sig/`;
 - mutation testing with mutant, which a test must catch every change of;
-- Steep, checking `lib/` against `sig/`, and `rbs validate`;
-- Standard, for style;
+- Steep, checking `lib/` against `sig/`, `rbs validate`, and the check that every public declaration in `sig/` has a comment;
+- Standard, for style, set to Ruby 3.3's syntax, which mutant reads;
 - every Ruby example in the documentation, run and checked against the results it shows;
 - `usage lint`, the check that `docs/reference/cli.md` matches the spec, and `reuse lint`.
 
