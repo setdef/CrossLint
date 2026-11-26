@@ -60,9 +60,9 @@ module CrossLint
       # a working tree, so Git's own message says why.
       def refusal(env, root, error)
         inside, = Open3.capture3(env, @git, "-C", root, "rev-parse", "--is-inside-work-tree")
-        return GitProjectFiles.outside(root) unless inside.strip == "true"
+        return GitProjectFiles.outside(root) unless inside.chomp == "true"
 
-        "CrossLint lists a project's files with Git, and Git refused #{root}: #{error.strip}"
+        "CrossLint lists a project's files with Git, and Git refused #{root}: #{error.chomp}"
       end
 
       def entries(folder)
