@@ -6,12 +6,12 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 
 | Part | Where | Holds | Requires |
 | --- | --- | --- | --- |
-| Core | `lib/crosslint/core/` | The domain's value objects, and one use case per command | Ruby's core and standard library |
-| Ports | `sig/crosslint/ports.rbs` | One RBS interface for each thing outside the core | Nothing; Ruby never loads them |
-| Adapters | `lib/crosslint/adapters/` | One implementation of a port per format or system, and an in-memory one of each | The core, and gems |
-| Contract tests | `lib/crosslint/testing.rb` | For each port, the Minitest tests every adapter of it passes | The core, and Minitest |
-| Command line | `lib/crosslint/cli.rb` and beside it | Reading arguments by `crosslint.usage.kdl`, calling one use case, and turning its result into an exit status | The composition root |
-| Composition root | `lib/crosslint/app.rb` | Building the adapters and handing them to a use case | Everything above |
+| Core | `lib/cross_lint/core/` | The domain's value objects, and one use case per command | Ruby's core and standard library |
+| Ports | `sig/cross_lint/ports.rbs` | One RBS interface for each thing outside the core | Nothing; Ruby never loads them |
+| Adapters | `lib/cross_lint/adapters/` | One implementation of a port per format or system, and an in-memory one of each | The core, and gems |
+| Contract tests | `lib/cross_lint/testing.rb` | For each port, the Minitest tests every adapter of it passes | The core, and Minitest |
+| Command line | `lib/cross_lint/cli.rb` and beside it | Reading arguments by `crosslint.usage.kdl`, calling one use case, and turning its result into an exit status | The composition root |
+| Composition root | `lib/cross_lint/app.rb` | Building the adapters and handing them to a use case | Everything above |
 | Built-in plugins | `plugins/angular/`, `plugins/debt/` | Each a folder with a `plugin.kdl`, its Ruby rules, and its helpers | Only what any plugin can reach |
 
 - **The domain:** artifact, companion, policy, rule result, violation with its identity, and debt entry, by the [glossary](../glossary.md)'s words. Each is immutable, and defined as `class Violation < Data.define(...)`: RBS's runtime checker misses a class defined with a block passed to `Data.define`.
