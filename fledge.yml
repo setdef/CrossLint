@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/setdef/Fledge/v0.17.0/lib/fledge/config.schema.json
+
+# What Fledge builds (rake build): a folder named CrossLint, whose one
+# program, crosslint, runs in a terminal. Its version is the gemspec's,
+# which is crosslint.usage.kdl's.
+name: CrossLint
+publisher: setdef
+description: Checks the rules that span files
+homepage: https://github.com/setdef/CrossLint
+programs:
+  - path: exe/crosslint
+    name: crosslint
+    kind: console
