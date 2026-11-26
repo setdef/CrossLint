@@ -15,7 +15,8 @@ module KDL
   class Node
     include Enumerable[Node]
 
-    attr_accessor name: String
+    # A name from CrossLint::Adapters::KDLDocument::Parser, which knows its line.
+    attr_accessor name: untyped
     attr_accessor arguments: Array[Value]
     attr_accessor properties: Hash[String, Value]
     attr_accessor children: Array[Node]
@@ -27,6 +28,28 @@ module KDL
   class Value
     attr_reader value: untyped
     attr_reader type: String?
+  end
+
+  class Parser
+    def initialize: (?parse_types: bool, **untyped) -> void
+
+    def parse: (String source, ?filename: String?) -> Document
+
+    private
+
+    def next_token: () -> [Symbol | false, untyped]
+  end
+
+  class Tokenizer
+    class Token
+      attr_reader type: Symbol
+      attr_reader value: untyped
+      attr_reader line: Integer
+      attr_reader column: Integer
+      attr_reader meta: Hash[Symbol, untyped]
+
+      def initialize: (Symbol type, untyped value, Integer line, Integer column, ?Hash[Symbol, untyped] meta) -> void
+    end
   end
 
   class Error < StandardError

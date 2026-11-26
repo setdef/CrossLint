@@ -1,0 +1,6 @@
+module CrossLint
+  # One implementation of a port per format or system, and one in memory
+  # of each, for the use cases' tests.
+  module Adapters
+  end
+end

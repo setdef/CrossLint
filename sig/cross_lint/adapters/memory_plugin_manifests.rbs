@@ -1,0 +1,19 @@
+module CrossLint
+  module Adapters
+    # The plugin-manifest port in memory, for the use cases' tests: each
+    # plugin's manifest, or the mistake reading it raises, by the absolute
+    # path of its folder.
+    class MemoryPluginManifests
+      include _PluginManifests
+
+      # A port that holds `folders`, by absolute path, and names `file`.
+      def initialize: (?Hash[String, Core::Manifest | Core::Mistake] folders, ?file: String) -> void
+
+      private
+
+      @folders: Hash[String, Core::Manifest | Core::Mistake]
+
+      @file: String
+    end
+  end
+end

@@ -1,0 +1,28 @@
+module CrossLint
+  module Adapters
+    # The configuration port in memory, for the use cases' tests: each
+    # project's configuration, or the mistake reading it raises, by its
+    # root. find_root looks for the nearest root among them, and read
+    # raises the mistake held for a root, or one naming `file` for a root
+    # it doesn't hold.
+    #
+    # ```ruby
+    # configuration = CrossLint::Core::Configuration.new(file: ".config/crosslint.kdl", plugins: [], policies: [],
+    #   warnings: nil, verbosity: nil)
+    # port = CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration})
+    # port.find_root("/app/lib/deep") # => "/app"
+    # ```
+    class MemoryConfiguration
+      include _Configuration
+
+      # A port that holds `projects`, by root, and names `file`.
+      def initialize: (?Hash[String, Core::Configuration | Core::Mistake] projects, ?file: String) -> void
+
+      private
+
+      @projects: Hash[String, Core::Configuration | Core::Mistake]
+
+      @file: String
+    end
+  end
+end

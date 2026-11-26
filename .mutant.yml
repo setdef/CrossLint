@@ -9,6 +9,11 @@ includes:
   - test
 requires:
   - cross_lint
+  - cross_lint/testing
+# The contract tests in CrossLint::Testing are tests themselves: the
+# adapters' tests run them, and no test covers them.
 matcher:
   subjects:
     - CrossLint*
+  ignore:
+    - CrossLint::Testing*

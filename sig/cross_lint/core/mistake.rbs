@@ -1,0 +1,25 @@
+module CrossLint
+  module Core
+    # A mistake that stops CrossLint with exit status 2, such as an
+    # unknown node in a configuration: its message, and the file and line
+    # it is on, where it has them.
+    #
+    # ```ruby
+    # mistake = CrossLint::Core::Mistake.new("unknown node \"file\"", file: "plugin.kdl", line: 2)
+    # mistake.location # => "plugin.kdl:2"
+    # ```
+    class Mistake < StandardError
+      # The file the mistake is in, relative to its project's root, or nil.
+      attr_reader file: String?
+
+      # The line the mistake is on, from 1, or nil.
+      attr_reader line: Integer?
+
+      # A mistake with `message`, in `file` on `line`.
+      def initialize: (String message, ?file: String?, ?line: Integer?) -> void
+
+      # The file and the line, as "FILE:LINE", or what there is of them.
+      def location: () -> String
+    end
+  end
+end

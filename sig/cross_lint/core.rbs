@@ -1,0 +1,10 @@
+module CrossLint
+  # The domain, as immutable value objects, and one use case per command.
+  # It requires nothing but Ruby's core and standard library, and reaches
+  # files and formats only through the ports in sig/cross_lint/ports.rbs.
+  module Core
+    # A rule's severity: `:error` fails the check, and `:warning` is
+    # reported and fails it only with --warnings=error.
+    type severity = :error | :warning
+  end
+end

@@ -1,0 +1,43 @@
+module CrossLint
+  module Adapters
+    # The configuration port for FILE, `.config/crosslint.kdl` in a
+    # project's root, read as the configuration reference says. find_root
+    # raises Core::Mistake when the folder it starts from doesn't exist.
+    class KDLConfiguration
+      include _Configuration
+
+      # The configuration's path in a project's root.
+      FILE: String
+
+      # The nodes the configuration can have at its top.
+      NODES: Array[String]
+
+      # The values of `warnings`.
+      WARNINGS: Array[String]
+
+      # The values of `verbosity`.
+      VERBOSITIES: Array[String]
+
+      # The values of a policy's `severity=`.
+      SEVERITIES: Array[String]
+
+      private
+
+      # The nodes at the top of `document` called `name`.
+      def nodes: (KDLDocument document, String name) -> Array[KDLDocument::Node]
+
+      # Reads a `plugin` node.
+      def plugin: (KDLDocument document, KDLDocument::Node node) -> Core::ListedPlugin
+
+      # Reads a plugin's setting, with the settings inside it.
+      def setting: (KDLDocument::Node node) -> Core::Setting
+
+      # Reads a `policy` node.
+      def policy: (KDLDocument document, KDLDocument::Node node) -> Core::PolicySetting
+
+      # Reads the `warnings` or `verbosity` node, set once at most, as one
+      # of `choices`.
+      def mode: (KDLDocument document, String name, Array[String] choices) -> untyped
+    end
+  end
+end

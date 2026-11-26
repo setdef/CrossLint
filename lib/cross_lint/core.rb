@@ -1,0 +1,14 @@
+# frozen_string_literal: true
+
+module CrossLint
+  module Core
+  end
+end
+
+require_relative "core/mistake"
+require_relative "core/spelling"
+require_relative "core/path_pattern"
+require_relative "core/condition"
+require_relative "core/manifest"
+require_relative "core/configuration"
+require_relative "core/built_in_rule"

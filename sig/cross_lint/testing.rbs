@@ -1,0 +1,81 @@
+module CrossLint
+  # The contract tests for each port, which every adapter of it passes,
+  # the in-memory one included. A Minitest test includes a contract and
+  # defines the methods its interface lists.
+  module Testing
+    # What a test of a configuration adapter defines.
+    interface _ConfigurationTest
+      # A port for the projects in `projects`, each a folder relative to
+      # the test's base, with a configuration that lists those plugins.
+      # With `broken`, the project in that folder has a configuration with
+      # a mistake on line 2.
+      def configuration_port: (Hash[String, Array[String]] projects, ?broken: String?) -> _Configuration
+
+      # The absolute path of `path`, relative to the test's base, which
+      # exists as a folder for an adapter that needs it to.
+      def folder: (String path) -> String
+
+      # The root find_root finds for a folder in the base that no project
+      # of the test's contains: nil, unless a folder above the base has a
+      # configuration.
+      def root_outside: () -> String?
+    end
+
+    # The tests every adapter of the configuration port passes.
+    module ConfigurationContract : _ConfigurationTest, Minitest::Assertions
+      # A project's root can be the folder find_root starts from.
+      def test_finds_the_root_in_the_folder_it_starts_from: () -> void
+
+      # find_root returns the nearest folder above with a configuration.
+      def test_finds_the_nearest_root_above_the_folder_it_starts_from: () -> void
+
+      # find_root returns nil when no folder above has a configuration.
+      def test_finds_no_root_when_no_folder_above_has_a_configuration: () -> void
+
+      # read returns the listed plugins in order, each with its line.
+      def test_reads_the_plugins_in_the_order_they_are_listed: () -> void
+
+      # read raises a mistake naming the file and the line.
+      def test_names_the_file_and_line_of_a_mistake: () -> void
+
+      # read raises a mistake naming the file when there is none.
+      def test_names_the_file_when_the_project_has_no_configuration: () -> void
+    end
+
+    # What a test of a plugin-manifest adapter defines.
+    interface _PluginManifestsTest
+      # A port with a manifest in each folder of `example`, relative to
+      # `base`, that declares the artifact "ruby-file" (files
+      # "lib/{path}.rb", companion "signature" at "sig/{path}.rbs"), the
+      # policy "has-signature" (applies to "ruby-file", runs
+      # "companion-exists" with companion "signature" at severity
+      # "warning"), the rule "names-class" in "rules/names_class.rb", and
+      # the helper "members" running "helpers/members.mjs" on "node"; and
+      # a manifest with a mistake on line 2 in each folder of `broken`.
+      def manifests_port: (?example: Array[String], ?broken: Array[String]) -> _PluginManifests
+
+      # The absolute path the folders are relative to.
+      def base: () -> String
+    end
+
+    # The tests every adapter of the plugin-manifest port passes.
+    module PluginManifestsContract : _PluginManifestsTest, Minitest::Assertions
+      # read returns everything the manifest declares.
+      def test_reads_the_artifacts_policies_rules_and_helpers_a_manifest_declares: () -> void
+
+      # read finds a manifest in the root folder itself.
+      def test_reads_the_manifest_of_the_root_folder_itself: () -> void
+
+      # read returns nil for a folder with no manifest.
+      def test_reads_nothing_from_a_folder_with_no_manifest: () -> void
+
+      # read raises a mistake naming the file and the line.
+      def test_names_the_file_and_line_of_a_mistake: () -> void
+
+      private
+
+      # The manifest `port` reads in `folder`, which has one.
+      def read_manifest: (_PluginManifests port, String folder) -> Core::Manifest
+    end
+  end
+end

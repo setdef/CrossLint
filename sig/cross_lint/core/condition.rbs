@@ -1,0 +1,82 @@
+module CrossLint
+  module Core
+    # A policy's condition, after `when`: which of the artifacts it
+    # applies to it checks.
+    type condition = Condition::CompanionExists | Condition::Not | Condition::All | Condition::Any
+
+    # The conditions a policy's `when` can state.
+    module Condition
+      # Holds when the artifact's companion of this name exists.
+      class CompanionExists < Data
+        # The companion's name.
+        attr_reader companion: String
+
+        # The line the condition is on.
+        attr_reader line: Integer
+
+        # A condition on the companion `companion`, on `line`.
+        def self.new: (companion: String, line: Integer) -> instance
+
+        # A condition on the companion `companion`, on `line`.
+        def initialize: (companion: String, line: Integer) -> void
+
+        # Itself, the one companion test it holds.
+        def companion_tests: () -> Array[CompanionExists]
+      end
+
+      # Holds when the condition inside doesn't.
+      class Not < Data
+        # The condition inside.
+        attr_reader condition: Core::condition
+
+        # The line `not` is on.
+        attr_reader line: Integer
+
+        # The opposite of `condition`, on `line`.
+        def self.new: (condition: Core::condition, line: Integer) -> instance
+
+        # The opposite of `condition`, on `line`.
+        def initialize: (condition: Core::condition, line: Integer) -> void
+
+        # The companion tests the condition inside holds.
+        def companion_tests: () -> Array[CompanionExists]
+      end
+
+      # Holds when every condition inside does.
+      class All < Data
+        # The conditions inside, one or more.
+        attr_reader conditions: Array[Core::condition]
+
+        # The line `all` is on.
+        attr_reader line: Integer
+
+        # Every one of `conditions`, on `line`.
+        def self.new: (conditions: Array[Core::condition], line: Integer) -> instance
+
+        # Every one of `conditions`, on `line`.
+        def initialize: (conditions: Array[Core::condition], line: Integer) -> void
+
+        # The companion tests the conditions inside hold.
+        def companion_tests: () -> Array[CompanionExists]
+      end
+
+      # Holds when at least one condition inside does.
+      class Any < Data
+        # The conditions inside, one or more.
+        attr_reader conditions: Array[Core::condition]
+
+        # The line `any` is on.
+        attr_reader line: Integer
+
+        # At least one of `conditions`, on `line`.
+        def self.new: (conditions: Array[Core::condition], line: Integer) -> instance
+
+        # At least one of `conditions`, on `line`.
+        def initialize: (conditions: Array[Core::condition], line: Integer) -> void
+
+        # The companion tests the conditions inside hold.
+        def companion_tests: () -> Array[CompanionExists]
+      end
+    end
+  end
+end

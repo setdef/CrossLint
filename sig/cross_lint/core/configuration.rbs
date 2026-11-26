@@ -1,0 +1,116 @@
+module CrossLint
+  module Core
+    # A setting in a plugin's block in the configuration, as written: its
+    # name, its arguments and properties, and the settings inside it. The
+    # plugin it belongs to reads it.
+    class Setting < Data
+      # The setting's name, such as "src-dir".
+      attr_reader name: String
+
+      # The setting's arguments, such as `["src"]`.
+      attr_reader arguments: Array[untyped]
+
+      # The setting's properties, such as `{"files" => "{path}.ts"}`.
+      attr_reader properties: Hash[String, untyped]
+
+      # The settings inside this one.
+      attr_reader children: Array[Setting]
+
+      # The line the setting is on.
+      attr_reader line: Integer
+
+      # A setting with these fields.
+      def self.new: (name: String, arguments: Array[untyped], properties: Hash[String, untyped], children: Array[Setting],
+                     line: Integer) -> instance
+
+      # A setting with these fields.
+      def initialize: (name: String, arguments: Array[untyped], properties: Hash[String, untyped], children: Array[Setting],
+                       line: Integer) -> void
+    end
+
+    # A plugin the configuration lists: its name as listed, the ref of a
+    # shared plugin, and its settings.
+    #
+    # ```ruby
+    # listing = CrossLint::Core::ListedPlugin.new(name: ".config/crosslint/tests", ref: nil, settings: [], line: 1)
+    # listing.kind # => :local
+    # listing.with(name: "debt").kind # => :built_in
+    # ```
+    class ListedPlugin < Data
+      # The plugin's name as listed: a path that starts with `.` or `/`
+      # for a local plugin, a URL that starts with `https://` for a shared
+      # one, or a built-in plugin's name.
+      attr_reader name: String
+
+      # The tag or commit of a shared plugin, or nil.
+      attr_reader ref: String?
+
+      # The plugin's settings.
+      attr_reader settings: Array[Setting]
+
+      # The line the plugin is listed on.
+      attr_reader line: Integer
+
+      # A listed plugin with these fields.
+      def self.new: (name: String, ref: String?, settings: Array[Setting], line: Integer) -> instance
+
+      # A listed plugin with these fields.
+      def initialize: (name: String, ref: String?, settings: Array[Setting], line: Integer) -> void
+
+      # What kind of plugin the name lists.
+      def kind: () -> (:local | :shared | :built_in)
+    end
+
+    # A change the configuration makes to one listed plugin's policy.
+    class PolicySetting < Data
+      # The policy, as PLUGIN/POLICY.
+      attr_reader name: String
+
+      # False to not run the policy, or nil to leave it as it is.
+      attr_reader enabled: bool?
+
+      # The severity of the policy's violations, or nil to leave it as
+      # its plugin gives it.
+      attr_reader severity: severity?
+
+      # The line the setting is on.
+      attr_reader line: Integer
+
+      # A policy setting with these fields.
+      def self.new: (name: String, enabled: bool?, severity: severity?, line: Integer) -> instance
+
+      # A policy setting with these fields.
+      def initialize: (name: String, enabled: bool?, severity: severity?, line: Integer) -> void
+    end
+
+    # A project's configuration: the plugins it lists, the changes it
+    # makes to their policies, and its defaults for --warnings and the
+    # output.
+    class Configuration < Data
+      # The configuration's path, relative to the project's root, as
+      # messages name it.
+      attr_reader file: String
+
+      # The listed plugins, in the order they are listed.
+      attr_reader plugins: Array[ListedPlugin]
+
+      # The changes to policies, in the order they are written.
+      attr_reader policies: Array[PolicySetting]
+
+      # The default for --warnings, or nil for CrossLint's.
+      attr_reader warnings: (:all | :none | :error)?
+
+      # The default output: `:quiet` as for --quiet, `:silent` as for
+      # --silent, or `:normal`; nil for CrossLint's.
+      attr_reader verbosity: (:normal | :quiet | :silent)?
+
+      # A configuration with these fields.
+      def self.new: (file: String, plugins: Array[ListedPlugin], policies: Array[PolicySetting],
+                     warnings: (:all | :none | :error)?, verbosity: (:normal | :quiet | :silent)?) -> instance
+
+      # A configuration with these fields.
+      def initialize: (file: String, plugins: Array[ListedPlugin], policies: Array[PolicySetting],
+                       warnings: (:all | :none | :error)?, verbosity: (:normal | :quiet | :silent)?) -> void
+    end
+  end
+end

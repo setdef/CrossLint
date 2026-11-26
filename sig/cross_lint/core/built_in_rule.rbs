@@ -1,0 +1,33 @@
+module CrossLint
+  module Core
+    # A rule built into CrossLint, which any policy can run: its name, the
+    # arguments it takes, and the severity of its violations.
+    #
+    # ```ruby
+    # CrossLint::Core::BuiltInRule.named("companion-exists").arguments # => ["companion"]
+    # ```
+    class BuiltInRule < Data
+      # Every built-in rule.
+      ALL: Array[BuiltInRule]
+
+      # The rule's name, such as "companion-exists".
+      attr_reader name: String
+
+      # The arguments the rule takes, each of them needed.
+      attr_reader arguments: Array[String]
+
+      # The severity of the rule's violations, unless a policy gives
+      # another.
+      attr_reader severity: severity
+
+      # The built-in rule called `name`, or nil.
+      def self.named: (String name) -> BuiltInRule?
+
+      # A built-in rule with these fields.
+      def self.new: (name: String, arguments: Array[String], severity: severity) -> instance
+
+      # A built-in rule with these fields.
+      def initialize: (name: String, arguments: Array[String], severity: severity) -> void
+    end
+  end
+end

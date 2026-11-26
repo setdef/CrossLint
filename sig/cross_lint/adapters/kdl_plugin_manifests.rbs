@@ -1,0 +1,60 @@
+module CrossLint
+  module Adapters
+    # The plugin-manifest port for FILE, `plugin.kdl` in a plugin's
+    # folder, read as the plugin reference says.
+    class KDLPluginManifests
+      include _PluginManifests
+
+      # The manifest's file name in a plugin's folder.
+      FILE: String
+
+      # The nodes a manifest can have at its top.
+      NODES: Array[String]
+
+      # The conditions a policy's `when` can state.
+      CONDITIONS: Array[String]
+
+      # The values of a rule's `severity=`.
+      SEVERITIES: Array[String]
+
+      private
+
+      # Each node at the top of `document` called `name`, read by `read`.
+      def nodes: [T] (KDLDocument document, String name) { (KDLDocument::Node node) -> T } -> Array[T]
+
+      # Reads an `artifact` node.
+      def artifact: (KDLDocument document, KDLDocument::Node node) -> Core::ArtifactDeclaration
+
+      # The path pattern `source`, written on `node`.
+      def pattern: (KDLDocument document, KDLDocument::Node node, String source) -> Core::PathPattern
+
+      # Reads a `policy` node.
+      def policy: (KDLDocument document, KDLDocument::Node node) -> Core::Policy
+
+      # Reads a policy's `when` node, whose arguments and block state its
+      # condition.
+      def when_condition: (KDLDocument document, KDLDocument::Node node) -> Core::condition
+
+      # Reads a condition, named by the node's name.
+      def condition: (KDLDocument document, KDLDocument::Node node) -> Core::condition
+
+      # The conditions in the block of `not`, `all`, or `any`.
+      def conditions: (KDLDocument document, KDLDocument::Node node, String usage, ?nonempty: bool) -> Array[Core::condition]
+
+      # Reads a policy's `rule` node.
+      def policy_rule: (KDLDocument document, KDLDocument::Node node) -> Core::PolicyRule
+
+      # Reads a `rule` node, which declares a rule written in Ruby.
+      def rule: (KDLDocument document, KDLDocument::Node node) -> Core::RuleDeclaration
+
+      # Reads a `helper` node.
+      def helper: (KDLDocument document, KDLDocument::Node node) -> Core::HelperDeclaration
+
+      # Checks that the node has no properties and no children.
+      def no_more: (KDLDocument document, KDLDocument::Node node) -> void
+
+      # Checks that the node has no children.
+      def no_children: (KDLDocument document, KDLDocument::Node node) -> void
+    end
+  end
+end

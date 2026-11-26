@@ -1,0 +1,25 @@
+module CrossLint
+  module Core
+    # The nearest valid spelling of a word someone typed, for the message
+    # that refuses it.
+    #
+    # ```ruby
+    # CrossLint::Core::Spelling.unknown("node", "file", ["files", "companion"])
+    # # => "unknown node \"file\", did you mean \"files\"?"
+    # CrossLint::Core::Spelling.unknown("node", "zzz", ["files", "companion"])
+    # # => "unknown node \"zzz\"; expected \"files\" or \"companion\""
+    # ```
+    module Spelling
+      # The word among `known` that `word` most likely misspells, or nil.
+      def self?.nearest: (String word, Array[String] known) -> String?
+
+      # The message for `word`, an unknown `kind` of thing: with the
+      # nearest of `known`, or else all of them, or `none` when there are
+      # none.
+      def self?.unknown: (String kind, String word, Array[String] known, ?none: String) -> String
+
+      # Words joined as in a sentence: "a", "a or b", "a, b, or c".
+      def self?.list: (Array[String] words) -> String
+    end
+  end
+end

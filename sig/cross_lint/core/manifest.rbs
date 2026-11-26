@@ -1,0 +1,184 @@
+module CrossLint
+  module Core
+    # A companion an artifact declares: its name, and the path pattern
+    # that gives its path for each primary file.
+    class CompanionDeclaration < Data
+      # The companion's name, unique within its artifact, such as "test".
+      attr_reader name: String
+
+      # Where the companion is for each primary file.
+      attr_reader pattern: PathPattern
+
+      # The line the declaration is on.
+      attr_reader line: Integer
+
+      # A companion with these fields.
+      def self.new: (name: String, pattern: PathPattern, line: Integer) -> instance
+
+      # A companion with these fields.
+      def initialize: (name: String, pattern: PathPattern, line: Integer) -> void
+    end
+
+    # A kind of artifact a plugin declares: the pattern that finds its
+    # primary files, and where each of its companions is.
+    class ArtifactDeclaration < Data
+      # The artifact's name, unique within its plugin, such as "ruby-file".
+      attr_reader name: String
+
+      # The pattern that finds the primary files, relative to the
+      # project's root.
+      attr_reader files: PathPattern
+
+      # The artifact's companions, in the order they are declared.
+      attr_reader companions: Array[CompanionDeclaration]
+
+      # The line the declaration is on.
+      attr_reader line: Integer
+
+      # An artifact with these fields.
+      def self.new: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer) -> instance
+
+      # An artifact with these fields.
+      def initialize: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer) -> void
+
+      # The companion called `name`, or nil.
+      def companion: (String name) -> CompanionDeclaration?
+    end
+
+    # The artifact a policy covers: one of its plugin's, by name, or
+    # another listed plugin's, as PLUGIN/ARTIFACT.
+    class AppliesTo < Data
+      # The artifact's name, or PLUGIN/ARTIFACT.
+      attr_reader artifact: String
+
+      # The line `applies-to` is on.
+      attr_reader line: Integer
+
+      # The artifact `artifact`, named on `line`.
+      def self.new: (artifact: String, line: Integer) -> instance
+
+      # The artifact `artifact`, named on `line`.
+      def initialize: (artifact: String, line: Integer) -> void
+    end
+
+    # A rule a policy runs: the rule's name, its arguments, and the
+    # severity the policy gives its violations, if it gives one.
+    class PolicyRule < Data
+      # The rule's name: a built-in rule's, or one the plugin declares.
+      attr_reader name: String
+
+      # The rule's arguments, such as `{"companion" => "test"}`.
+      attr_reader arguments: Hash[String, untyped]
+
+      # The severity of the rule's violations under this policy, or nil
+      # for the rule's own.
+      attr_reader severity: severity?
+
+      # The line the rule is on.
+      attr_reader line: Integer
+
+      # A policy's rule with these fields.
+      def self.new: (name: String, arguments: Hash[String, untyped], severity: severity?, line: Integer) -> instance
+
+      # A policy's rule with these fields.
+      def initialize: (name: String, arguments: Hash[String, untyped], severity: severity?, line: Integer) -> void
+    end
+
+    # A policy: when rules apply, to which artifact, and under what
+    # condition.
+    class Policy < Data
+      # The policy's name, unique within its plugin, which violations
+      # carry.
+      attr_reader name: String
+
+      # The artifact the policy covers.
+      attr_reader applies_to: AppliesTo
+
+      # The condition an artifact meets for the policy to apply, or nil
+      # for every artifact.
+      attr_reader condition: condition?
+
+      # The rules the policy runs, one or more.
+      attr_reader rules: Array[PolicyRule]
+
+      # The line the policy is on.
+      attr_reader line: Integer
+
+      # A policy with these fields.
+      def self.new: (name: String, applies_to: AppliesTo, condition: condition?, rules: Array[PolicyRule],
+                     line: Integer) -> instance
+
+      # A policy with these fields.
+      def initialize: (name: String, applies_to: AppliesTo, condition: condition?, rules: Array[PolicyRule],
+                       line: Integer) -> void
+    end
+
+    # A rule written in Ruby that a plugin declares.
+    class RuleDeclaration < Data
+      # The rule's name, which a policy runs it by.
+      attr_reader name: String
+
+      # The rule's file, relative to the plugin's folder.
+      attr_reader ruby: String
+
+      # The line the declaration is on.
+      attr_reader line: Integer
+
+      # A rule with these fields.
+      def self.new: (name: String, ruby: String, line: Integer) -> instance
+
+      # A rule with these fields.
+      def initialize: (name: String, ruby: String, line: Integer) -> void
+    end
+
+    # A helper a plugin declares: a program in another language that its
+    # Ruby rules call.
+    class HelperDeclaration < Data
+      # The helper's name, which a Ruby rule calls it by.
+      attr_reader name: String
+
+      # The command the helper runs on, such as "node".
+      attr_reader command: String
+
+      # The helper's file, relative to the plugin's folder.
+      attr_reader file: String
+
+      # The line the declaration is on.
+      attr_reader line: Integer
+
+      # A helper with these fields.
+      def self.new: (name: String, command: String, file: String, line: Integer) -> instance
+
+      # A helper with these fields.
+      def initialize: (name: String, command: String, file: String, line: Integer) -> void
+    end
+
+    # What a plugin's manifest declares: its artifacts, policies, rules,
+    # and helpers.
+    class Manifest < Data
+      # The manifest's path, relative to its project's root, as messages
+      # name it.
+      attr_reader file: String
+
+      # The artifacts, in the order they are declared.
+      attr_reader artifacts: Array[ArtifactDeclaration]
+
+      # The policies, in the order they are declared.
+      attr_reader policies: Array[Policy]
+
+      # The rules written in Ruby, in the order they are declared.
+      attr_reader rules: Array[RuleDeclaration]
+
+      # The helpers, in the order they are declared.
+      attr_reader helpers: Array[HelperDeclaration]
+
+      # A manifest with these fields.
+      def self.new: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
+                     rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration]) -> instance
+
+      # A manifest with these fields.
+      def initialize: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
+                       rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration]) -> void
+    end
+  end
+end

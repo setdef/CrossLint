@@ -1,0 +1,135 @@
+module CrossLint
+  module Adapters
+    # A KDL file, parsed into nodes that know their lines, with the checks
+    # the KDL adapters make of a node. Every check raises Core::Mistake,
+    # naming the file and the node's line.
+    #
+    # ```ruby
+    # document = CrossLint::Adapters::KDLDocument.new("files \"lib/{path}.rb\"\n", "plugin.kdl")
+    # document.nodes.first.line # => 1
+    # document.strings(document.nodes.first, "files PATTERN", 1) # => ["lib/{path}.rb"]
+    # ```
+    class KDLDocument
+      # A node: its name, its line, its arguments and properties as plain
+      # Ruby values, and its children.
+      class Node < Data
+        # The node's name.
+        attr_reader name: String
+
+        # The line the node's name is on.
+        attr_reader line: Integer
+
+        # The node's arguments: strings, numbers, true, false, or nil.
+        attr_reader arguments: Array[untyped]
+
+        # The node's properties, by name.
+        attr_reader properties: Hash[String, untyped]
+
+        # The nodes in the node's block.
+        attr_reader children: Array[Node]
+
+        # A node with these fields.
+        def self.new: (name: String, line: Integer, arguments: Array[untyped], properties: Hash[String, untyped],
+                       children: Array[Node]) -> instance
+
+        # A node with these fields.
+        def initialize: (name: String, line: Integer, arguments: Array[untyped], properties: Hash[String, untyped],
+                         children: Array[Node]) -> void
+      end
+
+      # The kdl gem's parser, which also hands over the line of each name
+      # and string.
+      class Parser < ::KDL::Parser
+        # A name or string that knows the line it is on.
+        class Word < String
+          # The line the word is on.
+          attr_reader line: Integer
+
+          # `text`, on `line`.
+          def initialize: (String text, Integer line) -> void
+        end
+
+        # The token of a name or a string, with a Word for its value.
+        class WordToken < Data
+          # The name or string.
+          attr_reader value: Word
+
+          # The line the token is on.
+          attr_reader line: Integer
+
+          # The column the token starts in.
+          attr_reader column: Integer
+
+          # A token with these fields.
+          def self.new: (value: Word, line: Integer, column: Integer) -> instance
+
+          # A token with these fields.
+          def initialize: (value: Word, line: Integer, column: Integer) -> void
+        end
+
+        # The kinds of token that are names or strings.
+        WORDS: Array[Symbol]
+
+        private
+
+        # The next token, with a Word for its value where it is a name or a
+        # string.
+        def next_token: () -> [Symbol | false, untyped]
+      end
+
+      # The file's path, as messages name it.
+      attr_reader file: String
+
+      # The nodes at the top of the file.
+      attr_reader nodes: Array[Node]
+
+      # Reads the file at `path`, as UTF-8, and parses it as for `new`.
+      def self.load: (String path, String file) -> KDLDocument
+
+      # Parses `source`, from `file`. Raises Core::Mistake when it isn't
+      # valid KDL or UTF-8, or has a type annotation.
+      def initialize: (String source, String file) -> void
+
+      # A mistake in the file, on the node's line.
+      def mistake: (String message, Node node) -> Core::Mistake
+
+      # The node's arguments, of which there must be `count`. `usage`
+      # shows how the node is written.
+      def arguments: (Node node, String usage, Integer count) -> Array[untyped]
+
+      # The node's arguments, as for `arguments`, each of them a string.
+      def strings: (Node node, String usage, Integer count) -> Array[String]
+
+      # The node's one argument, a string.
+      def string: (Node node, String usage) -> String
+
+      # The node's properties, each of them one of `allowed`.
+      def properties: (Node node, Array[String] allowed) -> Hash[String, untyped]
+
+      # Checks that each of the node's children is named one of `allowed`.
+      def children: (Node node, Array[String] allowed) -> void
+
+      # The node's property `name`, a string, or nil.
+      def string_property: (Node node, String name) -> String?
+
+      # The node's property `name`, true or false, or nil.
+      def boolean_property: (Node node, String name) -> bool?
+
+      # `value`, as a symbol, when it is one of `choices`, the values of the
+      # node's `name`.
+      def choice: (Node node, String name, String value, Array[String] choices) -> untyped
+
+      # The node's child called `name`, which it has once at most, or nil.
+      def optional_child: (Node node, String name) -> Node?
+
+      # The node's child called `name`, which it has once exactly.
+      def required_child: (Node node, String name) -> Node
+
+      private
+
+      # The kdl gem's `node`, as a Node. Raises Core::Mistake at a type
+      # annotation on the node or on one of its values.
+      def convert: (::KDL::Node node) -> Node
+    end
+  end
+end

@@ -21,19 +21,31 @@ unless defined?(Mutant)
 end
 
 require "mutant/minitest/coverage"
+require "fileutils"
 require "stringio"
+require "tmpdir"
 require "cross_lint"
+require "cross_lint/testing"
 
-# What the tests share.
 module TestHelper
-  # The checkout's root folder.
   ROOT = File.expand_path("..", __dir__)
 
-  # A usage spec with one of each thing CrossLint reads.
   def fixture_spec = CrossLint::UsageSpec.load(File.join(__dir__, "fixtures", "tool.usage.kdl"))
 
-  # The spec CrossLint ships.
   def shipped_spec = CrossLint::UsageSpec.load
+
+  def write(base, path, text)
+    full = File.join(base, path)
+    FileUtils.mkdir_p(File.dirname(full))
+    File.binwrite(full, text)
+    full
+  end
+
+  # The code blocks of `language` in a documentation page, so a test
+  # fails when the page and CrossLint disagree.
+  def doc_blocks(page, language)
+    File.read(File.join(ROOT, page)).scan(/^```#{language}\n(.*?)^```$/m).flatten
+  end
 end
 
 Minitest::Test.include(TestHelper)
