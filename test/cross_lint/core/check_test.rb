@@ -145,6 +145,16 @@ class CheckTest < Minitest::Test
     assert_equal 2, check(project(mixed_plugin), files: ["lib/a.rb"], verbosity: :quiet, warnings: :error).findings.size
   end
 
+  def test_orders_findings_that_differ_only_in_severity_errors_first_whatever_the_order_of_the_rules
+    warns = rule(severity: :warning)
+    fails = rule(severity: :error)
+    orders = [[warns, fails], [fails, warns]].map do |rules|
+      check(project(tests_plugin(rules:)), files: ["lib/a.rb"]).findings.map(&:severity)
+    end
+
+    assert_equal [[:error, :warning], [:error, :warning]], orders
+  end
+
   def test_reports_nothing_when_silent
     result = check(project(mixed_plugin, unused: true), files: ["lib/a.rb"], verbosity: :silent, warnings: :error, all: true)
 

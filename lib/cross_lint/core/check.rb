@@ -218,7 +218,8 @@ module CrossLint
       def sort(findings)
         findings.sort_by do |finding|
           case finding
-          when Violation, Stale then [finding.artifact, finding.plugin, finding.policy, finding.message]
+          when Violation then [finding.artifact, finding.plugin, finding.policy, finding.message, finding.severity == :error ? 0 : 1]
+          when Stale then [finding.artifact, finding.plugin, finding.policy, finding.message]
           else [finding.path, finding.plugin, "", finding.role]
           end
         end
