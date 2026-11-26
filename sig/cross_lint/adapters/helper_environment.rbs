@@ -1,0 +1,53 @@
+module CrossLint
+  module Adapters
+    # The environment a helper starts with: the one CrossLint was started
+    # with. Run from an app Fledge built, CrossLint's own environment is
+    # not that one: the launcher saves each variable it sets, RUBYOPT, the
+    # BUNDLE_ and GEM_ ones, and the rest, as BUNDLER_ORIG_NAME, and puts
+    # the app's Ruby's folder first on PATH, and the saved PATH holds that
+    # folder. So a helper gets each saved value back, or none for a
+    # variable the launcher set that was unset, no BUNDLER_ORIG_ variable,
+    # and, from an app, a PATH without the app's folder. Run from source
+    # under bundle exec, the same saved values apply and the PATH stays.
+    class HelperEnvironment
+      # The prefix of the names under which the launcher saves variables.
+      SAVED: String
+
+      # The value under which the launcher saves a variable that was unset.
+      UNSET: String
+
+      # The method that compares two paths: casecmp? where Windows folds
+      # case, == elsewhere.
+      COMPARING: Symbol
+
+      # The bin folder of the Ruby CrossLint runs on when that Ruby is the
+      # one a Fledge app carries, which Fledge marks with a fledge.cfg one
+      # or two folders above it, or nil.
+      def self.app_folder: () -> String?
+
+      # The environment of `env`, as ENV or a hash has it, from an app
+      # whose Ruby's folder is `app_folder`.
+      def initialize: (ProcessHelpers::_Environment env, ?app_folder: String?) -> void
+
+      # What to change in CrossLint's own environment to get the helper's:
+      # each variable by its name, with its value, or nil to remove it.
+      def changes: () -> Hash[String, String?]
+
+      # The value of `name` in the helper's environment, or `default` when
+      # it is unset there.
+      def fetch: [T] (String name, T default) -> (String | T)
+
+      private
+
+      @env: ProcessHelpers::_Environment
+
+      @app_folder: String?
+
+      # `path`, a PATH, without the folder `app`.
+      def without_app: (String path, String app) -> String
+
+      # Whether the folders `one` and `other` are the same folder.
+      def same?: (String one, String other) -> bool
+    end
+  end
+end

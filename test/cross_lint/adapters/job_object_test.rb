@@ -16,7 +16,7 @@ class JobObjectTest < Minitest::Test
 
   def test_ends_its_processes_once
     script = write(@base, "sleeps.sh", "sleep 30\n")
-    _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base)
+    _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})
     job = CrossLint::Adapters::JobObject.new(wait.pid)
     job.kill
     job.kill
@@ -32,7 +32,7 @@ class JobObjectTest < Minitest::Test
 
   def test_stops_at_each_call_windows_refuses_and_closes_what_it_made
     script = write(@base, "sleeps.sh", "sleep 30\n")
-    _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base)
+    _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})
     %w[CreateJobObjectW SetInformationJobObject AssignProcessToJobObject].each do |refused|
       called = []
       refusing = Class.new(CrossLint::Adapters::JobObject) do

@@ -7,9 +7,10 @@ require_relative "../core"
 module CrossLint
   module Adapters
     class ProcessGroup
-      def self.popen3(command, root)
+      def self.popen3(command, root, environment)
         program, file = command
-        Open3.popen3(program, file, chdir: root, pgroup: true)
+        env = environment #: untyped
+        Open3.popen3(env, program, file, chdir: root, pgroup: true)
       end
 
       def self.close_input(input) = input.close

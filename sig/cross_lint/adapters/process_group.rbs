@@ -3,10 +3,11 @@ module CrossLint
     # A helper's process tree on macOS and Linux: the process group its
     # process starts, which every process it starts joins.
     class ProcessGroup
-      # Starts the program and file `command` in `root`, in a process
+      # Starts the program and file `command` in `root`, with `environment`'s
+      # changes to its environment, in a process
       # group of its own, with pipes to its standard input, output, and
       # error.
-      def self.popen3: ([String, String] command, String root) -> [IO, IO, IO, Process::Waiter]
+      def self.popen3: ([String, String] command, String root, Hash[String, String?] environment) -> [IO, IO, IO, Process::Waiter]
 
       # Closes `input`, the pipe to a helper's standard input.
       def self.close_input: (IO input) -> void

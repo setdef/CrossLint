@@ -36,6 +36,7 @@ class ProcessHelpersTest < Minitest::Test
     "talks.sh" => "while read -r line; do echo heard >&2; echo '{}'; done\n",
     "leaves.sh" => "read -r line\nsleep 30 &\necho $! > leaves.pid\necho '{}'\n",
     "stays.sh" => "read -r line\nsleep 30 &\necho $! > stays.pid\necho '{}'\nwait\n",
+    "dumps.sh" => "env > env.txt\nread -r line\necho '{}'\n",
     "lingers.sh" => "read -r line\necho '{}'\nexec 0<&-\nwhile :; do sleep 1; done\n",
     "escapes.sh" => %(ruby -e 'Process.spawn(RbConfig.ruby, "-e", "sleep 8", pgroup: true)'\nread -r line\necho '{}'\n),
     "finishes.sh" => "while read -r line; do echo '{}'; done\nsleep 0.3\necho bye > finished.txt\n"
@@ -281,6 +282,28 @@ class ProcessHelpersTest < Minitest::Test
     Process.wait(pid)
 
     assert_instance_of CrossLint::Adapters::ProcessGroup, CrossLint::Adapters::ProcessGroup.new(pid)
+  end
+
+  def test_starts_a_helper_with_the_environment_the_launcher_saved_not_the_one_it_set
+    unset = CrossLint::Adapters::HelperEnvironment::UNSET
+    ENV["CROSSLINT_TEST_SET"] = "by the launcher"
+    env = ENV.to_h.merge("RUBYOPT" => "-rbundler/setup -W0", "BUNDLER_ORIG_RUBYOPT" => "-W0", "BUNDLER_ORIG_CROSSLINT_TEST_SET" => unset)
+    running = CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env:).start(@base, [plugin_of("dumps")])
+    running.call(plugin_of("dumps"), "dumps", {})
+    running.stop
+    seen = File.read(File.join(@base, "env.txt")).lines(chomp: true).map { |line| line.split("=", 2) }.to_h
+
+    assert_equal ["-W0", nil, []], [seen["RUBYOPT"], seen["CROSSLINT_TEST_SET"], seen.keys.grep(/\ABUNDLER_ORIG_/)]
+  ensure
+    ENV.delete("CROSSLINT_TEST_SET")
+  end
+
+  def test_finds_a_command_on_the_path_the_launcher_saved
+    write(@base, "saved/tool.exe", "")
+    File.chmod(0o755, File.join(@base, "saved/tool.exe"))
+    env = {"PATH" => File.join(@base, "other"), "BUNDLER_ORIG_PATH" => File.join(@base, "saved")}
+
+    assert_equal File.join(@base, "saved/tool.exe"), CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env:).find("tool.exe")
   end
 
   def test_stops_at_a_helper_file_the_plugins_folder_lacks

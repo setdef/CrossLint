@@ -46,9 +46,10 @@ module CrossLint
 
       # Binary, or Windows' Ruby turns each "\n" written to the helper
       # into "\r\n".
-      def self.popen3(command, root)
+      def self.popen3(command, root, environment)
         program, file = command
-        Open3.popen3(program, file, chdir: root).tap { |input, *| input.binmode }
+        env = environment #: untyped
+        Open3.popen3(env, program, file, chdir: root).tap { |input, *| input.binmode }
       end
 
       def self.close_input(input)

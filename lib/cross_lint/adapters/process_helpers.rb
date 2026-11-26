@@ -6,6 +6,7 @@ require "timeout"
 require_relative "../core"
 require_relative "process_group"
 require_relative "job_object"
+require_relative "helper_environment"
 
 module CrossLint
   module Adapters
@@ -27,7 +28,7 @@ module CrossLint
         @debug = debug
         @time_limit = time_limit
         @stop_limit = stop_limit
-        @env = env
+        @environment = HelperEnvironment.new(env)
       end
 
       def start(root, plugins)
@@ -36,7 +37,8 @@ module CrossLint
             [[plugin.name, helper.name], command(plugin, helper)] #: [[String, String], [String, String]]
           end
         end
-        Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit, tree: @tree_class)
+        Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit, tree: @tree_class,
+          environment: @environment.changes)
       end
 
       # On Windows, node is node.exe or node.cmd, and a file with no
@@ -46,8 +48,8 @@ module CrossLint
       # shells take for the current folder, is skipped, so that a
       # project's own files never stand in for a command.
       def find(command)
-        extensions = @env.fetch("PATHEXT", "").split(";").reject(&:empty?) + [""]
-        @env.fetch("PATH", "").split(File::PATH_SEPARATOR).reject(&:empty?).each do |folder|
+        extensions = @environment.fetch("PATHEXT", "").split(";").reject(&:empty?) + [""]
+        @environment.fetch("PATH", "").split(File::PATH_SEPARATOR).reject(&:empty?).each do |folder|
           extensions.each do |extension|
             candidate = File.expand_path(command + extension, folder)
             return candidate if File.file?(candidate) && File.executable?(candidate)
@@ -67,7 +69,8 @@ module CrossLint
       end
 
       class Running
-        def initialize(root, commands, err:, debug:, time_limit:, stop_limit:, tree:)
+        def initialize(root, commands, err:, debug:, time_limit:, stop_limit:, tree:, environment:)
+          @environment = environment
           @tree_class = tree
           @root = root
           @commands = commands
@@ -81,7 +84,7 @@ module CrossLint
         def call(plugin, name, input)
           key = [plugin.name, name] #: [String, String]
           process = @processes[key] ||= HelperProcess.new(name, @commands.fetch(key), root: @root, err: @err, debug: @debug, time_limit: @time_limit,
-            stop_limit: @stop_limit, tree: @tree_class)
+            stop_limit: @stop_limit, tree: @tree_class, environment: @environment)
           process.call(input)
         end
 
@@ -98,12 +101,12 @@ module CrossLint
       end
 
       class HelperProcess
-        def initialize(name, command, root:, err:, debug:, time_limit:, stop_limit:, tree:)
+        def initialize(name, command, root:, err:, debug:, time_limit:, stop_limit:, tree:, environment:)
           @name = name
           @time_limit = time_limit
           @stop_limit = stop_limit
           @tree_class = tree
-          @stdin, @stdout, stderr, @wait = @tree_class.popen3(command, root)
+          @stdin, @stdout, stderr, @wait = @tree_class.popen3(command, root, environment)
           # Before the first request, so that every process the helper
           # starts to answer one is in the tree.
           @tree = contain(stderr)

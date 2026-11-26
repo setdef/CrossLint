@@ -111,7 +111,7 @@ task :build do
   end
 end
 
-desc "Run the built app with nothing on PATH, and check its --version and --help, and its rules in Ruby and helpers"
+desc "Run the built app with nothing on PATH, and check its --version and --help, its rules in Ruby and helpers, and the environment of a helper"
 task "build:check" do
   require_relative "lib/cross_lint"
   app = Dir["build/dist/*/crosslint{,.exe}"].first || abort("rake build:check: no app in build/dist; run rake build")
@@ -129,6 +129,7 @@ task "build:check" do
     end
   end
   Rake::Task["build:check:plugins"].invoke(app)
+  Rake::Task["build:check:environment"].invoke(app)
 end
 
 # A project whose rules in Ruby run on the app's Ruby, the way an app
@@ -171,6 +172,55 @@ task "build:check:plugins", [:app] do |_, arguments|
       abort "rake build:check: #{app} check printed:\n#{actual}" unless (expected - lines).empty?
 
       puts "#{app} check: runs a rule in Ruby that asks a helper, and refuses a gem and bundler/inline"
+    end
+  end
+end
+
+# The environment a helper of the built app gets is the one the app was
+# started with: what the helper's `env` lists is what `env` lists when sh
+# starts with that environment, which has RUBYOPT, GEM_HOME and
+# BUNDLE_GEMFILE set, and a PATH of the folders of Git and sh alone. The
+# launcher's own settings for the Ruby it carries, saved and put back,
+# must not show. sh sets PWD, OLDPWD, SHLVL and _ itself, and MSYS2's
+# entries that start with "!" hold each drive's current folder.
+task "build:check:environment", [:app] do |_, arguments|
+  app = File.expand_path(arguments.fetch(:app))
+  files = {
+    ".config/crosslint/config.kdl" => %(plugin ".config/crosslint/dumps"\n),
+    ".config/crosslint/dumps/plugin.kdl" => %(artifact "doc" {\n  files "{path}.md"\n}\nrule "dumps" ruby="rule.rb"\n) +
+      %(helper "dumper" command="sh" file="dumper.sh"\npolicy "p" {\n  applies-to "doc"\n  rule "dumps"\n}\n),
+    ".config/crosslint/dumps/rule.rb" => %(class Dumps < CrossLint::Rule\n  def check(artifact)\n    helper("dumper").call("hi")\n    []\n  end\nend\n),
+    ".config/crosslint/dumps/dumper.sh" => %(env > helper-env.txt\nread -r line\necho '{}'\n),
+    "a.md" => ""
+  }
+  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  sh = finder.find("sh") || abort("rake build:check: no sh on the PATH")
+  folders = [finder.find("git") || abort("rake build:check: no git on the PATH"), sh].map { |program| File.dirname(program) }.uniq
+  # None of these values is a path, which MSYS2 would convert.
+  started = {"PATH" => folders.join(File::PATH_SEPARATOR), "RUBYOPT" => "-W0", "GEM_HOME" => "crosslint-check-gem-home",
+             "BUNDLE_GEMFILE" => "crosslint-check-gemfile", "CROSSLINT_CHECK" => "kept"}
+  listed = lambda do |text|
+    text.lines(chomp: true).filter_map { |line| line.split("=", 2) if line.include?("=") && !line.start_with?("!") }.to_h.except("PWD", "OLDPWD", "SHLVL", "_")
+  end
+  Dir.mktmpdir do |project|
+    files.each do |file, text|
+      FileUtils.mkdir_p(File.dirname(File.join(project, file)))
+      File.binwrite(File.join(project, file), text)
+    end
+    Bundler.with_unbundled_env do
+      system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
+      expected = listed.call(IO.popen(started, [sh, "-c", "env"], &:read))
+      actual = IO.popen(started, [app, "check", "-C", project], err: %i[child out], &:read)
+      abort "rake build:check: #{app} check exited with #{$?.exitstatus}, not 0:\n#{actual}" unless $?.success?
+
+      seen = listed.call(File.read(File.join(project, "helper-env.txt")))
+      differences = (expected.keys | seen.keys).reject { |name| expected[name] == seen[name] }
+      unless differences.empty?
+        abort "rake build:check: a helper of #{app} got an environment that isn't the one it was started with, in:\n" +
+          differences.map { |name| "  #{name}: started with #{expected[name].inspect}, the helper got #{seen[name].inspect}" }.join("\n")
+      end
+
+      puts "#{app} check: starts a helper with the environment it was started with"
     end
   end
 end
