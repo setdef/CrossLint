@@ -23,6 +23,7 @@ CrossLint has three kinds of thing, and they come together: an artifact says whi
 | --- | --- | --- |
 | **plugin** | A folder of artifacts, policies, and rules, with a `plugin.kdl` that declares them. A project uses a plugin by listing it in its configuration. | extension, package, preset |
 | **local plugin** | A plugin kept in the project's repository, for that project's rules. It is a plugin in every way; only where it lives differs. | custom rules, project rules |
+| **shared plugin** | A plugin kept in a Git repository of its own, which projects list by its URL and a tag or commit. CrossLint fetches it into the user's cache. | remote plugin, package |
 | **built-in plugin** | A plugin that ships inside CrossLint, such as `angular` and `debt`. It runs only when the configuration lists it, like any other. | core plugin, default plugin |
 | **configuration** | `.config/crosslint.kdl` in a project's root. It lists the plugins CrossLint runs, and settings for their rules. | config file, rc file, settings |
 | **helper** | A program in another language that a plugin carries to read files of that language, such as the Angular plugin's JavaScript that asks the project's TypeScript compiler for a component's inputs. It runs on the runtime for that language that the project already has. | adapter, bridge, sidecar |

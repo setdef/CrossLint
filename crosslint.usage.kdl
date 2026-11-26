@@ -82,3 +82,10 @@ any.
   example "crosslint init"
   example "crosslint init --from-ng-nudge --dry-run" header="See what moving from ng-nudge would change"
 }
+
+cmd "update" effect="write" help="Move each shared plugin in the configuration to its newest tag" {
+  long_help "Moves each shared plugin the configuration lists, a Git repository with a ref, to the repository's newest tag, and rewrites the ref in .config/crosslint.kdl. Lists each change it makes. Local and built-in plugins are left as they are."
+  flag "-n --dry-run" help="List the changes, and make none"
+  example "crosslint update"
+  example "crosslint update --dry-run" header="See which plugins have a newer tag"
+}

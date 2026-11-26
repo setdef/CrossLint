@@ -157,3 +157,34 @@ crosslint init
 ```
 crosslint init --from-ng-nudge --dry-run
 ```
+
+## `crosslint update`
+
+- **Usage:** `crosslint update [-n --dry-run]`
+- **Effect:** modifies state
+
+Moves each shared plugin the configuration lists, a Git repository with a ref, to the repository's newest tag, and rewrites the ref in .config/crosslint.kdl. Lists each change it makes. Local and built-in plugins are left as they are.
+
+### Flags
+- **`-n --dry-run`** — List the changes, and make none
+
+### Exit Status
+
+| Code | Meaning |
+| ---- | ------- |
+| `0` | Every check passed, or the command did what it was asked. |
+| `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
+| `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start. |
+| `130` | You interrupted CrossLint with Ctrl-C. |
+
+### Examples
+
+```
+crosslint update
+```
+
+**See which plugins have a newer tag**
+
+```
+crosslint update --dry-run
+```
