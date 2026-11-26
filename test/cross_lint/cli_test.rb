@@ -278,6 +278,14 @@ class CLITest < Minitest::Test
     assert_equal ["", 0, false], [out, status, err.start_with?("{")]
   end
 
+  def test_a_plugins_flag_named_for_the_warnings_flag_of_check_takes_any_value
+    warnings = CrossLint::Core::CommandFlag.new(short: nil, long: "warnings", value: "mode", help: "Its own mode", line: 2)
+    project = app(debt: true, debt_flags: [warnings])
+
+    assert_equal 0, check("debt", "update", "--warnings", "banana", app: project)[2]
+    assert_equal 0, check("debt", "update", "--warnings=banana", app: project)[2]
+  end
+
   def test_a_flag_a_plugins_command_doesnt_declare_stops_with_2_naming_the_nearest_spelling
     assert_equal ["", "crosslint: crosslint debt update has no flag --dry-ran; did you mean --dry-run?\n", 2],
       check("debt", "update", "--dry-ran", app: app(debt: true))
