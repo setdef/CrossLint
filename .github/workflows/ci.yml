@@ -4,11 +4,14 @@
 # whole gate, rake check (Standard, rbs validate, the comment on every
 # public part of sig/, Steep, the tests with their coverage, the tests
 # under RBS's runtime type checker, every Ruby example in the
-# documentation, mutation testing, usage lint, the check that
-# docs/reference/cli.md is what usage generates, and REUSE); and on macOS
-# and Windows the tests, each with the Ruby, the Node, and tools mise.toml
-# pins. The macOS and Windows jobs leave out the Gemfile's check group,
-# which only rake check uses.
+# documentation, usage lint, the check that docs/reference/cli.md is what
+# usage generates, and REUSE); and on macOS and Windows the tests, each
+# with the Ruby, the Node, and tools mise.toml pins. The macOS and Windows
+# jobs leave out the Gemfile's check group, which only rake check uses.
+# Mutation testing, the rest of rake check, takes longer than everything
+# else together, so it runs on Linux in four parts at once (MUTANT_SHARD,
+# see the Rakefile), each part on a computer of its own, and every
+# subject is in one part.
 
 name: CI
 
@@ -71,8 +74,48 @@ jobs:
       - name: Install the test fixtures' packages
         run: bundle exec rake fixtures
 
-      - name: Run every check
-        run: bundle exec rake check
+      - name: Run every check but mutation testing
+        run: bundle exec rake check:without_mutant
+
+  mutant:
+    name: Mutation testing (${{ matrix.shard }} of 4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      MUTANT_SHARD: ${{ matrix.shard }}/4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        with:
+          cache_save: ${{ github.ref == 'refs/heads/trunk' }}
+          version: 2026.10.11
+
+      - name: Place Bundler outside the checkout
+        id: paths
+        run: |
+          echo "BUNDLE_PATH=$HOME/.cache/crosslint/bundle" >> "$GITHUB_ENV"
+          echo "ruby=$(ruby -e 'print RUBY_VERSION, "-", RUBY_REVISION, "-", RUBY_PLATFORM')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/crosslint/bundle
+          key: gems-${{ runner.os }}-${{ runner.arch }}-${{ steps.paths.outputs.ruby }}-${{ hashFiles('Gemfile.lock') }}
+
+      - name: Install the bundle
+        run: bundle install
+
+      - name: Install the test fixtures' packages
+        run: bundle exec rake fixtures
+
+      - name: Run this part of the mutation testing
+        run: bundle exec rake mutant
 
   test-macos:
     name: Tests (macOS)

@@ -77,11 +77,29 @@ end
 
 WINDOWS = RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/)
 
-desc "Run mutation testing on lib/ (.mutant.yml); mutant forks, so it doesn't run on Windows"
+# MUTANT_SHARD=N/M runs the Nth of M parts of the subjects mutant finds,
+# which CI runs on M computers at once. A subject goes to the part its
+# place in the sorted list says, so every subject is in exactly one part.
+desc "Run mutation testing on lib/ (.mutant.yml), all of it or MUTANT_SHARD=N/M of it; mutant forks, so it doesn't run on Windows"
 task :mutant do
   next puts("rake mutant: mutant doesn't run on Windows") if WINDOWS
+  next sh("bundle", "exec", "mutant", "run") unless ENV["MUTANT_SHARD"]
 
-  sh "bundle", "exec", "mutant", "run"
+  index, count = ENV["MUTANT_SHARD"].match(%r{\A([1-9]\d*)/([1-9]\d*)\z})&.captures&.map(&:to_i)
+  abort "rake mutant: MUTANT_SHARD is #{ENV["MUTANT_SHARD"].inspect}, not N/M with N from 1 to M" unless index && index <= count
+
+  listed = IO.popen(%w[bundle exec mutant environment subject list], &:read)
+  abort "rake mutant: mutant environment subject list failed" unless $?.success?
+  # The list has a line of its own that counts the subjects, which must be
+  # the number of the others.
+  subjects = listed.lines(chomp: true).reject { |line| line.empty? || line.include?(" ") }.sort
+  counted = listed[/^Subjects in environment: (\d+)$/, 1]
+  abort "rake mutant: mutant lists #{subjects.size} subjects and says #{counted.inspect}" unless counted.to_i == subjects.size
+  shard = subjects.select.with_index { |_, place| place % count == index - 1 }
+  abort "rake mutant: part #{index} of #{count} has no subject, of #{subjects.size}" if shard.empty?
+
+  puts "rake mutant: part #{index} of #{count}: #{shard.size} of #{subjects.size} subjects"
+  sh "bundle", "exec", "mutant", "run", *shard
 end
 
 namespace :usage do
@@ -113,9 +131,13 @@ task :crosslint do
   ruby "exe/crosslint", "check"
 end
 
-desc "Run every check CI runs"
-task check: [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :mutant, :crosslint, "usage:lint",
+# Every check but mutation testing, which CI runs in parts on computers of
+# their own, since it takes longer than all the rest together.
+task "check:without_mutant" => [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :crosslint, "usage:lint",
   "usage:reference", :reuse]
+
+desc "Run every check CI runs"
+task check: ["check:without_mutant", :mutant]
 
 task default: :check
 
