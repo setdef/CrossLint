@@ -7,8 +7,10 @@ module CrossLint
     # spelling where one is close.
     class LoadProject
       # A use case that reads through `configuration` and `manifests`.
-      # `built_in` has the folder of each built-in plugin, by name.
-      def initialize: (configuration: _Configuration, manifests: _PluginManifests, ?built_in: Hash[String, String]) -> void
+      # `built_in` has the folder of each built-in plugin, by name, and
+      # `steps` each step CrossLint has, by name.
+      def initialize: (configuration: _Configuration, manifests: _PluginManifests, ?built_in: Hash[String, String],
+                       ?steps: Hash[String, _Step]) -> void
 
       # The project whose root is `start` or the nearest folder above it
       # with a configuration.
@@ -21,6 +23,8 @@ module CrossLint
       @manifests: _PluginManifests
 
       @built_in: Hash[String, String]
+
+      @steps: Hash[String, _Step]
 
       # The plugin listed at `index`, with its manifest, checked against
       # the plugins `loaded` before it.
@@ -43,8 +47,19 @@ module CrossLint
       def check_artifact: (ArtifactDeclaration artifact, String file) -> void
 
       # Checks that no two of `declarations` have the same name.
-      def once: (Array[ArtifactDeclaration | CompanionDeclaration | RuleDeclaration | HelperDeclaration | Policy] declarations,
+      def once: (Array[ArtifactDeclaration | CompanionDeclaration | RuleDeclaration | HelperDeclaration | Policy | StepPolicy |
+                       SettingDeclaration | FlagDeclaration | StepDeclaration] declarations,
                  String kind, String file) -> void
+
+      # Checks that each step is one CrossLint has, that each policy it
+      # reports is declared with no block, and that each policy declared
+      # with no block is one a step reports.
+      def check_steps: (Manifest manifest) -> void
+
+      # Checks that each setting in a plugin's block in the configuration
+      # at `file` is one its manifest declares, and that each of its steps
+      # can read them.
+      def check_settings: (Plugin plugin, String file) -> void
 
       # Checks a policy's artifact, condition, and rules.
       def check_policy: (Plugin plugin, Policy policy, Array[Plugin] plugins) -> void

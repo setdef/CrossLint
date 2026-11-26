@@ -40,7 +40,10 @@ class MemoryPluginManifestsTest < Minitest::Test
     artifact = ArtifactDeclaration.new(name: "ruby-file", files: PathPattern.new(source: "lib/{path}.rb"), companions:, line: 1)
     Manifest.new(file: folder.empty? ? "plugin.kdl" : "#{folder}/plugin.kdl", artifacts: [artifact], policies: example_policies,
       rules: [RuleDeclaration.new(name: "names-class", ruby: "rules/names_class.rb", line: 33)],
-      helpers: [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 34)])
+      helpers: [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 34)],
+      step_policies: [StepPolicy.new(name: "has-debt", line: 36)],
+      settings: [SettingDeclaration.new(name: "file", line: 37), SettingDeclaration.new(name: "report-entries", line: 38)],
+      flags: [FlagDeclaration.new(name: "update-debt", line: 39)], steps: [StepDeclaration.new(name: "track-debt", line: 40)])
   end
 
   def example_policies

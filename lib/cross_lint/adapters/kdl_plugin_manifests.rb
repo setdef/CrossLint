@@ -7,7 +7,7 @@ module CrossLint
     class KDLPluginManifests
       FILE = "plugin.kdl"
 
-      NODES = %w[artifact policy rule helper].freeze
+      NODES = %w[artifact policy rule helper setting flag step].freeze
 
       CONDITIONS = %w[companion-exists not all any].freeze
 
@@ -25,15 +25,31 @@ module CrossLint
 
           raise document.mistake(Core::Spelling.unknown("node", node.name, NODES), node)
         end
+        blockless, policies = document.nodes.select { |node| node.name == "policy" }.partition { |node| node.children.empty? }
         Core::Manifest.new(file: document.file, artifacts: nodes(document, "artifact") { |node| artifact(document, node) },
-          policies: nodes(document, "policy") { |node| policy(document, node) },
+          policies: policies.map { |node| policy(document, node) },
           rules: nodes(document, "rule") { |node| rule(document, node) },
-          helpers: nodes(document, "helper") { |node| helper(document, node) })
+          helpers: nodes(document, "helper") { |node| helper(document, node) },
+          step_policies: blockless.map { |node| Core::StepPolicy.new(name: named(document, node, "policy NAME { ... }"), line: node.line) },
+          settings: named_nodes(document, "setting") { |name, line| Core::SettingDeclaration.new(name:, line:) },
+          flags: named_nodes(document, "flag") { |name, line| Core::FlagDeclaration.new(name:, line:) },
+          steps: named_nodes(document, "step") { |name, line| Core::StepDeclaration.new(name:, line:) })
       end
 
       private
 
       def nodes(document, name, &read) = document.nodes.select { |node| node.name == name }.map(&read)
+
+      def named_nodes(document, name)
+        nodes(document, name) { |node| yield named(document, node, "#{name} NAME"), node.line }
+      end
+
+      # The name of a node that takes nothing else.
+      def named(document, node, usage)
+        name = document.string(node, usage)
+        no_more(document, node)
+        name
+      end
 
       def artifact(document, node)
         name = document.string(node, "artifact NAME { ... }")

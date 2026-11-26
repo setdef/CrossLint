@@ -109,10 +109,11 @@ module CrossLint
   # write to standard output and standard error, and Adapters::MemoryReport
   # holds results in memory; all three pass Testing::ReportContract.
   interface _Report
-    # Reports `result`: its findings and notices as they are, in their
-    # order, its summary unless its verbosity is `:quiet` or `:silent`,
-    # and its faults whatever the verbosity. Under `:silent`, writes
-    # nothing but the faults.
+    # Reports `result`: its findings, stale entries among them, and
+    # notices as they are, in their order, each line a step wrote, its
+    # summary unless its verbosity is `:quiet` or `:silent`, and its
+    # faults whatever the verbosity. Under `:silent`, writes nothing but
+    # the faults.
     def write: (Core::CheckResult result) -> void
   end
 

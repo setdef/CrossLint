@@ -22,6 +22,13 @@ module CrossLint
       # Each node at the top of `document` called `name`, read by `read`.
       def nodes: [T] (KDLDocument document, String name) { (KDLDocument::Node node) -> T } -> Array[T]
 
+      # Each node at the top of `document` called `name` that takes a name
+      # alone, read by the block from its name and line.
+      def named_nodes: [T] (KDLDocument document, String name) { (String name, Integer line) -> T } -> Array[T]
+
+      # The name of `node`, which takes nothing else, as `usage` shows.
+      def named: (KDLDocument document, KDLDocument::Node node, String usage) -> String
+
       # Reads an `artifact` node.
       def artifact: (KDLDocument document, KDLDocument::Node node) -> Core::ArtifactDeclaration
 

@@ -3,17 +3,24 @@
 require_relative "artifact"
 require_relative "check_result"
 require_relative "ruby_rule"
+require_relative "step"
 
 module CrossLint
   module Core
     class Check
-      def initialize(project_files:, plugin_ruby:, helpers:)
+      def initialize(project_files:, plugin_ruby:, helpers:, steps:)
         @project_files = project_files
         @plugin_ruby = plugin_ruby
         @helpers = helpers
+        @steps = steps
       end
 
-      def call(project, warnings: nil, verbosity: nil, all: false)
+      def call(project, warnings: nil, verbosity: nil, all: false, flags: [])
+        flags.each do |flag|
+          next if project.plugins.any? { |plugin| plugin.manifest.flags.any? { |declared| declared.name == flag } }
+
+          raise Mistake.new("lists no plugin that takes --#{flag}", file: project.configuration.file)
+        end
         warnings ||= project.configuration.warnings
         verbosity ||= project.configuration.verbosity || :normal
         policies = enabled_policies(project)
@@ -31,7 +38,8 @@ module CrossLint
         ensure
           helpers.stop
         end
-        report(project, kinds, checked_kinds(project, policies), violations, faults, warnings:, verbosity:, all:)
+        steps = run_steps(project, violations, faults, flags)
+        report(project, kinds, checked_kinds(project, policies), violations, faults, steps, warnings:, verbosity:, all:)
       end
 
       private
@@ -132,19 +140,42 @@ module CrossLint
         end
       end
 
-      def report(project, kinds, checked, violations, faults, warnings:, verbosity:, all:)
+      # Each step of each plugin that didn't stop, run on every violation.
+      def run_steps(project, violations, faults, flags)
+        faulted = faults.map(&:plugin)
+        project.plugins.reject { |plugin| faulted.include?(plugin.name) }.flat_map do |plugin|
+          taken = flags.select { |flag| plugin.manifest.flags.any? { |declared| declared.name == flag } }
+          plugin.manifest.steps.map do |declaration|
+            @steps.fetch(declaration.name).call(StepInput.new(project:, plugin:, violations:, faulted:, flags: taken))
+          end
+        end
+      end
+
+      def report(project, kinds, checked, violations, faults, steps, warnings:, verbosity:, all:)
         hidden = warnings == :none
-        shown = violations.select { |violation| !hidden || violation.severity == :error }
+        excused = steps.flat_map(&:excused)
+        left = violations.reject { |violation| excused.include?(violation) }
+        added = steps.flat_map(&:violations).reject { |violation| disabled?(project, violation) }
+        shown = (left + added).select { |violation| !hidden || violation.severity == :error }
+        stale = steps.flat_map(&:stale)
         notices = notices(project, kinds)
         fails = ->(violation) { violation.severity == :error || warnings == :error }
-        failed = shown.any?(&fails) || (warnings == :error && !notices.empty?)
+        wrote = steps.flat_map(&:wrote)
+        # A check that writes, as --update-debt does, did what it was asked.
+        failed = wrote.empty? && (shown.any?(&fails) || !stale.empty? || (warnings == :error && !notices.empty?))
         findings = (verbosity == :quiet) ? shown.select(&fails) : shown
-        findings += passed(kinds, checked, violations) if all && verbosity == :normal
+        findings += passed(kinds, checked, left) if all && verbosity == :normal
         # Every notice is a warning, so --quiet reports one only when it
-        # fails the check.
+        # fails the check. A step's warnings never fail it.
         shows_notices = !hidden && (verbosity == :normal || (verbosity == :quiet && warnings == :error))
-        CheckResult.new(notices: notices.select { shows_notices }, findings: sort(findings.reject { verbosity == :silent }),
-          summary: summary(kinds, checked, shown, hidden, faults.size), verbosity:, failed:, faults:)
+        notices = notices.select { shows_notices } + steps.flat_map(&:notices).select { !hidden && verbosity == :normal }
+        summary = summary(kinds, checked, shown, hidden, faults.size).with(stale: stale.size, steps: steps.flat_map(&:summary))
+        CheckResult.new(notices:, findings: sort((findings + stale).reject { verbosity == :silent }), summary:, verbosity:, failed:,
+          faults:, wrote: wrote.reject { verbosity == :silent })
+      end
+
+      def disabled?(project, violation)
+        project.configuration.policies.any? { |setting| setting.name == "#{violation.plugin}/#{violation.policy}" && setting.enabled == false }
       end
 
       def notices(project, kinds)
@@ -175,7 +206,7 @@ module CrossLint
       def sort(findings)
         findings.sort_by do |finding|
           case finding
-          when Violation then [finding.artifact, finding.plugin, finding.policy, finding.message]
+          when Violation, Stale then [finding.artifact, finding.plugin, finding.policy, finding.message]
           else [finding.path, finding.plugin, "", finding.role]
           end
         end

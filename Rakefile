@@ -130,6 +130,38 @@ task "build:check" do
   end
   Rake::Task["build:check:plugins"].invoke(app)
   Rake::Task["build:check:environment"].invoke(app)
+  Rake::Task["build:check:debt"].invoke(app)
+end
+
+# A project that lists the built-in debt plugin, which the app carries,
+# and whose debt file accepts its one violation. PATH holds only Git's
+# folder.
+task "build:check:debt", [:app] do |_, arguments|
+  app = File.expand_path(arguments.fetch(:app))
+  files = {
+    ".config/crosslint/config.kdl" => %(plugin "debt"\nplugin ".config/crosslint/docs"\n),
+    ".config/crosslint/docs/plugin.kdl" => %(artifact "doc" {\n  files "{path}.md"\n  companion "note" "{path}.txt"\n}\n) +
+      %(policy "has-note" {\n  applies-to "doc"\n  rule "companion-exists" companion="note"\n}\n),
+    ".config/crosslint/debt.tsv" => "Rule\tArtifact\tComment\r\ndocs/has-note\ta.md\tlater\r\n",
+    "a.md" => ""
+  }
+  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  git = File.dirname(finder.find("git") || abort("rake build:check: no git on the PATH"))
+  Dir.mktmpdir do |project|
+    files.each do |file, text|
+      FileUtils.mkdir_p(File.dirname(File.join(project, file)))
+      File.binwrite(File.join(project, file), text)
+    end
+    Bundler.with_unbundled_env do
+      system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
+      actual = IO.popen({"PATH" => git}, [app, "check", "-C", project], err: %i[child out], &:read)
+      expected = "crosslint: checked 1 doc artifact: 1 accepted as debt\n"
+      abort "rake build:check: #{app} check exited with #{$?.exitstatus}, not 0:\n#{actual}" unless $?.success?
+      abort "rake build:check: #{app} check printed:\n#{actual}" unless actual == expected
+
+      puts "#{app} check: runs the built-in debt plugin"
+    end
+  end
 end
 
 # A project whose rules in Ruby run on the app's Ruby, the way an app

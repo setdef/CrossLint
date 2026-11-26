@@ -1,0 +1,151 @@
+module CrossLint
+  module Core
+    # The debt plugin's step, `track-debt`, built into CrossLint: it reads
+    # the debt file through `debt_files`, excuses each violation an entry
+    # matches, reports each entry no violation matches as stale, and,
+    # with --update-debt, rewrites the file to list the current
+    # violations and reports the state it left. With `report-entries`, it
+    # reports each entry as a violation of `has-debt`.
+    #
+    # An entry is checked only when its plugin is listed and didn't stop
+    # at a fault, and its policy isn't disabled; one that isn't is never
+    # stale or excusing, and an update keeps it. An entry matches a
+    # violation by plugin and policy, artifact (as its key, or its key, a
+    # dot, and its role), and detail; one ng-nudge wrote, with a policy's
+    # name alone and no detail, matches every detail on its artifact.
+    class TrackDebt
+      include _Step
+
+      # What `report-entries` says: the severity of an entry with a
+      # comment, and the expression a comment matches to count as one.
+      class Report < Data
+        # `:error`, `:warning`, or `:none`, or nil for the policy's.
+        attr_reader commented: (:error | :warning | :none)?
+
+        # What a comment matches to count, or nil for any comment.
+        attr_reader matching: Regexp?
+
+        # A report with these fields.
+        def self.new: (commented: (:error | :warning | :none)?, matching: Regexp?) -> instance
+
+        # A report with these fields.
+        def initialize: (commented: (:error | :warning | :none)?, matching: Regexp?) -> void
+      end
+
+      # The debt plugin's settings: the debt file's path, and whether to
+      # report entries.
+      class Settings < Data
+        # The debt file's path, relative to the project's root.
+        attr_reader file: String
+
+        # What `report-entries` says, or nil when entries aren't reported.
+        attr_reader report: Report?
+
+        # Settings with these fields.
+        def self.new: (file: String, report: Report?) -> instance
+
+        # Settings with these fields.
+        def initialize: (file: String, report: Report?) -> void
+      end
+
+      # What an entry matches a violation by.
+      class Identity < Data
+        # The plugin's name.
+        attr_reader plugin: String
+
+        # The policy's name.
+        attr_reader policy: String
+
+        # The artifact's key.
+        attr_reader artifact: String
+
+        # The artifact's role.
+        attr_reader role: String
+
+        # The violation's detail, or an empty string for none.
+        attr_reader detail: String
+
+        # An identity with these fields.
+        def self.new: (plugin: String, policy: String, artifact: String, role: String, detail: String) -> instance
+
+        # An identity with these fields.
+        def initialize: (plugin: String, policy: String, artifact: String, role: String, detail: String) -> void
+
+        # The identity of `violation`.
+        def self.of: (Violation violation) -> Identity
+
+        # PLUGIN/POLICY.
+        def rule: () -> String
+      end
+
+      # The debt file's path when `file` gives none.
+      FILE: String
+
+      # The policy whose violations report entries.
+      POLICY: String
+
+      # The flag that rewrites the debt file.
+      FLAG: String
+
+      # The values of `commented=`.
+      SEVERITIES: Array[String]
+
+      # The properties of `report-entries`.
+      REPORT: Array[String]
+
+      # The settings in `settings`, from the configuration at `file`.
+      # Raises Mistake for a setting given twice, or given in a form the
+      # step can't use, naming `file` and the line.
+      def self.settings: (Array[Setting] settings, String file) -> Settings
+
+      # The path `file PATH` gives. Raises Mistake unless it is one path,
+      # relative to the project's root.
+      def self.debt_file: (Setting setting, String file) -> String
+
+      # What `report-entries` says. Raises Mistake for an argument, an
+      # unknown property, a severity it doesn't have, or an expression
+      # that isn't one.
+      def self.report: (Setting setting, String file) -> Report
+
+      # A step that reads and writes debt files through `debt_files`.
+      def initialize: (debt_files: _DebtFiles) -> void
+
+      private
+
+      @debt_files: _DebtFiles
+
+      # `entry`, with each `\` in its artifact read as `/`, and no source
+      # when it had one.
+      def slashed: (DebtEntry entry) -> DebtEntry
+
+      # The result for the entries of `debt`, the violations, and what
+      # was written.
+      def state: (Project project, StepInput input, Settings settings, DebtFile debt, Array[Identity] identities,
+                  Array[String] wrote) -> StepResult
+
+      # The plugin and policy `entry` is for, or nil when it isn't
+      # checked. Raises Mistake for a policy's name alone that two listed
+      # plugins have.
+      def resolve: (Project project, StepInput input, DebtFile debt, DebtEntry entry) -> [String, String]?
+
+      # The identities `entry` matches.
+      def matches: (DebtEntry entry, [String, String] rule, Array[Identity] identities) -> Array[Identity]
+
+      # The warning for an entry that matches more than one artifact, or
+      # more than its detail, or nil.
+      def coarse: (DebtEntry entry, [String, String] rule, Array[Identity] matched) -> String?
+
+      # Writes the file `debt` is read from with the entries that still
+      # match, those it rewrites, and one for each new identity, and
+      # returns the line that says so.
+      def update: (Project project, StepInput input, Settings settings, DebtFile debt, Array[Identity] identities) -> String
+
+      # A new entry for `identity`, with `comment`.
+      def fresh: (Identity identity, Array[Identity] identities, String comment) -> DebtEntry
+
+      # A violation of `has-debt` for each entry, unless the settings
+      # don't report entries or the configuration disables the policy.
+      def report_entries: (Project project, StepInput input, Settings settings, DebtFile debt) -> Array[Violation]
+    end
+  end
+end

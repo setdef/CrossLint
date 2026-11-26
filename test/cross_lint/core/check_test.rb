@@ -262,14 +262,152 @@ class CheckTest < Minitest::Test
 
   def test_stops_at_a_root_outside_a_git_working_tree
     port = CrossLint::Adapters::MemoryProjectFiles.new
-    assert_raises(Mistake) { Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new, helpers: CrossLint::Adapters::MemoryHelpers.new).call(project(tests_plugin)) }
+    assert_raises(Mistake) { Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new, helpers: CrossLint::Adapters::MemoryHelpers.new, steps: {}).call(project(tests_plugin)) }
+  end
+
+  # A step that records what it sees and answers with what it is given.
+  class ScriptedStep
+    attr_reader :inputs
+
+    def initialize(answer = nil, **result)
+      @answer = answer || ->(_) { CrossLint::Core::StepResult.new(excused: [], violations: [], stale: [], notices: [], wrote: [], summary: []).with(**result) }
+      @inputs = []
+    end
+
+    def policies = ["has-debt"]
+
+    def check_settings(_settings, _file) = nil
+
+    def call(input)
+      @inputs << input
+      @answer.call(input)
+    end
+  end
+
+  def stepped(name = "debt", flags: [])
+    manifest = Manifest.new(file: "#{name}/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [],
+      step_policies: [StepPolicy.new(name: "has-debt", line: 1)], flags: flags.map { |flag| FlagDeclaration.new(name: flag, line: 2) },
+      steps: [StepDeclaration.new(name: "track-debt", line: 3)])
+    Plugin.new(name:, folder: "#{ROOT}/#{name}", manifest:, listing: ListedPlugin.new(name:, ref: nil, settings: [], line: 1))
+  end
+
+  def stale(artifact) = Stale.new(plugin: "tests", policy: "has-test", artifact:, file: "debt.tsv", line: 2, message: "is stale")
+
+  def debt_violation(severity = :error)
+    Violation.new(plugin: "debt", policy: "has-debt", artifact: "debt.tsv", role: "debt-file", message: "line 2", severity:, detail: "2")
+  end
+
+  def test_runs_each_step_on_every_violation_whatever_warnings_hides
+    step = ScriptedStep.new
+    files = ["lib/a.rb", "lib/b.rb"]
+    check(project(mixed_plugin, stepped), files:, warnings: :none, steps: {"track-debt" => step})
+    input = step.inputs.fetch(0)
+
+    assert_equal [4, "debt", [], []], [input.violations.size, input.plugin.name, input.faulted, input.flags]
+    assert_equal ROOT, input.project.root
+  end
+
+  def test_leaves_out_what_a_step_excuses_and_reports_what_it_adds
+    excuse = ->(input) { StepResult.new(excused: input.violations.take(1), violations: [debt_violation(:warning)], stale: [], notices: [], wrote: [], summary: ["1 accepted as debt"]) }
+    result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/b.rb", "test/b_test.rb", "lib/c.rb"], steps: {"track-debt" => ScriptedStep.new(excuse)})
+
+    assert_equal [["debt.tsv", "line 2"], ["lib/c.rb", "no test file at test/c_test.rb"]], result.findings.map { |each| [each.artifact, each.message] }
+    assert_equal ["checked 3 ruby-file artifacts: 1 error, 1 warning, 1 accepted as debt", true], [result.summary.line, result.failed]
+    excused = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/b.rb", "test/b_test.rb"], all: true, steps: {"track-debt" => ScriptedStep.new(excuse)})
+
+    assert_equal [["lib/a.rb", Artifact], ["lib/b.rb", Artifact], ["debt.tsv", Violation]].sort, excused.findings.map { |each| [each.is_a?(Artifact) ? each.path : each.artifact, each.class] }.sort
+    refute excused.failed
+  end
+
+  def test_drops_what_a_step_adds_of_a_policy_the_configuration_disables
+    step = ScriptedStep.new(violations: [debt_violation])
+    result = check(project(stepped, policies: [setting("debt/has-debt", enabled: false)]), files: [], steps: {"track-debt" => step})
+
+    assert_equal [[], false], [result.findings, result.failed]
+  end
+
+  def test_fails_at_a_stale_entry_and_reports_it_among_the_findings_even_when_quiet
+    step = ScriptedStep.new(stale: [stale("lib/b.rb")])
+    result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/c.rb"], verbosity: :quiet, steps: {"track-debt" => step})
+
+    assert_equal ["lib/a.rb", "lib/b.rb", "lib/c.rb"], result.findings.map(&:artifact)
+    assert_equal [true, 1], [result.failed, result.summary.stale]
+    assert_empty check(project(stepped), files: [], verbosity: :silent, steps: {"track-debt" => step}).findings
+  end
+
+  def test_reports_a_steps_warnings_only_at_the_normal_verbosity_and_never_fails_on_them
+    notice = Notice.new(file: "debt.tsv", line: 3, message: "coarse")
+    step = ScriptedStep.new(notices: [notice])
+    results = [{}, {verbosity: :quiet}, {warnings: :none}, {warnings: :error}].map { |options| check(project(stepped), files: [], steps: {"track-debt" => step}, **options) }
+
+    assert_equal [[notice], [], [], [notice]], results.map(&:notices)
+    assert_equal [false] * 4, results.map(&:failed)
+  end
+
+  def test_passes_a_check_that_wrote_and_says_what_it_wrote_unless_silent
+    step = ScriptedStep.new(wrote: ["wrote debt.tsv"], violations: [debt_violation], stale: [stale("lib/a.rb")])
+    result = check(project(stepped), files: [], steps: {"track-debt" => step})
+
+    assert_equal [false, ["wrote debt.tsv"]], [result.failed, result.wrote]
+    assert_empty check(project(stepped), files: [], verbosity: :silent, steps: {"track-debt" => step}).wrote
+  end
+
+  def test_gives_each_step_only_the_flags_its_plugin_takes
+    step = ScriptedStep.new
+    check(project(stepped(flags: ["update-debt"]), stepped("other")), files: [], flags: ["update-debt"], steps: {"track-debt" => step})
+
+    assert_equal [["debt", ["update-debt"]], ["other", []]], step.inputs.map { |input| [input.plugin.name, input.flags] }
+  end
+
+  def test_runs_no_step_of_a_plugin_that_stopped_and_tells_the_others_which_stopped
+    step = ScriptedStep.new
+    broken = tests_plugin(rules: [rule("boom")], ruby: ["boom"]).then do |plugin|
+      plugin.with(manifest: plugin.manifest.with(step_policies: [StepPolicy.new(name: "has-debt", line: 1)], steps: [StepDeclaration.new(name: "track-debt", line: 3)]))
+    end
+    ruby = {"#{ROOT}/.config/tests/rules/boom.rb" => ->(_namespace) { raise "boom" }}
+    result = check(project(broken, stepped), files: ["lib/a.rb"], ruby:, steps: {"track-debt" => step})
+
+    assert_equal [["debt"], [["tests"]], ["tests"]], [step.inputs.map { |input| input.plugin.name }, step.inputs.map(&:faulted), result.faults.map(&:plugin)]
+  end
+
+  def test_fails_at_a_stale_entry_alone
+    step = ScriptedStep.new(stale: [stale("lib/a.rb")], summary: ["0 accepted as debt"])
+    result = check(project(stepped, stepped("other")), files: [], steps: {"track-debt" => step})
+
+    assert_equal [true, ["0 accepted as debt", "0 accepted as debt"]], [result.failed, result.summary.steps]
+  end
+
+  def test_drops_only_what_a_step_adds_of_the_policy_the_configuration_disables
+    kept = debt_violation.with(policy: "kept")
+    policies = [setting("debt/kept", severity: :error), setting("debt/has-debt", enabled: false), setting("other/kept", enabled: false)]
+    result = check(project(stepped, policies:), files: [], steps: {"track-debt" => ScriptedStep.new(violations: [debt_violation, kept])})
+
+    assert_equal [kept], result.findings
+  end
+
+  def test_gives_each_step_the_flags_its_plugin_takes_among_others
+    step = ScriptedStep.new
+    check(project(stepped(flags: ["x", "update-debt"]), stepped("other", flags: ["x"])), files: [], flags: ["update-debt", "x"],
+      steps: {"track-debt" => step})
+
+    assert_equal [["debt", ["update-debt", "x"]], ["other", ["x"]]], step.inputs.map { |input| [input.plugin.name, input.flags] }
+    mistake = assert_raises(Mistake) { check(project(stepped("other", flags: ["x"]), stepped(flags: ["y"])), files: [], flags: ["y", "nope"]) }
+
+    assert_equal "lists no plugin that takes --nope", mistake.message
+  end
+
+  def test_stops_at_a_flag_no_listed_plugin_takes
+    mistake = assert_raises(Mistake) { check(project(stepped), files: [], flags: ["update-debt"]) }
+
+    assert_equal [".config/crosslint/config.kdl", "lists no plugin that takes --update-debt"], [mistake.location, mistake.message]
   end
 
   private
 
-  def check(project, files:, ignored: [], **options)
+  def check(project, files:, ignored: [], steps: {}, ruby: {}, **options)
     port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files}, ignored: {ROOT => ignored})
-    Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new, helpers: CrossLint::Adapters::MemoryHelpers.new).call(project, **options)
+    Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(ruby), helpers: CrossLint::Adapters::MemoryHelpers.new, steps:)
+      .call(project, **options)
   end
 
   def declaration(name, files, line: 1, **companions)

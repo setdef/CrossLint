@@ -1,0 +1,12 @@
+// The debt plugin: a violation the debt file lists doesn't fail the check,
+// and an entry no violation matches does. CrossLint's step track-debt
+// reads and writes the file.
+step "track-debt"
+
+// Each entry, as a violation, with report-entries.
+policy "has-debt"
+
+setting "file"
+setting "report-entries"
+
+flag "update-debt"

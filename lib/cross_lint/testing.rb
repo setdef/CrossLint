@@ -138,6 +138,16 @@ module CrossLint
         assert_equal [[:warning], [nil], [:error], [nil]], severities
       end
 
+      def test_reads_the_settings_flags_and_steps_a_manifest_declares
+        manifest = signatures_manifest
+        names = [manifest.step_policies, manifest.settings, manifest.flags, manifest.steps].map { |each| each.map(&:name) }
+        lines = [manifest.step_policies, manifest.settings, manifest.flags, manifest.steps].flat_map { |each| each.map(&:line) }
+
+        assert_equal [["has-debt"], ["file", "report-entries"], ["update-debt"], ["track-debt"]], names
+        assert_equal lines.sort, lines.uniq
+        assert_operator lines.first, :>, manifest.policies.last.line
+      end
+
       def test_reads_the_manifest_of_the_root_folder_itself
         port = manifests_port(example: [""])
 
@@ -311,6 +321,23 @@ module CrossLint
         assert_nil reported.fetch(:summary)
       end
 
+      def test_reports_each_stale_entry_apart_from_the_violations
+        stale = Core::Stale.new(plugin: "tests", policy: "has-test", artifact: "lib/b.rb", file: "debt.tsv", line: 2, message: "is stale")
+        port = report_port
+        port.write(result([violation("lib/a.rb", "no test"), stale]))
+
+        assert_equal [[["lib/a.rb", "no test", "tests", "has-test", :error]], [["lib/b.rb", "is stale", "tests", "has-test"]]],
+          [reported.fetch(:findings), reported.fetch(:stale)]
+      end
+
+      def test_reports_each_file_a_step_wrote_unless_silent
+        port = report_port
+        port.write(result([], wrote: ["wrote debt.tsv: 1 entry added, 0 removed"]))
+        port.write(result([], verbosity: :silent, wrote: ["wrote other.tsv"]))
+
+        assert_equal ["wrote debt.tsv: 1 entry added, 0 removed"], reported.fetch(:wrote)
+      end
+
       def test_reports_each_fault_even_when_silent
         faults = [Core::Fault.new(plugin: "tests", rule: "names-class", artifact: "lib/a.rb", message: "raised RuntimeError: boom", trace: ["a.rb:1"]),
           Core::Fault.new(plugin: "other", rule: "uses-gem", artifact: nil, message: "requires rainbow", trace: [])]
@@ -328,9 +355,9 @@ module CrossLint
         Core::Violation.new(plugin: "tests", policy: "has-test", artifact: path, role: "ruby-file", message:, severity:, detail: nil)
       end
 
-      def result(findings, notices: [], verbosity: :normal, faults: [])
+      def result(findings, notices: [], verbosity: :normal, faults: [], wrote: [])
         summary = Core::Summary.new(kinds: [["ruby-file", 2]], faults: 0, errors: 0, warnings: 0, warnings_shown: true)
-        Core::CheckResult.new(notices:, findings:, summary:, verbosity:, failed: false, faults:)
+        Core::CheckResult.new(notices:, findings:, summary:, verbosity:, failed: false, faults:, wrote:)
       end
     end
 

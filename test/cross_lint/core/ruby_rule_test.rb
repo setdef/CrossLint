@@ -356,7 +356,7 @@ class RubyRuleTest < Minitest::Test
       path = File.expand_path(file, RULES)
       [path, text.is_a?(String) ? ->(namespace) { namespace.module_eval(text, path, 1) } : text]
     end
-    Check.new(project_files:, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(loaded), helpers: running)
+    Check.new(project_files:, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(loaded), helpers: running, steps: {})
       .call(Project.new(root: ROOT, configuration:, plugins:))
   end
 

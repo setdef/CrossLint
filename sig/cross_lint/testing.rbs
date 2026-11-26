@@ -93,7 +93,11 @@ module CrossLint
       #   companion "test" at severity "error";
       # * "either", when any of companion-exists "signature" and not
       #   companion-exists "test", running "companion-absent" with
-      #   companion "signature" and no severity.
+      #   companion "signature" and no severity;
+      #
+      # then the policy "has-debt", which a step reports, the settings
+      # "file" and "report-entries", the flag "update-debt", and the step
+      # "track-debt".
       #
       # A manifest with a mistake on line 2 is in each folder of `broken`.
       def manifests_port: (?example: Array[String], ?broken: Array[String]) -> _PluginManifests
@@ -118,6 +122,10 @@ module CrossLint
 
       # read returns a rule line's severity, and nil when it has none.
       def test_reads_the_severity_of_a_rule_line_when_it_has_one: () -> void
+
+      # read returns the policies a step reports apart from the others,
+      # and the settings, flags, and steps, each in order.
+      def test_reads_the_settings_flags_and_steps_a_manifest_declares: () -> void
 
       # read finds a manifest in the root folder itself.
       def test_reads_the_manifest_of_the_root_folder_itself: () -> void
@@ -245,11 +253,13 @@ module CrossLint
 
       # What the port wrote: each violation as its path, message, plugin,
       # policy, and severity; each notice as its file, line, and message;
-      # each fault as its plugin, rule, artifact, and message; and the
-      # summary line without "crosslint: ", or nil for none.
+      # each fault as its plugin, rule, artifact, and message; each stale
+      # entry, one whose message is "is stale", as its artifact, message,
+      # plugin, and policy; each line a step wrote; and the summary line
+      # without "crosslint: ", or nil for none.
       def reported: () -> {findings: Array[[String, String, String, String, Core::severity]],
                            notices: Array[[String, Integer, String]], faults: Array[[String, String, String?, String]],
-                           summary: String?}
+                           stale: Array[[String, String, String, String]], wrote: Array[String], summary: String?}
     end
 
     # The tests every adapter of the report port passes.
@@ -269,6 +279,12 @@ module CrossLint
       # write writes nothing under --silent for a result with no faults.
       def test_reports_nothing_when_silent: () -> void
 
+      # write reports each stale entry, and none of them as a violation.
+      def test_reports_each_stale_entry_apart_from_the_violations: () -> void
+
+      # write reports each line a step wrote, except under --silent.
+      def test_reports_each_file_a_step_wrote_unless_silent: () -> void
+
       # write reports each fault, even under --silent.
       def test_reports_each_fault_even_when_silent: () -> void
 
@@ -277,10 +293,11 @@ module CrossLint
       # A violation of tests/has-test on the ruby-file at `path`.
       def violation: (String path, String message, ?Core::severity severity) -> Core::Violation
 
-      # A result with these findings, notices, verbosity, and faults, and a
-      # summary of two ruby-file artifacts with no violations.
-      def result: (Array[Core::Violation | Core::Artifact] findings, ?notices: Array[Core::Notice],
-                   ?verbosity: (:normal | :quiet | :silent), ?faults: Array[Core::Fault]) -> Core::CheckResult
+      # A result with these findings, notices, verbosity, faults, and lines
+      # written, and a summary of two ruby-file artifacts with no
+      # violations.
+      def result: (Array[Core::Violation | Core::Stale | Core::Artifact] findings, ?notices: Array[Core::Notice],
+                   ?verbosity: (:normal | :quiet | :silent), ?faults: Array[Core::Fault], ?wrote: Array[String]) -> Core::CheckResult
     end
     # What a test of a debt-files adapter defines.
     interface _DebtFilesTest

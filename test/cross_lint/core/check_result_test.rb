@@ -20,6 +20,21 @@ class CheckResultTest < Minitest::Test
     assert_equal "checked 2 a, 0 b, and 1 c artifacts: 1 error, 1 warning", summary([["a", 2], ["b", 0], ["c", 1]], errors: 1, warnings: 1).line
   end
 
+  def test_says_how_many_entries_are_stale_and_what_each_step_says
+    assert_equal "checked 2 a artifacts: 1 error, 1 stale entry, 2 accepted as debt",
+      summary([["a", 2]], errors: 1).with(stale: 1, steps: ["2 accepted as debt"]).line
+    assert_equal "checked 2 a artifacts: 2 stale entries", summary([["a", 2]]).with(stale: 2).line
+    assert_equal [0, []], summary([]).then { |found| [found.stale, found.steps] }
+  end
+
+  def test_lists_the_stale_entries_among_the_findings
+    stale = Stale.new(plugin: "t", policy: "p", artifact: "a", file: "d.tsv", line: 2, message: "is stale")
+    violation = Violation.new(plugin: "t", policy: "p", artifact: "a", role: "r", message: "m", severity: :error, detail: nil)
+    result = CheckResult.new(notices: [], findings: [violation, stale], summary: summary([]), verbosity: :normal, failed: true, faults: [])
+
+    assert_equal [[violation], [stale], []], [result.violations, result.stale, result.wrote]
+  end
+
   def test_says_no_errors_when_warnings_are_hidden
     assert_equal "checked 2 ruby-file artifacts: no errors", summary([["ruby-file", 2]], warnings_shown: false).line
   end

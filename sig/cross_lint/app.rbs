@@ -8,11 +8,13 @@ module CrossLint
     # An app that reads the configuration through `configuration`, the
     # manifests through `manifests`, the project's files through
     # `project_files`, plugins' Ruby through `plugin_ruby`, and runs
-    # helpers through `helpers`, with the built-in plugins in `plugins`.
-    # With no `helpers`, it runs them as processes, writing what they
-    # write to standard error to `err` with `debug`.
+    # helpers through `helpers`, with the built-in plugins in `plugins`,
+    # and whose step track-debt reads and writes debt files through
+    # `debt_files`. With no `helpers`, it runs them as processes, writing
+    # what they write to standard error to `err` with `debug`.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
-                     ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?plugins: String, ?err: CLI::_Output, ?debug: bool) -> void
+                     ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?plugins: String, ?debt_files: _DebtFiles, ?err: CLI::_Output,
+                     ?debug: bool) -> void
 
     # The project whose root is `start` or the nearest folder above it
     # with a configuration, read and checked (Core::LoadProject).
@@ -20,9 +22,10 @@ module CrossLint
 
     # The result of checking that project (Core::Check), under the
     # command line's `warnings` and `verbosity`, nil where it gives none,
-    # with each passing artifact under `all`.
+    # with each passing artifact under `all`, and with `flags`, the
+    # plugins' flags given, without their dashes.
     def check: (String start, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                ?all: bool) -> Core::CheckResult
+                ?all: bool, ?flags: Array[String]) -> Core::CheckResult
 
     # The report that writes to `out` and `err`: JSON with `json`, else
     # text, in color with `color`, and each fault's trace with `debug`.
@@ -41,6 +44,8 @@ module CrossLint
     @helpers: _Helpers
 
     @built_in: Hash[String, String]
+
+    @steps: Hash[String, Core::_Step]
 
     # The folder of each built-in plugin in `folder`, by name.
     def built_in_plugins: (String folder) -> Hash[String, String]

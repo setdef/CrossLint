@@ -233,6 +233,7 @@ class TSVDebtFilesTest < Minitest::Test
       rewrite(file("Rule\tArtifact\tComment\r\nr\ta\tc"), added).force_encoding(Encoding::UTF_8)
   end
 
+  # ng-nudge wrote an empty debt file as one newline (lib/config/debt-file.js:76-81).
   def test_writes_a_header_and_a_newline_for_a_file_with_none
     assert_equal "Rule\tArtifact\tComment\n", rewrite(file("\n"))
     assert_equal "Rule\tArtifact\tComment\ntests/has-test\tlib/a.rb\t\n", rewrite(file(""), [fresh("lib/a.rb")])
@@ -252,6 +253,8 @@ class TSVDebtFilesTest < Minitest::Test
       rewrite(file("Rule\tArtifact\tComment\tDetail\nr\ta\t\t\n"), [fresh("lib/b.rb")])
   end
 
+  # ng-nudge failed an update when the folder was missing (lib/config/debt-file.js:81);
+  # the contract's test_makes_the_folder_of_a_file_it_writes shows CrossLint makes it.
   def test_replaces_the_file_whole_and_leaves_no_file_beside_it
     write(@root, "debt.tsv", "Rule\tArtifact\tComment\n")
     File.chmod(0o640, File.join(@root, "debt.tsv"))

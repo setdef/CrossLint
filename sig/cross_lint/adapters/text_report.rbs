@@ -13,6 +13,11 @@ module CrossLint
     #     lib/a.rb: no test file at test/a_test.rb (tests/has-test)
     #     lib/a.rb: warning: no signature file at sig/a.rbs (tests/has-signature)
     #
+    # A stale entry's line is its artifact, its message, and its plugin
+    # and policy, as a violation's is. A line for each file a step wrote,
+    # such as "wrote .config/crosslint/debt.tsv: 2 entries added, 0
+    # removed", goes after the faults and before the summary.
+    #
     # A passing artifact's line, under --all, is its path and role:
     # `lib/b.rb: ruby-file passes`. With color, a violation's message is
     # red for an error and yellow for a warning, and nothing else is

@@ -5,10 +5,11 @@ require "pathname"
 module CrossLint
   module Core
     class LoadProject
-      def initialize(configuration:, manifests:, built_in: {})
+      def initialize(configuration:, manifests:, built_in: {}, steps: {})
         @configuration = configuration
         @manifests = manifests
         @built_in = built_in
+        @steps = steps
       end
 
       def call(start)
@@ -24,7 +25,10 @@ module CrossLint
         plugins = configuration.plugins.each_with_index.with_object([]) do |(listing, index), loaded|
           loaded << plugin(root, configuration, index, loaded)
         end
-        plugins.each { |plugin| check_manifest(plugin, plugins) }
+        plugins.each do |plugin|
+          check_manifest(plugin, plugins)
+          check_settings(plugin, configuration.file)
+        end
         check_policy_settings(configuration, plugins)
         Project.new(root:, configuration:, plugins:)
       end
@@ -54,8 +58,6 @@ module CrossLint
           fail_at.call("shared plugin #{listing.name.dump} needs ref=, a tag or a full commit SHA") unless listing.ref
           fail_at.call("CrossLint can't fetch shared plugins yet")
         when :local
-          setting = listing.settings.first
-          fail_at.call("#{listing.name.dump} is a local plugin, which takes no settings", setting.line) if setting
           fail_at.call("only a shared plugin takes ref=") if listing.ref
           [root, clean(listing.name)]
         else
@@ -63,8 +65,6 @@ module CrossLint
           folder = @built_in.fetch(listing.name) do
             fail_at.call(Spelling.unknown("built-in plugin", listing.name, @built_in.keys, none: "this CrossLint has none"))
           end
-          setting = listing.settings.first
-          fail_at.call("settings for built-in plugins don't work yet", setting.line) if setting
           [File.dirname(folder), File.basename(folder)]
         end
       end
@@ -88,8 +88,47 @@ module CrossLint
             file: manifest.file, line: rule.line)
         end
         once(manifest.helpers, "helper", manifest.file)
-        once(manifest.policies, "policy", manifest.file)
+        once(manifest.policies + manifest.step_policies, "policy", manifest.file)
         manifest.policies.each { |policy| check_policy(plugin, policy, plugins) }
+        %i[settings flags steps].each { |kind| once(manifest.public_send(kind), kind.to_s.chomp("s"), manifest.file) }
+        check_steps(manifest)
+      end
+
+      # Each step is one CrossLint has, and reports exactly the policies
+      # the manifest declares with no block.
+      def check_steps(manifest)
+        reported = manifest.steps.flat_map do |declaration|
+          step = @steps.fetch(declaration.name) do
+            raise Mistake.new(Spelling.unknown("step", declaration.name, @steps.keys, none: "this CrossLint has none"),
+              file: manifest.file, line: declaration.line)
+          end
+          step.policies.each do |name|
+            next if manifest.step_policies.any? { |policy| policy.name == name }
+
+            raise Mistake.new("step #{declaration.name.dump} reports policy #{name.dump}; declare it as policy #{name.dump}, with no block",
+              file: manifest.file, line: declaration.line)
+          end
+        end
+        manifest.step_policies.each do |policy|
+          next if reported.include?(policy.name)
+
+          raise Mistake.new("policy #{policy.name.dump} has no applies-to, and no step of the plugin reports it",
+            file: manifest.file, line: policy.line)
+        end
+      end
+
+      # Each setting in the plugin's block is one its manifest declares,
+      # and each step reads what it takes.
+      def check_settings(plugin, file)
+        settings = plugin.listing.settings
+        declared = plugin.manifest.settings.map(&:name)
+        settings.each do |setting|
+          next if declared.include?(setting.name)
+
+          raise Mistake.new(Spelling.unknown("setting", setting.name, declared, none: "plugin #{plugin.name} takes none"), file:,
+            line: setting.line)
+        end
+        plugin.manifest.steps.each { |declaration| @steps.fetch(declaration.name).check_settings(settings, file) }
       end
 
       def check_artifact(artifact, file)
@@ -170,7 +209,7 @@ module CrossLint
           end
           owner = plugins.find { |plugin| plugin.name == owner_name }
           fail_at.call(Spelling.unknown("plugin", owner_name, plugins.map(&:name))) unless owner
-          policies = owner.manifest.policies.map(&:name)
+          policies = (owner.manifest.policies + owner.manifest.step_policies).map(&:name)
           fail_at.call(Spelling.unknown("policy", name, policies, none: "#{owner.name} declares none")) unless policies.include?(name)
         end
       end

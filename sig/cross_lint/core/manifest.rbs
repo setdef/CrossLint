@@ -158,8 +158,73 @@ module CrossLint
       def missing_command: (Plugin plugin) -> Mistake
     end
 
+    # A policy no rule runs, whose violations one of its plugin's steps
+    # reports, declared as `policy NAME` with no block.
+    class StepPolicy < Data
+      # The policy's name.
+      attr_reader name: String
+
+      # The line it is declared on.
+      attr_reader line: Integer
+
+      # A step's policy with these fields.
+      def self.new: (name: String, line: Integer) -> instance
+
+      # A step's policy with these fields.
+      def initialize: (name: String, line: Integer) -> void
+    end
+
+    # A setting the plugin takes in its block in the configuration,
+    # declared as `setting NAME`.
+    class SettingDeclaration < Data
+      # The setting's name, such as "file".
+      attr_reader name: String
+
+      # The line it is declared on.
+      attr_reader line: Integer
+
+      # A setting declaration with these fields.
+      def self.new: (name: String, line: Integer) -> instance
+
+      # A setting declaration with these fields.
+      def initialize: (name: String, line: Integer) -> void
+    end
+
+    # A flag of `crosslint check` the plugin takes, declared as
+    # `flag NAME`, without its dashes.
+    class FlagDeclaration < Data
+      # The flag's name, such as "update-debt".
+      attr_reader name: String
+
+      # The line it is declared on.
+      attr_reader line: Integer
+
+      # A flag declaration with these fields.
+      def self.new: (name: String, line: Integer) -> instance
+
+      # A flag declaration with these fields.
+      def initialize: (name: String, line: Integer) -> void
+    end
+
+    # A step the plugin runs after every rule has run, declared as
+    # `step NAME`, by the name of a step built into CrossLint.
+    class StepDeclaration < Data
+      # The step's name, such as "track-debt".
+      attr_reader name: String
+
+      # The line it is declared on.
+      attr_reader line: Integer
+
+      # A step declaration with these fields.
+      def self.new: (name: String, line: Integer) -> instance
+
+      # A step declaration with these fields.
+      def initialize: (name: String, line: Integer) -> void
+    end
+
     # What a plugin's manifest declares: its artifacts, policies, rules,
-    # and helpers.
+    # helpers, the policies its steps report, its settings, its flags,
+    # and its steps.
     class Manifest < Data
       # The manifest's path, relative to its project's root, as messages
       # name it.
@@ -177,13 +242,29 @@ module CrossLint
       # The helpers, in the order they are declared.
       attr_reader helpers: Array[HelperDeclaration]
 
-      # A manifest with these fields.
-      def self.new: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
-                     rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration]) -> instance
+      # The policies its steps report, in the order they are declared.
+      attr_reader step_policies: Array[StepPolicy]
 
-      # A manifest with these fields.
+      # The settings it takes, in the order they are declared.
+      attr_reader settings: Array[SettingDeclaration]
+
+      # The flags it takes, in the order they are declared.
+      attr_reader flags: Array[FlagDeclaration]
+
+      # Its steps, in the order they are declared.
+      attr_reader steps: Array[StepDeclaration]
+
+      # A manifest with these fields, and none of the last four unless
+      # given.
+      def self.new: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
+                     rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration], ?step_policies: Array[StepPolicy],
+                     ?settings: Array[SettingDeclaration], ?flags: Array[FlagDeclaration], ?steps: Array[StepDeclaration]) -> instance
+
+      # A manifest with these fields, and none of the last four unless
+      # given.
       def initialize: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
-                       rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration]) -> void
+                       rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration], ?step_policies: Array[StepPolicy],
+                       ?settings: Array[SettingDeclaration], ?flags: Array[FlagDeclaration], ?steps: Array[StepDeclaration]) -> void
     end
   end
 end

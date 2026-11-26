@@ -25,6 +25,16 @@ module CrossLint
       end
     end
 
-    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers); end
+    class StepPolicy < Data.define(:name, :line); end
+
+    class SettingDeclaration < Data.define(:name, :line); end
+
+    class FlagDeclaration < Data.define(:name, :line); end
+
+    class StepDeclaration < Data.define(:name, :line); end
+
+    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers, :step_policies, :settings, :flags, :steps)
+      def initialize(step_policies: [], settings: [], flags: [], steps: [], **declared) = super
+    end
   end
 end

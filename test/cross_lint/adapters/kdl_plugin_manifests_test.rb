@@ -55,6 +55,12 @@ class KDLPluginManifestsTest < Minitest::Test
 
     rule "names-class" ruby="rules/names_class.rb"
     helper "members" command="node" file="helpers/members.mjs"
+
+    policy "has-debt"
+    setting "file"
+    setting "report-entries"
+    flag "update-debt"
+    step "track-debt"
   KDL
 
   def setup
@@ -131,7 +137,7 @@ class KDLPluginManifestsTest < Minitest::Test
   def test_refuses_a_node_it_does_not_know
     assert_refuses 2, %(unknown node "file", did you mean "files"?), %(artifact "a" {\n  file "lib/{path}.rb"\n}\n)
     assert_refuses 1, %(unknown node "artefact", did you mean "artifact"?), %(artefact "a")
-    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "policy", "rule", or "helper"), %(zzz)
+    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "policy", "rule", "helper", "setting", "flag", or "step"), %(zzz)
     assert_refuses 2, %(unknown node "polcy", did you mean "policy"?), %(rule "r" ruby="r.rb"\npolcy "p")
   end
 
@@ -191,6 +197,22 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 3, "any has no condition; write it as any { CONDITION ... }", policy_with(%(when any { }))
     assert_refuses 3, "all has 1 argument; write it as all { CONDITION ... }", policy_with(%(when all "b" { companion-exists "b"; }))
     assert_refuses 3, "not has 1 argument; write it as not { CONDITION }", policy_with(%(when not "b" { companion-exists "b"; }))
+  end
+
+  def test_reads_a_policy_with_no_block_as_one_a_step_reports
+    manifest = read(%(policy "has-debt"\npolicy "p" {\n  applies-to "a"\n  rule "r"\n}\n))
+
+    assert_equal [[["has-debt", 1]], ["p"]], [manifest.step_policies.map { |policy| [policy.name, policy.line] }, manifest.policies.map(&:name)]
+  end
+
+  def test_refuses_a_setting_flag_or_step_written_wrong
+    %w[setting flag step].each do |kind|
+      assert_refuses 1, "#{kind} has 0 arguments; write it as #{kind} NAME", kind
+      assert_refuses 1, %(unknown property "x"; #{kind} takes none), %(#{kind} "a" x=1)
+      assert_refuses 1, %(unknown node "x"; #{kind} takes no children), %(#{kind} "a" { x; })
+    end
+    assert_refuses 1, %(unknown property "x"; policy takes none), %(policy "a" x=1)
+    assert_refuses 1, "policy has 0 arguments; write it as policy NAME { ... }", %(policy { applies-to "a"; })
   end
 
   def test_refuses_a_ruby_rule_written_wrong

@@ -6,13 +6,17 @@ module CrossLint
     # report under the --warnings mode and the verbosity. It reads the
     # project's files only through `project_files`, plugins' Ruby only
     # through `plugin_ruby`, and runs helpers only through `helpers`, and
-    # writes nothing. A plugin whose Ruby rule has a fault, while it loads
-    # or checks, reports the fault alone, and the other plugins run.
+    # writes nothing itself. A plugin whose Ruby rule has a fault, while
+    # it loads or checks, reports the fault alone, and the other plugins
+    # run. Then each step of each plugin that didn't stop runs on every
+    # violation, and the result leaves out what the steps excuse and adds
+    # what they report.
     class Check
       # A use case that reads the project's files through `project_files`,
       # loads plugins' Ruby through `plugin_ruby`, and runs their helpers
-      # through `helpers`.
-      def initialize: (project_files: _ProjectFiles, plugin_ruby: _PluginRuby, helpers: _Helpers) -> void
+      # through `helpers`, and runs each plugin's steps from `steps`, by
+      # name.
+      def initialize: (project_files: _ProjectFiles, plugin_ruby: _PluginRuby, helpers: _Helpers, steps: Hash[String, _Step]) -> void
 
       # The result of checking `project`. `warnings` and `verbosity` are
       # the command line's, nil when it gives none, and the configuration's
@@ -20,14 +24,18 @@ module CrossLint
       # the findings include each artifact checked that has no violation.
       # Raises Mistake for a root outside a Git working tree, for a helper
       # whose command isn't on the PATH, and for a Ruby rule whose file
-      # isn't there, each before any rule runs. Ends every helper before
-      # it returns.
+      # isn't there, each before any rule runs, and for a flag in `flags`,
+      # each without its dashes, that no listed plugin takes. Each step
+      # gets the flags its plugin takes. Ends every helper before it
+      # returns.
       def call: (Project project, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                 ?all: bool) -> CheckResult
+                 ?all: bool, ?flags: Array[String]) -> CheckResult
 
       private
 
       @project_files: _ProjectFiles
+
+      @steps: Hash[String, _Step]
 
       @plugin_ruby: _PluginRuby
 
@@ -68,12 +76,20 @@ module CrossLint
       def run: (Project project, Plugin plugin, Policy policy, Hash[String, Hash[String, Array[Artifact]]] kinds,
                 Hash[[String, String], RubyRule] rules, ^(String path) -> String read) -> Array[Violation]
 
-      # The result: violations, notices, and passing artifacts filtered by
-      # `warnings` and `verbosity`, the summary, and `faults`. A nil
-      # `warnings` is `:all`.
+      # What each step of each plugin that didn't stop at a fault does with
+      # every violation.
+      def run_steps: (Project project, Array[Violation] violations, Array[Fault] faults, Array[String] flags) -> Array[StepResult]
+
+      # The result: violations the steps didn't excuse and those they add,
+      # stale entries, notices, and passing artifacts, filtered by
+      # `warnings` and `verbosity`, the summary, `faults`, and what the
+      # steps wrote. A nil `warnings` is `:all`.
       def report: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
-                   Array[Violation] violations, Array[Fault] faults, warnings: (:all | :none | :error)?,
+                   Array[Violation] violations, Array[Fault] faults, Array[StepResult] steps, warnings: (:all | :none | :error)?,
                    verbosity: (:normal | :quiet | :silent), all: bool) -> CheckResult
+
+      # Whether the configuration disables the policy of `violation`.
+      def disabled?: (Project project, Violation violation) -> bool
 
       # A notice for each Ruby rule no policy runs and each artifact
       # declaration whose files pattern matches no file.
@@ -89,7 +105,7 @@ module CrossLint
                     Array[Violation] shown, bool hidden, Integer faults) -> Summary
 
       # `findings` in the order the report gives them.
-      def sort: (Array[Violation | Artifact] findings) -> Array[Violation | Artifact]
+      def sort: (Array[Violation | Stale | Artifact] findings) -> Array[Violation | Stale | Artifact]
     end
   end
 end

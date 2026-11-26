@@ -14,7 +14,8 @@ Gem::Specification.new do |spec|
   spec.license = "MIT"
   spec.required_ruby_version = ">= 4.1.0.a"
 
-  spec.files = Dir.chdir(__dir__) { Dir["crosslint.usage.kdl", "exe/*", "lib/**/*.rb", "LICENSE"] }
+  # The built-in plugins' folders ship in the app beside lib/.
+  spec.files = Dir.chdir(__dir__) { Dir["crosslint.usage.kdl", "exe/*", "lib/**/*.rb", "plugins/**/*", "LICENSE"] }
   spec.bindir = "exe"
   spec.executables = ["crosslint"]
   spec.require_paths = ["lib"]

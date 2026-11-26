@@ -168,8 +168,8 @@ class CLITest < Minitest::Test
     assert_equal ["crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], [err, status]
   end
 
-  def test_check_refuses_to_update_the_debt
-    assert_equal ["", "crosslint: --update-debt needs the debt plugin, which doesn't work yet\n", 2],
+  def test_check_hands_a_flag_it_doesnt_read_to_the_plugins
+    assert_equal ["", "crosslint: .config/crosslint/config.kdl: lists no plugin that takes --update-debt\n", 2],
       check("check", "--update-debt", app: app)
   end
 

@@ -21,6 +21,8 @@ module ReportTestHelper
 
   def summary_line = own_lines.grep(/\Achecked /).first
 
+  def wrote = own_lines.grep(/\Awrote /)
+
   def violation_of(path, message, severity = :error, plugin: "tests", detail: nil)
     Violation.new(plugin:, policy: "has-test", artifact: path, role: "ruby-file", message:, severity:, detail:)
   end
@@ -50,7 +52,8 @@ class TextReportTest < Minitest::Test
       message, plugin, policy = rest.match(/\A(.*) \(([^\/]+)\/(.+)\)\z/).captures
       [path, message, plugin, policy, warning ? :warning : :error]
     end
-    {findings:, notices:, faults:, summary: summary_line}
+    stale, findings = findings.partition { |_, message| message == "is stale" }
+    {findings:, notices:, faults:, stale: stale.map { |finding| finding.take(4) }, wrote:, summary: summary_line}
   end
 
   def test_writes_each_fault_after_the_findings_and_says_how_to_see_its_trace
@@ -180,7 +183,8 @@ class JSONReportTest < Minitest::Test
     findings = object.fetch("findings").map do |finding|
       [finding.fetch("path"), finding.fetch("message"), finding.fetch("plugin"), finding.fetch("policy"), finding.fetch("severity").to_sym]
     end
-    {findings:, notices:, faults:, summary: summary_line}
+    stale = object.fetch("stale", []).map { |each| [each.fetch("artifact"), each.fetch("message"), each.fetch("plugin"), each.fetch("policy")] }
+    {findings:, notices:, faults:, stale:, wrote:, summary: summary_line}
   end
 
   def test_writes_one_object_with_its_keys_in_order
@@ -189,15 +193,23 @@ class JSONReportTest < Minitest::Test
     assert_equal <<~JSON.delete("\n") + "\n", @out.string
       {"findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null},
       {"path":"lib/b.rb","message":"x","plugin":"tests","policy":"has-test","artifact":"lib/b.rb","role":"ruby-file","severity":"warning","detail":"y"}],
-      "summary":{"artifacts":9,"errors":1,"warnings":1}}
+      "stale":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}
     JSON
     assert_equal "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning\n", @err.string
+  end
+
+  def test_writes_each_stale_entry_with_its_keys_in_order
+    stale = Stale.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", file: "debt.tsv", line: 2, message: "is stale")
+    report_port.write(result_of([stale]))
+
+    assert_equal %({"findings":[],"stale":[{"file":"debt.tsv","line":2,"plugin":"tests","policy":"has-test","artifact":"lib/a.rb",) +
+      %("message":"is stale"}],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}\n), @out.string
   end
 
   def test_writes_the_object_with_no_summary_line_when_quiet
     report_port.write(result_of([], verbosity: :quiet))
 
-    assert_equal [%({"findings":[],"summary":{"artifacts":9,"errors":1,"warnings":1}}\n), ""], [@out.string, @err.string]
+    assert_equal [%({"findings":[],"stale":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}\n), ""], [@out.string, @err.string]
   end
 
   def test_leaves_passing_artifacts_out
@@ -243,7 +255,8 @@ class MemoryReportTest < Minitest::Test
     notices = results.flat_map(&:notices).map { |notice| [notice.file, notice.line, notice.message] }
     faults = @port.results.flat_map(&:faults).map { |fault| [fault.plugin, fault.rule, fault.artifact, fault.message] }
     summary = results.find { |result| result.verbosity == :normal }&.summary&.line
-    {findings:, notices:, faults:, summary:}
+    stale = results.flat_map(&:stale).map { |each| [each.artifact, each.message, each.plugin, each.policy] }
+    {findings:, notices:, faults:, stale:, wrote: results.flat_map(&:wrote), summary:}
   end
 
   def test_holds_every_result_written_in_order

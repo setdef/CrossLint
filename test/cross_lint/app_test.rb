@@ -7,6 +7,7 @@ class AppTest < Minitest::Test
   cover "CrossLint::App*"
 
   App = CrossLint::App
+  Core = CrossLint::Core
   Mistake = CrossLint::Core::Mistake
 
   MANIFEST = %(artifact "a" {\n  files "{path}.md"\n  companion "c" "{path}.txt"\n}\n) +
@@ -30,12 +31,34 @@ class AppTest < Minitest::Test
 
   def test_finds_the_built_in_plugins_in_crosslints_plugins_folder
     assert_equal File.join(ROOT, "plugins"), App::PLUGINS
-    write(@base, "app/.config/crosslint/config.kdl", %(plugin "debt"\n))
-    write(@base, "debt/plugin.kdl", MANIFEST)
-    mistake = assert_raises(Mistake) { Dir.chdir(@base) { App.new.load_project(File.join(@base, "app")) } }
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "debt" {\n  file "debt.tsv"\n}\n))
+    project = App.new.load_project(File.join(@base, "app"))
 
-    assert_equal ".config/crosslint/config.kdl:1: unknown built-in plugin \"debt\"; this CrossLint has none",
-      "#{mistake.location}: #{mistake.message}"
+    assert_equal [["debt", File.join(ROOT, "plugins", "debt"), ["track-debt"]]],
+      project.plugins.map { |plugin| [plugin.name, plugin.folder, plugin.manifest.steps.map(&:name)] }
+  end
+
+  # ng-nudge counted its debt file as an artifact (lib/console-output.js:16).
+  def test_tracks_debt_with_the_built_in_debt_plugin
+    write(@base, ".config/crosslint/config.kdl", %(plugin "debt" {\n  report-entries commented="none"\n}\nplugin ".config/crosslint/tests"\n))
+    write(@base, ".config/crosslint/tests/plugin.kdl", MANIFEST.sub("{path}.md", "lib/{path}.md"))
+    write(@base, "lib/a.md", "")
+    write(@base, "lib/b.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    before = App.new.check(@base)
+    updated = App.new.check(@base, flags: ["update-debt"])
+    debt = File.binread(File.join(@base, ".config/crosslint/debt.tsv"))
+
+    assert_equal [true, 2, false], [before.failed, before.violations.size, updated.failed]
+    assert_equal ["wrote .config/crosslint/debt.tsv: 2 entries added, 0 removed"], updated.wrote
+    assert_equal "Rule\tArtifact\tComment\ntests/p\tlib/a.md\t\ntests/p\tlib/b.md\t\n", debt
+    File.binwrite(File.join(@base, ".config/crosslint/debt.tsv"), debt.sub("lib/a.md\t", "lib/a.md\tlater"))
+    write(@base, "b.txt", "")
+    after = App.new.check(@base)
+
+    assert_equal [["lib/b.md", Core::Stale], [".config/crosslint/debt.tsv", Core::Violation]].sort,
+      after.findings.map { |finding| [finding.artifact, finding.class] }.sort
+    assert_equal ["checked 2 a artifacts: 1 error, 1 stale entry, 1 accepted as debt", true], [after.summary.line, after.failed]
   end
 
   def test_takes_each_folder_with_a_manifest_as_a_built_in_plugin

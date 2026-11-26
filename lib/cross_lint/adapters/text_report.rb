@@ -26,6 +26,7 @@ module CrossLint
         # before the findings.
         @out.flush
         write_faults(result)
+        result.wrote.each { |line| say(line) } unless result.verbosity == :silent
         say(result.summary.line) if result.verbosity == :normal
       end
 
@@ -48,6 +49,8 @@ module CrossLint
             message = (finding.severity == :warning) ? "warning: #{finding.message}" : finding.message
             message = "#{COLORS.fetch(finding.severity)}#{message}#{RESET}" if @color
             @out.puts "#{finding.artifact}: #{message} (#{finding.plugin}/#{finding.policy})"
+          when Core::Stale
+            @out.puts "#{finding.artifact}: #{finding.message} (#{finding.plugin}/#{finding.policy})"
           else
             @out.puts "#{finding.path}: #{finding.role} passes"
           end

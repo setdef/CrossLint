@@ -8,6 +8,10 @@ module CrossLint
 
     WARNINGS = {"all" => :all, "none" => :none, "error" => :error}.freeze
 
+    # The flags of check the command line reads itself; a plugin takes
+    # each of the others.
+    CHECK_FLAGS = %w[warnings all json].freeze
+
     def initialize(argv, out:, err:, env:, spec: nil, app: nil)
       @argv = argv
       @out = out
@@ -22,7 +26,7 @@ module CrossLint
       line = CommandLine.new(spec, @argv)
       command = line.command
       if line.action == :run && command
-        return check(line) if command.name == "check"
+        return check(line, command) if command.name == "check"
 
         return say("#{spec.bin} #{command.name} doesn't work yet")
       end
@@ -41,14 +45,13 @@ module CrossLint
 
     private
 
-    def check(line)
-      return say("--update-debt needs the debt plugin, which doesn't work yet") if line.flags.key?("update-debt")
-
+    def check(line, command)
       app = @app || App.new(err: @err, debug: debug?)
       given = line.value("warnings") if line.given?("warnings")
       warnings = WARNINGS.fetch(given) if given
       verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?
-      result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"))
+      flags = command.flags.map(&:long).select { |flag| line.given?(flag) } - CHECK_FLAGS
+      result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"), flags:)
       app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line), debug: debug?).write(result)
       return 2 unless result.faults.empty?
 

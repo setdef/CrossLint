@@ -58,10 +58,13 @@ class LoadProjectTest < Minitest::Test
     assert_mistake CONFIG, 1, "no plugin.kdl in ../..", plugins: [listing("../../x/..")]
   end
 
-  def test_stops_at_settings_for_a_local_plugin
+  def test_stops_at_a_setting_the_plugins_manifest_doesnt_declare
     plugin = listing(".config/crosslint/tests", settings: [setting("src-dir", line: 2), setting("other", line: 3)])
 
-    assert_mistake CONFIG, 2, %(".config/crosslint/tests" is a local plugin, which takes no settings), plugins: [plugin]
+    assert_mistake CONFIG, 2, %(unknown setting "src-dir"; plugin tests takes none), plugins: [plugin],
+      manifests: {"#{APP}/.config/crosslint/tests" => tests_manifest(".config/crosslint/tests")}
+    assert_mistake CONFIG, 2, %(unknown setting "fiel", did you mean "file"?), plugins: [listing("debt", settings: [setting("fiel", line: 2)])],
+      built_in: {"debt" => "#{TOP}c/plugins/debt"}, manifests: {"#{TOP}c/plugins/debt" => debt_manifest}, steps: {"track-debt" => RecordingStep.new}
   end
 
   def test_stops_at_a_ref_for_a_local_or_built_in_plugin
@@ -90,10 +93,75 @@ class LoadProjectTest < Minitest::Test
     assert_mistake CONFIG, 1, %(unknown built-in plugin "debt"; this CrossLint has none), plugins: [listing("debt")]
   end
 
-  def test_stops_at_settings_for_a_built_in_plugin
-    assert_mistake CONFIG, 2, "settings for built-in plugins don't work yet",
-      plugins: [listing("debt", settings: [setting("file", line: 2)])], built_in: {"debt" => "#{TOP}c/plugins/debt"},
-      manifests: {"#{TOP}c/plugins/debt" => tests_manifest("debt")}
+  def test_has_each_step_read_its_plugins_settings
+    step = RecordingStep.new
+    settings = [setting("file", line: 2)]
+    load_project(plugins: [listing("debt", settings:)], built_in: {"debt" => "#{TOP}c/plugins/debt"},
+      manifests: {"#{TOP}c/plugins/debt" => debt_manifest}, steps: {"track-debt" => step})
+
+    assert_equal [[settings, CONFIG]], step.read
+  end
+
+  def test_stops_at_a_mistake_a_step_finds_in_its_settings
+    step = RecordingStep.new(Mistake.new("file takes one path", file: CONFIG, line: 2))
+
+    assert_mistake CONFIG, 2, "file takes one path", plugins: [listing("debt", settings: [setting("file", line: 2)])],
+      built_in: {"debt" => "#{TOP}c/plugins/debt"}, manifests: {"#{TOP}c/plugins/debt" => debt_manifest}, steps: {"track-debt" => step}
+  end
+
+  def test_stops_at_a_step_crosslint_doesnt_have
+    assert_mistake "rules/tests/plugin.kdl", 9, %(unknown step "track-dept", did you mean "track-debt"?),
+      manifest: debt_manifest("rules/tests", step: "track-dept"), steps: {"track-debt" => RecordingStep.new}
+    assert_mistake "rules/tests/plugin.kdl", 9, %(unknown step "track-debt"; this CrossLint has none), manifest: debt_manifest("rules/tests")
+  end
+
+  def test_stops_at_a_policy_a_step_reports_that_the_manifest_doesnt_declare_with_no_block
+    assert_mistake "rules/tests/plugin.kdl", 9, %(step "track-debt" reports policy "has-debt"; declare it as policy "has-debt", with no block),
+      manifest: debt_manifest("rules/tests", step_policies: []), steps: {"track-debt" => RecordingStep.new}
+  end
+
+  def test_stops_at_each_policy_a_step_reports_that_the_manifest_doesnt_declare
+    assert_mistake "rules/tests/plugin.kdl", 9, %(step "track-debt" reports policy "more"; declare it as policy "more", with no block),
+      manifest: debt_manifest("rules/tests"), steps: {"track-debt" => RecordingStep.new(policies: ["has-debt", "more"])}
+  end
+
+  def test_stops_at_the_first_setting_the_manifest_doesnt_declare_after_one_it_does
+    assert_mistake CONFIG, 3, %(unknown setting "other"; expected "file"),
+      plugins: [listing("debt", settings: [setting("file", line: 2), setting("other", line: 3)])], built_in: {"debt" => "#{TOP}c/plugins/debt"},
+      manifests: {"#{TOP}c/plugins/debt" => debt_manifest}, steps: {"track-debt" => RecordingStep.new}
+  end
+
+  def test_has_no_step_unless_it_is_given_some
+    configuration = Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], policies: [], warnings: nil, verbosity: nil)
+    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
+      manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}))
+
+    assert_equal %(unknown step "track-debt"; this CrossLint has none), assert_raises(Mistake) { use_case.call(APP) }.message
+  end
+
+  def test_stops_at_a_policy_with_no_block_that_no_step_reports
+    assert_mistake "rules/tests/plugin.kdl", 4, %(policy "other" has no applies-to, and no step of the plugin reports it),
+      manifest: debt_manifest("rules/tests", step_policies: [StepPolicy.new(name: "has-debt", line: 3), StepPolicy.new(name: "other", line: 4)]),
+      steps: {"track-debt" => RecordingStep.new}
+  end
+
+  def test_stops_at_a_setting_flag_step_or_policy_declared_twice
+    twice = ->(kind, field, made) { debt_manifest("rules/tests").with(field => [made.new(name: "a", line: 2), made.new(name: "a", line: 3)]) }
+    {"setting" => [:settings, SettingDeclaration], "flag" => [:flags, FlagDeclaration]}.each do |kind, (field, made)|
+      assert_mistake "rules/tests/plugin.kdl", 3, %(#{kind} "a" is declared twice; the first is on line 2), manifest: twice.call(kind, field, made),
+        steps: {"track-debt" => RecordingStep.new}
+    end
+    assert_mistake "rules/tests/plugin.kdl", 9, %(step "track-debt" is declared twice; the first is on line 9),
+      manifest: debt_manifest("rules/tests").then { |manifest| manifest.with(steps: manifest.steps * 2) }, steps: {"track-debt" => RecordingStep.new}
+    assert_mistake "rules/tests/plugin.kdl", 3, %(policy "has-test" is declared twice; the first is on line 5),
+      manifest: debt_manifest("rules/tests", step_policies: [StepPolicy.new(name: "has-test", line: 3)]), steps: {"track-debt" => RecordingStep.new}
+  end
+
+  def test_lets_the_configuration_change_a_policy_a_step_reports
+    project = load_project(plugins: [listing("debt")], policies: [policy_setting("debt/has-debt")], built_in: {"debt" => "#{TOP}c/plugins/debt"},
+      manifests: {"#{TOP}c/plugins/debt" => debt_manifest}, steps: {"track-debt" => RecordingStep.new})
+
+    assert_equal ["debt/has-debt"], project.configuration.policies.map(&:name)
   end
 
   def test_stops_at_two_plugins_with_one_name
@@ -336,11 +404,32 @@ class LoadProjectTest < Minitest::Test
   MemoryConfiguration = CrossLint::Adapters::MemoryConfiguration
   MemoryPluginManifests = CrossLint::Adapters::MemoryPluginManifests
 
-  def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, start: APP)
+  # A step that records the settings it is given to read, and raises
+  # `mistake` when it reads them.
+  class RecordingStep
+    attr_reader :read
+
+    def initialize(mistake = nil, policies: ["has-debt"])
+      @mistake = mistake
+      @policies = policies
+      @read = []
+    end
+
+    attr_reader :policies
+
+    def check_settings(settings, file)
+      @read << [settings, file]
+      raise @mistake if @mistake
+    end
+
+    def call(_input) = raise("not called")
+  end
+
+  def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP)
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), built_in:).call(start)
+      manifests: MemoryPluginManifests.new(manifests), built_in:, steps:).call(start)
   end
 
   def assert_mistake(file, line, message, **options)
@@ -357,6 +446,11 @@ class LoadProjectTest < Minitest::Test
 
   def tests_manifest(folder = "rules/tests", artifacts: [artifact], policies: [policy], rules: [], helpers: [])
     Manifest.new(file: folder.empty? ? "plugin.kdl" : "#{folder}/plugin.kdl", artifacts:, policies:, rules:, helpers:)
+  end
+
+  def debt_manifest(folder = "debt", step: "track-debt", step_policies: [StepPolicy.new(name: "has-debt", line: 3)])
+    tests_manifest(folder).with(step_policies:, settings: [SettingDeclaration.new(name: "file", line: 4)],
+      flags: [FlagDeclaration.new(name: "update-debt", line: 8)], steps: [StepDeclaration.new(name: step, line: 9)])
   end
 
   def artifact(name = "ruby-file", companions: [companion("test", line: 3)], line: 1)
