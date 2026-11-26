@@ -57,14 +57,14 @@ class SharedPluginTest < Minitest::Test
   def test_refuses_the_first_shared_plugin_whose_url_has_a_user_name_or_password_and_no_other
     listing = ->(name, line, ref = nil) { CrossLint::Core::ListedPlugin.new(name:, ref:, settings: [], line:) }
     port = CrossLint::Adapters::MemorySharedPlugins.new(err: StringIO.new, schemes: ["file://"])
-    plugins = [listing.call("./a@b", 1), listing.call("https://example.com/o/ok", 2, "v1"), listing.call("file://u@h/o", 3, "v1"),
+    plugins = [listing.call("./a@b", 1), listing.call("ssh://u@h/o", 1, "v1"), listing.call("https://example.com/o/ok", 2, "v1"), listing.call("file://u@h/o", 3, "v1"),
       listing.call("https://u:p@h/o/r", 4, "v1"), listing.call("https://v@h/o/r", 5, "v1")]
     configuration = CrossLint::Core::Configuration.new(file: "c.kdl", plugins:, policies: [], warnings: nil, verbosity: nil)
     mistake = assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration, port) }
 
     assert_equal ["c.kdl", 3], [mistake.file, mistake.line]
-    SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.first(2)), port)
-    assert_equal 4, assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.drop(3)), port) }.line
+    SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.first(3)), port)
+    assert_equal 4, assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.drop(4)), port) }.line
     SharedPlugin.refuse_credentials(configuration.with(plugins: []), port)
   end
 
