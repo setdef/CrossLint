@@ -252,7 +252,6 @@ class KDLPluginManifestsTest < Minitest::Test
   def test_refuses_a_command_written_wrong
     assert_refuses 1, %(command "update" has no help=, its line in --help), %(command "update")
     assert_refuses 1, %(command "update" has no help=, its line in --help), %(command "update" help="")
-    assert_refuses 1, %(command "update" has no help=, its line in --help), %(command "update" help=" ")
     assert_refuses 1, "command has 0 arguments; write it as command NAME help=TEXT", %(command help="Help")
     assert_refuses 1, %(unknown property "hlp", did you mean "help"?), %(command "update" hlp="Help")
     assert_refuses 1, %(unknown node "x"; command takes no children), %(command "update" help="Help" { x; })

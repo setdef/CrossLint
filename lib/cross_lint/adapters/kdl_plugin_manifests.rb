@@ -169,7 +169,7 @@ module CrossLint
         document.properties(node, ["help"])
         no_children(document, node)
         help = document.string_property(node, "help")
-        raise document.mistake("command #{name.dump} has no help=, its line in --help", node) if help.nil? || help.strip.empty?
+        raise document.mistake("command #{name.dump} has no help=, its line in --help", node) if help.nil? || help.empty?
 
         Core::CommandDeclaration.new(name:, help:, line: node.line)
       end

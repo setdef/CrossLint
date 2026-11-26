@@ -733,11 +733,11 @@ class LoadProjectTest < Minitest::Test
   end
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
-    shared_plugins: shared_plugins({}), reserved: [], listed: false)
+    shared_plugins: shared_plugins({}), reserved: nil, listed: false)
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, reserved:)
+      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, **(reserved ? {reserved:} : {}))
     listed ? use_case.listed(start) : use_case.call(start)
   end
 
