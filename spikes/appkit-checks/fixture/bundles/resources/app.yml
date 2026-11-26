@@ -1,5 +1,0 @@
-resources:
-  apps:
-    app:
-      user_api_scopes:
-        - sql

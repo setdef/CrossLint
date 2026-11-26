@@ -1,7 +1,0 @@
-{
-  "name": "hangs",
-  "protocol": 1,
-  "timeout": 2,
-  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "hang"] },
-  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
-}

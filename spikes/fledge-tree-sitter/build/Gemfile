@@ -1,5 +1,0 @@
-# frozen_string_literal: true
-
-source "https://rubygems.org"
-
-gem "fledge", git: "https://github.com/setdef/Fledge", tag: "v0.17.0"

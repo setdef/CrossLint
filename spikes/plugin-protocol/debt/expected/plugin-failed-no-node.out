@@ -1,7 +1,0 @@
-Debt not checked in this run:
-   app/card/card interface-matches-api: no plugin that ran provides it
-   app/list/list interface-matches-api: no plugin that ran provides it
-   app/multi/multi interface-matches-api: no plugin that ran provides it
-   app/multi/multi interface-matches-api: no plugin that ran provides it
-   app/multi/multi interface-matches-api: no plugin that ran provides it
-exit 2

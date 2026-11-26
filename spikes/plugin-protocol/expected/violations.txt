@@ -1,7 +1,0 @@
-src/app/card/card.component.ts: [spec-per-component/component-has-spec] no spec at src/app/card/card.component.spec.ts
-src/app/footer/footer.component.ts: [spec-per-component/component-has-spec] no spec at src/app/footer/footer.component.spec.ts
-src/app/footer/footer.component.ts: [template-per-component/component-has-template] no template at src/app/footer/footer.component.html
-src/app/list/list.component.ts: [template-per-component/component-has-template] no template at src/app/list/list.component.html
-src/app/card/card.component.ts: [component-io/interface-matches-api] src/app/card/card.component.i.d.ts lacks "expanded"
-src/app/footer/footer.component.ts: [component-io/component-has-interface] no interface at src/app/footer/footer.component.i.d.ts
-src/app/list/list.component.ts: [component-io/interface-matches-api] src/app/list/list.component.i.d.ts lacks "inheritedSignal"

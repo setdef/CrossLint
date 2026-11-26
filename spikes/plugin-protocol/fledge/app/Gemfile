@@ -1,7 +1,0 @@
-# frozen_string_literal: true
-
-# The host needs only Ruby's standard library, except that on Windows Ruby no longer
-# loads fiddle (the host's job objects) from the standard library.
-source "https://rubygems.org"
-
-gem "fiddle", platforms: [:windows]

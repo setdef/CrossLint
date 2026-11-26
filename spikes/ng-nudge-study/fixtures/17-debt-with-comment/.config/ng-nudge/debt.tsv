@@ -1,4 +1,0 @@
-Rule	Artifact	Comment
-spec-exists	app/a	
-spec-exists	app/b	legacy, refactor planned
-spec-exists	app/c	TODO later

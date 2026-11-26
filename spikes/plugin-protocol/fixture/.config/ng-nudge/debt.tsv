@@ -1,3 +1,0 @@
-Rule	Artifact	Comment
-spec-exists	app/card/card	add it when the card is redesigned
-stub-exists	app/list/list

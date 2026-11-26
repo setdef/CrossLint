@@ -1,9 +1,0 @@
-Rule	Artifact	Comment
-spec-exists	app/footer/footer	"add it when the footer is redesigned, ""soon"""
-stub-exists	app/list/list
-interface-matches-api	app/card/card	"first line
-second line"
-prefer-css-over-scss	app\card\card	written on Windows
-spec-exists	app/button/button	the button has a spec now
-spec-exists	app/gone/gone
-interface-exists	app/footer/footer	"a	tab"

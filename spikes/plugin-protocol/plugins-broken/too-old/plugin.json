@@ -1,6 +1,0 @@
-{
-  "name": "needs-node-99",
-  "protocol": 1,
-  "runtime": { "command": "node", "args": ["{plugin_dir}/plugin.x"], "min_version": "99" },
-  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
-}

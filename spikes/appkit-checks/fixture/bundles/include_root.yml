@@ -1,4 +1,0 @@
-bundle:
-  name: demo
-include:
-  - resources/*.yml

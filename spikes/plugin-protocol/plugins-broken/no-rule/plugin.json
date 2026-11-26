@@ -1,6 +1,0 @@
-{
-  "name": "violation-without-rule",
-  "protocol": 1,
-  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "no-rule"] },
-  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
-}

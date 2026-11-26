@@ -1,7 +1,0 @@
-{
-  "rules": {
-    "readme-exists": {
-      "severity": "warning"
-    }
-  }
-}

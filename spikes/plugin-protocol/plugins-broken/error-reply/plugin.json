@@ -1,6 +1,0 @@
-{
-  "name": "replies-with-an-error",
-  "protocol": 1,
-  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "error-reply"] },
-  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
-}

@@ -1,5 +1,0 @@
-name: tsspike
-kind: console
-version: "0.0.1"
-publisher: setdef
-description: Spike, reads TypeScript with ruby_tree_sitter

@@ -1,7 +1,0 @@
-bundle:
-  name: demo
-resources:
-  apps:
-    app:
-      name: demo
-      source_code_path: ./
