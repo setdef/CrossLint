@@ -18,7 +18,7 @@ Minitest::TestTask.create("test:rbs") do |task|
   task.warning = true
   task.test_prelude = [
     'ENV["RBS_TEST_TARGET"] = "CrossLint::*"',
-    'ENV["RBS_TEST_OPT"] = "-r json -r minitest -r open3 -r pathname -I sig"',
+    'ENV["RBS_TEST_OPT"] = "-r fileutils -r json -r minitest -r open3 -r pathname -I sig"',
     'ENV["RBS_TEST_RAISE"] = "true"',
     'ENV["RBS_TEST_LOGLEVEL"] = "error"',
     'require "rbs/test/setup"'
@@ -28,7 +28,7 @@ end
 namespace :rbs do
   desc "Validate the signatures in sig/"
   task :validate do
-    sh "rbs", "-r", "json", "-r", "minitest", "-r", "open3", "-r", "pathname", "-I", "sig", "validate"
+    sh "rbs", "-r", "fileutils", "-r", "json", "-r", "minitest", "-r", "open3", "-r", "pathname", "-I", "sig", "validate"
   end
 
   desc "Check that every public part of CrossLint has a comment in sig/"

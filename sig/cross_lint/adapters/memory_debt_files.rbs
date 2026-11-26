@@ -1,0 +1,29 @@
+module CrossLint
+  module Adapters
+    # The debt-files port in memory, for the use cases' tests: each debt
+    # file, or the mistake reading it raises, by its root and path joined.
+    # write holds each entry with the line it would start on and a source,
+    # as reading it back from a file would give it.
+    #
+    # ```ruby
+    # port = CrossLint::Adapters::MemoryDebtFiles.new
+    # debt = CrossLint::Core::DebtFile.new(file: "debt.tsv", header: nil,
+    #   entries: [CrossLint::Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/a.rb")])
+    # port.write("/app", "debt.tsv", debt)
+    # port.read("/app", "debt.tsv").entries.map(&:line) # => [2]
+    # ```
+    class MemoryDebtFiles
+      include _DebtFiles
+
+      # The header a file written with none gets.
+      HEADER: String
+
+      # A port that holds `files`, each by its root and path joined.
+      def initialize: (?Hash[String, Core::DebtFile | Core::Mistake] files) -> void
+
+      private
+
+      @files: Hash[String, Core::DebtFile | Core::Mistake]
+    end
+  end
+end

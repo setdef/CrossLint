@@ -282,5 +282,39 @@ module CrossLint
       def result: (Array[Core::Violation | Core::Artifact] findings, ?notices: Array[Core::Notice],
                    ?verbosity: (:normal | :quiet | :silent), ?faults: Array[Core::Fault]) -> Core::CheckResult
     end
+    # What a test of a debt-files adapter defines.
+    interface _DebtFilesTest
+      # A port with no debt files under debt_root. With `broken`, the file
+      # at that path, relative to debt_root, has an entry with no rule on
+      # line 3.
+      def debt_files_port: (?broken: String?) -> _DebtFiles
+
+      # The absolute path of the project's root.
+      def debt_root: () -> String
+    end
+
+    # The tests every adapter of the debt-files port passes.
+    module DebtFilesContract : _DebtFilesTest, Minitest::Assertions
+      # read gives a file that doesn't exist no entries and no header.
+      def test_reads_no_entries_and_no_header_from_a_file_that_doesnt_exist: () -> void
+
+      # read gives back each entry write wrote, in order, every field kept,
+      # tabs, quotes, line endings, and non-ASCII text included, each with
+      # a source and the line it starts on, the first on line 2, and a
+      # header.
+      def test_reads_back_each_entry_it_wrote_in_order_with_its_line: () -> void
+
+      # Writing what read gave changes nothing read gives next.
+      def test_writes_back_what_it_read_unchanged: () -> void
+
+      # A file written with no entries reads back with its header.
+      def test_keeps_the_header_of_a_file_with_no_entries: () -> void
+
+      # write makes the folder a file goes in.
+      def test_makes_the_folder_of_a_file_it_writes: () -> void
+
+      # read raises a mistake naming the file and the line.
+      def test_names_the_file_and_line_of_a_mistake: () -> void
+    end
   end
 end

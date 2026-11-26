@@ -109,4 +109,25 @@ module CrossLint
     # nothing but the faults.
     def write: (Core::CheckResult result) -> void
   end
+
+  # Where the core reads and writes a project's debt file: a format, such
+  # as ng-nudge's tab-separated values, and where its files are.
+  # Adapters::TSVDebtFiles reads and writes the files, and
+  # Adapters::MemoryDebtFiles holds them in memory; both pass
+  # Testing::DebtFilesContract.
+  interface _DebtFiles
+    # The debt file at `path`, relative to `root` with `/` between
+    # folders: its entries, in order, each with the line it starts on and
+    # its source, and its header. A file that doesn't exist has no entries
+    # and no header. Raises Core::Mistake, naming `path` and the line, at
+    # a mistake in it, such as an entry with no rule or no artifact.
+    def read: (String root, String path) -> Core::DebtFile
+
+    # Replaces the file at `path`, relative to `root`, whole with `debt`:
+    # its header, or a header of the port's own when it has none, and its
+    # entries in order, each written as its source when it has one. Makes
+    # the file's folder when there is none, and leaves the file as it was
+    # when the write fails.
+    def write: (String root, String path, Core::DebtFile debt) -> void
+  end
 end

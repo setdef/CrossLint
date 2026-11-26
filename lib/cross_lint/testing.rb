@@ -333,5 +333,64 @@ module CrossLint
         Core::CheckResult.new(notices:, findings:, summary:, verbosity:, failed: false, faults:)
       end
     end
+
+    module DebtFilesContract
+      def test_reads_no_entries_and_no_header_from_a_file_that_doesnt_exist
+        debt = debt_files_port.read(debt_root, "missing/debt.tsv")
+
+        assert_equal ["missing/debt.tsv", 0, nil], [debt.file, debt.entries.size, debt.header]
+      end
+
+      def test_reads_back_each_entry_it_wrote_in_order_with_its_line
+        port = debt_files_port
+        entries = [Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/b.rb", comment: "a\ttab, a \"quote\",\r\nand lines"),
+          Core::DebtEntry.fresh(rule: "has-test", artifact: "lib/a.rb", detail: "name\twith a tab"),
+          Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/caf\u00e9.rb", comment: "caf\u00e9")]
+        port.write(debt_root, "debt.tsv", Core::DebtFile.new(file: "debt.tsv", entries:, header: nil))
+        read = port.read(debt_root, "debt.tsv")
+
+        assert_equal "debt.tsv", read.file
+        assert_equal entries.map { |entry| [entry.rule, entry.artifact, entry.comment, entry.detail] },
+          read.entries.map { |entry| [entry.rule, entry.artifact, entry.comment, entry.detail] }
+        lines = read.entries.map(&:line)
+
+        assert_equal [2, lines.sort, lines.uniq], [lines.first, lines, lines]
+        assert read.entries.all?(&:source)
+        refute_nil read.header
+      end
+
+      def test_writes_back_what_it_read_unchanged
+        port = debt_files_port
+        port.write(debt_root, "debt.tsv", Core::DebtFile.new(file: "debt.tsv", header: nil,
+          entries: [Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/a.rb", comment: "later")]))
+        read = port.read(debt_root, "debt.tsv")
+        port.write(debt_root, "debt.tsv", read)
+
+        assert_equal read, port.read(debt_root, "debt.tsv")
+      end
+
+      def test_keeps_the_header_of_a_file_with_no_entries
+        port = debt_files_port
+        port.write(debt_root, "debt.tsv", Core::DebtFile.new(file: "debt.tsv", entries: [], header: nil))
+        read = port.read(debt_root, "debt.tsv")
+
+        assert_equal [], read.entries
+        refute_nil read.header
+      end
+
+      def test_makes_the_folder_of_a_file_it_writes
+        port = debt_files_port
+        port.write(debt_root, "new/folder/debt.tsv", Core::DebtFile.new(file: "new/folder/debt.tsv", header: nil,
+          entries: [Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/a.rb")]))
+
+        assert_equal ["lib/a.rb"], port.read(debt_root, "new/folder/debt.tsv").entries.map(&:artifact)
+      end
+
+      def test_names_the_file_and_line_of_a_mistake
+        mistake = assert_raises(Core::Mistake) { debt_files_port(broken: "debt.tsv").read(debt_root, "debt.tsv") }
+
+        assert_equal ["debt.tsv", 3], [mistake.file, mistake.line]
+      end
+    end
   end
 end

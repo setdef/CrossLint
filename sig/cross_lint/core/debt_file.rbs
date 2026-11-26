@@ -1,0 +1,66 @@
+module CrossLint
+  module Core
+    # One entry of a debt file: the policy that found the violation, the
+    # artifact, a comment saying why it is accepted, and a detail where
+    # the rule gives one, with where the file has it.
+    #
+    # ```ruby
+    # entry = CrossLint::Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/a.rb")
+    # [entry.comment, entry.detail, entry.line] # => ["", nil, nil]
+    # ```
+    class DebtEntry < Data
+      # The Rule column: PLUGIN/POLICY, or a policy's name alone, as
+      # ng-nudge writes it.
+      attr_reader rule: String
+
+      # The Artifact column: the artifact's key, such as its primary
+      # file's path, or the key, a dot, and its role.
+      attr_reader artifact: String
+
+      # The Comment column, empty when there is none.
+      attr_reader comment: String
+
+      # The Detail column, or nil when it is empty or the file has none.
+      attr_reader detail: String?
+
+      # The line the entry starts on, or nil for an entry no file has yet.
+      attr_reader line: Integer?
+
+      # The entry as the file has it, which the file's adapter writes back
+      # unchanged, or nil for an entry to write anew. Only the adapter
+      # that read it knows what it holds.
+      attr_reader source: String?
+
+      # An entry with these fields.
+      def self.new: (rule: String, artifact: String, comment: String, detail: String?, line: Integer?, source: String?) -> instance
+
+      # An entry with these fields.
+      def initialize: (rule: String, artifact: String, comment: String, detail: String?, line: Integer?, source: String?) -> void
+
+      # An entry no file has yet, with an empty comment unless `comment`
+      # gives one.
+      def self.fresh: (rule: String, artifact: String, ?comment: String, ?detail: String?) -> DebtEntry
+    end
+
+    # A debt file's entries, in the file's order, and how it begins.
+    class DebtFile < Data
+      # The file's path, relative to the project's root, as messages name
+      # it.
+      attr_reader file: String
+
+      # The entries, in the file's order.
+      attr_reader entries: Array[DebtEntry]
+
+      # The file's header as the file has it, which the file's adapter
+      # writes back unchanged, or nil when the file has none, as when it
+      # doesn't exist.
+      attr_reader header: String?
+
+      # A debt file with these fields.
+      def self.new: (file: String, entries: Array[DebtEntry], header: String?) -> instance
+
+      # A debt file with these fields.
+      def initialize: (file: String, entries: Array[DebtEntry], header: String?) -> void
+    end
+  end
+end

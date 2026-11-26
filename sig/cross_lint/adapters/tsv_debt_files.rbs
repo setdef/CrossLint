@@ -1,0 +1,83 @@
+module CrossLint
+  module Adapters
+    # The debt-files port for ng-nudge's format: tab-separated values with
+    # the header `Rule`, `Artifact`, `Comment`, and an optional `Detail`,
+    # read and written as d3-dsv reads and writes them. An entry read is
+    # written back byte for byte, its line ending included; a new entry is
+    # written with the line ending the header has, quoting each field
+    # that holds a tab, a newline, a carriage return, or `"`. A file with
+    # no entries keeps its header, and the header gains `Detail` only when
+    # an entry has a detail.
+    class TSVDebtFiles
+      include _DebtFiles
+
+      # The columns every debt file's header has, in order.
+      COLUMNS: Array[String]
+
+      # The optional fourth column.
+      DETAIL: String
+
+      # The byte of `"`.
+      QUOTE: Integer
+
+      # The byte of "\n".
+      NEWLINE: Integer
+
+      # The byte of "\r".
+      RETURN: Integer
+
+      # The byte of a tab.
+      TAB: Integer
+
+      # What a field holds when d3-dsv quotes it.
+      QUOTED: Regexp
+
+      private
+
+      # A debt file at `path` with no entries and no header.
+      def empty: (String path) -> Core::DebtFile
+
+      # The bytes of the file `debt` makes.
+      def contents: (Core::DebtFile debt) -> String
+
+      # The line ending `line` ends with, or nil.
+      def ending: (String line) -> String?
+
+      # `line`, with `ending` after it unless it has a line ending.
+      def ended: (String line, String ending) -> String
+
+      # Writes `contents` to a file beside `full` and renames it over
+      # `full`, the file at `path`. Raises Core::Mistake naming `path` when
+      # the system denies the rename, as Windows does while another
+      # program has the file open.
+      def replace: (String full, String path, String contents) -> void
+
+      # The header's columns. Raises Core::Mistake when they aren't a debt
+      # file's.
+      def header_columns: ([Array[String], Integer, Integer] record, String path) -> Array[String]
+
+      # The entry of a record. Raises Core::Mistake for one with more
+      # fields than columns, or with no rule or no artifact.
+      def entry: (Array[String] fields, Array[String] columns, Integer line, String source, String path) -> Core::DebtEntry
+
+      # The bytes of `data` from `from` up to `to`, as UTF-8.
+      def slice: (String data, Integer from, Integer to) -> String
+
+      # Each record of `data`: its fields, the offset it starts at, and its
+      # line. Raises Core::Mistake for a quote that doesn't end, or text
+      # after one that does.
+      def records: (String data, String path) -> Array[[Array[String], Integer, Integer]]
+
+      # How many line endings `bytes` has.
+      def breaks: (String bytes) -> Integer
+
+      # The field at `at`, and the offset of the tab or line ending after
+      # it, or `stop`.
+      def field: (String data, Integer at, Integer stop, String path, Integer line) -> [String, Integer]
+
+      # The quoted field at `at`, and the offset just past its closing
+      # quote.
+      def quoted: (String data, Integer at, Integer stop, String path, Integer line) -> [String, Integer]
+    end
+  end
+end
