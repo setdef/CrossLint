@@ -104,7 +104,9 @@ module TsSpike
     puts "program #{File.expand_path($PROGRAM_NAME)}"
     puts "grammars #{GRAMMARS} #{Dir.exist?(GRAMMARS) ? Dir.children(GRAMMARS).sort.join(",") : "missing"}"
     puts "cwd #{Dir.pwd}"
-    puts "frozen_bundle #{defined?(Bundler) && Bundler.frozen_bundle?}"
+    puts "BUNDLE_GEMFILE #{ENV["BUNDLE_GEMFILE"]}"
+    puts "RUBYOPT #{ENV["RUBYOPT"]}"
+    puts "GEM_HOME #{ENV["GEM_HOME"]}"
   end
 
   # Load every .rb file in DIR and say what happened to each. A LoadError is
@@ -130,6 +132,7 @@ module TsSpike
   end
 end
 
+$stdout.sync = true
 args = ARGV.dup
 rules_dir = nil
 info = false
@@ -148,4 +151,11 @@ all.each { |f| TsSpike.report(f) }
 if rules_dir
   TsSpike.load_rules(rules_dir)
   TsSpike.run_rules(all)
+end
+
+# On Windows, ruby_tree_sitter 2.1.1 frees a tree by calling Ruby from its free function, which
+# Ruby 4.1 dev builds stop with a [BUG] at exit. TSSPIKE_EXIT_BANG=1 skips the exit-time free.
+if ENV["TSSPIKE_EXIT_BANG"]
+  $stdout.flush
+  exit!(0)
 end

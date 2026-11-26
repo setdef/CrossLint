@@ -67,6 +67,14 @@ echo "== ruby on PATH under mise x: $(mise x -- bash -c 'command -v ruby' 2>&1 |
 
 tool="$(mise which "$exe")"
 cp -R "$here/sample" "$work/sample"
+# RULES_ONLY="01_ 05_" keeps only the rule files that start with one of these.
+if [ -n "${RULES_ONLY:-}" ]; then
+  for f in "$work/sample/project/.crosslint/rules/"*.rb; do
+    keep=no
+    for p in $RULES_ONLY; do case "$(basename "$f")" in "$p"*) keep=yes ;; esac; done
+    [ "$keep" = yes ] || rm -f "$f"
+  done
+fi
 cd "$work/sample/project" || exit 1
 s=$(now); "$tool" ../Widget.ts >/dev/null 2>&1; echo "== first run seconds: $(elapsed "$s" "$(now)")"
 s=$(now); for _ in 1 2 3 4 5 6 7 8 9 10; do "$tool" ../Widget.ts >/dev/null 2>&1; done
