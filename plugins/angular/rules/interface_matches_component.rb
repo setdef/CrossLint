@@ -27,8 +27,9 @@ class InterfaceMatchesComponent < CrossLint::Rule
         # SPDX-SnippetBegin
         # SPDX-SnippetCopyrightText: 2026 Over The Top Marketing
         # SPDX-License-Identifier: MIT
-        violation(artifact, "interface missing #{kind}: #{name}", detail: "#{kind} #{name}")
+        message = "interface missing #{kind}: #{name}"
         # SPDX-SnippetEnd
+        violation(artifact, message, detail: "#{kind} #{name}")
       end
     end
   end

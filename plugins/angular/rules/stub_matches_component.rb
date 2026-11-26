@@ -22,8 +22,9 @@ class StubMatchesComponent < CrossLint::Rule
         # SPDX-SnippetBegin
         # SPDX-SnippetCopyrightText: 2026 Over The Top Marketing
         # SPDX-License-Identifier: MIT
-        violation(artifact, "stub missing #{kind}: #{name}", detail: "#{kind} #{name}")
+        message = "stub missing #{kind}: #{name}"
         # SPDX-SnippetEnd
+        violation(artifact, message, detail: "#{kind} #{name}")
       end
     end
   end
