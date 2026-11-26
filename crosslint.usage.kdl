@@ -61,7 +61,7 @@ With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a confi
 """#
   flag "--from-ng-nudge" help="Write the configuration from this project's ng-nudge setup, and move its debt file"
   flag "-n --dry-run" help="List the changes, and make none"
-  flag "-f --force" help="Replace an existing configuration"
+  flag "-f --force" help="Replace an existing configuration, and with --from-ng-nudge an existing debt file"
   example "crosslint init"
   example "crosslint init --from-ng-nudge --dry-run" header="See what moving from ng-nudge would change"
 }

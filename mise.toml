@@ -23,7 +23,8 @@ ruby.compile = false
 ruby = { version = "4.1.0-preview1", os = ["linux", "macos"] }
 # Node runs the Angular plugin's helper in its tests, an LTS release, and
 # npm installs the typescript its test fixture's package-lock.json locks
-# (rake fixtures). CrossLint itself needs no Node.
+# (rake fixtures). CrossLint needs Node only to move a project from
+# ng-nudge, and runs the one on the project's PATH.
 node = "26.13.1"
 # usage lints crosslint.usage.kdl and generates docs/reference/cli.md
 # from it (rake usage:lint, rake usage:reference).

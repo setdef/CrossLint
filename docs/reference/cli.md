@@ -107,7 +107,7 @@ With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a confi
 ### Flags
 - **`--from-ng-nudge`** — Write the configuration from this project's ng-nudge setup, and move its debt file
 - **`-n --dry-run`** — List the changes, and make none
-- **`-f --force`** — Replace an existing configuration
+- **`-f --force`** — Replace an existing configuration, and with --from-ng-nudge an existing debt file
 
 ### Exit Status
 
