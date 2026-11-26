@@ -39,7 +39,7 @@ ng-nudge's checks for Angular projects: a spec for every component, directive, p
 | --- | --- | --- |
 | `src-dir PATH` | The folder the plugin's artifacts are found in, relative to the project's root. | `src` |
 | `tsconfig PATH` | The `tsconfig.json` its TypeScript checks read. | `tsconfig.json` |
-| `role NAME files=PATTERN` | Find a role's files by this [path pattern](plugin.md#artifact), relative to `src-dir`, in place of `{path}.NAME.ts`. | |
+| `role NAME files=PATTERN { expects COMPANION ... }` | Find a role's files by this [path pattern](plugin.md#artifact), relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. `expects` lists the companions the role must have, such as `spec`. | |
 
 ### `debt`
 
@@ -61,6 +61,6 @@ Debt tracking: violations listed in the debt file don't fail the check, and an e
 
 A policy that no listed plugin has stops CrossLint with exit status 2.
 
-## `warnings`
+## `warnings` and `verbosity`
 
-`warnings MODE` sets the default for `crosslint check --warnings`: `all`, `none`, or `error`. A flag on the command line wins over it.
+`warnings MODE` sets the default for `crosslint check --warnings`: `all`, `none`, or `error`. `verbosity MODE` sets the default output: `normal`, `quiet` as for `--quiet`, or `silent` as for `--silent`. A flag on the command line wins over either.

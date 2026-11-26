@@ -1,0 +1,30 @@
+# Plugins
+
+What loading and running a plugin must guarantee, and the traps known so far. The decision these rest on is [ADR 0001](../decisions/0001-crosslint-is-ruby-and-a-plugin-may-read-files-in-their-language.md). What a plugin can declare is in [the plugin reference](../reference/plugin.md); how to meet each requirement is the implementer's choice.
+
+## The engine and its plugins
+
+- **The engine has no role, language, or policy built in.** It loads the configuration and the plugins, finds each artifact's files, applies policies, runs rules, applies each policy's severity and the configuration's settings, prints the report, and sets the exit status. Angular and debt tracking are plugins like any other, and a project that lists neither runs without them.
+- **What debt tracking needs, any plugin can have:** a step after every rule has run that sees every violation and can excuse some, add others, and report stale entries; a flag (`--update-debt`); and settings under its name in the configuration. No plugin reaches the engine any other way.
+- **A local plugin, a shared plugin, and a built-in one are loaded the same way,** from a folder with a `plugin.kdl`. A built-in plugin's folder ships inside CrossLint. The Angular plugin lives in this repository in one folder, and nothing outside that folder depends on its contents, so it can move to a separate repository later.
+
+## Ruby rules
+
+- A rule written in Ruby runs on the Ruby CrossLint carries, so a project needs no Ruby. It can require Ruby's standard library and files in its plugin's folder.
+- **A gem CrossLint wasn't built with can't be loaded,** and requiring one stops the plugin with a message naming the gem, not a Ruby `LoadError`. `bundler/inline` would install a gem into CrossLint's install folder at run time, so CrossLint must not offer it.
+- A rule that raises an exception is reported as a fault in its plugin, naming the plugin, the rule, and the artifact, with the trace under `--debug`. The other plugins still run.
+
+## Helpers
+
+- A helper runs on the project's runtime for its language, found on the `PATH`, and its plugin declares which command it needs. A command not on the `PATH` stops CrossLint with exit status 2 before any check starts, naming the plugin and the command.
+- **On Windows, find the command with each extension in `PATHEXT`,** since `node` is `node.exe` or `node.cmd` there.
+- Requests and responses are JSON on the helper's standard input and output, one per line. Its standard error goes to CrossLint's standard error under `--debug`, and to its message when it fails.
+- **A helper that hangs is ended after a time limit, with everything it started.** Ending only the helper's process leaves its children running: on macOS and Linux, start it in a new process group and end the group; on Windows, put it in a job object. On Windows, `taskkill /T` alone leaves an MSYS2 child running.
+- **On Windows, write to a helper in binary mode,** or Ruby turns each `\n` into `\r\n`; and a helper that has already exited makes closing its input raise `EPIPE`, which is not an error of the check.
+- The Angular plugin's helper asks the project's `typescript` package, from its `node_modules`, so its answers match the project's compiler version.
+
+## Shared plugins
+
+- A shared plugin is fetched at the tag or full commit SHA the configuration gives, never at a branch, into the user's cache, outside the project, and reused from there. A ref that has moved since it was fetched is the copy in the cache until `crosslint update` changes the configuration.
+- **Print a line on standard error before every network request,** and make none during a check otherwise.
+- A plugin that can't be fetched stops CrossLint with exit status 2, naming the plugin and the URL; it never runs the check without it.
