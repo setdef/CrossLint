@@ -26,6 +26,18 @@ module CrossLint
 
       def self.version?(ref) = ref.match?(VERSION)
 
+      # Everything between the scheme and the first /, ?, or # is the
+      # authority, and a user name or password comes before an @ in it.
+      def self.credentials?(url) = url.match?(%r{\A[a-z][a-z0-9+.-]*://[^/?#]*@}i)
+
+      # Before any request is made, so that no secret is sent, or printed
+      # in a later message.
+      def self.refuse_credentials(configuration, port)
+        configuration.plugins.each do |listing|
+          raise Mistake.credentials(configuration.file, listing.line) if listing.shared?(port) && credentials?(listing.name)
+        end
+      end
+
       # `keep` stands in for the other tags of its version, so that v1.2.0
       # and 1.2.0 on one commit don't send a project from one to the other.
       # A `keep` of a higher version than any tag stays, so that no update

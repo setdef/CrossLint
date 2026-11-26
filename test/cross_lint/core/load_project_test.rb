@@ -78,6 +78,20 @@ class LoadProjectTest < Minitest::Test
     assert_mistake CONFIG, 1, %(shared plugin "#{URL}" needs ref=, a tag or a full commit SHA), plugins: [listing(URL)]
   end
 
+  CREDENTIALS = "the URL of a shared plugin has a user name or password, which would be in the configuration and on standard error; " \
+    "remove it, and give Git the credentials with a Git credential helper (git help credentials)"
+
+  def test_stops_at_the_url_of_a_shared_plugin_that_has_a_user_name_or_password_and_doesnt_print_it
+    ["https://user:secret@example.com/o/signatures", "https://secret@example.com/o/signatures", "https://:secret@example.com/o/signatures"].each do |url|
+      shared = shared_plugins({})
+      mistake = assert_raises(Mistake) { load_project(plugins: [listing(url, ref: "v1.2.0", line: 2), listing(url, ref: "v1.2.0", line: 3)], shared_plugins: shared) }
+
+      assert_equal [CONFIG, 2, CREDENTIALS], [mistake.file, mistake.line, mistake.message]
+      refute_includes mistake.message, "secret"
+      assert_empty shared.fetched
+    end
+  end
+
   def test_reads_a_shared_plugin_from_the_folder_the_port_fetched
     shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
     project = load_project(plugins: [listing(URL, ref: "v1.2.0", line: 3)], manifests: {"#{TOP}cache/a1/signatures" => tests_manifest("signatures")},

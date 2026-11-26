@@ -26,6 +26,7 @@ module CrossLint
         configuration = @configuration.read(root)
         raise Mistake.new("lists no plugin, so no check would run; list one with plugin NAME", file: configuration.file) if configuration.plugins.empty?
 
+        SharedPlugin.refuse_credentials(configuration, @shared_plugins)
         plugins = configuration.plugins.each_with_index.with_object([]) do |(listing, index), loaded|
           loaded << plugin(root, configuration, index, loaded)
         end

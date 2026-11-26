@@ -38,6 +38,7 @@ module CrossLint
       def call(start, dry_run: false)
         root = @configuration.find_root(start) || raise(Mistake.no_configuration(@configuration.file, start))
         configuration = @configuration.read(root)
+        SharedPlugin.refuse_credentials(configuration, @shared_plugins)
         shared = configuration.plugins.select { |listing| listing.shared?(@shared_plugins) }
         result = UpdateResult.new(updates: shared.map { |listing| update(listing, configuration.file) }, dry_run:)
         changes = result.changes

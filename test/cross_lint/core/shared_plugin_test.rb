@@ -47,6 +47,13 @@ class SharedPluginTest < Minitest::Test
     assert_equal [[true] * versions.size, [false] * others.size], [versions, others].map { |refs| refs.map { |ref| SharedPlugin.version?(ref) } }
   end
 
+  def test_knows_a_url_with_a_user_name_or_password_by_what_comes_before_the_first_slash_after_the_scheme
+    with = %w[https://u:p@example.com/o/r https://u@example.com/o/r https://:p@example.com/o/r https://u:p@example.com ssh://git@example.com/o/r]
+    without = %w[https://example.com/o/r https://example.com/o/a@b https://example.com/?a=b@c https://example.com#a@b https://example.com:8080/o/r file:///tmp/a@b]
+
+    assert_equal [[true] * with.size, [false] * without.size], [with, without].map { |urls| urls.map { |url| SharedPlugin.credentials?(url) } }
+  end
+
   def test_picks_the_tag_with_the_highest_version_by_number_not_by_text
     assert_equal "v1.10.0", SharedPlugin.newest_tag(%w[v1.2.0 v1.10.0 v1.9.9 v0.99.99])
     assert_equal "2.0.0", SharedPlugin.newest_tag(%w[v1.10.0 2.0.0 v1.99.99])

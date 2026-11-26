@@ -102,6 +102,18 @@ class UpdatePluginsTest < Minitest::Test
     assert_equal ["crosslint: listing the tags of #{ONE}"], @err.string.lines(chomp: true)
   end
 
+  def test_stops_at_the_url_of_a_shared_plugin_that_has_a_user_name_or_password_and_doesnt_print_it
+    url = "https://user:secret@example.com/OWNER/one"
+    configuration, shared = project([listing(ONE, "v1.0.0"), listing(url, "v1.0.0", 3)], ONE => %w[v1.1.0])
+    mistake = assert_raises(Core::Mistake) { Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP) }
+
+    assert_equal [FILE, 3, "the URL of a shared plugin has a user name or password, which would be in the configuration and on standard error; " \
+      "remove it, and give Git the credentials with a Git credential helper (git help credentials)"], [mistake.file, mistake.line, mistake.message]
+    refute_includes mistake.message, "secret"
+    assert_empty @err.string
+    assert_nil configuration.set
+  end
+
   def test_asks_a_port_that_accepts_other_urls_for_their_tags_too
     url = "file:///tmp/one"
     configuration, = project([listing(url, "v1.0.0")], {})

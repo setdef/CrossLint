@@ -15,6 +15,11 @@ module CrossLint
         new("no #{file} in #{start} or any folder above it; run crosslint init in the project's root to write one")
       end
 
+      def self.credentials(file, line)
+        new("the URL of a shared plugin has a user name or password, which would be in the configuration and on standard error; " \
+          "remove it, and give Git the credentials with a Git credential helper (git help credentials)", file:, line:)
+      end
+
       def location = [file, line].compact.join(":")
     end
   end
