@@ -14,7 +14,9 @@ module CrossLint
       end
 
       def files(root)
-        listed, _, status = Open3.capture3(@git, "-C", root, *LIST)
+        # RBS types Open3's env values as String, though nil unsets one.
+        env = environment #: untyped
+        listed, _, status = Open3.capture3(env, @git, "-C", root, *LIST)
         raise Core::Mistake, GitProjectFiles.outside(root) unless status.success?
 
         # --cached lists a tracked file deleted from the working tree, and
@@ -43,6 +45,11 @@ module CrossLint
       end
 
       private
+
+      # Inside a Git hook, Git sets GIT_DIR and others, and a Git run that
+      # inherits them reads that repository instead of the project's. The
+      # values are nil, which unsets the variable.
+      def environment = ENV.keys.filter_map { |name| [name, nil] if name.start_with?("GIT_") }.to_h
 
       def entries(folder)
         @entries[folder] ||= begin

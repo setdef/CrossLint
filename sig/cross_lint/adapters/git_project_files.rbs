@@ -23,6 +23,10 @@ module CrossLint
 
       private
 
+      # Each GIT_ variable in the environment, set to nil so that the Git
+      # run has none.
+      def environment: () -> Hash[String, String?]
+
       @git: String
 
       @entries: Hash[String, Array[String]]

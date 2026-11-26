@@ -86,6 +86,32 @@ class GitProjectFilesTest < Minitest::Test
     quietly { Encoding.default_external = external }
   end
 
+  def test_lists_the_projects_files_whatever_repository_git_variables_name
+    port = project_files_port(listed: ["a.rb", "b.rb"])
+    other = File.join(@base, "other")
+    FileUtils.mkdir_p(other)
+    Open3.capture3("git", "init", "-q", chdir: other)
+    ENV["GIT_DIR"] = File.join(other, ".git")
+    ENV["GIT_WORK_TREE"] = other
+
+    assert_equal ["a.rb", "b.rb"], port.files(project_root).sort
+  ensure
+    ENV.delete("GIT_DIR")
+    ENV.delete("GIT_WORK_TREE")
+  end
+
+  def test_leaves_the_other_variables_for_git
+    port = project_files_port(listed: ["a.rb", "x.rb"])
+    write(@base, "home/.gitconfig", "[core]\n\texcludesFile = #{@base}/ignore\n")
+    write(@base, "ignore", "x.rb\n")
+    home = ENV.fetch("HOME", nil)
+    ENV["HOME"] = File.join(@base, "home")
+
+    assert_equal ["a.rb"], port.files(project_root)
+  ensure
+    ENV["HOME"] = home
+  end
+
   def test_says_when_it_finds_no_git
     mistake = assert_raises(Mistake) { CrossLint::Adapters::GitProjectFiles.new(git: "no-such-git").files(@base) }
 
