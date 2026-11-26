@@ -242,9 +242,10 @@ module CrossLint
   interface _JavaScript
     # Which of `texts` the JavaScript regular expression `source`, with
     # no flags, matches anywhere in, as `new RegExp(source).test(text)`
-    # says, in the order of `texts`. Raises Core::JavaScriptError, with
-    # the reason, when JavaScript can't be run, doesn't answer, or says
-    # `source` isn't a valid expression.
+    # says, in the order of `texts`, and, with none, only compiles it.
+    # Raises Core::InvalidExpression, with what JavaScript said, when it
+    # says `source` isn't a valid expression, and Core::JavaScriptError, with
+    # the reason, when JavaScript can't be run or doesn't answer.
     def matches: (String source, Array[String] texts) -> Array[bool]
 
     # The files the project's own glob package, node-glob, finds for each

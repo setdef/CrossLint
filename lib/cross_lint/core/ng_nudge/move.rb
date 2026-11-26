@@ -53,7 +53,7 @@ module CrossLint
           replaces = moves && @debt_files.exist?(root, TrackDebt::FILE)
           attempt(problems) { refuse_existing(TrackDebt::FILE, "the debt file") } if replaces && !force
           matching = found&.matching
-          attempt(problems) { agree(matching, read) } if read && matching
+          attempt(problems) { agree(matching, read) } if matching
           raise Mistakes.of(problems) unless problems.empty?
 
           converted = found #: Rc::Result
@@ -133,14 +133,13 @@ module CrossLint
             "#{", and replace the debt file that is there" if replaces}"
         end
 
-        # ng-nudge tests `withComment.matching` on each comment with
-        # JavaScript, and CrossLint with the translation, so the two are
-        # tested on each comment the debt file has: the translation is
-        # trusted only where they agree.
+        # ng-nudge compiles `withComment.matching` with JavaScript, which
+        # can refuse what the translation reads, and tests it on each
+        # comment with JavaScript, and CrossLint with the translation, so
+        # the two are tested on each comment the debt file has, if it has
+        # one: the translation is trusted only where they agree.
         def agree(matching, debt)
-          entries = debt.entries.reject { |entry| entry.comment.empty? }.uniq(&:comment)
-          return if entries.empty?
-
+          entries = (debt&.entries || []).reject { |entry| entry.comment.empty? }.uniq(&:comment)
           ruby = Regexp.new(matching.translated)
           answers = @javascript.matches(matching.source, entries.map(&:comment))
           entry, javascript = entries.zip(answers).reject { |each, answer| ruby.match?(each.comment) == answer }.first
@@ -149,6 +148,8 @@ module CrossLint
           raise Mistake.new("#{matching.key}: JavaScript #{javascript ? "matches" : "doesn't match"} the comment #{entry.comment.dump} " \
             "of line #{entry.line} of the debt file, and its translation, #{matching.translated.dump}, #{javascript ? "doesn't" : "does"}; " \
             "write the expression another way, or remove it", file: SETTINGS_FILE)
+        rescue InvalidExpression => error
+          raise Mistake.new("#{matching.key}: is #{matching.source.dump}, which JavaScript refuses: #{error.message}; write it another way, or remove it", file: SETTINGS_FILE)
         rescue JavaScriptError => error
           raise Mistake.new("#{matching.key}: CrossLint tests the expression, #{matching.source.dump}, with JavaScript on each comment of the debt file, " \
             "and " + error.message, file: SETTINGS_FILE)

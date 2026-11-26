@@ -743,7 +743,13 @@ module CrossLint
       end
 
       def test_raises_the_reason_for_an_expression_javascript_does_not_accept
-        error = assert_raises(Core::JavaScriptError) { javascript_port.matches("(", ["a"]) }
+        error = assert_raises(Core::InvalidExpression) { javascript_port.matches("(", ["a"]) }
+
+        assert_includes error.message, "("
+      end
+
+      def test_raises_the_reason_for_an_expression_javascript_does_not_accept_with_no_texts
+        error = assert_raises(Core::InvalidExpression) { javascript_port.matches("(", []) }
 
         assert_includes error.message, "("
       end

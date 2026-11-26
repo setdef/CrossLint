@@ -95,9 +95,11 @@ module CrossLint
         # moved, if there is one.
         def moved: (bool replaced, Rc::Result converted, bool moves, DebtFile debt, bool replaces) -> Array[String]
 
-        # Raises a Mistake when JavaScript and the translation of
-        # `matching` don't agree on a comment of `debt`.
-        def agree: (Matching matching, DebtFile debt) -> void
+        # Raises a Mistake when JavaScript refuses `matching`, or when it
+        # and the translation of
+        # `matching` don't agree on a comment of `debt`, which is nil when
+        # it can't be read.
+        def agree: (Matching matching, DebtFile? debt) -> void
       end
     end
   end

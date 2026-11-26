@@ -6,5 +6,11 @@ module CrossLint
     # setting it was for.
     class JavaScriptError < StandardError
     end
+
+    # JavaScript answered that the regular expression itself isn't valid,
+    # such as one with a quantifier on an anchor. The message is what
+    # JavaScript said.
+    class InvalidExpression < JavaScriptError
+    end
   end
 end

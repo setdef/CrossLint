@@ -14,7 +14,7 @@ module CrossLint
       end
 
       def matches(source, texts)
-        held = @expressions.fetch(source) { raise Core::JavaScriptError, "Invalid regular expression: #{source}" }
+        held = @expressions.fetch(source) { raise Core::InvalidExpression, "Invalid regular expression: #{source}" }
         case held
         when Core::JavaScriptError then raise held
         else texts.map { |text| held.call(text) }

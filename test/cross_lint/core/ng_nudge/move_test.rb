@@ -118,6 +118,15 @@ class NgNudgeMoveTest < Minitest::Test
     assert_match(/JavaScript matches the comment "later" of line 2/, mistakes.all.last.message)
   end
 
+  def test_lists_a_matching_that_javascript_rejects_even_when_the_debt_file_cannot_be_read
+    json = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "warning", "matching" => "^*"}}}}
+    expressions = {"^*" => Core::InvalidExpression.new("Invalid regular expression: /^*/: Nothing to repeat")}
+    broken = Core::Mistake.new("has an entry with no rule", file: NG_DEBT, line: 3)
+    mistakes = assert_raises(Core::Mistakes) { world(json, expressions:, debt_file: broken).move }
+
+    assert_equal [[NG_DEBT, 3], [RC, nil]], mistakes.all.map { |mistake| [mistake.file, mistake.line] }
+  end
+
   def test_lists_a_debt_file_it_cannot_read_with_the_other_problems
     broken = Core::Mistake.new("has an entry with no rule", file: NG_DEBT, line: 3)
     mistakes = assert_raises(Core::Mistakes) { world({"srcDir" => "../x"}, debt_file: broken).move }
@@ -232,11 +241,43 @@ class NgNudgeMoveTest < Minitest::Test
     assert_unchanged world
   end
 
-  def test_does_not_ask_javascript_when_no_comment_has_a_matching_to_test
+  def test_asks_javascript_to_compile_the_expression_even_when_no_comment_has_a_matching_to_test
     json = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "warning", "matching" => "^TODO"}}}}
+    expressions = {"^TODO" => ->(_) { true }}
+    [{comments: ["", ""]}, {comments: [], debt: false}].each do |options|
+      world = world(json, expressions:, **options)
+      asked = []
+      world.javascript.singleton_class.prepend(Module.new { define_method(:matches) { |source, texts| super(source, texts).tap { asked << [source, texts] } } })
 
-    assert_includes world(json, comments: ["", ""]).move.changes.last, "matching"
-    assert_includes world(json, comments: [], debt: false).move.changes.last, "matching"
+      assert_includes world.move.changes.last, "matching"
+      assert_equal [["^TODO", []]], asked
+    end
+  end
+
+  # The translation reads these, and JavaScript says "Nothing to repeat"
+  # or "Invalid quantifier" of them.
+  def test_refuses_a_matching_that_javascript_rejects_and_says_what_javascript_said_and_changes_nothing
+    ["^*", "\\b+", "${2}"].each do |expression|
+      said = "Invalid regular expression: /#{expression}/: Nothing to repeat"
+      json = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "warning", "matching" => expression}}}}
+      [{comments: %w[TODO]}, {comments: [], debt: false}].each do |options|
+        world = world(json, expressions: {expression => Core::InvalidExpression.new(said)}, **options)
+        mistake = assert_raises(Core::Mistake) { world.move }
+
+        assert_equal [RC, %(rules.has-debt.withComment.matching: is #{expression.dump}, which JavaScript refuses: #{said}; write it another way, or remove it)],
+          [mistake.file, mistake.message]
+        assert_unchanged world, debt: options.fetch(:debt, true)
+      end
+    end
+  end
+
+  def test_lists_a_matching_that_javascript_rejects_with_the_files_it_refuses
+    json = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "warning", "matching" => "^*"}}}}
+    expressions = {"^*" => Core::InvalidExpression.new("Invalid regular expression: /^*/: Nothing to repeat")}
+    mistakes = assert_raises(Core::Mistakes) { world(json, expressions:, files: {".config/ng-nudge/policies/x.policy.js" => ""}).move }
+
+    assert_equal [".config/ng-nudge/policies/x.policy.js", RC], mistakes.all.map(&:file)
+    assert_match(/\Arules\.has-debt\.withComment\.matching: is "\^\*", which JavaScript refuses/, mistakes.all.last.message)
   end
 
   def test_says_it_could_not_compare_the_files_node_glob_finds_when_the_project_has_no_glob_and_moves_all_the_same
@@ -324,9 +365,9 @@ class NgNudgeMoveTest < Minitest::Test
   end
 
   # Nothing written, and nothing moved.
-  def assert_unchanged(world, own_debt: false)
+  def assert_unchanged(world, own_debt: false, debt: true)
     refute world.configuration.exist?(APP)
-    assert world.debt_files.exist?(APP, NG_DEBT)
+    assert_equal debt, world.debt_files.exist?(APP, NG_DEBT)
     assert_equal own_debt, world.debt_files.exist?(APP, DEBT)
   end
 end

@@ -508,7 +508,7 @@ module CrossLint
     interface _JavaScriptTest
       # A port that answers for the expressions "b", "^a", and "é" as
       # JavaScript's `RegExp#test` does with no flags, and raises
-      # Core::JavaScriptError, naming "(", for the expression "(".
+      # Core::InvalidExpression, naming "(", for the expression "(".
       def javascript_port: () -> _JavaScript
 
       # A port for a project in `glob_root`. With `installed`, its glob
@@ -544,9 +544,13 @@ module CrossLint
       # glob gives nil when no folder it is told to ask has a glob.
       def test_gives_no_files_when_no_folder_it_is_told_to_ask_has_a_glob: () -> void
 
-      # matches raises Core::JavaScriptError, with the reason, for an
+      # matches raises Core::InvalidExpression, with the reason, for an
       # expression JavaScript doesn't accept.
       def test_raises_the_reason_for_an_expression_javascript_does_not_accept: () -> void
+
+      # matches raises Core::InvalidExpression for an expression JavaScript
+      # doesn't accept even when it has no texts to test.
+      def test_raises_the_reason_for_an_expression_javascript_does_not_accept_with_no_texts: () -> void
     end
   end
 end

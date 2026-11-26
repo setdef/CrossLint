@@ -69,9 +69,21 @@ class NodeJavaScriptTest < Minitest::Test
   end
 
   def test_gives_the_message_node_gives_for_an_expression_it_does_not_accept
-    error = assert_raises(JavaScriptError) { javascript_port.matches("(", ["a"]) }
+    error = assert_raises(CrossLint::Core::InvalidExpression) { javascript_port.matches("(", ["a"]) }
 
     assert_match(/\AInvalid regular expression: \/\(\/.*: Unterminated group\z/, error.message)
+  end
+
+  def test_gives_the_message_node_gives_for_a_quantifier_on_an_anchor_though_no_text_is_tested
+    error = assert_raises(CrossLint::Core::InvalidExpression) { javascript_port.matches("^*", []) }
+
+    assert_match(/\AInvalid regular expression: \/\^\*\/.*: Nothing to repeat\z/, error.message)
+  end
+
+  def test_does_not_call_a_failure_of_node_an_invalid_expression
+    error = assert_raises(JavaScriptError) { CrossLint::Adapters::NodeJavaScript.new(command: "crosslint-no-such-node").matches("a", []) }
+
+    refute_kind_of CrossLint::Core::InvalidExpression, error
   end
 
   def test_tests_a_text_for_each_of_many_texts_without_stopping_on_a_full_pipe

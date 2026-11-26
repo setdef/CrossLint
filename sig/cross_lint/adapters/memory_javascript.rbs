@@ -2,7 +2,8 @@ module CrossLint
   module Adapters
     # The JavaScript port in memory, for the use cases' tests: what each
     # expression `matches`, as a proc of one text, or the
-    # Core::JavaScriptError that JavaScript would raise for it. An
+    # Core::JavaScriptError (Core::InvalidExpression, for an expression
+    # JavaScript refuses) that JavaScript would raise for it. An
     # expression it doesn't hold raises one too.
     #
     # ```ruby

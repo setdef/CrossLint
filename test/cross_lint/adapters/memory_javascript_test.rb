@@ -13,7 +13,7 @@ class MemoryJavaScriptTest < Minitest::Test
       "b" => ->(text) { text.include?("b") },
       "^a" => ->(text) { text.start_with?("a") },
       "é" => ->(text) { text.include?("é") },
-      "(" => CrossLint::Core::JavaScriptError.new("Invalid regular expression: /(/: Unterminated group")
+      "(" => CrossLint::Core::InvalidExpression.new("Invalid regular expression: /(/: Unterminated group")
     })
   end
 
@@ -24,7 +24,7 @@ class MemoryJavaScriptTest < Minitest::Test
   def glob_root = "/app"
 
   def test_raises_for_an_expression_it_does_not_hold
-    error = assert_raises(CrossLint::Core::JavaScriptError) { CrossLint::Adapters::MemoryJavaScript.new.matches("x", ["x"]) }
+    error = assert_raises(CrossLint::Core::InvalidExpression) { CrossLint::Adapters::MemoryJavaScript.new.matches("x", ["x"]) }
 
     assert_equal "Invalid regular expression: x", error.message
   end

@@ -786,6 +786,22 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_init_from_ng_nudge_refuses_a_matching_node_rejects_and_says_what_node_said_and_changes_nothing
+    ["^*", "\\b+", "${2}"].each do |expression|
+      Dir.mktmpdir do |project|
+        rc = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "none", "matching" => expression}}}}
+        write(project, ".config/ng-nudge/rc.json", JSON.generate(rc))
+        write(project, ".config/ng-nudge/debt.tsv", "Rule\tArtifact\tComment\n")
+        out, err, status = run_cli("init", "--from-ng-nudge", "-C", project, spec: shipped_spec)
+
+        assert_equal ["", 2], [out, status]
+        assert_match(/\Acrosslint: \.config\/ng-nudge\/rc\.json: rules\.has-debt\.withComment\.matching: is #{Regexp.escape(expression.dump)}, which JavaScript refuses: Invalid regular expression: .*: Nothing to repeat; write it another way, or remove it\n\z/, err)
+        refute File.exist?(File.join(project, ".config/crosslint"))
+        assert File.exist?(File.join(project, ".config/ng-nudge/debt.tsv"))
+      end
+    end
+  end
+
   def test_init_names_the_folder_that_does_not_exist
     missing = File.join(Dir.tmpdir, "crosslint-missing-#{SecureRandom.hex(8)}")
 

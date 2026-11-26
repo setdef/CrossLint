@@ -42,7 +42,7 @@ module CrossLint
       def matches(source, texts)
         answer = ask(@script, JSON.generate({"source" => source, "texts" => texts}))
         error = answer["error"]
-        raise Core::JavaScriptError, error if error
+        raise Core::InvalidExpression, error if error
 
         answer.fetch("matches")
       end
