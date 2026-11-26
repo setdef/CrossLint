@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "pathname"
-
 require_relative "artifacts"
 require_relative "ruby_rule"
 

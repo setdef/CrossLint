@@ -163,7 +163,7 @@ class AngularPathsTest < Minitest::Test
     assert_equal default.map { |role, *rest| (role == "service") ? [role, rest[0], {}, rest[2], rest[3]] : [role, *rest] }, declared(%(role "service" {\n    expects\n  }))
     assert_equal default.map { |role, *rest| (role == "service") ? [role, "src/x/{name}.service.ts", {"spec" => "src/x/{name}.service.spec.ts"}, "x/{name}", false] : [role, *rest] },
       declared(%(role "service" files="x/{name}.service.ts"))
-    assert_equal default.map { |role, _, companions, key, optional| [role, "app/{path}.#{role}.ts", (role == "component") ? moved : companions.transform_values { _1.sub("src/", "app/") }, key, optional] } +
+    assert_equal default.map { |role, _, companions, key, optional| [role, "app/{path}.#{role}.ts", (role == "component") ? moved : companions.transform_values { it.sub("src/", "app/") }, key, optional] } +
       [["store", "app/{path}.store.ts", {"spec" => "app/{path}.store.spec.ts"}, "{path}", false]],
       declared(%(src-dir "app"\n  tsconfig "config/tsconfig.app.json"\n  role "store"))
   end
@@ -271,7 +271,7 @@ class AngularPathsTest < Minitest::Test
 
   def declared(settings)
     app(settings).load_project(@root).plugins.first.manifest.artifacts.map do |artifact|
-      [artifact.name, artifact.files.source, artifact.companions.to_h { [_1.name, _1.pattern.source] }, artifact.key.source, artifact.optional]
+      [artifact.name, artifact.files.source, artifact.companions.to_h { [it.name, it.pattern.source] }, artifact.key.source, artifact.optional]
     end
   end
 

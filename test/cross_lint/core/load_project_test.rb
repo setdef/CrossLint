@@ -501,7 +501,7 @@ class LoadProjectTest < Minitest::Test
 
     assert_equal [[setting("lib", line: 3)]], given
     assert_equal [["ruby-file", "lib/{path}.rb", [["test", "test/{path}_test.rb", 4]], "{path}", true, 4]],
-      declared.map { |each| [each.name, each.files.source, each.companions.map { [_1.name, _1.pattern.source, _1.line] }, each.key.source, each.optional, each.line] }
+      declared.map { |each| [each.name, each.files.source, each.companions.map { [it.name, it.pattern.source, it.line] }, each.key.source, each.optional, each.line] }
   end
 
   def test_adds_the_artifacts_a_plugins_ruby_declares_to_those_its_manifest_declares
@@ -570,7 +570,7 @@ class LoadProjectTest < Minitest::Test
     Object.const_set(:Artifacts, Class.new(CrossLint::Artifacts))
     project = load_project(manifest: declaring_manifest, ruby:)
 
-    assert_equal ["lib/{path}.rb"], project.plugins.first.manifest.artifacts.map { _1.files.source }
+    assert_equal ["lib/{path}.rb"], project.plugins.first.manifest.artifacts.map { it.files.source }
     assert_mistake "rules/tests/plugin.kdl", 4, "fault in plugin tests: artifacts.rb defines no class Artifacts", manifest: declaring_manifest,
       ruby: {"#{APP}/rules/tests/artifacts.rb" => ->(_) {}}
   ensure

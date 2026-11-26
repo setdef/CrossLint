@@ -40,7 +40,7 @@ class CheckTest < Minitest::Test
     plugin = plugin("tests", artifacts: [keyed, declaration("rake-file", "{path}.rake", "test" => "test/{path}_test.rb")],
       policies: [policy("has-test", rules: [rule]), policy("rake-has-test", rules: [rule], applies_to: "rake-file")])
 
-    assert_equal [["lib/app/a.rb", "app/a"], ["tasks.rake", nil]], check(project(plugin), files: ["lib/app/a.rb", "tasks.rake"]).findings.map { [_1.artifact, _1.key] }
+    assert_equal [["lib/app/a.rb", "app/a"], ["tasks.rake", nil]], check(project(plugin), files: ["lib/app/a.rb", "tasks.rake"]).findings.map { [it.artifact, it.key] }
   end
 
   def test_passes_when_every_companion_exists
@@ -237,7 +237,7 @@ class CheckTest < Minitest::Test
     plugin = plugin("tests", artifacts:, policies: [policy("has-test", rules: [rule], applies_to: nil), has_note])
     result = check(project(plugin), files: ["lib/a.rb", "a.rake", "a.md", "a.txt"])
 
-    assert_equal [["a.md", "has-test"], ["a.md", "note"], ["lib/a.rb", "has-test"]], result.findings.map { [_1.artifact, _1.policy] }
+    assert_equal [["a.md", "has-test"], ["a.md", "note"], ["lib/a.rb", "has-test"]], result.findings.map { [it.artifact, it.policy] }
     assert_equal "checked 1 ruby-file and 1 doc artifacts: 3 errors", result.summary.line
   end
 

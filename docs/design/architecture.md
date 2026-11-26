@@ -26,4 +26,4 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 - Nothing outside `plugins/angular/` refers to anything inside it, so it can move to a separate repository.
 - Every file under `lib/` has an RBS signature at the matching path under `sig/`. Steep checks `lib/` against `sig/`, and the test suite runs a second time under RBS's runtime checker. CrossLint checks that every file has its signature with a local plugin, the one in the README's first example.
 - A built-in plugin's Ruby loads at run time, once for each check, so the tests load it once as well, as top-level constants (`test/plugin_ruby.rb`), and coverage measures it as it measures `lib/`.
-- Standard checks the code as Ruby 3.3 (`.standard.yml`), the syntax it was kept to while mutant tested it.
+- Standard checks the code as the Ruby that `mise.toml` pins (`.standard.yml` sets no target).

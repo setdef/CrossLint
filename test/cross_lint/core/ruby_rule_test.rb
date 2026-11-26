@@ -336,7 +336,7 @@ class RubyRuleTest < Minitest::Test
   end
 
   def test_names_a_rules_class_in_camel_case
-    assert_equal %w[SignatureNamesClass NamesClass X Html5Check AB], %w[signature-names-class names_class x html5-check a--b].map { RubyRule.class_name(_1) }
+    assert_equal %w[SignatureNamesClass NamesClass X Html5Check AB], %w[signature-names-class names_class x html5-check a--b].map { RubyRule.class_name(it) }
   end
 
   private

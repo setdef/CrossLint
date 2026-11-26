@@ -84,7 +84,7 @@ class TrackDebtTest < Minitest::Test
     assert_match "matches the violations of 2 artifacts", result.notices.first.message
     step(violations, [entry("tests/has-test", "app/foo", "later")], update: true)
 
-    assert_equal [["src/app/foo.component.ts", "later"], ["src/app/foo.service.ts", "later"]], written.map { [_1.artifact, _1.comment] }
+    assert_equal [["src/app/foo.component.ts", "later"], ["src/app/foo.service.ts", "later"]], written.map { [it.artifact, it.comment] }
   end
 
   def test_matches_an_entry_with_a_detail_only_to_that_detail_and_one_without_only_to_none
