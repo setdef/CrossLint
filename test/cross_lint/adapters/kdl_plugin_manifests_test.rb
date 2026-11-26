@@ -90,7 +90,9 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_equal [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 1)], helper.helpers
     assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update"]],
       [steps.steps, steps.step_policies, steps.settings, steps.commands].map { |list| list.map(&:name) }
-    assert_equal [CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 8)], steps.commands
+    flag = CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "List the entries update would add and remove, and write nothing", line: 9)
+
+    assert_equal [CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 8, flags: [flag])], steps.commands
   end
 
   def test_reads_the_plugins_in_the_readme_and_the_tutorial
