@@ -39,6 +39,9 @@ module CrossLint
         # package ng-nudge finds its files with is looked for from.
         PACKAGES: Array[String]
 
+        # What a project with no rc.json is moved as if it held.
+        EMPTY: String
+
         # What node-glob does that CrossLint doesn't.
         WHY: String
 
@@ -66,6 +69,10 @@ module CrossLint
         @javascript: _JavaScript
 
         @project_files: _ProjectFiles
+
+        # The line that says a project with no rc.json, whose `text` is
+        # nil, is moved as if it held `{}`, or none when it has one.
+        def assumed: (String? text) -> Array[String]
 
         # A line for each file only node-glob or only CrossLint finds for a
         # role of `converted`, with why, or why they weren't compared.

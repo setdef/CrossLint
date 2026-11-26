@@ -24,6 +24,9 @@ module CrossLint
         # own, and then the project's.
         PACKAGES = ["node_modules/@overthetopmarketing/ng-nudge", ""].freeze
 
+        # What a project with no rc.json is moved as if it held.
+        EMPTY = "{}"
+
         # What node-glob does that CrossLint doesn't, which is why a file
         # can be found by one and not the other.
         WHY = "node-glob also returns folders, ignores case on macOS and Windows, finds files Git ignores, and follows a symlinked folder, which CrossLint doesn't"
@@ -39,9 +42,8 @@ module CrossLint
         def call(root, force: false, dry_run: false, planned: nil)
           replaced = @configuration.exist?(root)
           refuse_existing(@configuration.file, "the configuration") if replaced && !force
-          text = @ng_nudge.settings(root) || raise(Mistake.new("doesn't exist; crosslint init --from-ng-nudge moves a project that has it, " \
-            "and crosslint init writes a configuration for any other", file: SETTINGS_FILE))
-          converted = Rc.new(text).call
+          text = @ng_nudge.settings(root)
+          converted = Rc.new(text || EMPTY).call
           paths = @ng_nudge.extensions(root)
           refuse_code(paths)
           debt = @debt_files.read(root, DEBT_FILE)
@@ -49,7 +51,7 @@ module CrossLint
           replaces = moves && @debt_files.exist?(root, TrackDebt::FILE)
           refuse_existing(TrackDebt::FILE, "the debt file") if replaces && !force
           agree(converted.matching, debt) if converted.matching
-          changes = [*moved(replaced, converted, moves, debt, replaces), *converted.changes, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
+          changes = [*assumed(text), *moved(replaced, converted, moves, debt, replaces), *converted.changes, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
           notes = compare(root, converted)
           planned&.call(changes, notes)
           unless dry_run
@@ -60,6 +62,14 @@ module CrossLint
         end
 
         private
+
+        # The line that says a project with no rc.json is moved as if it
+        # held {}, or none when it has one.
+        def assumed(text)
+          return [] if text
+
+          ["treat #{SETTINGS_FILE}, which isn't there, as #{EMPTY}, since ng-nudge then runs on its defaults"]
+        end
 
         # The files the project's own glob finds for each role's pattern,
         # and the files CrossLint finds for the pattern it was converted

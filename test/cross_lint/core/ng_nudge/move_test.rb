@@ -121,12 +121,19 @@ class NgNudgeMoveTest < Minitest::Test
     assert_equal ["x"], world.debt_files.read(APP, DEBT).entries.map(&:artifact)
   end
 
-  def test_refuses_a_project_with_no_rc_json
-    world = world({}, rc: false)
-    mistake = assert_raises(Core::Mistake) { world.move }
+  # ng-nudge runs on its defaults when it has no rc.json.
+  def test_moves_a_project_with_no_rc_json_as_if_it_held_empty_braces_and_says_so
+    world = world({}, rc: false, comments: %w[later])
+    result = world.move
 
-    assert_equal [RC, "doesn't exist; crosslint init --from-ng-nudge moves a project that has it, and crosslint init writes a configuration for any other"],
-      [mistake.file, mistake.message]
+    assert_equal [%(treat #{RC}, which isn't there, as {}, since ng-nudge then runs on its defaults),
+      "write #{CONFIG}, with the plugins angular and debt", "move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry"], result.changes
+    assert_equal ["angular", "debt"], world.configuration.read(APP).plugins.map(&:name)
+    assert_equal ["later"], world.debt_files.read(APP, DEBT).entries.map(&:comment)
+  end
+
+  def test_does_not_say_it_treats_an_rc_json_that_is_there_as_empty_braces
+    refute(world({}).move.changes.any? { |change| change.start_with?("treat") })
   end
 
   def test_refuses_a_key_it_cannot_carry_before_it_changes_anything
