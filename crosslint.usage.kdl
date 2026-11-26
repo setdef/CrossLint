@@ -1,0 +1,84 @@
+// The command-line interface of `crosslint`, as a usage spec (https://usage.jdx.dev).
+// The command reference is generated from this file.
+
+min_usage_version "2.0.0"
+name "CrossLint"
+bin "crosslint"
+version "0.1.0"
+author "setdef"
+license "MIT"
+repository "https://github.com/setdef/CrossLint"
+
+about "Check the rules that span files: every source file has its test, every component has its template"
+long_about #"""
+CrossLint checks how a project's files relate to each other: that each group of files that belong
+together has the files it should, and that a component and its stub agree. Its plugins declare
+which files belong together and what to check, and the project's configuration,
+.config/crosslint.kdl, lists the plugins it runs.
+
+Findings go to standard output, one per line. The lines CrossLint prints about itself go to
+standard error, and each begins with "crosslint:".
+"""#
+after_long_help #"""
+Documentation: https://github.com/setdef/CrossLint/tree/trunk/docs
+Report a problem: https://github.com/setdef/CrossLint/issues
+"""#
+
+unknown_flags "error"
+
+example "crosslint init" header="Write a configuration with the recommended plugins"
+example "crosslint check" header="Check the project" help="Runs every plugin the configuration lists, prints each violation, and exits with 1 if any fails the check."
+example "crosslint check --update-debt" header="Accept the current violations as debt" help="Writes every current violation to the debt file, so the next check passes until a new one appears."
+example "crosslint init --from-ng-nudge" header="Move a project from ng-nudge"
+
+exit_code 0 "Every check passed, or the command did what it was asked."
+exit_code 1 "A check failed: there is a violation that fails it, or a stale entry in the debt file."
+exit_code 2 "CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start."
+exit_code 130 "You interrupted CrossLint with Ctrl-C."
+
+flag "-q --quiet" global=#true help="Print only what fails the check, with no summary"
+flag "-s --silent" global=#true help="Print nothing but errors that stop CrossLint; only the exit status gives the result"
+flag "--no-color" global=#true help="Print no color, as when NO_COLOR is set or the output isn't a terminal"
+flag "--debug" global=#true help="Print what CrossLint does at each step, to standard error, as when DEBUG is set"
+flag "-C --project <dir>" global=#true help="Use the project whose root, the folder with .config/crosslint.kdl, contains this folder"
+
+cmd "check" effect="read" help="Check the project, and exit with 1 if a check fails" {
+  long_help #"""
+Runs every plugin the project's configuration lists, on the whole project, and prints each
+violation on a line of its own: the file, the message, and the plugin and policy it comes from. Ends
+with a summary of how many artifacts it checked and what it found.
+
+Violations listed in the debt file don't fail the check. An entry that no violation matches any
+more does, until --update-debt removes it.
+"""#
+  flag "--warnings <mode>" help="Show warnings, hide them, or let them fail the check" {
+    choices "all" "none" "error"
+    default "all"
+  }
+  flag "-a --all" help="List every artifact checked, passing ones included"
+  flag "--json" help="Print the findings and the summary as one JSON object in place of lines"
+  flag "--update-debt" effect="write" help="After checking, rewrite the debt file to list the current violations" {
+    long_help "After checking, rewrites the debt file to list exactly the current violations: keeps each entry that still matches, with its comment, drops stale entries, and adds one entry with an empty comment for each new violation. Then reports the state the update left, and exits with 0."
+  }
+  example "crosslint check"
+  example "crosslint check --warnings=error" header="Fail the check on warnings too"
+  example "crosslint check --json" header="Read the findings from a script"
+  example "crosslint check --update-debt" header="Record the current violations as debt"
+}
+
+cmd "init" effect="write" help="Write a configuration for this project, with the recommended plugins" {
+  long_help #"""
+Writes .config/crosslint.kdl in the current folder, listing the recommended plugins. If the
+file exists, changes nothing unless you pass --force.
+
+With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a configuration with the
+Angular plugin, the debt plugin, and every setting rc.json had. Moves ng-nudge's debt file to
+.config/crosslint/debt.tsv with every entry and comment kept. Lists every change before it makes
+any.
+"""#
+  flag "--from-ng-nudge" help="Write the configuration from this project's ng-nudge setup, and move its debt file"
+  flag "-n --dry-run" help="List the changes, and make none"
+  flag "-f --force" help="Replace an existing configuration"
+  example "crosslint init"
+  example "crosslint init --from-ng-nudge --dry-run" header="See what moving from ng-nudge would change"
+}
