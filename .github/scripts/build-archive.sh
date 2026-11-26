@@ -7,8 +7,10 @@
 # PLATFORM is macos-aarch64, linux-x86_64, or windows-x86_64. Run it from a
 # fresh checkout, with the Ruby and tools mise.toml pins on PATH: Fledge
 # packs the whole project folder, so a folder that ran the tests would
-# carry coverage/ into the archive. The bundle goes outside the checkout
-# for the same reason, unless BUNDLE_PATH says where.
+# carry coverage/ into the archive. The script refuses to build when
+# `git status --porcelain --ignored` prints anything, and prints it. The
+# bundle goes outside the checkout for the same reason, unless BUNDLE_PATH
+# says where.
 
 set -eu
 
@@ -24,8 +26,10 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 version=$("$root/.github/scripts/spec-version.sh")
 cd "$root"
 
-if [ -e coverage ] || [ -e build/dist ]; then
-  echo "build-archive.sh: coverage/ or build/dist exists in $root; build from a fresh checkout" >&2
+found=$(git status --porcelain --ignored)
+if [ -n "$found" ]; then
+  echo "build-archive.sh: $root is not a fresh checkout; git status --porcelain --ignored lists:" >&2
+  printf '%s\n' "$found" >&2
   exit 1
 fi
 
