@@ -102,6 +102,14 @@ class SharedPluginTest < Minitest::Test
     assert_equal "v1.2.0", SharedPlugin.newest_tag(%w[v1.2.0], keep: "1.1.0")
   end
 
+  # v1.2.0 and v1.02.0 are one version in two spellings of the same form.
+  def test_keeps_the_tag_the_project_has_or_else_the_first_by_name_among_tags_of_one_version_and_form
+    tags = %w[v1.2.0 v1.02.0]
+
+    assert_equal ["v1.2.0", "v1.2.0", "v1.02.0", "v1.02.0", "v1.02.0"], [SharedPlugin.newest_tag(tags, keep: "v1.2.0"), SharedPlugin.newest_tag(tags.reverse, keep: "v1.2.0"),
+      SharedPlugin.newest_tag(tags, keep: "v1.1.0"), SharedPlugin.newest_tag(tags.reverse, keep: "v1.1.0"), SharedPlugin.newest_tag(tags.reverse)]
+  end
+
   def test_never_moves_to_a_lower_version_than_the_one_the_project_has
     assert_equal ["v2.0.0", "2.1.0", "v1.10.0", "v1.2.0"], [SharedPlugin.newest_tag(%w[v1.9.0 v1.10.0], keep: "v2.0.0"), SharedPlugin.newest_tag(%w[v1.9.0], keep: "2.1.0"),
       SharedPlugin.newest_tag(%w[v1.9.0 v1.10.0], keep: "v1.1.0"), SharedPlugin.newest_tag(%w[v1.2.0], keep: "v1.2.0")]
