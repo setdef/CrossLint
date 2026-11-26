@@ -323,15 +323,16 @@ class CLITest < Minitest::Test
       update("update", app:)
   end
 
-  def test_update_builds_the_app_it_needs_and_works_from_the_current_folder_unless_it_is_told_otherwise
+  def test_update_builds_the_app_it_needs_which_fetches_over_https_only_and_works_from_the_current_folder
     Dir.mktmpdir do |base|
       url = "https://example.test/#{SecureRandom.hex(8)}/signatures"
       origin = repository_at(File.join(base, "origin", "signatures"), {"plugin.kdl" => ""}, tags: %w[v1.0.0 v1.2.0])
       config = write(base, "project/.config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
       out, err, status = rewriting(url, origin) { Dir.chdir(File.join(base, "project")) { run_cli("update", spec: shipped_spec) } }
 
-      assert_equal ["", "crosslint: listing the tags of #{url}\ncrosslint: #{url}: moved from v1.0.0 to v1.2.0\n", 0], [out, err, status]
-      assert_equal %(plugin "#{url}" ref="v1.2.0"\n), File.binread(config)
+      assert_equal ["", 2], [out, status]
+      assert_match(%r{^crosslint: \.config/crosslint/config\.kdl:1: couldn't list the tags of shared plugin #{Regexp.escape(url)}: .*transport 'file' not allowed}m, err)
+      assert_equal %(plugin "#{url}" ref="v1.0.0"\n), File.binread(config)
     end
   end
 

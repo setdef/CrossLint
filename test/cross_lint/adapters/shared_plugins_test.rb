@@ -151,6 +151,10 @@ class GitSharedPluginsTest < Minitest::Test
 
   PLUGIN = Origin::PLUGIN
 
+  # The arguments before each run of the port's git, which accepts file URLs
+  # too.
+  PROTOCOLS = %w[-c protocol.allow=never -c protocol.https.allow=always -c protocol.file.allow=always].freeze
+
   # Logs each run of git, and the environment it was given, and runs the
   # real one.
   LOGS = <<~RUBY
@@ -203,6 +207,37 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal [true, false, true], [default.accepts?("https://github.com/OWNER/REPO"), default.accepts?(repository_url), port.accepts?(repository_url)]
   end
 
+  def test_allows_git_the_transport_of_each_scheme_it_accepts_and_no_other
+    silent = fake("logs.rb", LOGS.sub(/^exec.*\n/, "exit 0\n"))
+    web = Adapters::GitSharedPlugins.new(err: @err, cache: @base, git: silent)
+    web.tags("https://example.test/OWNER/signatures")
+    ssh = Adapters::GitSharedPlugins.new(err: @err, cache: @base, git: silent, schemes: ["https://", "ssh://"])
+    ssh.tags("ssh://example.test/OWNER/signatures")
+
+    assert_equal [%w[-c protocol.allow=never -c protocol.https.allow=always], %w[-c protocol.allow=never -c protocol.https.allow=always -c protocol.ssh.allow=always]], logged.map { |entry| entry.fetch("argv").first(entry.fetch("argv").index("ls-remote")) }
+  end
+
+  # A Git setting of the user's, such as url.BASE.insteadOf, can send a
+  # request for one address to another, a file or a command, and Git
+  # would follow it.
+  def test_fetches_over_https_only_so_that_a_git_setting_cant_send_it_to_another_transport
+    url = "https://example.test/OWNER/signatures"
+    default = Adapters::GitSharedPlugins.new(err: @err, cache: @base)
+    messages = rewriting(url, repository_url) do
+      [-> { default.fetch(url, "v1.0.0") }, -> { default.fetch(url, commit_sha) }, -> { default.tags(url) }].map { |call| assert_raises(Core::FetchError, &call).message }
+    end
+
+    assert_equal 3, messages.grep(/not allowed/).size, messages.inspect
+    assert_empty Dir.children(File.join(@base, "plugins"))
+  end
+
+  def test_fetches_through_a_git_setting_that_sends_https_to_a_scheme_the_port_was_told_to_accept
+    url = "https://example.test/OWNER/signatures"
+    folder = rewriting(url, repository_url) { port.fetch(url, "v1.0.0") }
+
+    assert_equal PLUGIN, File.binread(File.join(folder, "plugin.kdl"))
+  end
+
   def test_saves_the_plugin_as_files_in_a_folder_with_its_name_in_a_folder_for_the_url_and_ref
     folder = port.fetch(repository_url, "v1.2.0")
     key = Digest::SHA256.hexdigest("#{repository_url}\0v1.2.0")[0, 32]
@@ -230,7 +265,7 @@ class GitSharedPluginsTest < Minitest::Test
 
   def test_fetches_the_commit_alone_with_git_run_as_a_program
     port(git: fake("logs.rb", LOGS)).fetch(repository_url, "v1.0.0")
-    commands = logged.map { |entry| entry.fetch("argv") }
+    commands = logged_arguments
     repository = commands.drop(1)
 
     assert_equal ["ls-remote", repository_url, "refs/tags/v1.0.0", "refs/heads/v1.0.0"], commands.first
@@ -243,13 +278,13 @@ class GitSharedPluginsTest < Minitest::Test
     port(git: fake("logs.rb", LOGS)).fetch(repository_url, commit_sha)
 
     assert_equal [["init", "-q"], ["fetch", "-q", "--depth", "1", "--no-tags", repository_url, commit_sha], ["checkout", "-q", "--detach", "FETCH_HEAD"]],
-      logged.map { |entry| entry.fetch("argv").drop(4 + SETTINGS.size) }
+      logged_arguments.map { |argv| argv.drop(4 + SETTINGS.size) }
   end
 
   def test_lists_tags_with_ls_remote
     port(git: fake("logs.rb", LOGS)).tags(repository_url)
 
-    assert_equal [["ls-remote", "--tags", "--refs", repository_url]], logged.map { |entry| entry.fetch("argv") }
+    assert_equal [["ls-remote", "--tags", "--refs", repository_url]], logged_arguments
   end
 
   def test_gives_git_the_proxies_and_never_a_password_prompt_or_a_git_variable_of_crosslints
@@ -426,7 +461,7 @@ class GitSharedPluginsTest < Minitest::Test
   def test_fetches_each_time_in_a_folder_of_its_own_in_the_cache
     port(git: fake("logs.rb", LOGS)).fetch(repository_url, "v1.0.0")
     port(git: fake("logs.rb", LOGS)).fetch(repository_url, "v1.2.0")
-    work = logged.map { |entry| entry.fetch("argv") }.select { |argv| argv.first == "--git-dir" }.map { |argv| File.dirname(argv.fetch(1)) }.uniq
+    work = logged_arguments.select { |argv| argv.first == "--git-dir" }.map { |argv| File.dirname(argv.fetch(1)) }.uniq
 
     assert_equal 2, work.size
     assert(work.all? { |folder| File.basename(folder).match?(/\A\.fetching-\h{32}\z/) })
@@ -520,6 +555,16 @@ class GitSharedPluginsTest < Minitest::Test
   # reads no RUBYOPT, so that Bundler doesn't slow every run.
   def fake(name, script)
     [RbConfig.ruby, "--disable=rubyopt", write(File.join(@base, "fakes"), name, script)]
+  end
+
+  # The arguments of each run the fake git logged, after the ones that
+  # limit the protocols, which every run must have first.
+  def logged_arguments
+    logged.map do |entry|
+      argv = entry.fetch("argv")
+      assert_equal PROTOCOLS, argv.first(PROTOCOLS.size)
+      argv.drop(PROTOCOLS.size)
+    end
   end
 
   # What the fake git logged, one JSON object a line.

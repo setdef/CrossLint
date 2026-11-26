@@ -3,7 +3,10 @@ module CrossLint
     # The shared-plugins port with Git: the Git already on the PATH, run as
     # a program with arguments and never through a shell, with none of
     # CrossLint's GIT_ variables, and with GIT_TERMINAL_PROMPT set to 0 so
-    # that it never waits for a password. It leaves proxies to Git, which
+    # that it never waits for a password. It allows git only the
+    # transports of the schemes the port accepts, https by default, so
+    # that a Git setting such as `url.BASE.insteadOf` can't send a fetch
+    # to ssh, a file, or a command. It leaves proxies to Git, which
     # reads HTTPS_PROXY, HTTP_PROXY, and NO_PROXY from the environment.
     #
     # The first time it fetches a plugin, it fetches that commit alone,
@@ -70,6 +73,13 @@ module CrossLint
       @home: ^() -> String
 
       @command: GitCommand
+
+      @protocols: Array[String]
+
+      # The arguments before every run of git that allow the transport of
+      # each of `schemes` and no other, whatever the user's Git settings
+      # say.
+      def protocols: (Array[String] schemes) -> Array[String]
 
       # Raises Core::FetchError unless the port accepts `url`.
       def check: (String url) -> void

@@ -43,6 +43,7 @@ module CrossLint
         @env = env
         @windows = windows
         @home = home
+        @protocols = protocols(schemes)
         # Proxies are left to Git, which reads HTTPS_PROXY, HTTP_PROXY, and
         # NO_PROXY itself. Git must never wait for a person to type a
         # password: the time limit would end it, a minute later.
@@ -78,6 +79,14 @@ module CrossLint
       end
 
       private
+
+      # Git follows a setting such as url.BASE.insteadOf to any transport,
+      # a file or a command among them, unless it is told which it may use.
+      # The tests widen this with `schemes`.
+      def protocols(schemes)
+        names = schemes.filter_map { |scheme| scheme[%r{\A([a-z][a-z0-9+.-]*)://}i, 1] }
+        ["-c", "protocol.allow=never", *names.flat_map { |name| ["-c", "protocol.#{name}.allow=always"] }]
+      end
 
       def check(url)
         raise Core::FetchError.scheme(url, @schemes) unless accepts?(url)
@@ -150,7 +159,7 @@ module CrossLint
       # What git writes to standard output, or Core::FetchError with what
       # it wrote to standard error when it fails.
       def git!(arguments, folder, deadline, what = nil)
-        output = @command.run(arguments, folder, deadline)
+        output = @command.run([*@protocols, *arguments], folder, deadline)
         return output.out if output.success
 
         said = output.err.strip
