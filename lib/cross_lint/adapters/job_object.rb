@@ -28,6 +28,11 @@ module CrossLint
       # GetProcessTimes needs.
       ASSIGN = 0x0101 | 0x00100000 | 0x1000
 
+      # How many milliseconds a process that Windows refuses to put in a
+      # job has to signal that it has exited. A process on its way out is
+      # refused before it signals, and signals within moments.
+      EXIT_WAIT = 1000
+
       # Seconds from 1601, which a FILETIME counts from, to 1970.
       EPOCH = 11_644_473_600
 
@@ -141,7 +146,7 @@ module CrossLint
 
       # Whether the process that `process` is a handle of has exited,
       # which WAIT_OBJECT_0, 0, answers.
-      def exited?(process) = call("WaitForSingleObject", [Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT], Fiddle::TYPE_INT, process, 0).to_i.zero?
+      def exited?(process) = call("WaitForSingleObject", [Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT], Fiddle::TYPE_INT, process, EXIT_WAIT).to_i.zero?
 
       def failed(name) = Core::PluginError.new("couldn't be put in a job object: #{name} failed with Windows error #{Fiddle.win32_last_error.to_i}")
 

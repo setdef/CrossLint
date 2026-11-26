@@ -79,6 +79,27 @@ class JobObjectTest < Minitest::Test
     refute_nil wait.join(5)
   end
 
+  # Windows refuses a process that is exiting, with error 5, a moment
+  # before it signals that it has exited, so one wait of no time at all
+  # takes it for a running process.
+  def test_waits_for_a_process_windows_refuses_to_signal_that_it_has_exited
+    script = write(@base, "sleeps.sh", "sleep 30\n")
+    _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})
+    waited = []
+    refusing = Class.new(CrossLint::Adapters::JobObject) do
+      define_method(:call) do |name, arguments, result, *values|
+        waited << values.last if name == "WaitForSingleObject"
+        (name == "AssignProcessToJobObject") ? 0 : super(name, arguments, result, *values)
+      end
+    end
+    error = assert_raises(CrossLint::Core::PluginError) { refusing.new(wait.pid) }
+
+    assert_match(/AssignProcessToJobObject failed/, error.message)
+    assert_equal [CrossLint::Adapters::JobObject::EXIT_WAIT], waited
+    assert_operator CrossLint::Adapters::JobObject::EXIT_WAIT, :>, 0
+    CrossLint::Adapters::JobObject.new(wait.pid).kill
+  end
+
   def test_stops_at_each_call_windows_refuses_and_closes_what_it_made
     script = write(@base, "sleeps.sh", "sleep 30\n")
     _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})

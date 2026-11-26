@@ -31,6 +31,10 @@ module CrossLint
       # PROCESS_QUERY_LIMITED_INFORMATION.
       ASSIGN: Integer
 
+      # The milliseconds a process that Windows refuses to put in a job
+      # has to signal that it has exited.
+      EXIT_WAIT: Integer
+
       # The seconds from 1601, which a FILETIME counts from, to 1970.
       EPOCH: Integer
 
@@ -78,7 +82,8 @@ module CrossLint
       # every call that fails by returning zero does.
       def checked: (String name, Array[Integer] arguments, Integer result, *untyped values) -> untyped
 
-      # Whether the process `process`, a handle, has exited.
+      # Whether the process `process`, a handle, has exited, or does
+      # within EXIT_WAIT milliseconds.
       def exited?: (untyped process) -> bool
 
       # The error for the call `name` that returned zero.
