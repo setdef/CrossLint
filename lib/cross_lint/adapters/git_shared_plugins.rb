@@ -16,6 +16,11 @@ module CrossLint
 
       SCHEMES = ["https://"].freeze
 
+      # The transports Git may use, whatever the user's settings say. A
+      # URL in a configuration is https, so file is reachable only through
+      # the user's own setting, such as url.BASE.insteadOf.
+      PROTOCOLS = %w[-c protocol.allow=never -c protocol.https.allow=always -c protocol.file.allow=always].freeze
+
       # Git on Windows keeps no file past 260 characters unless it is
       # told to, and a checkout must give the same bytes on every system.
       SETTINGS = %w[-c core.autocrlf=false -c core.longpaths=true -c advice.detachedHead=false].freeze
@@ -43,7 +48,6 @@ module CrossLint
         @env = env
         @windows = windows
         @home = home
-        @protocols = protocols(schemes)
         # Proxies are left to Git, which reads HTTPS_PROXY, HTTP_PROXY, and
         # NO_PROXY itself. Git must never wait for a person to type a
         # password: the time limit would end it, a minute later.
@@ -79,14 +83,6 @@ module CrossLint
       end
 
       private
-
-      # Git follows a setting such as url.BASE.insteadOf to any transport,
-      # a file or a command among them, unless it is told which it may use.
-      # The tests widen this with `schemes`.
-      def protocols(schemes)
-        names = schemes.filter_map { |scheme| scheme[%r{\A([a-z][a-z0-9+.-]*)://}i, 1] }
-        ["-c", "protocol.allow=never", *names.flat_map { |name| ["-c", "protocol.#{name}.allow=always"] }]
-      end
 
       def check(url)
         raise Core::FetchError.scheme(url, @schemes) unless accepts?(url)
@@ -159,7 +155,7 @@ module CrossLint
       # What git writes to standard output, or Core::FetchError with what
       # it wrote to standard error when it fails.
       def git!(arguments, folder, deadline, what = nil)
-        output = @command.run([*@protocols, *arguments], folder, deadline)
+        output = @command.run([*PROTOCOLS, *arguments], folder, deadline)
         return output.out if output.success
 
         said = output.err.strip

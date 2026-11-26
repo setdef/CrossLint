@@ -201,28 +201,18 @@ class AppTest < Minitest::Test
 
   # The https URLs these tests use differ, so that the cache the tests
   # share holds no fetch of another test's.
-  def test_fetches_a_shared_plugin_with_git_into_the_cache_of_the_user_unless_it_is_given_a_folder
+  def test_fetches_a_shared_plugin_with_git_into_the_cache_of_the_user_unless_it_is_given_another_port
     url = "https://example.test/#{SecureRandom.hex(8)}/shared-docs"
     write(@base, ".config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
     write(@base, "a.md", "")
     Open3.capture3("git", "init", "-q", chdir: @base)
     err = StringIO.new
-    port = CrossLint::Adapters::GitSharedPlugins.new(err:, schemes: ["https://", "file://"])
-    result = rewriting(url, shared_repository) { App.new(err:, shared_plugins: port).check(@base) }
+    result = rewriting(url, shared_repository) { App.new(err:).check(@base) }
 
     assert_equal ["a.md"], result.violations.map(&:artifact)
     assert_equal ["crosslint: fetching #{url} at v1.0.0"], err.string.lines(chomp: true)
     key = Digest::SHA256.hexdigest("#{url}\0v1.0.0")[0, 32]
     assert_equal [MANIFEST], Dir.glob(File.join(CACHE, "**", "plugins", key, "shared-docs", "plugin.kdl")).map { |file| File.binread(file) }
-  end
-
-  def test_fetches_over_https_only_unless_it_is_given_another_port
-    url = "https://example.test/#{SecureRandom.hex(8)}/shared-docs"
-    write(@base, ".config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
-    mistake = rewriting(url, shared_repository) { assert_raises(Mistake) { App.new(err: StringIO.new).check(@base) } }
-
-    assert_match(/transport 'file' not allowed/, mistake.message)
-    assert_empty Dir.glob(File.join(CACHE, "**", Digest::SHA256.hexdigest("#{url}\0v1.0.0")[0, 32]))
   end
 
   def test_runs_helpers_through_the_port_it_is_given

@@ -207,33 +207,36 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal [true, false, true], [default.accepts?("https://github.com/OWNER/REPO"), default.accepts?(repository_url), port.accepts?(repository_url)]
   end
 
-  def test_allows_git_the_transport_of_each_scheme_it_accepts_and_no_other
+  def test_allows_git_https_and_file_and_no_other_transport_whatever_schemes_the_port_accepts
     silent = fake("logs.rb", LOGS.sub(/^exec.*\n/, "exit 0\n"))
-    web = Adapters::GitSharedPlugins.new(err: @err, cache: @base, git: silent)
-    web.tags("https://example.test/OWNER/signatures")
-    ssh = Adapters::GitSharedPlugins.new(err: @err, cache: @base, git: silent, schemes: ["https://", "ssh://"])
-    ssh.tags("ssh://example.test/OWNER/signatures")
+    Adapters::GitSharedPlugins.new(err: @err, cache: @base, git: silent).tags("https://example.test/OWNER/signatures")
+    Adapters::GitSharedPlugins.new(err: @err, cache: @base, git: silent, schemes: ["https://", "ssh://"]).tags("ssh://example.test/OWNER/signatures")
 
-    assert_equal [%w[-c protocol.allow=never -c protocol.https.allow=always], %w[-c protocol.allow=never -c protocol.https.allow=always -c protocol.ssh.allow=always]], logged.map { |entry| entry.fetch("argv").first(entry.fetch("argv").index("ls-remote")) }
+    assert_equal [PROTOCOLS, PROTOCOLS], logged.map { |entry| entry.fetch("argv").first(PROTOCOLS.size) }
+    assert_equal %w[-c protocol.allow=never -c protocol.https.allow=always -c protocol.file.allow=always], Adapters::GitSharedPlugins::PROTOCOLS
   end
 
   # A Git setting of the user's, such as url.BASE.insteadOf, can send a
-  # request for one address to another, a file or a command, and Git
+  # request for one address to another, to ssh or a command, and Git
   # would follow it.
-  def test_fetches_over_https_only_so_that_a_git_setting_cant_send_it_to_another_transport
+  def test_refuses_a_git_setting_that_sends_a_request_to_another_transport_than_https_or_file
     url = "https://example.test/OWNER/signatures"
     default = Adapters::GitSharedPlugins.new(err: @err, cache: @base)
-    messages = rewriting(url, repository_url) do
-      [-> { default.fetch(url, "v1.0.0") }, -> { default.fetch(url, commit_sha) }, -> { default.tags(url) }].map { |call| assert_raises(Core::FetchError, &call).message }
+    targets = %w[ssh://example.test/o/r http://example.test/o/r git://example.test/o/r ext::true]
+    messages = targets.flat_map do |target|
+      rewriting(url, target) do
+        [-> { default.fetch(url, "v1.0.0") }, -> { default.fetch(url, commit_sha) }, -> { default.tags(url) }].map { |call| assert_raises(Core::FetchError, &call).message }
+      end
     end
 
-    assert_equal 3, messages.grep(/not allowed/).size, messages.inspect
+    assert_equal targets.flat_map { |target| ["transport '#{target[/\A[a-z]+/]}' not allowed"] * 3 }, messages.map { |message| message[/transport '[a-z]+' not allowed/] }
     assert_empty Dir.children(File.join(@base, "plugins"))
   end
 
-  def test_fetches_through_a_git_setting_that_sends_https_to_a_scheme_the_port_was_told_to_accept
+  def test_follows_a_git_setting_that_sends_https_to_a_file
     url = "https://example.test/OWNER/signatures"
-    folder = rewriting(url, repository_url) { port.fetch(url, "v1.0.0") }
+    default = Adapters::GitSharedPlugins.new(err: @err, cache: @base)
+    folder = rewriting(url, repository_url) { default.fetch(url, "v1.0.0") }
 
     assert_equal PLUGIN, File.binread(File.join(folder, "plugin.kdl"))
   end
