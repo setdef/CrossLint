@@ -49,6 +49,14 @@ class SignatureCommentsTaskTest < Minitest::Test
     assert_equal ["", 0], run_task
   end
 
+  def test_reports_a_module_with_no_comment
+    assert_reports "sig/cross_lint/thing.rbs:1: CrossLint has no comment", COMMENTED.sub("# The module.\n", "")
+  end
+
+  def test_reports_a_class_with_no_comment
+    assert_reports "sig/cross_lint/thing.rbs:3: CrossLint::Thing has no comment", COMMENTED.sub("  # The class.\n", "")
+  end
+
   def test_reports_a_method_with_no_comment
     assert_reports "sig/cross_lint/thing.rbs:11: CrossLint::Thing#run has no comment", COMMENTED.sub("  # Runs.\n", "")
   end
