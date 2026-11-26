@@ -15,7 +15,7 @@ What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/RE
 
 ## Checks
 
-After `bundle install`, run `bundle exec rake fixtures` once: it installs the packages the Angular plugin's test fixtures lock, with `npm ci`, using the Node that `mise.toml` pins. No test task runs it, and a test whose fixture lacks them fails saying to run it. Then `bundle exec rake check` runs every check CI runs, and a change passes all of them before it's pushed:
+After `bundle install`, run `bundle exec rake fixtures` once: it installs the packages the Angular plugin's test fixtures lock, with `npm ci`, using the Node that `mise.toml` pins. No test task runs it, and a test whose fixture lacks them fails saying to run it. Then `bundle exec rake check` runs every check CI runs, and CI runs it after every push to `trunk`:
 
 - the test suite, covering every line and branch of `lib/` and of each built-in plugin's Ruby, but the other system's process tree (`job_object.rb` off Windows, `process_group.rb` on it), with each built-in plugin's tests in its folder under `plugins/`;
 - the same suite under RBS's runtime type checker, which compares every call into CrossLint with `sig/`;
@@ -25,19 +25,25 @@ After `bundle install`, run `bundle exec rake fixtures` once: it installs the pa
 - every Ruby example in the documentation, run and checked against the results it shows;
 - `usage lint`, the check that `docs/reference/cli.md` matches the spec, and `reuse lint`.
 
+Before a push, run `bundle exec rake gate`, which takes about a minute. It runs every check in that list but full mutation testing, cheapest first, and then mutation testing of only part of the code:
+
+- the subjects the change touches since `origin/trunk`, which the clone needs to have, or since the commit in `GATE_BASE`;
+- the subjects each changed test file covers, by its path (`test/cross_lint/core/load_project_test.rb` covers `CrossLint::Core::LoadProject`, and a plugin's tests cover that plugin's Ruby);
+- every subject, when a changed test file covers none by its path, so a change to such a test is never left unchecked.
+
+It prints the base and how many subjects it chose, warns of a Ruby file Git doesn't track yet (the diff leaves it out), and refuses a base that is `HEAD` itself. Mutant forks a process for each mutation, so the gate refuses to run on Windows, where nothing forks, rather than skip its mutation testing.
+
 Every public class, module, method, and constant is documented in its RBS signature under `sig/`, in Markdown. A `.rb` file has a comment only where the code needs a reason: why it's written this way, or what makes it tricky. How the code divides, and why, is in [Architecture](docs/design/architecture.md).
 
 ## Landing a change
 
-Commit straight to `trunk`, one change at a time, each one complete and releasable. A spike, an experiment written to answer a question, is throwaway code and stays off `trunk`; its answer goes in the issue it serves. Run the checks that apply to the change before you push, and rebase and run them again when a push is refused because `trunk` moved.
+Commit straight to `trunk`, one change at a time, each one complete and releasable. A spike, an experiment written to answer a question, is throwaway code and stays off `trunk`; its answer goes in the issue it serves. Run `rake gate` before you push, and rebase and run it again when a push is refused because `trunk` moved.
 
 When CI on `trunk` fails, revert the commit that broke it at once, whoever wrote it, and tell its author in the issue the commit names; the fix lands again afterwards, with a test. Nobody fixes forward on a red `trunk`.
 
 ### Known flaky tests
 
 A test that fails without a change to what it tests is a fault in the test, fixed or set aside with its reason recorded here, never rerun until it passes. Running it again never closes it.
-
-- **Mutations of `err:` in `App#initialize` and `CLI#check`** sometimes survive a full mutation run, and never alone. The likely cause is a thread that raises into a test after it ended; #18 tracks it.
 
 ## Licensing
 
@@ -49,4 +55,4 @@ Code or prose taken from [ng-nudge](https://github.com/OverTheTopMarketing/ng-nu
 
 ## Releases
 
-Releases are tags and GitHub releases, cut whenever `trunk` is ready. To cut one, tag a commit CI passed as `v` and the version in `crosslint.usage.kdl`, such as `v0.1.0`, and push the tag: the Release workflow builds each platform's archive from a clean checkout, runs each with no Ruby to fall back on (on Linux in a container with no Ruby, and on macOS and Windows with an empty `PATH`), and publishes the archives with a `SHA256SUMS` file. It refuses a tag that doesn't match the spec's version. Every version is `0.X.Y`, three plain integers, with no prerelease form such as `-rc.1` and no build metadata, and the version stays below 1.0.0. Nothing is published to a registry outside GitHub.
+Releases are tags and GitHub releases, cut whenever `trunk` is ready. To cut one, tag a commit CI passed as `v` and the version in `crosslint.usage.kdl`, such as `v0.1.0`, and push the tag: the Release workflow builds each platform's archive from a clean checkout, runs each with no Ruby to fall back on (on Linux in a container with no Ruby, and on macOS and Windows with an empty `PATH`), and publishes the archives with a `SHA256SUMS` file. It refuses a tag that doesn't match the spec's version, and a tag whose commit has no passing CI run from a push to `trunk`. A tag pushed before that run passes fails its Release run; rerun the Release run once CI has passed. Every version is `0.X.Y`, three plain integers, with no prerelease form such as `-rc.1` and no build metadata, and the version stays below 1.0.0. Nothing is published to a registry outside GitHub.
