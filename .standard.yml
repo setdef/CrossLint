@@ -5,3 +5,8 @@ ruby_version: 3.3
 ignore:
   - ".scratch/**/*"
   - "build/dist/**/*"
+  # Layout/EndOfLine is "native", which on Windows demands CRLF. Every text
+  # file is LF on every system (.gitattributes), so the cop has nothing to
+  # check, and it would refuse every file there.
+  - "**/*":
+      - Layout/EndOfLine
