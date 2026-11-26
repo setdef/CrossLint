@@ -331,6 +331,7 @@ class CLITest < Minitest::Test
       out, err, status = rewriting(url, origin) { Dir.chdir(File.join(base, "project")) { run_cli("update", spec: shipped_spec) } }
 
       assert_equal ["", 2], [out, status]
+      assert_operator err, :start_with?, "crosslint: listing the tags of #{url}\n"
       assert_match(%r{^crosslint: \.config/crosslint/config\.kdl:1: couldn't list the tags of shared plugin #{Regexp.escape(url)}: .*transport 'file' not allowed}m, err)
       assert_equal %(plugin "#{url}" ref="v1.0.0"\n), File.binread(config)
     end
