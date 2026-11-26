@@ -1,0 +1,7 @@
+{
+  "name": "unknown-rule",
+  "protocol": 1,
+  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "crash"] },
+  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }],
+  "policies": [{ "name": "p", "artifacts": ["component"], "rules": ["nobody/some-rule"] }]
+}

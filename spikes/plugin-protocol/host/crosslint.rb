@@ -3,7 +3,8 @@
 
 # Spike host: runs plugins that speak protocol 1 (see ../README.md).
 #
-#   crosslint.rb [--root DIR] [--provision] [--timing] [--repeat N] [--lifetime per-check|per-run] PLUGIN_DIR...
+#   crosslint.rb [--root DIR] [--config FILE] [--provision] [--timing] [--repeat N]
+#                [--lifetime per-check|per-run] PLUGIN_DIR...
 #
 # Exit status: 0 no violations, 1 violations, 2 a plugin failed.
 
@@ -25,6 +26,8 @@ module Spike
     end
   end
 
+  def self.windows? = Gem.win_platform?
+
   def self.which(command)
     return (File.executable?(command) ? command : nil) if command.include?("/")
 
@@ -37,7 +40,7 @@ module Spike
 
   # Ends a plugin and everything it started: the process group on Unix, the process tree on Windows.
   def self.kill_tree(pid)
-    if Gem.win_platform?
+    if windows?
       system("taskkill", "/T", "/F", "/PID", pid.to_s, out: File::NULL, err: File::NULL)
     else
       begin
@@ -45,6 +48,31 @@ module Spike
       rescue Errno::ESRCH, Errno::EPERM
         nil
       end
+    end
+  end
+
+  # A policy's condition, as data. See the README for the list.
+  def self.holds?(cond, item, artifact, config, root, who)
+    bad = ->(why) { raise PluginFailure.new(who, "bad-manifest", why) }
+    case cond
+    when nil, true then true
+    when Hash
+      if cond.key?("all") then cond["all"].all? { holds?(_1, item, artifact, config, root, who) }
+      elsif cond.key?("any") then cond["any"].any? { holds?(_1, item, artifact, config, root, who) }
+      elsif cond.key?("not") then !holds?(cond["not"], item, artifact, config, root, who)
+      elsif cond.key?("companion")
+        c = item["companions"][cond["companion"]] or bad.("no companion #{cond["companion"].inspect} on artifact #{artifact["name"]}")
+        c["exists"] == cond.fetch("exists", true)
+      elsif cond.key?("expects") then Array(artifact["expects"]).include?(cond["expects"])
+      elsif cond.key?("config")
+        present = !config.dig(*cond["config"].split(".")).nil?
+        present == cond.fetch("present", true)
+      elsif cond.key?("lines")
+        n = File.foreach(File.join(root, item["path"])).count
+        cond["lines"].all? { |op, v| { "gt" => n > v, "gte" => n >= v, "eq" => n == v }.fetch(op) { bad.("unknown comparison #{op.inspect}") } }
+      else bad.("unknown condition #{cond.keys.first.inspect}")
+      end
+    else bad.("a condition is an object, found #{cond.inspect}")
     end
   end
 
@@ -66,6 +94,13 @@ module Spike
 
     def artifacts = @manifest.fetch("artifacts")
 
+    def artifact(name) = artifacts.find { _1["name"] == name } || fail!("bad-manifest", "no artifact #{name.inspect}")
+
+    # Without `policies`, each artifact gets one policy that always applies and runs whatever the plugin runs.
+    def policies = @manifest["policies"] || artifacts.map { { "name" => _1["name"], "artifacts" => [_1["name"]] } }
+
+    def declares?(rule) = !@manifest.key?("rules") || @manifest["rules"].any? { _1["name"] == rule }
+
     # Builds the facts the host already knows: matched paths and which companions exist.
     def items(artifact)
       Dir.glob(artifact.fetch("match"), base: @root).sort.map do |path|
@@ -83,7 +118,7 @@ module Spike
     def argv
       rt = @manifest.fetch("runtime")
       cmd = rt.fetch("command").sub("{host_ruby}", RbConfig.ruby)
-      args = (rt["args"] || []).map { _1.gsub("{plugin_dir}", @dir) }
+      args = (rt["args"] || []).map { _1.gsub("{plugin_dir}", @dir).gsub("{host_ruby}", RbConfig.ruby) }
       if Spike.which(cmd)
         check_version(cmd, rt["min_version"]) if rt["min_version"]
         missing = (rt["also"] || []).reject { Spike.which(_1) }
@@ -124,7 +159,7 @@ module Spike
 
     def check(artifact, items)
       t0 = now
-      result = call("check", { "root" => @root, "artifact" => artifact.fetch("name"), "items" => items })
+      result = call("check", { "root" => @root, "artifact" => artifact, "items" => items })
       @timings << ["check", now - t0]
       result.fetch("violations").map { _1.merge("plugin" => @name) }
     rescue KeyError => e
@@ -146,7 +181,7 @@ module Spike
 
     # Ends whatever the plugin left in its group, and forgets the process.
     def reap
-      Spike.kill_tree(@wait.pid) unless Gem.win_platform?
+      Spike.kill_tree(@wait.pid) unless Spike.windows?
       LIVE.delete(@wait.pid)
     end
 
@@ -192,9 +227,10 @@ module Spike
   end
 end
 
-options = { root: Dir.pwd, provision: false, timing: false, repeat: 1, lifetime: nil }
+options = { root: Dir.pwd, provision: false, timing: false, repeat: 1, lifetime: nil, config: {} }
 OptionParser.new do |o|
   o.on("--root DIR") { options[:root] = File.expand_path(_1) }
+  o.on("--config FILE") { options[:config] = JSON.parse(File.read(_1)) }
   o.on("--provision") { options[:provision] = true }
   o.on("--timing") { options[:timing] = true }
   o.on("--repeat N", Integer) { options[:repeat] = _1 }
@@ -203,26 +239,74 @@ end.parse!
 
 violations = []
 failures = []
-ARGV.each do |dir|
-  plugin = Spike::Plugin.new(dir, root: options[:root], provision: options[:provision], lifetime: options[:lifetime])
-  plugin.start if plugin.per_run?
-  plugin.artifacts.each do |artifact|
-    items = plugin.items(artifact)
-    begin
-      plugin.start unless plugin.per_run?
-      results = Array.new(options[:repeat]) { plugin.check(artifact, items) }
-      violations.concat(results.first)
-    ensure
-      plugin.stop unless plugin.per_run?
+fail_with = lambda do |e|
+  failures << e
+  warn "crosslint: #{e.message}"
+end
+
+loaded = ARGV.filter_map do |dir|
+  Spike::Plugin.new(dir, root: options[:root], provision: options[:provision], lifetime: options[:lifetime])
+rescue Spike::PluginFailure => e
+  fail_with.(e)
+  nil
+end
+
+# Apply the policies: which rules run on which artifacts. plan[target plugin][[owner, artifact]] = items by path.
+plan = Hash.new { |h, k| h[k] = {} }
+loaded.each do |owner|
+  owner.policies.each do |policy|
+    Array(policy.fetch("artifacts")).each do |artifact_name|
+      artifact = owner.artifact(artifact_name)
+      owner.items(artifact).each do |item|
+        next unless Spike.holds?(policy["when"], item, artifact, options[:config], options[:root], owner.name)
+
+        # A rule is "name" (the policy's own plugin) or "plugin/name". No `rules` means the plugin decides.
+        targets = (policy["rules"] || [nil]).map do |ref|
+          next [owner, nil] unless ref
+
+          pname, rule = ref.include?("/") ? ref.split("/", 2) : [owner.name, ref]
+          target = loaded.find { _1.name == pname } or raise Spike::PluginFailure.new(owner.name, "rule-unknown", "policy #{policy["name"]} lists #{ref}, and no plugin #{pname} was given")
+          raise Spike::PluginFailure.new(owner.name, "rule-unknown", "policy #{policy["name"]} lists #{ref}, which #{pname} does not declare") unless target.declares?(rule)
+
+          [target, rule]
+        end
+        targets.each do |target, rule|
+          group = (plan[target][[owner.name, artifact_name]] ||= {})
+          entry = (group[item["path"]] ||= item.dup)
+          next unless rule
+
+          entry["rules"] ||= []
+          disabled = options[:config].dig("rules", rule, "enabled") == false
+          entry["rules"] << rule unless disabled || entry["rules"].include?(rule)
+        end
+      end
     end
   end
-  plugin.stop if plugin.per_run?
+rescue Spike::PluginFailure => e
+  fail_with.(e)
+end
+
+loaded.each do |plugin|
+  groups = plan.fetch(plugin, {})
+  begin
+    plugin.start if plugin.per_run? && !groups.empty?
+    groups.each do |(_owner, artifact_name), by_path|
+      begin
+        plugin.start unless plugin.per_run?
+        results = Array.new(options[:repeat]) { plugin.check(artifact_name, by_path.values) }
+        violations.concat(results.first)
+      ensure
+        plugin.stop unless plugin.per_run?
+      end
+    end
+  rescue Spike::PluginFailure => e
+    fail_with.(e)
+  ensure
+    plugin.stop if plugin.per_run? && !groups.empty?
+  end
   if options[:timing]
     plugin.timings.each { |what, s| warn format("timing %-28s %-16s %6.0f ms", plugin.name, what, s * 1000) }
   end
-rescue Spike::PluginFailure => e
-  failures << e
-  warn "crosslint: #{e.message}"
 end
 
 violations.each { |v| puts "#{v["path"]}: [#{v["plugin"]}/#{v["rule"]}] #{v["message"]}" }

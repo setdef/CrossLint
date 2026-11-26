@@ -12,6 +12,8 @@ The prior art on #4 (protoc plugins, go-plugin, Danger's `--process`, LSP, pre-c
 
 ## Result
 
+Policies fit in a manifest as data: ng-nudge's five built-in policies run from 14 lines of JSON that the host applies, and the host sends rules to plugins in two languages from one policy. The parts that stay code are the rules that read inside files, and ng-nudge's debt filtering. See [Policies as data](#policies-as-data).
+
 It works for path-relation rules and for a rule that reads TypeScript, with three plugins in three languages (Ruby, JavaScript, shell with `jq`) against one fixture project. The same results came out on macOS (arm64) and Linux (x86_64). The host reports a missing runtime by plugin and runtime name, exits 2, and still runs the other plugins. Provisioning a plugin's runtime with `mise` worked; a cold install of Node took 47 s here. A Fledge-built app and Windows were not run.
 
 ## Rerun
@@ -26,7 +28,7 @@ Needs Ruby 3.2 or later, Node 20 or later, `jq`, and network access on the first
 $ ruby host/crosslint.rb --root fixture --timing plugins/spec-per-component-rb plugins/template-per-component-sh plugins/component-io-js
 ```
 
-Options: `--provision` (install a missing runtime with mise, see below), `--timing`, `--repeat N` (send the same check N times to one process), `--lifetime per-check|per-run`.
+Options: `--config FILE` (a JSON file for policy conditions), `--provision` (install a missing runtime with mise, see below), `--timing`, `--repeat N` (send the same check N times to one process), `--lifetime per-check|per-run`.
 
 ## Protocol, version 1
 
@@ -60,7 +62,21 @@ Every plugin is a folder with a `plugin.json` manifest and its program. The host
 - `runtime.also` (optional): other executables the plugin needs on `PATH`, such as `jq`.
 - `runtime.provision` (optional): how the host can install the runtime when it is missing. Only `mise` is implemented.
 - `lifetime`: `per-check` starts a fresh process for each artifact; `per-run` keeps one process for the whole run. The messages are the same either way.
-- `artifacts`: each has a `name`, a glob `match` relative to the project root, and `companions`, a map from a name to a path template. `{dir}` is the matched file's folder and `{base}` its file name up to the first dot.
+- `artifacts`: each has a `name`, a glob `match` relative to the project root, `companions` (a map from a name to a path template; `{dir}` is the matched file's folder and `{base}` its file name up to the first dot), and optionally `expects`, a list of companion names that this kind of artifact is expected to have.
+- `rules` (optional): the rules the plugin implements, each `{ "name": "..." }`. A policy may list only declared rules. Without the key, any name is accepted.
+- `policies` (optional): each has a `name`, `artifacts` (names from this manifest), `when` (a condition, below) and `rules`. A rule is `name` for one of this plugin's, or `plugin/name` for another plugin's, which must be on the command line. The host evaluates `when` for each matched file and sends the plugin only the rules whose policies apply. Without the key, the host makes one policy per artifact that always applies and lists no rules, so the plugin runs everything. `"policies": []` makes none.
+
+A condition is a JSON object:
+
+| Condition | True when |
+| --- | --- |
+| `{"companion": "interface", "exists": true}` | the companion file exists (`exists` defaults to `true`) |
+| `{"expects": "spec"}` | the artifact's `expects` lists it |
+| `{"config": "rules.has-debt.withComment", "present": true}` | the key is in the JSON file given with `--config` (`present` defaults to `true`) |
+| `{"lines": {"gt": 1}}` | the file has more than 1 line (`gt`, `gte` or `eq`) |
+| `{"all": [...]}`, `{"any": [...]}`, `{"not": {...}}` | the combination holds |
+
+Without `when`, a policy always applies. `--config` takes a JSON file in the shape of ng-nudge's `rc.json`; `rules.NAME.enabled: false` removes that rule from every item, and the policy still applies, as in ng-nudge. A condition the host does not know fails with `bad-manifest`, and a rule that no given plugin declares fails with `rule-unknown`.
 
 ### Messages
 
@@ -71,11 +87,12 @@ Handshake, always first:
 {"id":1,"result":{"protocol":1,"name":"component-io"}}
 ```
 
-Check, once per artifact. The host expands the glob and the companion templates, and tests which companions exist, so the plugin starts with those facts:
+Check, once per artifact. The host expands the glob and the companion templates, and tests which companions exist, so the plugin starts with those facts. When policies chose the rules, each item carries them in `rules`, and the plugin runs only those on that item (a plugin that ignores `rules` runs all of its rules, so the field is an addition to protocol 1, not a new version):
 
 ```json
 {"id":2,"method":"check","params":{"root":"/abs/project","artifact":"component","items":[
   {"path":"src/app/card/card.component.ts",
+   "rules":["interface-matches-api"],
    "companions":{"interface":{"path":"src/app/card/card.component.i.d.ts","exists":true}}}]}}
 {"id":2,"result":{"violations":[
   {"rule":"interface-matches-api","path":"src/app/card/card.component.ts","message":"src/app/card/card.component.i.d.ts lacks \"expanded\""}]}}
@@ -94,7 +111,9 @@ A plugin that cannot answer replies with `{"id":N,"error":{"code":"...","message
 | `exited` | the process ended before it answered; the message carries the exit status and the first 300 bytes of stderr |
 | `bad-json` | a stdout line was not JSON |
 | `bad-response` | wrong `id`, or neither `result` nor `error` |
-| `timeout` | no answer within `timeout` seconds (default 60); the host kills the process |
+| `timeout` | no answer within `timeout` seconds (default 60); the host kills the process and its children |
+| `bad-manifest` | a policy lists an artifact the manifest lacks, a companion it does not declare, or a condition the host does not know |
+| `rule-unknown` | a policy lists a rule of a plugin that was not given, or a rule that plugin does not declare |
 
 Any other code comes from the plugin. The JavaScript plugin uses `dependency-missing` when the project has no installed `typescript`, and the host passes it through.
 
@@ -102,18 +121,49 @@ Any other code comes from the plugin. The JavaScript plugin uses `dependency-mis
 
 | Part | Lines of code |
 | --- | --- |
-| `host/crosslint.rb`, the host | 161 |
+| `host/crosslint.rb`, the host | 254 (161 before policies and process groups; about 25 of the added lines are conditions, 35 apply the policies, 20 end process groups) |
 | `plugins/spec-per-component-rb/plugin.rb`, every component has a spec | 15 |
 | `plugins/template-per-component-sh/plugin.sh`, every component has an HTML template | 13 |
-| `plugins/component-io-js/plugin.mjs`, a component's inputs and outputs, inherited ones included, appear in its interface file | 75 |
+| `plugins/component-io-js/plugin.mjs`, a component's inputs and outputs, inherited ones included, appear in its interface file | 77 |
+| `plugins/ng-nudge-paths-rb/plugin.rb`, five of ng-nudge's rules that read paths or one TSV file | 26 |
 | three manifests | 13, 13, 18 |
-| `run.sh`, the checks | 54 |
+| `plugins/ng-nudge-paths-rb/plugin.json`, with ng-nudge's five policies in 14 lines | 50 |
+| `plugins/ng-nudge-ts-js/plugin.json`, a second manifest for the JavaScript plugin | 14 |
+| `run.sh`, the checks | 87 |
 
 Lines of code exclude blank lines and comment lines, except for the manifests and `run.sh`, which are line counts. The three plugins check one `component` artifact each, so a plugin could carry several rules. The fixture (`fixture/`) has four Angular-style components, written to trigger a violation from each plugin: `card` and `footer` lack a spec, `footer` and `list` lack a template, `card` lacks `expanded` in its interface, `list` lacks the input `inheritedSignal` that it inherits through an import, and `footer` has no interface file.
 
 The JavaScript plugin is the reading of one component from [`spikes/ts-from-ruby/approach_b/helper.mjs`](../ts-from-ruby/approach_b/helper.mjs): the compiler's `getBaseTypes` finds the base class, and `input()`, `output()`, `@Input` and `@Output` members with initializers count, as in ng-nudge. It loads the `typescript` that the project has installed with `createRequire` from the project root. It rebuilds the TypeScript program on every check.
 
 The Ruby plugin has no TypeScript parser and no file system access. The host's facts are enough for a path-relation rule. The shell plugin parses JSON with `jq`, which is the practical way to write one.
+
+## Policies as data
+
+The cases are the five built-in policies of ng-nudge, as the [ng-nudge study](../ng-nudge-study/README.md#policies-and-rules) lists them. `plugins/ng-nudge-paths-rb/plugin.json` holds them as data and a 26-line Ruby plugin holds the rules that read only paths and one TSV file. The `interface-matches-component` rule needs a TypeScript reader, so the policy lists it as `ng-nudge-ts/interface-matches-api`, the JavaScript plugin from above under a second manifest (`plugins/ng-nudge-ts-js/`, which reuses `component-io-js/plugin.mjs`). The host evaluates the conditions and sends each plugin the rules for each file. The fixture gained a service without a spec, two stub files, two SCSS files (one beside a CSS file) and a `debt.tsv` with two entries.
+
+| ng-nudge policy | In the manifest | Data or code |
+| --- | --- | --- |
+| `HasSpec` | `component` and `service` artifacts, `{"expects": "spec"}`, rule `spec-exists` | Data. The rule is a path test written in Ruby. |
+| `HasInterface` | `component`, `{"companion": "interface", "exists": true}`, rules `stub-exists` and `ng-nudge-ts/interface-matches-api` | The policy is data. The second rule is code, in another plugin and another language. |
+| `HasStub` | `component`, `{"companion": "stub", "exists": true}`, rule `interface-exists` | The policy is data. `stub-matches-component` was not built; it is the interface check aimed at the stub file. |
+| `HasStyles` | `component`, no condition, rule `prefer-css-over-scss` | Data. The rule (SCSS exists and CSS does not) could be data too, and is Ruby here. |
+| `HasDebt` | `debt-file`, `all` of `{"config": "rules.has-debt.withComment"}` and `{"lines": {"gt": 1}}`, rule `has-debt` | The condition is data, with two conditions the others do not need. The rule is code. Excusing other rules' violations, stale entries and `--update-debt` are not a policy; see below. |
+
+Results (`run.sh` on macOS):
+
+- With a config that has `rules.has-debt.withComment`, the run gives 11 violations, which match what ng-nudge's policy table says for this fixture: `spec-exists` on `card`, `footer` and the service; `stub-exists` on `card` and `list` (they have an interface and no stub, and `button` has both); `interface-exists` on `footer` (a stub and no interface); `prefer-css-over-scss` on `card` only; two `has-debt` entries; and two `interface-matches-api` violations from the JavaScript plugin.
+- With no `withComment` in the config, `has-debt` does not apply, and the other nine violations are unchanged.
+- With `spec-exists` disabled in the config, its three violations disappear and the rest stay.
+- When a policy lists a rule of a plugin that was not given, or uses a condition the host does not know, the host reports a named error and exits 2.
+
+What the cases show:
+
+- **The conditions of all five built-in policies fit as data.** `instanceof Component` in ng-nudge is a kind of artifact, `component`, in the manifest. Four policies need only `companion` and `expects`; `HasDebt` also needs a config key and a line count, which the host reads from the `--config` file and the matched file. The five policies take 14 lines of JSON, where the study measures ng-nudge's at 23 to 27 lines of JavaScript each.
+- **One policy can list rules of plugins in different languages,** which is the case where one project mixes Ruby and JavaScript. The host groups the rules by plugin, and each plugin gets the file's facts from the manifest that owns the artifact. The plugins must agree on companion names (the JavaScript plugin reads `interface`); nothing checks that.
+- **Code is still needed for the rules that read inside files,** and for any `applies` that tests something other than a file's path, its companions, its line count or the config. ng-nudge's built-in policies have none, but its project policies are classes with an arbitrary `applies(artifact)`, and the spike has no way to express or call that. A plugin could answer an `applies` request over the protocol; nobody tried it.
+- **Debt is more than a policy.** ng-nudge excuses the violations that match a debt-file entry, finds stale entries, rewrites the file with `--update-debt` and changes the exit code (study, "Where the engine, Angular and debt are tangled"). The `has-debt` rule here only reports each row. The protocol has no step that filters another plugin's violations after the rules run, so a debt plugin would need one. Nobody tried it.
+- **Not modeled:** severity (`prefer-css-over-scss` is a warning in ng-nudge), `withComment` caps, d3-dsv quoting in the TSV, and which policy is listed for an artifact in a printed report.
+- **Host changes:** a plugin with no files for an artifact is no longer started (before, it got an empty check), and `run.sh`'s check for a project with no `typescript` now uses a project that has a component.
 
 ## Cost per plugin call
 
@@ -178,7 +228,8 @@ The project's `typescript` is still read from the project's `node_modules`, so p
 
 ## Unproven
 
-- **Policies.** The protocol carries artifacts (a glob and companions) and rules (the `check` result). Nothing in it says when a rule applies, so a policy has no place yet.
+- **Policies that need code, and debt's filtering,** as above: an `applies` that tests more than paths, companions, line counts and config; and a step that filters other plugins' violations.
+- **Severity,** and the rest of ng-nudge's per-rule configuration, as above.
 - **Rules that need facts about other artifacts or other files.** The plugin gets paths and which companions exist. A plugin that needs more reads the files itself, as the JavaScript plugin does; whether the host should pass file contents, or answer queries during a check, was not tried.
 - **Whether a Fledge app carries the Ruby that `{host_ruby}` points to, and what a Ruby plugin's `ruby` finds there.** In a Fledge app no Ruby is on `PATH`, so a manifest with `"command": "ruby"` would find a project's Ruby or none. `{host_ruby}` is implemented but never run inside an app.
 - **Windows.** Starting `sh`, `.cmd` shims for Node and path separators in the manifests were not tried.

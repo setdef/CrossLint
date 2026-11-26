@@ -1,0 +1,50 @@
+{
+  "name": "ng-nudge-paths",
+  "protocol": 1,
+  "runtime": { "command": "{host_ruby}", "args": ["{plugin_dir}/plugin.rb"], "min_version": "3.2" },
+  "lifetime": "per-check",
+  "artifacts": [
+    {
+      "name": "component",
+      "match": "src/**/*.component.ts",
+      "expects": ["spec"],
+      "companions": {
+        "spec": "{dir}/{base}.component.spec.ts",
+        "stub": "{dir}/{base}.component.stub.ts",
+        "interface": "{dir}/{base}.component.i.d.ts",
+        "css": "{dir}/{base}.component.css",
+        "scss": "{dir}/{base}.component.scss"
+      }
+    },
+    {
+      "name": "service",
+      "match": "src/**/*.service.ts",
+      "expects": ["spec"],
+      "companions": { "spec": "{dir}/{base}.service.spec.ts" }
+    },
+    { "name": "debt-file", "match": ".config/ng-nudge/debt.tsv" }
+  ],
+  "rules": [
+    { "name": "spec-exists" },
+    { "name": "stub-exists" },
+    { "name": "interface-exists" },
+    { "name": "prefer-css-over-scss" },
+    { "name": "has-debt" }
+  ],
+  "policies": [
+    { "name": "has-spec", "artifacts": ["component", "service"],
+      "when": { "expects": "spec" },
+      "rules": ["spec-exists"] },
+    { "name": "has-interface", "artifacts": ["component"],
+      "when": { "companion": "interface", "exists": true },
+      "rules": ["stub-exists", "ng-nudge-ts/interface-matches-api"] },
+    { "name": "has-stub", "artifacts": ["component"],
+      "when": { "companion": "stub", "exists": true },
+      "rules": ["interface-exists"] },
+    { "name": "has-styles", "artifacts": ["component"],
+      "rules": ["prefer-css-over-scss"] },
+    { "name": "has-debt", "artifacts": ["debt-file"],
+      "when": { "all": [{ "config": "rules.has-debt.withComment", "present": true }, { "lines": { "gt": 1 } }] },
+      "rules": ["has-debt"] }
+  ]
+}

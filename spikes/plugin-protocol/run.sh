@@ -21,6 +21,19 @@ status=0
 "${host[@]}" "$here/plugins/spec-per-component-rb" "$here/plugins/template-per-component-sh" "$here/plugins/component-io-js" >"$here/.scratch/out.txt" || status=$?
 if [ "$status" = 1 ] && diff -u "$here/expected/violations.txt" "$here/.scratch/out.txt"; then ok "three plugins give the expected violations (exit 1)"; else bad "three plugins (status $status)"; fi
 
+# 1b. Policies as data: ng-nudge's five built-in policies, from the manifest of a Ruby plugin that also
+# sends one rule to a JavaScript plugin. The host decides which rules run on which artifact.
+policy_run() { # config-file; prints the host's output, expects exit 1
+  local status=0
+  "${host[@]}" --config "$1" "$here/plugins/ng-nudge-paths-rb" "$here/plugins/ng-nudge-ts-js" >"$here/.scratch/policies.txt" || status=$?
+  [ "$status" = 1 ]
+}
+if policy_run "$here/fixture/crosslint.rc.json" && diff -u "$here/expected/policies.txt" "$here/.scratch/policies.txt"; then ok "five ng-nudge policies give the expected violations"; else bad "ng-nudge policies"; fi
+printf '%s\n' '{}' >"$here/.scratch/rc-empty.json"
+if policy_run "$here/.scratch/rc-empty.json" && grep -v '^\.config/ng-nudge/debt.tsv' "$here/expected/policies.txt" | diff -u - "$here/.scratch/policies.txt"; then ok "no withComment in the config: has-debt does not apply"; else bad "has-debt without withComment"; fi
+printf '%s\n' '{"rules":{"spec-exists":{"enabled":false},"has-debt":{"withComment":true}}}' >"$here/.scratch/rc-off.json"
+if policy_run "$here/.scratch/rc-off.json" && grep -v '\[ng-nudge-paths/spec-exists\]' "$here/expected/policies.txt" | diff -u - "$here/.scratch/policies.txt"; then ok "spec-exists disabled in the config: it does not run"; else bad "spec-exists disabled"; fi
+
 # 2. Error paths: each must exit 2 and name the plugin and the kind of failure.
 expect_failure() { # dir expected-substring
   local err status=0
@@ -36,6 +49,8 @@ expect_failure wrong-protocol "speaks-protocol-2: protocol-mismatch"
 expect_failure error-reply "replies-with-an-error: dependency-missing"
 export HANG_PIDFILE="$here/.scratch/hang.pid"
 rm -f "$HANG_PIDFILE"
+expect_failure bad-condition 'bad-condition: bad-manifest: unknown condition "moon-phase"'
+expect_failure unknown-rule "unknown-rule: rule-unknown: policy p lists nobody/some-rule, and no plugin nobody was given"
 expect_failure hang "hangs: timeout: no answer to handshake in 2 s"
 
 # The hung plugin started a child (sleep 30). After the timeout the host must have ended it too.
@@ -52,8 +67,11 @@ elif [ "$left" = no ]; then ok "hang: the plugin's child (pid $child) is gone af
 else bad "hang: the plugin's child (pid $child) is still running"; kill "$child" 2>/dev/null || true; fi
 
 # A real plugin reporting an error: the project it runs in has no typescript.
+mkdir -p "$here/.scratch/no-ts/src/app/a"
+: >"$here/.scratch/no-ts/src/app/a/a.component.ts"
+: >"$here/.scratch/no-ts/src/app/a/a.component.i.d.ts"
 status=0
-err="$(ruby "$here/host/crosslint.rb" --root "$here/plugins-broken" "$here/plugins/component-io-js" 2>&1 >/dev/null)" || status=$?
+err="$(ruby "$here/host/crosslint.rb" --root "$here/.scratch/no-ts" "$here/plugins/component-io-js" 2>&1 >/dev/null)" || status=$?
 if [ "$status" = 2 ] && [[ "$err" == *"component-io: dependency-missing"* ]]; then ok "component-io: dependency-missing"; else bad "component-io without typescript: $status $err"; fi
 
 # 3. Missing runtime, found by name while the other plugins still run: PATH has ruby and the system tools, no node.

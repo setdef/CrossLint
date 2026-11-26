@@ -55,10 +55,16 @@ function check({ root, items }) {
     return names;
   };
 
+  // The host sends item.rules when a policy chose them; without it, run every rule.
+  const wants = (item, rule) => !item.rules || item.rules.includes(rule);
   const violations = [];
   for (const item of items) {
     const iface = item.companions.interface;
-    if (!iface.exists) { violations.push({ rule: 'component-has-interface', path: item.path, message: `no interface at ${iface.path}` }); continue; }
+    if (!iface.exists) {
+      if (wants(item, 'component-has-interface')) violations.push({ rule: 'component-has-interface', path: item.path, message: `no interface at ${iface.path}` });
+      continue;
+    }
+    if (!wants(item, 'interface-matches-api')) continue;
     const decls = program.getSourceFile(abs(iface.path)).statements.filter(ts.isInterfaceDeclaration);
     const declared = new Set(decls.flatMap((d) => d.members.map((m) => m.name.getText())));
     for (const name of apiOf(item.path)) {

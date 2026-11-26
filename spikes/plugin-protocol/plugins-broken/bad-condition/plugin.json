@@ -1,0 +1,7 @@
+{
+  "name": "bad-condition",
+  "protocol": 1,
+  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "crash"] },
+  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }],
+  "policies": [{ "name": "p", "artifacts": ["component"], "when": { "moon-phase": "full" }, "rules": ["r"] }]
+}
