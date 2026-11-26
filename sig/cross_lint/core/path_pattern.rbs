@@ -43,6 +43,38 @@ module CrossLint
       # The names of the placeholders in the pattern, each once, in the
       # order they first appear.
       def placeholders: () -> Array[String]
+
+      # What each placeholder matches, as a regular expression, by name.
+      MATCHES: Hash[String, String]
+
+      # The text each placeholder matched in `path`, by name, or nil when
+      # the pattern doesn't match `path`. The match is case-sensitive, and
+      # the rest of the pattern matches only itself: a path pattern is not
+      # a glob. A placeholder written twice matches the same text both
+      # times. Where the pattern could match in several ways, the first
+      # placeholder takes as much as it can.
+      #
+      # ```ruby
+      # pattern = CrossLint::Core::PathPattern.new(source: "lib/{path}.rb")
+      # pattern.match("lib/fledge/archive.rb") # => {"path" => "fledge/archive"}
+      # pattern.match("lib/fledge.rb") # => {"path" => "fledge"}
+      # pattern.match("sig/fledge.rbs") # => nil
+      # ```
+      def match: (String path) -> Hash[String, String]?
+
+      # The path the pattern gives for `values`, the text of each of its
+      # placeholders, as `match` returns them.
+      #
+      # ```ruby
+      # CrossLint::Core::PathPattern.new(source: "sig/{path}.rbs").expand({"path" => "fledge/archive"})
+      # # => "sig/fledge/archive.rbs"
+      # ```
+      def expand: (Hash[String, String] values) -> String
+
+      private
+
+      # The regular expression that matches the paths the pattern matches.
+      def regexp: () -> Regexp
     end
   end
 end
