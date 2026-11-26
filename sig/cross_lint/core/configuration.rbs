@@ -2,7 +2,7 @@ module CrossLint
   module Core
     # A setting in a plugin's block in the configuration, as written: its
     # name, its arguments and properties, and the settings inside it. The
-    # plugin it belongs to reads it.
+    # plugin whose block it is in reads it.
     class Setting < Data
       # The setting's name, such as "src-dir".
       attr_reader name: String
@@ -61,7 +61,7 @@ module CrossLint
       def kind: () -> (:local | :shared | :built_in)
     end
 
-    # A change the configuration makes to one listed plugin's policy.
+    # What the configuration says about one listed plugin's policy.
     class PolicySetting < Data
       # The policy, as PLUGIN/POLICY.
       attr_reader name: String
@@ -83,9 +83,8 @@ module CrossLint
       def initialize: (name: String, enabled: bool?, severity: severity?, line: Integer) -> void
     end
 
-    # A project's configuration: the plugins it lists, the changes it
-    # makes to their policies, and its defaults for --warnings and the
-    # output.
+    # A project's configuration: the plugins it lists, what it says about
+    # their policies, and its defaults for --warnings and the output.
     class Configuration < Data
       # The configuration's path, relative to the project's root, as
       # messages name it.

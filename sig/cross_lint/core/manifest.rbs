@@ -71,7 +71,7 @@ module CrossLint
       attr_reader arguments: Hash[String, untyped]
 
       # The severity of the rule's violations under this policy, or nil
-      # for the rule's own.
+      # for the rule's default.
       attr_reader severity: severity?
 
       # The line the rule is on.
