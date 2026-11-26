@@ -161,7 +161,8 @@ module CrossLint
       # A new entry for `identity`, with `comment`.
       def fresh: (Identity identity, Array[Identity] identities, String comment) -> DebtEntry
 
-      # A violation of `has-debt` for each entry, unless the settings
+      # A violation of `has-debt` for each entry CrossLint checks, not one for a
+      # disabled policy or an unlisted or stopped plugin, unless the settings
       # don't report entries or the configuration disables the policy.
       def report_entries: (Project project, StepInput input, Settings settings, DebtFile debt) -> Array[Violation]
     end

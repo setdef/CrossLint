@@ -130,6 +130,17 @@ class TrackDebtTest < Minitest::Test
     assert_equal entries.map(&:source), written.map(&:source)
   end
 
+  # docs/design/debt.md: an entry for a disabled policy, or for a plugin
+  # the configuration doesn't list, is neither stale nor reported.
+  def test_reports_no_entry_for_a_disabled_policy_an_unlisted_plugin_or_a_plugin_that_stopped_and_reports_the_others
+    entries = [entry("tests/has-signature", "lib/a.rb", "off for now"), entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
+      entry("spec-exists", "app/card", "angular later", line: 4), entry("other/has-test", "lib/a.rb", "stopped", line: 5),
+      entry("tests/has-test", "lib/b.rb", "listed", line: 6)]
+    result = step([], entries, plugins: %w[tests other], settings: [setting("report-entries")], disabled: ["tests/has-signature"], faulted: ["other"])
+
+    assert_equal [%w[6], [FILE]], [result.violations.map(&:detail), result.violations.map(&:artifact).uniq]
+  end
+
   def test_excuses_both_artifacts_an_entry_matches_with_a_warning_naming_both
     violations = [violation("app/card", role: "component"), violation("app/card", role: "service")]
     result = step(violations, [entry("tests/has-test", "app/other"), entry("tests/has-test", "app/card", "both")])

@@ -247,6 +247,8 @@ module CrossLint
 
         severity = policy&.severity || :error
         debt.entries.filter_map do |entry|
+          next unless resolve(project, input, debt, entry)
+
           comment = entry.comment
           commented = !comment.empty? && (report.matching.nil? || report.matching.match?(comment))
           level = commented ? (report.commented || severity) : severity
