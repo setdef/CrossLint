@@ -716,6 +716,13 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal({"GIT_WORK_TREE" => nil}, Adapters::GitEnvironment.cleared(env, windows: false))
   end
 
+  def test_unsets_a_git_variable_in_any_case_when_this_is_windows_and_only_then_unless_it_is_told_otherwise
+    env = {"Git_Dir" => "x", "GIT_WORK_TREE" => "z"}
+
+    assert_equal [{"Git_Dir" => nil, "GIT_WORK_TREE" => nil}, {"GIT_WORK_TREE" => nil}],
+      [as_windows(true) { Adapters::GitEnvironment.cleared(env) }, as_windows(false) { Adapters::GitEnvironment.cleared(env) }]
+  end
+
   # Ruby keeps the case a variable was set in, and Windows names ignore
   # case, so a GIT_DIR in lower case reaches Git unless it is named as set.
   def test_gives_a_child_no_git_variable_of_any_case_where_the_system_ignores_case
@@ -810,6 +817,19 @@ class GitSharedPluginsTest < Minitest::Test
         [stdin, *pipes, wait]
       end
     end
+  end
+
+  # Runs the block as it would run on Windows, or on another system, so
+  # that a default that reads which system this is can be seen to read it.
+  def as_windows(windows)
+    processes = Adapters::ProcessHelpers
+    actual = processes::WINDOWS
+    processes.send(:remove_const, :WINDOWS)
+    processes.const_set(:WINDOWS, windows)
+    yield
+  ensure
+    processes.send(:remove_const, :WINDOWS)
+    processes.const_set(:WINDOWS, actual)
   end
 
   # Denies each File.rename in this thread while the block runs, as Windows
