@@ -730,6 +730,18 @@ module CrossLint
         assert_empty javascript_port.matches("b", [])
       end
 
+      def test_finds_the_files_of_each_pattern_with_the_glob_the_project_has_in_the_folder_it_is_told_to_look_in
+        found = glob_port(true).glob(glob_root, "src", ["**/*.a.ts", "echo", "none"], ["missing", ""])
+
+        none = [] #: Array[String]
+
+        assert_equal({"**/*.a.ts" => ["app/x.a.ts"], "echo" => ["src", "true"], "none" => none}, found)
+      end
+
+      def test_gives_no_files_when_no_folder_it_is_told_to_ask_has_a_glob
+        assert_nil glob_port(false).glob(glob_root, "src", ["**/*.a.ts"], ["", "other"])
+      end
+
       def test_raises_the_reason_for_an_expression_javascript_does_not_accept
         error = assert_raises(Core::JavaScriptError) { javascript_port.matches("(", ["a"]) }
 

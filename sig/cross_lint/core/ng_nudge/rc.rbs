@@ -45,11 +45,38 @@ module CrossLint
           # when no expression counts.
           attr_reader matching: Matching?
 
-          # A result with these fields.
-          def self.new: (configuration: Configuration, changes: Array[String], matching: Matching?) -> instance
+          # The folder the Angular plugin looks in, relative to the
+          # project's root: `srcDir`, cleaned up, or "src".
+          attr_reader src_dir: String
+
+          # Each role the Angular plugin finds files for: the built-in ones,
+          # and each the configuration adds or changes.
+          attr_reader roles: Array[Role]
 
           # A result with these fields.
-          def initialize: (configuration: Configuration, changes: Array[String], matching: Matching?) -> void
+          def self.new: (configuration: Configuration, changes: Array[String], matching: Matching?, src_dir: String, roles: Array[Role]) -> instance
+
+          # A result with these fields.
+          def initialize: (configuration: Configuration, changes: Array[String], matching: Matching?, src_dir: String, roles: Array[Role]) -> void
+        end
+
+        # A role, the node-glob pattern ng-nudge finds its files with, and
+        # the path pattern that stands for it.
+        class Role < Data
+          # The role's name.
+          attr_reader name: String
+
+          # The node-glob pattern, relative to `srcDir`.
+          attr_reader glob: String
+
+          # The path pattern it converts to, relative to `src-dir`.
+          attr_reader files: String
+
+          # A role with these fields.
+          def self.new: (name: String, glob: String, files: String) -> instance
+
+          # A role with these fields.
+          def initialize: (name: String, glob: String, files: String) -> void
         end
 
         # A `report-entries` setting, and the expression it holds, if any.
@@ -69,6 +96,9 @@ module CrossLint
 
         # The configuration's path, as messages name it.
         FILE: String
+
+        # The roles ng-nudge has, each found by `**/*.ROLE.ts`.
+        BUILT_IN: Array[String]
 
         # The keys of rc.json that ng-nudge reads.
         KEYS: Array[String]
@@ -117,6 +147,8 @@ module CrossLint
 
         @changes: Array[String]
 
+        @globs: Hash[String, String]
+
         # The conversion of the object `data`.
         def convert: (Hash[String, untyped] data) -> Result
 
@@ -144,9 +176,13 @@ module CrossLint
         # A setting, as the configuration holds it.
         def setting: (String name, Array[untyped] arguments, ?Hash[String, untyped] properties, ?Array[Setting] children) -> Setting
 
-        # The setting `name` for the path `key` gives, cleaned up, or nil
-        # when there is none or it is `default`.
-        def folder: (Hash[String, untyped] data, String key, String name, String default) -> Setting?
+        # The path `key` gives, cleaned up, or `default` when there is none.
+        # `name` is what the setting for it is called.
+        def location: (Hash[String, untyped] data, String key, String name, String default) -> String
+
+        # The setting `name` for the folder `location`, or nil when it is
+        # `default`.
+        def folder: (String name, String location, String default) -> Setting?
 
         # `path` with each `./`, `//`, trailing `/`, and `x/..` taken
         # out, or nil when a `..` leaves the folder it starts in.
@@ -157,6 +193,11 @@ module CrossLint
 
         # The `role` setting for `name`, from its entry `given`.
         def role: (String name, Hash[String, untyped] given) -> Setting
+
+        # Each built-in role and each role the configuration adds or
+        # changes, with its node-glob pattern and the path pattern it
+        # converts to.
+        def found_roles: () -> Array[Role]
 
         # The path pattern for the glob `pattern`, which `key` names.
         def files: (String key, String pattern) -> String

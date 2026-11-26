@@ -63,6 +63,28 @@ class NgNudgeRcTest < Minitest::Test
     assert_equal [["src-dir", ["a/c"]], ["tsconfig", ["x/w.json"]]], shape(result).first.last.map { |setting| setting.first(2) }
   end
 
+  def test_gives_the_folder_the_angular_plugin_looks_in_and_the_seven_roles_it_finds_by_default
+    result = convert({})
+    roles = %w[component directive pipe service guard resolver interceptor]
+
+    assert_equal "src", result.src_dir
+    assert_equal roles.map { |role| [role, "**/*.#{role}.ts", "{path}.#{role}.ts"] }, result.roles.map { |role| [role.name, role.glob, role.files] }
+  end
+
+  def test_gives_the_src_dir_cleaned_up_whether_or_not_it_is_a_setting
+    assert_equal ["app", "src", "src", "x/y"], [convert({"srcDir" => "./app/"}).src_dir, convert({"srcDir" => ""}).src_dir, convert({"srcDir" => "src/"}).src_dir,
+      convert({"srcDir" => "x//y"}).src_dir]
+  end
+
+  def test_gives_each_role_the_configuration_changes_or_adds_after_the_built_in_ones
+    result = convert({"artifacts" => {"page" => {}, "service" => {"pattern" => "app/*/**/*.svc.ts"}, "store" => {"pattern" => "**/*.store.ts"}, "pipe" => {"pattern" => ""}}})
+
+    assert_equal [["component", "**/*.component.ts", "{path}.component.ts"], ["directive", "**/*.directive.ts", "{path}.directive.ts"],
+      ["pipe", "**/*.pipe.ts", "{path}.pipe.ts"], ["service", "app/*/**/*.svc.ts", "app/{name}/{path}.svc.ts"], ["guard", "**/*.guard.ts", "{path}.guard.ts"],
+      ["resolver", "**/*.resolver.ts", "{path}.resolver.ts"], ["interceptor", "**/*.interceptor.ts", "{path}.interceptor.ts"],
+      ["page", "**/*.page.ts", "{path}.page.ts"], ["store", "**/*.store.ts", "{path}.store.ts"]], result.roles.map { |role| [role.name, role.glob, role.files] }
+  end
+
   def test_converts_a_src_dir_of_the_project_root_to_an_empty_one
     result = convert({"srcDir" => "."})
 

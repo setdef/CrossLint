@@ -7,14 +7,19 @@ module CrossLint
         # .config/crosslint/config.kdl, with the plugins angular and debt".
         attr_reader changes: Array[String]
 
+        # Each file that node-glob finds for a role and CrossLint doesn't,
+        # or the other way round, and why they weren't compared when they
+        # weren't. None of them stops the move.
+        attr_reader notes: Array[String]
+
         # Whether it only listed the changes.
         attr_reader dry_run: bool
 
         # A result with these fields.
-        def self.new: (changes: Array[String], dry_run: bool) -> instance
+        def self.new: (changes: Array[String], notes: Array[String], dry_run: bool) -> instance
 
         # A result with these fields.
-        def initialize: (changes: Array[String], dry_run: bool) -> void
+        def initialize: (changes: Array[String], notes: Array[String], dry_run: bool) -> void
       end
 
       # Moves a project from ng-nudge 0.3.0: writes the configuration its
@@ -25,19 +30,30 @@ module CrossLint
       # any change, and each change is listed to `planned` before the
       # first. It raises Mistake, naming the file and the key, for
       # anything it can't carry, and for a configuration or a debt file it
-      # would replace, unless it is told to.
+      # would replace, unless it is told to. It also compares the files the
+      # project's own node-glob finds for each role's pattern with the files
+      # CrossLint finds, and lists each that only one of them finds as a
+      # note, which stops nothing.
       class Move
+        # The folders, relative to the project's root, that the glob
+        # package ng-nudge finds its files with is looked for from.
+        PACKAGES: Array[String]
+
+        # What node-glob does that CrossLint doesn't.
+        WHY: String
+
         # A use case that reads rc.json and the extension files through
         # `ng_nudge`, writes the configuration through `configuration`,
-        # reads and moves the debt file through `debt_files`, and tests
-        # expressions through `javascript`.
-        def initialize: (configuration: _Configuration, ng_nudge: _NgNudge, debt_files: _DebtFiles, javascript: _JavaScript) -> void
+        # reads and moves the debt file through `debt_files`, tests
+        # expressions and finds files through `javascript`, and lists the
+        # files CrossLint finds through `project_files`.
+        def initialize: (configuration: _Configuration, ng_nudge: _NgNudge, debt_files: _DebtFiles, javascript: _JavaScript, project_files: _ProjectFiles) -> void
 
         # Moves the project whose root is `root`. With `force`, replaces
         # a configuration and a debt file that are there; with `dry_run`,
-        # changes nothing. `planned` is called with the changes before the
-        # first is made.
-        def call: (String root, ?force: bool, ?dry_run: bool, ?planned: (^(Array[String]) -> void)?) -> MoveResult
+        # changes nothing. `planned` is called with the changes and the
+        # notes before the first change is made.
+        def call: (String root, ?force: bool, ?dry_run: bool, ?planned: (^(Array[String], Array[String]) -> void)?) -> MoveResult
 
         private
 
@@ -48,6 +64,12 @@ module CrossLint
         @debt_files: _DebtFiles
 
         @javascript: _JavaScript
+
+        @project_files: _ProjectFiles
+
+        # A line for each file only node-glob or only CrossLint finds for a
+        # role of `converted`, with why, or why they weren't compared.
+        def compare: (String root, Rc::Result converted) -> Array[String]
 
         # Raises a Mistake that says `what`, a file CrossLint would write,
         # is there already.

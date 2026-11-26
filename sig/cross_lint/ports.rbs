@@ -246,5 +246,16 @@ module CrossLint
     # the reason, when JavaScript can't be run, doesn't answer, or says
     # `source` isn't a valid expression.
     def matches: (String source, Array[String] texts) -> Array[bool]
+
+    # The files the project's own glob package, node-glob, finds for each
+    # of `patterns`, by the pattern, with `cwd`, a folder relative to
+    # `root`, as the folder to look in: each a path relative to `cwd` with
+    # `/` between folders, in the order glob gives them, folders and files
+    # Git ignores among them. The package is the one `require("glob")`
+    # finds from the first of `packages`, folders relative to `root`, that
+    # has one. Gives nil when none does. Raises Core::JavaScriptError, with
+    # the reason, when JavaScript can't be run, doesn't answer, or glob
+    # fails.
+    def glob: (String root, String cwd, Array[String] patterns, Array[String] packages) -> Hash[String, Array[String]]?
   end
 end

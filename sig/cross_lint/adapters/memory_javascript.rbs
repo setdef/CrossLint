@@ -12,12 +12,20 @@ module CrossLint
     class MemoryJavaScript
       include _JavaScript
 
-      # A port that answers for `expressions`, by source.
-      def initialize: (?Hash[String, ^(String) -> bool | Core::JavaScriptError] expressions) -> void
+      # What glob finds for a pattern the port holds no files for.
+      NONE: Array[String]
+
+      # A port that answers for `expressions`, by source, and finds the
+      # files `globs` holds for each pattern, or none for a pattern it
+      # doesn't hold; with `globs` nil, the project has no glob, and with a
+      # Core::JavaScriptError, glob raises it.
+      def initialize: (?Hash[String, ^(String) -> bool | Core::JavaScriptError] expressions, ?globs: (Hash[String, Array[String]] | Core::JavaScriptError)?) -> void
 
       private
 
       @expressions: Hash[String, ^(String) -> bool | Core::JavaScriptError]
+
+      @globs: (Hash[String, Array[String]] | Core::JavaScriptError)?
     end
   end
 end

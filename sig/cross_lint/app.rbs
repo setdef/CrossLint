@@ -63,7 +63,7 @@ module CrossLint
     # debt file, or listing what it would change with `dry_run`; with
     # `force`, over a configuration and a debt file that are there.
     # `planned` hears each change before the first is made.
-    def move_from_ng_nudge: (String start, ?force: bool, ?dry_run: bool, ?planned: (^(Array[String]) -> void)?) -> Core::NgNudge::MoveResult
+    def move_from_ng_nudge: (String start, ?force: bool, ?dry_run: bool, ?planned: (^(Array[String], Array[String]) -> void)?) -> Core::NgNudge::MoveResult
 
     # The report that writes to `out` and `err`: JSON with `json`, else
     # text, in color with `color`, and each fault's trace with `debug`.

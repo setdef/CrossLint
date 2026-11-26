@@ -20,14 +20,22 @@ module CrossLint
       # `withComment.matching` when one counts. A key or a value that isn't
       # carried raises a Mistake naming the file and the key, and the fix.
       class Rc
-        # The configuration, the changes to list, and the `matching`, or
-        # nil.
-        class Result < Data.define(:configuration, :changes, :matching); end
+        # The configuration, the changes to list, the `matching`, or nil,
+        # the folder the Angular plugin looks in, and each role it finds
+        # files for.
+        class Result < Data.define(:configuration, :changes, :matching, :src_dir, :roles); end
+
+        # A role, the node-glob pattern ng-nudge finds its files with, and
+        # the path pattern that stands for it.
+        class Role < Data.define(:name, :glob, :files); end
 
         # A `report-entries` setting, and the matching it holds, or nil.
         class Report < Data.define(:setting, :matching); end
 
         FILE = ".config/crosslint/config.kdl"
+
+        # The roles ng-nudge has, each found by **/*.ROLE.ts.
+        BUILT_IN = %w[component directive pipe service guard resolver interceptor].freeze
 
         KEYS = %w[$schema srcDir tsConfig artifacts rules options].freeze
 
@@ -57,6 +65,7 @@ module CrossLint
           @text = text
           @file = file
           @changes = [] #: Array[String]
+          @globs = {} #: Hash[String, String]
         end
 
         def call
@@ -72,12 +81,14 @@ module CrossLint
         def convert(data)
           refuse_unknown(data, KEYS, "ng-nudge reads only these keys")
           @changes << "drop $schema, which CrossLint doesn't read" if data.key?("$schema")
-          angular = [folder(data, "srcDir", "src-dir", "src"), folder(data, "tsConfig", "tsconfig", "tsconfig.json"), *roles(data)].compact
+          src_dir = location(data, "srcDir", "src-dir", "src")
+          tsconfig = location(data, "tsConfig", "tsconfig", "tsconfig.json")
+          angular = [folder("src-dir", src_dir, "src"), folder("tsconfig", tsconfig, "tsconfig.json"), *roles(data)].compact
           policies, report = rules(data)
           options = options(data)
           plugins = [plugin("angular", angular), plugin("debt", [report&.setting].compact)]
           Result.new(configuration: Configuration.new(file: FILE, plugins:, policies:, warnings: options["warnings"]&.to_sym, verbosity: options["verbosity"]&.to_sym),
-            changes: @changes, matching: report&.matching)
+            changes: @changes, matching: report&.matching, src_dir:, roles: found_roles)
         end
 
         def refuse(key, message) = raise(Mistake.new("#{key}: #{message}", file: @file))
@@ -118,9 +129,9 @@ module CrossLint
         # srcDir or tsConfig: a path in the project, cleaned up, as src-dir
         # or tsconfig, and left out when it is the default. ng-nudge reads
         # an empty one as the default.
-        def folder(data, key, name, default)
+        def location(data, key, name, default)
           path = string(data.fetch(key, ""), key, "a path as a string, such as #{default.dump}")
-          return if path.empty?
+          return default if path.empty?
 
           outside = "is #{path.dump}, which is outside the project; write a path inside it, relative to the project's root"
           refuse(key, "is #{path.dump}, which has a \\ or a brace; CrossLint reads neither, so write / between folders and no brace") if path.match?(/[\\{}]/)
@@ -128,11 +139,12 @@ module CrossLint
 
           cleaned = clean(path) || refuse(key, outside)
           refuse(key, "is #{path.dump}, which is no file; write the path of the tsconfig.json to read") if cleaned.empty? && name == "tsconfig"
-          return if cleaned == default
-
-          @changes << "convert #{key} #{path.dump} to #{name} #{cleaned.dump}" unless cleaned == path
-          setting(name, [cleaned])
+          @changes << "convert #{key} #{path.dump} to #{name} #{cleaned.dump}" unless cleaned == path || cleaned == default
+          cleaned
         end
+
+        # The setting for a folder, or nil when it is the default.
+        def folder(name, location, default) = (setting(name, [location]) unless location == default)
 
         # `path` with each ./, //, trailing /, and x/.. taken out, or nil
         # when a .. leaves the folder the path starts in.
@@ -158,7 +170,13 @@ module CrossLint
           refuse_unknown(given, %w[pattern expects], "ng-nudge reads only these", within: key)
           pattern = string(given.fetch("pattern", ""), "#{key}.pattern", "a glob pattern as a string")
           properties = pattern.empty? ? {} : {"files" => files("#{key}.pattern", pattern)} #: Hash[String, untyped]
+          @globs[name] = pattern.empty? ? "**/*.#{name}.ts" : pattern
           setting("role", [name], properties, given.slice("expects").map { |_, value| expects("#{key}.expects", value) })
+        end
+
+        # Each built-in role and each role the configuration adds or changes.
+        def found_roles
+          BUILT_IN.to_h { |role| [role, "**/*.#{role}.ts"] }.merge(@globs).map { |name, glob| Role.new(name:, glob:, files: Glob.convert(glob)) }
         end
 
         def files(key, pattern)

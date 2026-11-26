@@ -602,6 +602,35 @@ class CLITest < Minitest::Test
       "and run crosslint debt update once", CrossLint::CLI::NEXT_STEPS
   end
 
+  def test_init_from_ng_nudge_says_each_file_node_glob_and_crosslint_find_differently_after_the_changes_and_before_what_to_do_next
+    app, = ng_nudge_app({}, globs: {"**/*.pipe.ts" => %w[a.pipe.ts]}, files: %w[src/b.pipe.ts])
+    err = init("init", "--from-ng-nudge", app:)[1]
+
+    assert_equal ["crosslint: will write .config/crosslint/config.kdl, with the plugins angular and debt\n",
+      "crosslint: will move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 0 entries\n",
+      "crosslint: node-glob finds src/a.pipe.ts as a pipe, and CrossLint doesn't\n", "crosslint: CrossLint finds src/b.pipe.ts as a pipe, and node-glob doesn't\n",
+      "crosslint: #{CrossLint::Core::NgNudge::Move::WHY}\n", "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n"], err.lines
+    assert_equal "", init("init", "--from-ng-nudge", "--silent", app: ng_nudge_app({}, globs: {"**/*.pipe.ts" => %w[a.pipe.ts]}).first)[1]
+  end
+
+  def test_init_from_ng_nudge_moves_a_project_and_says_the_differences_with_a_glob_the_project_has_and_git
+    Dir.mktmpdir do |project|
+      write(project, ".config/ng-nudge/rc.json", "{}")
+      write(project, "src/app/a.pipe.ts", "")
+      write(project, "src/app/.x/b.pipe.ts", "")
+      write(project, "node_modules/glob/index.js", "exports.glob = async (pattern) => pattern === '**/*.pipe.ts' ? ['app/a.pipe.ts', 'app/c.pipe.ts', 'app/.x/b.pipe.ts'] : [];\n")
+      Open3.capture3("git", "init", "-q", chdir: project)
+      out, err, status = run_cli("init", "--from-ng-nudge", "-C", project, spec: shipped_spec)
+
+      assert_equal ["", 0], [out, status]
+      assert_includes err, "crosslint: node-glob finds src/app/.x/b.pipe.ts as a pipe, and CrossLint doesn't\n"
+      assert_includes err, "crosslint: node-glob finds src/app/c.pipe.ts as a pipe, and CrossLint doesn't\n"
+      assert_includes err, "crosslint: #{CrossLint::Core::NgNudge::Move::WHY}\n"
+      refute_includes err, "src/app/a.pipe.ts"
+      assert File.file?(File.join(project, ".config/crosslint/config.kdl"))
+    end
+  end
+
   def test_init_from_ng_nudge_lists_what_it_would_change_and_changes_nothing_with_dry_run
     %w[--dry-run -n].each do |flag|
       app, configuration, debt_files = ng_nudge_app({})
@@ -656,6 +685,7 @@ class CLITest < Minitest::Test
 
       assert_equal ["", 0], [out, status]
       assert_includes err, "crosslint: will move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 2 entries\n"
+      assert_includes err, "crosslint: couldn't compare the files node-glob finds with the files CrossLint finds, since the project has no glob package\n"
       assert_equal debt.b, File.binread(File.join(project, ".config/crosslint/debt.tsv"))
       refute File.exist?(File.join(project, ".config/ng-nudge/debt.tsv"))
       assert_equal <<~KDL, File.read(File.join(project, ".config/crosslint/config.kdl"), encoding: Encoding::UTF_8)
@@ -742,7 +772,7 @@ class CLITest < Minitest::Test
   # An app that holds an ng-nudge project at WORK/app, with the rc.json
   # `rc` and an empty debt file, and the configuration and debt files it
   # holds. With `existing`, the project has a configuration already.
-  def ng_nudge_app(rc, existing: false)
+  def ng_nudge_app(rc, existing: false, globs: {}, files: [])
     core = CrossLint::Core
     root = "#{WORK}/app"
     configuration = CrossLint::Adapters::MemoryConfiguration.new
@@ -750,7 +780,9 @@ class CLITest < Minitest::Test
     debt = core::DebtFile.new(file: ".config/ng-nudge/debt.tsv", entries: [], header: "Rule\tArtifact\tComment\n")
     debt_files = CrossLint::Adapters::MemoryDebtFiles.new({File.join(root, ".config/ng-nudge/debt.tsv") => debt})
     ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({root => {".config/ng-nudge/rc.json" => JSON.generate(rc)}})
-    [CrossLint::App.new(configuration:, debt_files:, ng_nudge:), configuration, debt_files]
+    javascript = CrossLint::Adapters::MemoryJavaScript.new({}, globs: globs)
+    project_files = CrossLint::Adapters::MemoryProjectFiles.new({root => files})
+    [CrossLint::App.new(configuration:, debt_files:, ng_nudge:, javascript:, project_files:), configuration, debt_files]
   end
 
   # What init prints in the project at WORK/app, as update does.

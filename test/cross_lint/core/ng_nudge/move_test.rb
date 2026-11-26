@@ -37,7 +37,7 @@ class NgNudgeMoveTest < Minitest::Test
   def test_lists_every_change_before_it_makes_the_first
     world = world({"$schema" => "x"})
     seen = []
-    world.move(planned: ->(changes) { seen << [changes, world.configuration.exist?(APP), world.debt_files.exist?(APP, DEBT)] })
+    world.move(planned: ->(changes, _notes) { seen << [changes, world.configuration.exist?(APP), world.debt_files.exist?(APP, DEBT)] })
 
     assert_equal [[["write #{CONFIG}, with the plugins angular and debt", "move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry",
       "drop $schema, which CrossLint doesn't read"], false, false]], seen
@@ -46,7 +46,7 @@ class NgNudgeMoveTest < Minitest::Test
   def test_makes_no_change_with_dry_run_and_lists_them
     world = world({})
     seen = []
-    result = world.move(dry_run: true, planned: ->(changes) { seen << changes })
+    result = world.move(dry_run: true, planned: ->(changes, _notes) { seen << changes })
 
     assert_equal [seen.first, true], [result.changes, result.dry_run]
     refute world.configuration.exist?(APP)
@@ -181,15 +181,72 @@ class NgNudgeMoveTest < Minitest::Test
     assert_includes world(json, comments: [], debt: false).move.changes.last, "matching"
   end
 
+  def test_says_it_could_not_compare_the_files_node_glob_finds_when_the_project_has_no_glob_and_moves_all_the_same
+    world = world({})
+    result = world.move
+
+    assert_equal ["couldn't compare the files node-glob finds with the files CrossLint finds, since the project has no glob package"], result.notes
+    assert world.configuration.exist?(APP)
+  end
+
+  def test_lists_each_file_only_node_glob_or_only_crosslint_finds_for_a_role_and_says_why_they_can_differ_and_moves_all_the_same
+    json = {"srcDir" => "app", "artifacts" => {"store" => {"pattern" => "*.store.ts"}}}
+    globs = {"**/*.component.ts" => %w[a.component.ts ignored.component.ts], "*.store.ts" => %w[s.store.ts], "**/*.pipe.ts" => %w[p/q.pipe.ts]}
+    project = %w[app/a.component.ts app/b.component.ts app/s.store.ts app/x/t.store.ts app/p/q.pipe.ts other/c.component.ts]
+    world = world(json, globs:, project:)
+    seen = []
+    result = world.move(planned: ->(changes, notes) { seen << [changes, notes, world.configuration.exist?(APP)] })
+
+    assert_equal ["node-glob finds app/ignored.component.ts as a component, and CrossLint doesn't", "CrossLint finds app/b.component.ts as a component, and node-glob doesn't",
+      Core::NgNudge::Move::WHY], result.notes
+    assert_equal [[result.changes, result.notes, false]], seen
+    assert world.configuration.exist?(APP)
+  end
+
+  def test_says_nothing_of_files_when_the_two_find_the_same
+    world = world({}, globs: {"**/*.component.ts" => %w[a.component.ts]}, project: %w[src/a.component.ts src/a.txt])
+
+    assert_empty world.move.notes
+  end
+
+  def test_asks_the_glob_for_each_pattern_once_in_the_src_dir_from_ng_nudges_package_and_then_the_projects
+    asked = []
+    world = world({"srcDir" => "app/", "artifacts" => {"store" => {"pattern" => "**/*.pipe.ts"}}}, globs: {})
+    world.javascript.singleton_class.prepend(Module.new { define_method(:glob) { |*arguments| super(*arguments).tap { asked << arguments } } })
+    world.move
+
+    patterns = %w[component directive pipe service guard resolver interceptor].map { |role| "**/*.#{role}.ts" } + ["**/*.pipe.ts"]
+    assert_equal [[APP, "app", patterns.uniq, ["node_modules/@overthetopmarketing/ng-nudge", ""]]], asked
+  end
+
+  def test_says_what_went_wrong_when_it_cannot_compare_because_glob_or_node_fails_or_git_cannot_list_the_files
+    error = Core::JavaScriptError.new("glob stopped")
+
+    assert_equal ["couldn't compare the files node-glob finds with the files CrossLint finds: glob stopped"], world({}, globs: error).move.notes
+    outside = world({}, globs: {})
+    outside.project_files = Memory::MemoryProjectFiles.new
+    notes = outside.move.notes
+
+    assert_equal 1, notes.size
+    assert_match(/\Acouldn't compare the files node-glob finds with the files CrossLint finds: .+/, notes.first)
+  end
+
+  def test_makes_no_change_with_dry_run_but_still_compares
+    world = world({}, globs: {"**/*.pipe.ts" => %w[a.pipe.ts]})
+    result = world.move(dry_run: true)
+
+    assert_equal [true, false], [result.notes.first.start_with?("node-glob finds src/a.pipe.ts"), world.configuration.exist?(APP)]
+  end
+
   private
 
   # A project, with ng-nudge's rc.json for `json`, a debt file with a
   # comment for each of `comments`, and the ports that hold them.
-  World = Struct.new(:configuration, :ng_nudge, :debt_files, :javascript) do
-    def move(**options) = Core::NgNudge::Move.new(configuration:, ng_nudge:, debt_files:, javascript:).call(APP, **options)
+  World = Struct.new(:configuration, :ng_nudge, :debt_files, :javascript, :project_files) do
+    def move(**options) = Core::NgNudge::Move.new(configuration:, ng_nudge:, debt_files:, javascript:, project_files:).call(APP, **options)
   end
 
-  def world(json, comments: %w[legacy], debt: true, rc: true, existing: false, own_debt: false, files: {}, expressions: nil, debt_file: nil)
+  def world(json, comments: %w[legacy], debt: true, rc: true, existing: false, own_debt: false, files: {}, expressions: nil, debt_file: nil, globs: nil, project: [])
     files = files.merge(RC => JSON.generate(json)) if rc
     configuration = Memory::MemoryConfiguration.new
     held = {} #: Hash[String, Core::DebtFile | Core::Mistake]
@@ -204,7 +261,8 @@ class NgNudgeMoveTest < Minitest::Test
       held[File.join(APP, DEBT)] = Core::DebtFile.new(file: DEBT, entries: [entry], header: "Rule\tArtifact\tComment\n")
     end
     configuration.write(APP, Core::Configuration.new(file: CONFIG, plugins: [], policies: [], warnings: nil, verbosity: nil)) if existing
-    World.new(configuration, Memory::MemoryNgNudge.new({APP => files}), Memory::MemoryDebtFiles.new(held), Memory::MemoryJavaScript.new(expressions || {}))
+    World.new(configuration, Memory::MemoryNgNudge.new({APP => files}), Memory::MemoryDebtFiles.new(held), Memory::MemoryJavaScript.new(expressions || {}, globs:),
+      Memory::MemoryProjectFiles.new({APP => project}))
   end
 
   # Nothing written, and nothing moved.

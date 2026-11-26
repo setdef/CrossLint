@@ -186,7 +186,12 @@ module CrossLint
     # --dry-run, "would", and then says what to do next.
     def move_from_ng_nudge(app, root, force:, dry_run:, silent:)
       tense = dry_run ? "would" : "will"
-      planned = ->(changes) { changes.each { |change| @err.puts("#{PREFIX}#{tense} #{change}") } unless silent }
+      planned = lambda do |changes, notes|
+        unless silent
+          changes.each { |change| @err.puts("#{PREFIX}#{tense} #{change}") }
+          notes.each { |note| @err.puts(PREFIX + note) }
+        end
+      end
       app.move_from_ng_nudge(root, force:, dry_run:, planned:)
       @err.puts("#{PREFIX}#{NEXT_STEPS}") unless dry_run || silent
       0

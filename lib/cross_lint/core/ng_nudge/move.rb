@@ -3,6 +3,7 @@
 require_relative "../javascript_error"
 require_relative "../mistake"
 require_relative "../track_debt"
+require_relative "differences"
 require_relative "files"
 require_relative "rc"
 
@@ -10,18 +11,29 @@ module CrossLint
   module Core
     module NgNudge
       # What `crosslint init --from-ng-nudge` did, or would do: each change,
-      # as a verb and what it acts on.
-      class MoveResult < Data.define(:changes, :dry_run); end
+      # as a verb and what it acts on, and each note: a file that node-glob
+      # and CrossLint would find differently, or why they weren't compared.
+      class MoveResult < Data.define(:changes, :notes, :dry_run); end
 
       # Moves a project from ng-nudge: writes the configuration its rc.json
       # converts to, and moves its debt file. Every key is checked, and each
       # change listed to `planned`, before the first one is made.
       class Move
-        def initialize(configuration:, ng_nudge:, debt_files:, javascript:)
+        # The folders, relative to the project's root, that the glob
+        # package ng-nudge finds its files with is looked for from: ng-nudge's
+        # own, and then the project's.
+        PACKAGES = ["node_modules/@overthetopmarketing/ng-nudge", ""].freeze
+
+        # What node-glob does that CrossLint doesn't, which is why a file
+        # can be found by one and not the other.
+        WHY = "node-glob also returns folders, ignores case on macOS and Windows, finds files Git ignores, and follows a symlinked folder, which CrossLint doesn't"
+
+        def initialize(configuration:, ng_nudge:, debt_files:, javascript:, project_files:)
           @configuration = configuration
           @ng_nudge = ng_nudge
           @debt_files = debt_files
           @javascript = javascript
+          @project_files = project_files
         end
 
         def call(root, force: false, dry_run: false, planned: nil)
@@ -37,15 +49,34 @@ module CrossLint
           refuse_existing(TrackDebt::FILE, "the debt file") if moves && !force && @debt_files.exist?(root, TrackDebt::FILE)
           agree(converted.matching, debt) if converted.matching
           changes = [*moved(replaced, converted, moves, debt), *converted.changes, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
-          planned&.call(changes)
+          notes = compare(root, converted)
+          planned&.call(changes, notes)
           unless dry_run
             @configuration.write(root, converted.configuration)
             @debt_files.move(root, DEBT_FILE, TrackDebt::FILE) if moves
           end
-          MoveResult.new(changes:, dry_run:)
+          MoveResult.new(changes:, notes:, dry_run:)
         end
 
         private
+
+        # The files the project's own glob finds for each role's pattern,
+        # and the files CrossLint finds for the pattern it was converted
+        # to, compared: a line for each file only one of them finds. It
+        # refuses nothing: it says why when it can't compare.
+        def compare(root, converted)
+          src_dir = converted.src_dir
+          found = @javascript.glob(root, src_dir, converted.roles.map(&:glob).uniq, PACKAGES)
+          return ["couldn't compare the files node-glob finds with the files CrossLint finds, since the project has no glob package"] unless found
+
+          files = @project_files.files(root)
+          lines = converted.roles.flat_map do |role|
+            Differences.new(role: role.name, src_dir:).lines(found.fetch(role.glob), Differences.found(files, src_dir, role.files))
+          end
+          lines.empty? ? lines : [*lines, WHY]
+        rescue JavaScriptError, Mistake => error
+          ["couldn't compare the files node-glob finds with the files CrossLint finds: " + error.message]
+        end
 
         def refuse_existing(file, what)
           raise Mistake.new("already exists, and crosslint init --from-ng-nudge changes nothing in #{what}; crosslint init --from-ng-nudge --force replaces it", file:)

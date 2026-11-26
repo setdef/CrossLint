@@ -15,28 +15,50 @@ module CrossLint
         "try { const expression = new RegExp(input.source); answer = { matches: input.texts.map((text) => expression.test(text)) }; } " \
         "catch (error) { answer = { error: error.message }; } process.stdout.write(JSON.stringify(answer)); });"
 
+      # Reads {root, cwd, patterns, packages}, finds the glob package from
+      # the first of the folders in packages that has it, as require does,
+      # and writes {found}, with the files of each pattern, or {missing}
+      # when no folder has it, or {error}.
+      GLOB_SCRIPT = "const path = require('path'); const { createRequire } = require('module'); const chunks = []; " \
+        "process.stdin.on('data', (chunk) => chunks.push(chunk)); " \
+        "process.stdin.on('end', async () => { const input = JSON.parse(Buffer.concat(chunks).toString('utf8')); let glob = null; " \
+        "for (const folder of input.packages) { try { glob = createRequire(path.join(input.root, folder, 'noop.js'))('glob').glob; break; } " \
+        "catch (error) { if (error.code !== 'MODULE_NOT_FOUND') { throw error; } } } let answer = { missing: true }; " \
+        "if (glob !== null) { try { const cwd = path.join(input.root, input.cwd); const found = {}; " \
+        "for (const pattern of input.patterns) { found[pattern] = await glob(pattern, { cwd, posix: true }); } answer = { found }; } " \
+        "catch (error) { answer = { error: error.message }; } } process.stdout.write(JSON.stringify(answer)); });"
+
       LIMIT = 10
 
       attr_reader :limit
 
-      def initialize(command: "node", script: SCRIPT, limit: LIMIT)
+      def initialize(command: "node", script: SCRIPT, glob_script: GLOB_SCRIPT, limit: LIMIT)
         @command = command
         @script = script
+        @glob_script = glob_script
         @limit = limit
       end
 
       def matches(source, texts)
-        answer = ask(JSON.generate({"source" => source, "texts" => texts}))
+        answer = ask(@script, JSON.generate({"source" => source, "texts" => texts}))
         error = answer["error"]
         raise Core::JavaScriptError, error if error
 
         answer.fetch("matches")
       end
 
+      def glob(root, cwd, patterns, packages)
+        answer = ask(@glob_script, JSON.generate({"root" => File.expand_path(root), "cwd" => cwd, "patterns" => patterns, "packages" => packages}))
+        error = answer["error"]
+        raise Core::JavaScriptError, error if error
+
+        answer["found"]
+      end
+
       private
 
-      def ask(input)
-        out, err, status = run(input)
+      def ask(script, input)
+        out, err, status = run(script, input)
         raise Core::JavaScriptError, "#{@command} exited with status #{status.exitstatus}, and wrote:\n#{err}" unless status.success?
 
         JSON.parse(out)
@@ -48,8 +70,8 @@ module CrossLint
       # its status, once it has read `input`. The program answers once it
       # has read all of its input, so the input is written first. A timer
       # ends the program when it takes longer than the limit.
-      def run(input)
-        Open3.popen3(@command, "-e", @script) do |stdin, stdout, stderr, wait|
+      def run(script, input)
+        Open3.popen3(@command, "-e", script) do |stdin, stdout, stderr, wait|
           timer = Thread.new { Process.kill("KILL", wait.pid) unless wait.join(@limit) }
           write(stdin, input)
           out = text(stdout)
@@ -60,7 +82,7 @@ module CrossLint
           [out, err, status]
         end
       rescue SystemCallError => error
-        raise Core::JavaScriptError, "couldn't run #{@command}, which CrossLint tests a regular expression with, so install Node: " + error.message
+        raise Core::JavaScriptError, "couldn't run #{@command}, which CrossLint runs to ask about regular expressions and files, so install Node: " + error.message
       end
 
       def write(stdin, input)

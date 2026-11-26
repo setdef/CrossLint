@@ -52,7 +52,8 @@ module CrossLint
     end
 
     def move_from_ng_nudge(start, force: false, dry_run: false, planned: nil)
-      Core::NgNudge::Move.new(configuration: @configuration, ng_nudge: @ng_nudge, debt_files: @debt_files, javascript: @javascript)
+      Core::NgNudge::Move.new(configuration: @configuration, ng_nudge: @ng_nudge, debt_files: @debt_files, javascript: @javascript,
+        project_files: @project_files)
         .call(start, force:, dry_run:, planned:)
     end
 

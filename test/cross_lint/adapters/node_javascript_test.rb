@@ -11,7 +11,62 @@ class NodeJavaScriptTest < Minitest::Test
 
   JavaScriptError = CrossLint::Core::JavaScriptError
 
+  FAKE_GLOB = <<~JS
+    const path = require('path');
+    exports.glob = async (pattern, options) => {
+      if (pattern === '**/*.a.ts') return ['app/x.a.ts'];
+      if (pattern === 'echo') return [path.basename(options.cwd), String(options.posix)];
+      if (pattern === 'fails') throw new Error('glob stopped');
+      return [];
+    };
+  JS
+
+  def setup
+    @root = Dir.mktmpdir("crosslint")
+  end
+
+  def teardown
+    FileUtils.rm_rf(@root)
+  end
+
+  def glob_root = @root
+
+  # The project has a fake glob in its node_modules, which answers as
+  # glob_port says, unless it is not installed.
+  def glob_port(installed)
+    write(@root, "node_modules/glob/index.js", FAKE_GLOB) if installed
+    javascript_port
+  end
+
   def javascript_port = CrossLint::Adapters::NodeJavaScript.new
+
+  def test_finds_a_glob_in_the_first_folder_that_has_one_and_looks_in_a_folder_of_the_project
+    write(@root, "tool/node_modules/glob/index.js", FAKE_GLOB)
+    found = javascript_port.glob(@root, "src", ["echo"], ["nothing", "tool", ""])
+
+    assert_equal({"echo" => ["src", "true"]}, found)
+  end
+
+  def test_finds_a_glob_for_a_root_given_relative_to_the_current_folder
+    glob_port(true)
+    found = Dir.chdir(File.dirname(@root)) { javascript_port.glob(File.basename(@root), "src", ["echo"], [""]) }
+
+    assert_equal({"echo" => ["src", "true"]}, found)
+  end
+
+  def test_says_what_glob_stopped_with
+    glob_port(true)
+    error = assert_raises(JavaScriptError) { javascript_port.glob(@root, "src", ["fails"], [""]) }
+
+    assert_equal "glob stopped", error.message
+  end
+
+  def test_says_what_node_wrote_when_the_glob_package_cannot_be_loaded
+    write(@root, "node_modules/glob/index.js", "this is not javascript")
+    error = assert_raises(JavaScriptError) { javascript_port.glob(@root, "src", ["a"], [""]) }
+
+    assert_match(/\Anode exited with status 1, and wrote:\n.*SyntaxError/m, error.message)
+  end
 
   def test_gives_the_message_node_gives_for_an_expression_it_does_not_accept
     error = assert_raises(JavaScriptError) { javascript_port.matches("(", ["a"]) }
@@ -32,7 +87,7 @@ class NodeJavaScriptTest < Minitest::Test
   def test_says_to_install_node_when_the_command_is_not_there
     error = assert_raises(JavaScriptError) { CrossLint::Adapters::NodeJavaScript.new(command: "crosslint-no-such-node").matches("a", ["a"]) }
 
-    assert_match(/\Acouldn't run crosslint-no-such-node, which CrossLint tests a regular expression with, so install Node: \S/, error.message)
+    assert_match(/\Acouldn't run crosslint-no-such-node, which CrossLint runs to ask about regular expressions and files, so install Node: \S/, error.message)
   end
 
   def test_says_what_the_program_wrote_when_it_exits_with_a_failure

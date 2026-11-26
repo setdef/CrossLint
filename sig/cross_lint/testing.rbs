@@ -510,6 +510,17 @@ module CrossLint
       # JavaScript's `RegExp#test` does with no flags, and raises
       # Core::JavaScriptError, naming "(", for the expression "(".
       def javascript_port: () -> _JavaScript
+
+      # A port for a project in `glob_root`. With `installed`, its glob
+      # finds "app/x.a.ts" for the pattern "**/*.a.ts", nothing for the
+      # pattern "none", and, for the pattern "echo", the name of the folder
+      # it is told to look in and whether it is told to give paths with
+      # `/`, as "true"; the port's project holds a glob in its folder
+      # "" and in no other. Without it, the project has no glob.
+      def glob_port: (bool installed) -> _JavaScript
+
+      # The absolute path of the project `glob_port` makes.
+      def glob_root: () -> String
     end
 
     # The tests every adapter of the JavaScript port passes.
@@ -525,6 +536,13 @@ module CrossLint
 
       # matches gives nothing for no texts.
       def test_answers_for_no_texts_with_no_matches: () -> void
+
+      # glob finds the files of each pattern, looking in the folder it is
+      # told to, with the first folder that has a glob.
+      def test_finds_the_files_of_each_pattern_with_the_glob_the_project_has_in_the_folder_it_is_told_to_look_in: () -> void
+
+      # glob gives nil when no folder it is told to ask has a glob.
+      def test_gives_no_files_when_no_folder_it_is_told_to_ask_has_a_glob: () -> void
 
       # matches raises Core::JavaScriptError, with the reason, for an
       # expression JavaScript doesn't accept.

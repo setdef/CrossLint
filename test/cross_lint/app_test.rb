@@ -264,12 +264,14 @@ class AppTest < Minitest::Test
     debt = Core::DebtFile.new(file: ".config/ng-nudge/debt.tsv", entries: [], header: "Rule\tArtifact\tComment\n")
     debt_files = CrossLint::Adapters::MemoryDebtFiles.new({"/app/.config/ng-nudge/debt.tsv" => debt})
     ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({"/app" => {".config/ng-nudge/rc.json" => "{}"}})
-    javascript = CrossLint::Adapters::MemoryJavaScript.new
-    app = App.new(configuration:, debt_files:, ng_nudge:, javascript:)
+    javascript = CrossLint::Adapters::MemoryJavaScript.new({}, globs: {"**/*.pipe.ts" => ["a.pipe.ts"]})
+    project_files = CrossLint::Adapters::MemoryProjectFiles.new({"/app" => []})
+    app = App.new(configuration:, debt_files:, ng_nudge:, javascript:, project_files:)
     seen = []
-    dry = app.move_from_ng_nudge("/app", dry_run: true, planned: ->(changes) { seen << changes })
+    dry = app.move_from_ng_nudge("/app", dry_run: true, planned: ->(changes, _notes) { seen << changes })
 
     assert_equal [dry.changes, true, false], [seen.first, dry.dry_run, configuration.exist?("/app")]
+    assert_equal ["node-glob finds src/a.pipe.ts as a pipe, and CrossLint doesn't", Core::NgNudge::Move::WHY], dry.notes
     assert_equal [false, ["angular", "debt"]], [app.move_from_ng_nudge("/app").dry_run, configuration.read("/app").plugins.map(&:name)]
     assert_equal [false, true], [debt_files.exist?("/app", ".config/ng-nudge/debt.tsv"), debt_files.exist?("/app", ".config/crosslint/debt.tsv")]
     assert_raises(Mistake) { app.move_from_ng_nudge("/app") }
