@@ -30,6 +30,10 @@ module CrossLint
         .call(load_project(start), warnings:, verbosity:, all:, flags:, started:)
     end
 
+    def update(start, dry_run: false)
+      Core::UpdatePlugins.new(configuration: @configuration, shared_plugins: @shared_plugins).call(start, dry_run:)
+    end
+
     def report(out:, err:, json: false, color: false, debug: false)
       json ? Adapters::JSONReport.new(out:, err:, debug:) : Adapters::TextReport.new(out:, err:, color:, debug:)
     end

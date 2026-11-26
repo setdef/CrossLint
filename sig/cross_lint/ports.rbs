@@ -17,6 +17,13 @@ module CrossLint
     # Core::Mistake, naming the file and the line, at a mistake in it, and
     # when the project has none.
     def read: (String root) -> Core::Configuration
+
+    # Sets the ref of each plugin the configuration of `root` lists, by
+    # the plugin's name, that is a key of `refs`, to its value, and
+    # changes nothing else of the configuration: with a file, every other
+    # byte stays. Raises Core::Mistake, naming the file and the line, when
+    # a plugin has no ref it can rewrite, and when the project has none.
+    def set_refs: (String root, Hash[String, String] refs) -> void
   end
 
   # Where the core reads each plugin's manifest: a format, such as KDL in

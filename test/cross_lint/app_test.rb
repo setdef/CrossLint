@@ -183,6 +183,36 @@ class AppTest < Minitest::Test
       "and a ref is a tag or a full 40-character commit SHA"], [mistake.location, mistake.message]
   end
 
+  def test_moves_a_shared_plugin_to_its_newest_tag_in_the_configuration_file_and_nothing_else
+    url = shared_repository(tags: %w[v1.0.0 v1.2.0 v1.10.0-rc.1])
+    text = "// The checks of this project\r\nplugin #{url.dump} ref=\"v1.0.0\" // pinned\r\nwarnings \"all\"\r\n"
+    path = write(@base, ".config/crosslint/config.kdl", text)
+    err = StringIO.new
+    app = App.new(err:, shared_plugins: CrossLint::Adapters::GitSharedPlugins.new(err:, cache: File.join(@base, "cache"), schemes: ["file://"]))
+    dry = app.update(@base, dry_run: true)
+
+    assert_equal [["#{url}: would move from v1.0.0 to v1.2.0"], text], [dry.lines, File.binread(path)]
+    assert_equal ["#{url}: moved from v1.0.0 to v1.2.0"], app.update(@base).lines
+    assert_equal text.sub("v1.0.0", "v1.2.0"), File.binread(path)
+    assert_equal ["#{url}: is at its newest tag, v1.2.0"], app.update(@base).lines
+    assert_equal ["crosslint: listing the tags of #{url}"] * 3, err.string.lines(chomp: true)
+  end
+
+  # The https URLs these tests use differ, so that the cache the tests
+  # share holds no fetch of another test's.
+  def test_fetches_a_shared_plugin_with_git_into_the_cache_of_the_user_unless_it_is_given_another_port
+    url = "https://example.test/#{SecureRandom.hex(8)}/shared-docs"
+    write(@base, ".config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
+    write(@base, "a.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    err = StringIO.new
+    result = rewriting(url, shared_repository) { App.new(err:).check(@base) }
+
+    assert_equal ["a.md"], result.violations.map(&:artifact)
+    assert_equal ["crosslint: fetching #{url} at v1.0.0"], err.string.lines(chomp: true)
+    assert_equal 1, Dir.glob(File.join(CACHE, "**", "plugins", "*", "shared-docs", "plugin.kdl")).count { |file| File.binread(file) == MANIFEST }
+  end
+
   def test_runs_helpers_through_the_port_it_is_given
     helpers = CrossLint::Adapters::MemoryHelpers.new
     def helpers.start(*) = raise(CrossLint::Core::Mistake, "asked")
@@ -220,17 +250,10 @@ class AppTest < Minitest::Test
 
   private
 
-  # A repository of a plugin called shared-docs, tagged v1.0.0 on the
+  # A repository of a plugin called shared-docs, with these tags, on the
   # branch main, in the test's base. Its file URL.
-  def shared_repository
-    folder = File.join(@base, "origin", "shared-docs")
-    write(folder, "plugin.kdl", MANIFEST)
-    settings = %w[-c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false -c tag.gpgsign=false]
-    [%w[init -q -b main], %w[add -A], %w[commit -q -m one], %w[tag v1.0.0]].each do |arguments|
-      _, error, status = Open3.capture3("git", *settings, *arguments, chdir: folder)
-      raise error unless status.success?
-    end
-    "file://#{"/" unless folder.start_with?("/")}#{folder}"
+  def shared_repository(tags: ["v1.0.0"])
+    repository_at(File.join(@base, "origin", "shared-docs"), {"plugin.kdl" => MANIFEST}, tags:)
   end
 
   # A project at /app whose plugin, local, warns of each a.md with no

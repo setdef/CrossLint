@@ -30,6 +30,12 @@ module CrossLint
     def check: (String start, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
                 ?all: bool, ?flags: Array[String], ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
 
+    # The result of moving each shared plugin in that project's
+    # configuration to the newest tag of its repository
+    # (Core::UpdatePlugins), or of listing what it would move, with
+    # `dry_run`.
+    def update: (String start, ?dry_run: bool) -> Core::UpdateResult
+
     # The report that writes to `out` and `err`: JSON with `json`, else
     # text, in color with `color`, and each fault's trace with `debug`.
     def report: (out: CLI::_Output, err: CLI::_Output, ?json: bool, ?color: bool, ?debug: bool) -> _Report

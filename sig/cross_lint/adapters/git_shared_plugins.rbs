@@ -7,7 +7,7 @@ module CrossLint
     # reads HTTPS_PROXY, HTTP_PROXY, and NO_PROXY from the environment.
     #
     # The first time it fetches a plugin, it fetches that commit alone,
-    # with no history, into a folder of its own in the user's cache, and
+    # with no history, into a separate folder in the user's cache, and
     # renames it into place, so that a fetch that stops partway leaves
     # nothing. The cache is `$XDG_CACHE_HOME/crosslint/plugins`, or
     # `~/.cache/crosslint/plugins` without XDG_CACHE_HOME, or on Windows
@@ -81,7 +81,7 @@ module CrossLint
       # The folder that holds the cache's fetched plugins.
       def plugins: () -> String
 
-      # Fetches the plugin into a folder of its own in the cache, and
+      # Fetches the plugin into a separate folder in the cache, and
       # renames it to `entry`, in which the plugin's folder is `name`.
       def download: (String url, String ref, String entry, String name) -> void
 

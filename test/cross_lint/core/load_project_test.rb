@@ -116,7 +116,7 @@ class LoadProjectTest < Minitest::Test
   end
 
   def test_stops_at_a_shared_plugin_whose_url_names_no_plugin
-    assert_mistake CONFIG, 1, %(can't name a plugin from "https://example.com/o/a b", whose last part has other characters ) +
+    assert_mistake CONFIG, 1, %(can't name a plugin from "https://example.com/o/a b", whose last path segment has other characters ) +
       "than letters, digits, and . _ -; a plugin's name is its repository's name", plugins: [listing("https://example.com/o/a b", ref: "v1")]
   end
 

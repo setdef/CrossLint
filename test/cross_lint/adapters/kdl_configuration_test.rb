@@ -203,7 +203,143 @@ class KDLConfigurationTest < Minitest::Test
     assert_equal FILE, CrossLint::Adapters::KDLConfiguration.new.file
   end
 
+  # Denies each File.rename in this thread while :crosslint_config_rename_denied
+  # is set, as Windows does over a file another program has open.
+  module DeniedRenames
+    def rename(from, to)
+      raise Errno::EACCES, "#{from}, #{to}" if Thread.current[:crosslint_config_rename_denied]
+
+      super
+    end
+  end
+  File.singleton_class.prepend(DeniedRenames)
+
+  URL = "https://example.com/OWNER/REPO"
+
+  def test_sets_a_ref_and_leaves_every_other_byte_as_it_was
+    text = "// A comment, with a ref=\"v1.0.0\" in it\r\n\tplugin   \"#{URL}\"\t ref=\"v1.0.0\"  { \r\n  src-dir \"src\"\r\n}\r\n\r\n" \
+      "plugin \"angular\" // ref=\"v1.0.0\"\r\nwarnings \"error\"  \r\n"
+
+    assert_equal text.sub("ref=\"v1.0.0\"  {", "ref=\"v2.0.0\"  {"), set_refs(text, URL => "v2.0.0")
+  end
+
+  def test_sets_the_refs_of_every_plugin_it_is_given_wherever_they_are_on_a_line
+    text = %(plugin "#{URL}/a" ref="v1"; plugin "#{URL}/b" ref="v1"\nplugin "#{URL}/c"\\\n  ref="v1"\nplugin "#{URL}/d" ref="v1"\n)
+
+    # Each ref is longer or shorter than the one it replaces, so that a
+    # change made before the one after it would move that one.
+    assert_equal text.sub(%(/a" ref="v1"), %(/a" ref="v10.20.30")).sub(%(/b" ref="v1"), %(/b" ref="v")).sub(%(/c"\\\n  ref="v1"), %(/c"\\\n  ref="version-400")),
+      set_refs(text, "#{URL}/a" => "v10.20.30", "#{URL}/b" => "v", "#{URL}/c" => "version-400")
+  end
+
+  def test_counts_columns_in_characters_and_lines_by_every_line_ending_kdl_has
+    ["\r\n", "\n", "\u0085", "\u000B", "\u000C", "\u2028", "\u2029"].each do |ending|
+      text = "// é#{ending}plugin \"é\" ref=\"v1\"#{ending}"
+
+      assert_equal "// é#{ending}plugin \"é\" ref=\"v2\"#{ending}", set_refs(text, "é" => "v2"), "after #{ending.dump}"
+    end
+  end
+
+  def test_sets_a_ref_written_as_a_raw_string
+    assert_equal %(plugin "#{URL}" ref=#"v2"#\n), set_refs(%(plugin "#{URL}" ref=#"v1"#\n), URL => "v2")
+    assert_equal %(plugin "#{URL}" ref=##"v2"##\n), set_refs(%(plugin "#{URL}" ref=##"v1"##\n), URL => "v2")
+  end
+
+  def test_sets_a_ref_before_the_argument_and_one_on_a_plugin_with_settings
+    assert_equal %(plugin ref="v2" "#{URL}"\n), set_refs(%(plugin ref="v1" "#{URL}"\n), URL => "v2")
+    assert_equal %(plugin "#{URL}" ref="v2" {\n  ref "v1"\n}\n), set_refs(%(plugin "#{URL}" ref="v1" {\n  ref "v1"\n}\n), URL => "v2")
+  end
+
+  def test_leaves_a_plugin_it_is_not_given_a_ref_for_and_a_node_that_is_not_a_plugin
+    text = %(plugin "#{URL}" ref="v1"\nplugin "#{URL}/other" ref="v1"\npolicy "#{URL}" severity="error"\nwarnings "all"\n)
+
+    assert_equal text.sub(%(REPO" ref="v1"), %(REPO" ref="v2")), set_refs(text, URL => "v2")
+  end
+
+  def test_writes_nothing_when_no_plugin_is_given_a_ref
+    path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
+    inode = File.stat(path).ino
+    CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "project"), {"https://example.com/other" => "v2"})
+
+    assert_equal [inode, [".config"]], [File.stat(path).ino, Dir.children(File.join(@base, "project"))]
+  end
+
+  def test_keeps_the_permissions_of_the_file_and_leaves_no_other_file
+    skip "Windows has no permission bits to keep" if Gem.win_platform?
+
+    path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
+    File.chmod(0o640, path)
+    set_refs_in("project", URL => "v2")
+
+    assert_equal [0o640, ["config.kdl"]], [File.stat(path).mode & 0o777, Dir.children(File.dirname(path))]
+  end
+
+  def test_leaves_the_file_as_it_was_when_the_system_denies_the_rename
+    path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
+    mistake = begin
+      Thread.current[:crosslint_config_rename_denied] = true
+      assert_raises(Mistake) { set_refs_in("project", URL => "v2") }
+    ensure
+      Thread.current[:crosslint_config_rename_denied] = nil
+    end
+
+    assert_equal [FILE, nil, "couldn't be replaced, since permission was denied; close any program that has it open, and run again"],
+      [mistake.file, mistake.line, mistake.message]
+    assert_equal [%(plugin "#{URL}" ref="v1"\n), ["config.kdl"]], [File.binread(path), Dir.children(File.dirname(path))]
+  end
+
+  def test_refuses_to_set_the_ref_of_a_plugin_that_has_none_or_one_it_cant_rewrite
+    assert_refuses_to_set 2, %(plugin "#{URL}" has no ref= with a string to rewrite), %(warnings "all"\nplugin "#{URL}"\n)
+    assert_refuses_to_set 1, %(plugin "#{URL}" has no ref= with a string to rewrite), %(plugin "#{URL}" ref=#null\n)
+    assert_refuses_to_set 1, %(plugin "#{URL}" has no ref= with a string to rewrite), %(plugin "#{URL}" ref=1\n)
+    assert_refuses_to_set 3, %(can't rewrite ref="v1\\nx", which isn't written as plain text between quotes on one line; write it as ref="v1\\nx"),
+      %(warnings "all"\nplugin "#{URL}" \\\n  ref="""\n  v1\n  x\n  """\n)
+    assert_refuses_to_set 1, %(can't rewrite ref="v1\\"x", which isn't written as plain text between quotes on one line; write it as ref="v1\\"x"),
+      %(plugin "#{URL}" ref="v1\\"x"\n)
+    assert_refuses_to_set 1, %(can't rewrite ref="v1", which isn't written as plain text between quotes on one line; write it as ref="v1"), %(plugin "#{URL}" ref=v1\n)
+    assert_refuses_to_set 1, %(can't rewrite ref="v1.0.0", which isn't written as plain text between quotes on one line; write it as ref="v1.0.0"),
+      %(plugin "#{URL}" ref="v\\u{31}.0.0"\n)
+  end
+
+  def test_leaves_the_file_as_it_was_when_one_of_its_refs_cant_be_rewritten
+    text = %(plugin "#{URL}/a" ref="v1"\nplugin "#{URL}/b" ref=1\n)
+    path = write(@base, "project/#{FILE}", text)
+
+    assert_raises(Mistake) { set_refs_in("project", "#{URL}/a" => "v2", "#{URL}/b" => "v2") }
+    assert_equal text, File.binread(path)
+  end
+
+  def test_names_the_file_when_it_sets_a_ref_in_a_project_with_no_configuration
+    mistake = assert_raises(Mistake) { CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "nowhere"), {URL => "v1"}) }
+
+    assert_equal [FILE, "doesn't exist"], [mistake.file, mistake.message]
+  end
+
+  def test_refuses_to_set_a_ref_in_a_configuration_that_isnt_valid_kdl
+    write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1" {\n))
+    mistake = assert_raises(Mistake) { set_refs_in("project", URL => "v2") }
+
+    assert_equal [FILE, 2], [mistake.file, mistake.line]
+  end
+
   private
+
+  # `text` as a configuration, after its plugins' refs are set.
+  def set_refs(text, refs)
+    write(@base, "project/#{FILE}", text)
+    set_refs_in("project", refs)
+    File.binread(File.join(@base, "project", FILE)).force_encoding(Encoding::UTF_8)
+  end
+
+  def set_refs_in(project, refs) = CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, project), refs)
+
+  def assert_refuses_to_set(line, message, text)
+    write(@base, "project/#{FILE}", text)
+    mistake = assert_raises(Mistake) { set_refs_in("project", URL => "v2") }
+
+    assert_equal [FILE, line, message], [mistake.file, mistake.line, mistake.message]
+    assert_equal text, File.binread(File.join(@base, "project", FILE)), "the file changed"
+  end
 
   def read(text)
     write(@base, "project/#{FILE}", text)

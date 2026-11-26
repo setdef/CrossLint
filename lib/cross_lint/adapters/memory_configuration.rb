@@ -23,6 +23,12 @@ module CrossLint
         folder
       end
 
+      def set_refs(root, refs)
+        configuration = read(root)
+        plugins = configuration.plugins.map { |listing| refs.key?(listing.name) ? listing.with(ref: refs.fetch(listing.name)) : listing }
+        @projects[root] = configuration.with(plugins:)
+      end
+
       def read(root)
         configuration = @projects.fetch(root) { Core::Mistake.new("doesn't exist", file:) }
         raise configuration if configuration.is_a?(Core::Mistake)

@@ -68,6 +68,18 @@ module CrossLint
       # read raises a mistake naming the file when there is none.
       def test_names_the_file_when_the_project_has_no_configuration: () -> void
 
+      # set_refs sets the ref of the plugin it is given and nothing else
+      # that read returns.
+      def test_sets_the_ref_of_a_plugin_and_changes_nothing_else: () -> void
+
+      # set_refs changes nothing when it is given no ref, or one for a
+      # plugin the configuration doesn't list.
+      def test_changes_nothing_when_it_is_given_no_ref_or_one_for_a_plugin_the_configuration_doesnt_list: () -> void
+
+      # set_refs raises a mistake naming the file when the project has no
+      # configuration.
+      def test_names_the_file_when_the_project_it_sets_refs_in_has_no_configuration: () -> void
+
       private
 
       # The configuration `example_configuration_port` holds.

@@ -218,7 +218,7 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal "signatures", File.basename(port.folder("https://example.com/OWNER/signatures.git/", "v1.0.0"))
     error = assert_raises(Core::FetchError) { port.folder("https://example.com/OWNER/a b", "v1.0.0") }
 
-    assert_equal "can't name a plugin from https://example.com/OWNER/a b, whose last part has other characters than letters, digits, and . _ -",
+    assert_equal "can't name a plugin from https://example.com/OWNER/a b, whose last path segment has other characters than letters, digits, and . _ -",
       error.message
   end
 
@@ -474,8 +474,6 @@ class GitSharedPluginsTest < Minitest::Test
   # here, so that a test that writes there writes in the test's base even
   # when the code is wrong.
   def entry_for(url, ref) = File.join(@base, "cache", "plugins", Digest::SHA256.hexdigest("#{url}\0#{ref}")[0, 32])
-
-  def file_url(path) = "file://#{"/" unless path.start_with?("/")}#{path}"
 
   # A port that keeps its cache in the test's base, accepts file URLs, and
   # writes to the test's `said`. A String as the first argument names

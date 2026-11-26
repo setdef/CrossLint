@@ -46,10 +46,9 @@ module CrossLint
       # `line`, with `ending` after it unless it has a line ending.
       def ended: (String line, String ending) -> String
 
-      # Writes `contents` to a file beside `full` and renames it over
-      # `full`, the file at `path`. Raises Core::Mistake naming `path` when
-      # the system denies the rename, as Windows does while another
-      # program has the file open.
+      # Replaces `full`, the file at `path`, with `contents` (ReplaceFile).
+      # Raises Core::Mistake naming `path` when the system denies the
+      # rename, as Windows does while another program has the file open.
       def replace: (String full, String path, String contents) -> void
 
       # The header's columns. Raises Core::Mistake when they aren't a debt

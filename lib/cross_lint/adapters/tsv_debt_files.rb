@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "securerandom"
+require_relative "replace_file"
 require_relative "../core"
 
 module CrossLint
@@ -74,23 +74,13 @@ module CrossLint
 
       def ended(line, ending) = ending(line) ? line : line + ending
 
-      # Writes beside the file, to a file named by 128 random bits, and renames
-      # it over the file, so a write that stops partway leaves the file as it
-      # was and never touches another file. The new file keeps the old one's
-      # permissions. Windows refuses to rename over a file another program
-      # has open, and the file is left as it was.
+      # Windows refuses to rename over a file another program has open, and
+      # the file is left as it was.
       def replace(full, path, contents)
-        temporary = File.join(File.dirname(full), ".crosslint-#{SecureRandom.hex}.tmp")
-        begin
-          File.binwrite(temporary, contents)
-          File.chmod(File.stat(full).mode, temporary) if File.file?(full)
-          File.rename(temporary, full)
-        rescue Errno::EACCES
-          raise Core::Mistake.new("couldn't be replaced, since permission was denied; close any program that has it open, and run again",
-            file: path)
-        ensure
-          File.delete(temporary) if File.exist?(temporary)
-        end
+        ReplaceFile.call(full, contents)
+      rescue Errno::EACCES
+        raise Core::Mistake.new("couldn't be replaced, since permission was denied; close any program that has it open, and run again",
+          file: path)
       end
 
       def header_columns(record, path)

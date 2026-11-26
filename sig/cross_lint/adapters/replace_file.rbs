@@ -1,0 +1,12 @@
+module CrossLint
+  module Adapters
+    # Replaces a file whole, so that a write that fails leaves it as it was.
+    module ReplaceFile
+      # Replaces the file `full` with `contents`, as bytes, through a file
+      # beside it that has a random name. Windows refuses to rename over a
+      # file another program has open: Errno::EACCES, with the file left as
+      # it was.
+      def self.call: (String full, String contents) -> void
+    end
+  end
+end

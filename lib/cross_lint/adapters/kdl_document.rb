@@ -12,11 +12,12 @@ module CrossLint
       # each name and string to the gem as a String that knows its line.
       class Parser < ::KDL::Parser
         class Word < String
-          attr_reader :line
+          attr_reader :line, :column
 
-          def initialize(text, line)
+          def initialize(text, line, column)
             super(text)
             @line = line
+            @column = column
           end
         end
 
@@ -32,7 +33,7 @@ module CrossLint
           type, token = super
           return [type, token] unless WORDS.include?(type)
 
-          [type, WordToken.new(value: Word.new(token.value, token.line), line: token.line, column: token.column)]
+          [type, WordToken.new(value: Word.new(token.value, token.line, token.column), line: token.line, column: token.column)]
         end
       end
 

@@ -84,7 +84,7 @@ module CrossLint
       end
 
       def plugin_name(url)
-        Core::SharedPlugin.plugin_name(url) || raise(Core::FetchError, "can't name a plugin from #{url}, whose last part has other characters than " \
+        Core::SharedPlugin.plugin_name(url) || raise(Core::FetchError, "can't name a plugin from #{url}, whose last path segment has other characters than " \
           "letters, digits, and . _ -")
       end
 

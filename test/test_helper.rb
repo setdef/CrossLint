@@ -27,6 +27,8 @@ end
 
 require "mutant/minitest/coverage"
 require "fileutils"
+require "open3"
+require "securerandom"
 require "stringio"
 require "tmpdir"
 
@@ -53,6 +55,39 @@ module TestHelper
     FileUtils.mkdir_p(File.dirname(full))
     File.binwrite(full, text)
     full
+  end
+
+  # The file URL of the folder `path`.
+  def file_url(path) = "file://#{"/" unless path.start_with?("/")}#{path}"
+
+  # A Git repository in `folder` that has `files`, a hash of paths and
+  # text, in one commit on the branch main, with `tags` on that commit.
+  # Its file URL.
+  def repository_at(folder, files, tags: [])
+    files.each { |path, text| write(folder, path, text) }
+    settings = %w[-c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false -c tag.gpgsign=false]
+    [%w[init -q -b main], %w[add -A], %w[commit -q -m one], *tags.map { |tag| ["tag", tag] }].each do |arguments|
+      _, error, status = Open3.capture3("git", *settings, *arguments, chdir: folder)
+      raise error unless status.success?
+    end
+    file_url(folder)
+  end
+
+  # Runs the block with a Git setting, in a home folder that goes with
+  # the block, that sends the https URL `url` to `origin`, a file URL, so
+  # that what asks for `url` reaches no network.
+  def rewriting(url, origin)
+    Dir.mktmpdir("crosslint-home") do |home|
+      File.binwrite(File.join(home, ".gitconfig"), %([url "#{origin}"]\n\tinsteadOf = #{url}\n))
+      names = %w[HOME USERPROFILE]
+      saved = ENV.values_at(*names)
+      names.each { |name| ENV[name] = home }
+      begin
+        yield
+      ensure
+        names.zip(saved) { |name, value| ENV[name] = value }
+      end
+    end
   end
 
   # The code blocks of `language` in a documentation page, so a test

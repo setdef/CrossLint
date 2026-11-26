@@ -21,10 +21,7 @@ module CrossLint
 
       def call(start)
         root = @configuration.find_root(start)
-        unless root
-          raise Mistake, "no #{@configuration.file} in #{start} or any folder above it; " \
-            "run crosslint init in the project's root to write one"
-        end
+        raise Mistake.no_configuration(@configuration.file, start) unless root
 
         configuration = @configuration.read(root)
         raise Mistake.new("lists no plugin, so no check would run; list one with plugin NAME", file: configuration.file) if configuration.plugins.empty?
@@ -88,7 +85,7 @@ module CrossLint
       def fetch(listing, fail_at)
         url = listing.name
         ref = listing.ref || fail_at.call("shared plugin #{url.dump} needs ref=, a tag or a full commit SHA")
-        name = SharedPlugin.plugin_name(url) || fail_at.call("can't name a plugin from #{url.dump}, whose last part has other characters " \
+        name = SharedPlugin.plugin_name(url) || fail_at.call("can't name a plugin from #{url.dump}, whose last path segment has other characters " \
           "than letters, digits, and . _ -; a plugin's name is its repository's name")
 
         folder = begin

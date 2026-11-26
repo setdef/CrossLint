@@ -40,13 +40,17 @@ module CrossLint
       # The kdl gem's parser, which also hands over the line of each name
       # and string.
       class Parser < ::KDL::Parser
-        # A name or string that has the line it is on.
+        # A name or string that has the line and column it starts at. A
+        # column counts characters, from 1.
         class Word < String
           # The line the word is on.
           attr_reader line: Integer
 
-          # `text`, on `line`.
-          def initialize: (String text, Integer line) -> void
+          # The column the word starts in.
+          attr_reader column: Integer
+
+          # `text`, at `column` of `line`.
+          def initialize: (String text, Integer line, Integer column) -> void
         end
 
         # The token of a name or a string, with a Word for its value.

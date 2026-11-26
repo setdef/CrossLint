@@ -25,6 +25,13 @@ class KDLDocumentTest < Minitest::Test
       document.nodes.first.children.map { |node| [node.name, node.line, node.arguments] }
   end
 
+  def test_gives_each_string_the_line_and_column_it_starts_at_counted_in_characters
+    nodes = Document.new(%(plugin "é" ref="v1"\n  other ref=#"v2"# "a"), "a.kdl").nodes
+    words = [nodes.first.properties.fetch("ref"), nodes.first.arguments.first, nodes.last.properties.fetch("ref"), nodes.last.arguments.first]
+
+    assert_equal [["v1", 1, 16], ["é", 1, 8], ["v2", 2, 13], ["a", 2, 20]], words.map { |word| [word, word.line, word.column] }
+  end
+
   def test_reads_values_as_plain_ruby_values
     node = Document.new(%(n "s" 1 2.5 #true #false #null raw=#"r"# bare=word), "a.kdl").nodes.first
 

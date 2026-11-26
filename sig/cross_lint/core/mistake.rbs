@@ -18,6 +18,10 @@ module CrossLint
       # A mistake with `message`, in `file` on `line`.
       def initialize: (String message, ?file: String?, ?line: Integer?) -> void
 
+      # The mistake for a project with no configuration `file` in `start`
+      # or any folder above it.
+      def self.no_configuration: (String file, String start) -> Mistake
+
       # The file and the line, as "FILE:LINE", or what there is of them.
       def location: () -> String
     end

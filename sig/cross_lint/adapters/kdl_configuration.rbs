@@ -21,7 +21,21 @@ module CrossLint
       # The values of a policy's `severity=`.
       SEVERITIES: Array[String]
 
+      # Where a line ends, as KDL says.
+      NEWLINE: Regexp
+
+      # A string, plain or raw, at the position it is matched from: its
+      # text is the second group.
+      STRING: Regexp
+
       private
+
+      # Where the text of the ref of the `plugin` node `node` is in
+      # `source`, how long it is, and `ref`, to put there. Raises
+      # Core::Mistake when the node has no ref with a string, or the ref
+      # isn't written as plain text between quotes on one line, with no
+      # escape.
+      def change: (String source, KDLDocument::Node node, String ref) -> [Integer, Integer, String]
 
       # The nodes at the top of `document` called `name`.
       def nodes: (KDLDocument document, String name) -> Array[KDLDocument::Node]

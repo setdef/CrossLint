@@ -1,0 +1,86 @@
+module CrossLint
+  module Core
+    # What `crosslint update` found for one shared plugin: the plugin as
+    # listed, and the tag it would move to.
+    class Update < Data
+      # The shared plugin as the configuration lists it.
+      attr_reader listing: ListedPlugin
+
+      # The tag with the highest version among the repository's tags, such
+      # as "v1.4.0", or nil when no tag is a version. The tag the plugin is
+      # at already, when it is one of the tags of that version.
+      attr_reader newest: String?
+
+      # An update with these fields.
+      def self.new: (listing: ListedPlugin, newest: String?) -> instance
+
+      # An update with these fields.
+      def initialize: (listing: ListedPlugin, newest: String?) -> void
+
+      # Whether the plugin is at its newest tag already.
+      def current?: () -> bool
+
+      # Whether no tag of the repository is a version.
+      def untagged?: () -> bool
+    end
+
+    # What `crosslint update` found for every shared plugin the
+    # configuration lists.
+    #
+    # ```ruby
+    # listing = CrossLint::Core::ListedPlugin.new(name: "https://github.com/OWNER/REPO", ref: "v1.0.0", settings: [], line: 1)
+    # update = CrossLint::Core::Update.new(listing:, newest: "v1.2.0")
+    # result = CrossLint::Core::UpdateResult.new(updates: [update], dry_run: true)
+    # result.lines # => ["https://github.com/OWNER/REPO: would move from v1.0.0 to v1.2.0"]
+    # ```
+    class UpdateResult < Data
+      # One for each shared plugin, in the order the configuration lists
+      # them.
+      attr_reader updates: Array[Update]
+
+      # Whether the update only listed what it would change.
+      attr_reader dry_run: bool
+
+      # A result with these fields.
+      def self.new: (updates: Array[Update], dry_run: bool) -> instance
+
+      # A result with these fields.
+      def initialize: (updates: Array[Update], dry_run: bool) -> void
+
+      # The updates that move a plugin to another tag.
+      def changes: () -> Array[Update]
+
+      # One line for each update: the plugin and its URL, and what
+      # moved, would move, or stays.
+      def lines: () -> Array[String]
+    end
+
+    # Moves each shared plugin the configuration lists to the newest tag of
+    # its repository that is a version, vX.Y.Z or X.Y.Z, by rewriting its
+    # ref in the configuration. A plugin whose repository has no such tag
+    # stays as it is. Local and built-in plugins are left alone. It raises
+    # Mistake, naming the file and the line, when a shared plugin has no
+    # ref or its tags can't be listed, and changes nothing then.
+    class UpdatePlugins
+      # A use case that reads the configuration and sets refs through
+      # `configuration`, and lists tags through `shared_plugins`.
+      def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins) -> void
+
+      # Updates the project whose root is `start` or the nearest folder
+      # above it with a configuration. With `dry_run`, changes nothing.
+      def call: (String start, ?dry_run: bool) -> UpdateResult
+
+      private
+
+      @configuration: _Configuration
+
+      @shared_plugins: _SharedPlugins
+
+      # The tag each of `changes` moves its plugin to, by the plugin's name.
+      def refs: (Array[Update] changes) -> Hash[String, String]
+
+      # The update of the shared plugin `listing`, listed in `file`.
+      def update: (ListedPlugin listing, String file) -> Update
+    end
+  end
+end

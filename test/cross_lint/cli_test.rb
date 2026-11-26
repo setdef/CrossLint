@@ -256,7 +256,90 @@ class CLITest < Minitest::Test
       check("check", app: app(broken: CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl")))[1]
   end
 
+  def test_update_moves_each_shared_plugin_and_says_so_on_standard_error
+    app, configuration = update_app
+    lines = ["crosslint: #{ONE}: moved from v1.0.0 to v1.2.0\n", "crosslint: #{TWO}: is at its newest tag, v3.0.0\n"]
+
+    assert_equal ["", lines.join, 0], update("update", app:)
+    assert_equal ["v1.2.0", "v3.0.0"], configuration.read("#{WORK}/app").plugins.map(&:ref)
+  end
+
+  def test_update_lists_what_it_would_move_and_changes_nothing_with_dry_run
+    %w[--dry-run -n].each do |flag|
+      app, configuration = update_app
+
+      assert_equal ["", "crosslint: #{ONE}: would move from v1.0.0 to v1.2.0\ncrosslint: #{TWO}: is at its newest tag, v3.0.0\n", 0],
+        update("update", flag, app:)
+      assert_equal ["v1.0.0", "v3.0.0"], configuration.read("#{WORK}/app").plugins.map(&:ref)
+    end
+  end
+
+  def test_update_says_what_it_did_unless_silent
+    assert_equal 2, update("update", "--quiet", app: update_app.first)[1].lines.size
+    assert_equal ["", "", 0], update("update", "--silent", app: update_app.first)
+  end
+
+  def test_update_finds_the_project_from_the_project_flag
+    app, configuration = update_app
+
+    assert_equal 0, update("update", "-C", "#{WORK}/app/lib", app:)[2]
+    assert_equal "v1.2.0", configuration.read("#{WORK}/app").plugins.first.ref
+  end
+
+  def test_update_names_the_file_and_line_of_a_plugin_whose_tags_it_cant_list
+    app, = update_app(missing: true)
+
+    assert_equal ["", "crosslint: .config/crosslint/config.kdl:2: couldn't list the tags of shared plugin #{TWO}: no repository at #{TWO}\n", 2],
+      update("update", app:)
+  end
+
+  def test_update_builds_the_app_it_needs_and_works_from_the_current_folder_unless_it_is_told_otherwise
+    Dir.mktmpdir do |base|
+      url = "https://example.test/#{SecureRandom.hex(8)}/signatures"
+      origin = repository_at(File.join(base, "origin", "signatures"), {"plugin.kdl" => ""}, tags: %w[v1.0.0 v1.2.0])
+      config = write(base, "project/.config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
+      out, err, status = rewriting(url, origin) { Dir.chdir(File.join(base, "project")) { run_cli("update", spec: shipped_spec) } }
+
+      assert_equal ["", "crosslint: listing the tags of #{url}\ncrosslint: #{url}: moved from v1.0.0 to v1.2.0\n", 0], [out, err, status]
+      assert_equal %(plugin "#{url}" ref="v1.2.0"\n), File.binread(config)
+    end
+  end
+
+  def test_update_says_nothing_it_is_not_asked_to_when_no_plugin_is_shared
+    Dir.mktmpdir do |project|
+      write(project, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/tests"\n))
+
+      assert_equal ["", "", 0], run_cli("update", "-C", project, spec: shipped_spec)
+    end
+  end
+
   private
+
+  ONE = "https://example.com/OWNER/one"
+  TWO = "https://example.com/OWNER/two"
+
+  # An app, and the configuration it holds, for the project at WORK/app,
+  # which lists the shared plugins ONE at v1.0.0 and TWO at v3.0.0,
+  # whose repositories have tags to move ONE to v1.2.0.
+  def update_app(missing: false)
+    core = CrossLint::Core
+    plugins = [core::ListedPlugin.new(name: ONE, ref: "v1.0.0", settings: [], line: 1), core::ListedPlugin.new(name: TWO, ref: "v3.0.0", settings: [], line: 2)]
+    configuration = CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => core::Configuration.new(file: ".config/crosslint/config.kdl", plugins:,
+      policies: [], warnings: nil, verbosity: nil)})
+    tags = ->(names) { CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: names.to_h { |name| [name, "/cache/#{name}"] }, branches: [], commits: {}) }
+    repositories = {ONE => tags.call(%w[v1.0.0 v1.2.0])}
+    repositories[TWO] = tags.call(%w[v3.0.0]) unless missing
+    shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new(repositories, err: StringIO.new)
+    [CrossLint::App.new(configuration:, shared_plugins:), configuration]
+  end
+
+  def update(*argv, app:)
+    argv += ["-C", "#{WORK}/app"] unless argv.include?("-C")
+    out = StringIO.new
+    err = StringIO.new
+    status = CrossLint::CLI.new(argv, out:, err:, env: {}, spec: shipped_spec, app:).run
+    [out.string, err.string, status]
+  end
 
   # Standard output on a terminal.
   class Terminal < StringIO

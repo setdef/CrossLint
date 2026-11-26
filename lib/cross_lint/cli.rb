@@ -27,6 +27,7 @@ module CrossLint
       command = line.command
       if line.action == :run && command
         return check(line, command) if command.name == "check"
+        return update(line) if command.name == "update"
 
         return say("#{spec.bin} #{command.name} doesn't work yet")
       end
@@ -60,6 +61,15 @@ module CrossLint
       return 2 unless result.faults.empty?
 
       result.failed ? 1 : 0
+    end
+
+    # --silent leaves out each plugin's line, but not the line before each
+    # request, which tells the person that CrossLint is reaching the network.
+    def update(line)
+      app = @app || App.new(err: @err)
+      result = app.update(line.value("project") || Dir.pwd, dry_run: line.flags.key?("dry-run"))
+      result.lines.each { |text| @err.puts(PREFIX + text) } unless line.flags.key?("silent")
+      0
     end
 
     # NO_COLOR, TERM=dumb, and --no-color win over FORCE_COLOR, which
