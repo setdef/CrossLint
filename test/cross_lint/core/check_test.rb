@@ -324,7 +324,7 @@ class CheckTest < Minitest::Test
       rules = [RuleDeclaration.new(name: "unused", ruby: "unused.rb", line: 3)]
       plugins = [first.with(manifest: first.manifest.with(rules:))] + plugins.drop(1)
     end
-    configuration = Configuration.new(file: ".config/crosslint.kdl", plugins: plugins.map(&:listing), policies:, warnings:, verbosity:)
+    configuration = Configuration.new(file: ".config/crosslint/config.kdl", plugins: plugins.map(&:listing), policies:, warnings:, verbosity:)
     Project.new(root: ROOT, configuration:, plugins:)
   end
 end

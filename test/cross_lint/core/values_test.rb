@@ -74,7 +74,7 @@ class CoreValuesTest < Minitest::Test
       rules: [PolicyRule.new(name: "used", arguments: {}, severity: nil, line: 5)], line: 3)
     one = plugin("one", Manifest.new(file: "one/plugin.kdl", artifacts: [], policies: [policy], rules: [used, unused], helpers: []))
     two = plugin("two", Manifest.new(file: "two/plugin.kdl", artifacts: [], policies: [], rules: [used], helpers: []))
-    configuration = Configuration.new(file: ".config/crosslint.kdl", plugins: [one.listing, two.listing], policies: [],
+    configuration = Configuration.new(file: ".config/crosslint/config.kdl", plugins: [one.listing, two.listing], policies: [],
       warnings: nil, verbosity: nil)
     project = Project.new(root: "/app", configuration:, plugins: [one, two])
 

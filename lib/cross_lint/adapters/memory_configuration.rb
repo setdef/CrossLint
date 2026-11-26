@@ -7,7 +7,7 @@ module CrossLint
     class MemoryConfiguration
       attr_reader :file
 
-      def initialize(projects = {}, file: ".config/crosslint.kdl")
+      def initialize(projects = {}, file: ".config/crosslint/config.kdl")
         @projects = projects
         @file = file
       end

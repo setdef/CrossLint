@@ -8,7 +8,7 @@ class KDLConfigurationTest < Minitest::Test
   include CrossLint::Testing::ConfigurationContract
 
   Mistake = CrossLint::Core::Mistake
-  FILE = ".config/crosslint.kdl"
+  FILE = ".config/crosslint/config.kdl"
 
   def setup
     @base = Dir.mktmpdir("crosslint")
@@ -166,6 +166,21 @@ class KDLConfigurationTest < Minitest::Test
     root = CrossLint::Adapters::KDLConfiguration.new.find_root(folder("app"))
 
     assert_equal [root_outside], [root]
+  end
+
+  def test_does_not_read_the_old_path_of_the_configuration
+    write(@base, "app/.config/crosslint.kdl", %(plugin "one"\n))
+    write(@base, "app/lib/.keep", "")
+
+    root = CrossLint::Adapters::KDLConfiguration.new.find_root(folder("app/lib"))
+
+    assert_equal [root_outside], [root]
+  end
+
+  def test_finds_the_nearest_folder_with_the_configuration
+    configuration_port({"app" => ["one"], "app/inner" => ["two"]})
+
+    assert_equal File.join(@base, "app", "inner"), CrossLint::Adapters::KDLConfiguration.new.find_root(folder("app/inner/lib"))
   end
 
   def test_says_the_configuration_does_not_exist

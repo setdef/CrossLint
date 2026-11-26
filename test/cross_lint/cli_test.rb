@@ -120,7 +120,7 @@ class CLITest < Minitest::Test
 
     assert_equal summary, check("check", "-C", "#{WORK}/app/lib", app: app)[1]
     assert_equal summary, check("check", "--project", "#{WORK}/app", app: app)[1]
-    assert_match(/\Acrosslint: no \.config\/crosslint\.kdl in .*elsewhere or any folder above it/,
+    assert_match(/\Acrosslint: no \.config\/crosslint\/config\.kdl in .*elsewhere or any folder above it/,
       check("check", "-C", "#{TOP}elsewhere", app: app)[1])
   end
 
@@ -194,7 +194,7 @@ class CLITest < Minitest::Test
 
   def test_check_reads_the_project_in_the_folder_it_runs_in_or_a_folder_relative_to_it
     Dir.mktmpdir("crosslint") do |folder|
-      write(folder, "app/.config/crosslint.kdl", %(plugin "."\n))
+      write(folder, "app/.config/crosslint/config.kdl", %(plugin "."\n))
       write(folder, "app/plugin.kdl", %(helper "h" command="node" file="h.mjs"\n))
       # A .git file that points nowhere keeps Git from finding a
       # repository in a folder above.
@@ -212,8 +212,8 @@ class CLITest < Minitest::Test
 
     assert_equal ["", %(crosslint: .config/tests/plugin.kdl:2: unknown node "file", did you mean "files"?\n), 2],
       check("check", app: app(broken: mistake))
-    assert_equal "crosslint: .config/crosslint.kdl: lists nothing\n",
-      check("check", app: app(broken: CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint.kdl")))[1]
+    assert_equal "crosslint: .config/crosslint/config.kdl: lists nothing\n",
+      check("check", app: app(broken: CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl")))[1]
   end
 
   private
@@ -249,7 +249,7 @@ class CLITest < Minitest::Test
     policy = core::Policy.new(name: "has-test", applies_to: core::AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, line: 5,
       rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "test"}, severity:, line: 7)])
     manifest = core::Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
-    configuration = core::Configuration.new(file: ".config/crosslint.kdl", plugins: listed, policies: [], warnings:, verbosity:)
+    configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: listed, policies: [], warnings:, verbosity:)
     CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => broken || configuration}),
       manifests: CrossLint::Adapters::MemoryPluginManifests.new({"#{WORK}/app/.config/tests" => manifest}),
       project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}))

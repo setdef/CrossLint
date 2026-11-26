@@ -7,7 +7,7 @@ class MemoryConfigurationTest < Minitest::Test
 
   include CrossLint::Testing::ConfigurationContract
 
-  FILE = ".config/crosslint.kdl"
+  FILE = ".config/crosslint/config.kdl"
 
   def configuration_port(projects, broken: nil)
     held = projects.to_h do |project, plugins|

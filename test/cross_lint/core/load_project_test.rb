@@ -9,7 +9,7 @@ class LoadProjectTest < Minitest::Test
 
   include CrossLint::Core
 
-  CONFIG = ".config/crosslint.kdl"
+  CONFIG = ".config/crosslint/config.kdl"
 
   # Absolute paths as File.expand_path gives them, with a drive on Windows.
   TOP = File.expand_path("/")
@@ -25,7 +25,7 @@ class LoadProjectTest < Minitest::Test
   def test_says_how_to_write_a_configuration_when_there_is_none
     mistake = assert_raises(Mistake) { load_project(plugins: [listing(".x")], start: "/elsewhere/lib") }
 
-    assert_equal ["", "no .config/crosslint.kdl in /elsewhere/lib or any folder above it; " \
+    assert_equal ["", "no .config/crosslint/config.kdl in /elsewhere/lib or any folder above it; " \
       "run crosslint init in the project's root to write one"], [mistake.location, mistake.message]
   end
 

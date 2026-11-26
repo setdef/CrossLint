@@ -1,12 +1,12 @@
 module CrossLint
   # Where the core reads a project's configuration: a format, such as
-  # KDL in `.config/crosslint.kdl`, and where its files are.
+  # KDL in `.config/crosslint/config.kdl`, and where its files are.
   # Adapters::KDLConfiguration reads the files, and
   # Adapters::MemoryConfiguration holds configurations in memory; both
   # pass Testing::ConfigurationContract.
   interface _Configuration
     # The configuration's path in a project's root, as messages name it,
-    # such as ".config/crosslint.kdl".
+    # such as ".config/crosslint/config.kdl".
     def file: () -> String
 
     # The project's root: the nearest folder, `start` or one above it,

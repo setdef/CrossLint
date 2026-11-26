@@ -7,7 +7,7 @@ module CrossLint
     # it doesn't hold.
     #
     # ```ruby
-    # configuration = CrossLint::Core::Configuration.new(file: ".config/crosslint.kdl", plugins: [], policies: [],
+    # configuration = CrossLint::Core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: [], policies: [],
     #   warnings: nil, verbosity: nil)
     # port = CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration})
     # port.find_root("/app/lib/deep") # => "/app"

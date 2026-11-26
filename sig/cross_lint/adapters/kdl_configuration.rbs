@@ -1,6 +1,6 @@
 module CrossLint
   module Adapters
-    # The configuration port for FILE, `.config/crosslint.kdl` in a
+    # The configuration port for FILE, `.config/crosslint/config.kdl` in a
     # project's root, read as the configuration reference says. find_root
     # raises Core::Mistake when the folder it starts from doesn't exist.
     class KDLConfiguration

@@ -32,7 +32,7 @@ class ExeTest < Minitest::Test
     first, fixed = doc_blocks("docs/getting-started.md", "console").select { |block| block.start_with?("$ crosslint check\n") }
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/tests/plugin.kdl", plugin)
-      write(project, ".config/crosslint.kdl", configuration.sub(%(plugin "debt"\n), ""))
+      write(project, ".config/crosslint/config.kdl", configuration.sub(%(plugin "debt"\n), ""))
       %w[currency customer discount invoice line_item payment pdf tax total].each { |name| write(project, "lib/invoices/#{name}.rb", "") }
       %w[customer discount invoice line_item payment total].each { |name| write(project, "test/invoices/#{name}_test.rb", "") }
       Open3.capture3("git", "init", "-q", chdir: project)
@@ -50,7 +50,7 @@ class ExeTest < Minitest::Test
     plugin, configuration = doc_blocks("docs/getting-started.md", "kdl")
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/tests/plugin.kdl", plugin.sub("files", "file"))
-      write(project, ".config/crosslint.kdl", configuration.sub(%(plugin "debt"\n), ""))
+      write(project, ".config/crosslint/config.kdl", configuration.sub(%(plugin "debt"\n), ""))
 
       assert_equal ["", %(crosslint: .config/crosslint/tests/plugin.kdl:2: unknown node "file", did you mean "files"?\n), 2],
         crosslint("check", "-C", project)

@@ -5,7 +5,7 @@ require_relative "kdl_document"
 module CrossLint
   module Adapters
     class KDLConfiguration
-      FILE = ".config/crosslint.kdl"
+      FILE = ".config/crosslint/config.kdl"
 
       NODES = %w[plugin policy warnings verbosity].freeze
 

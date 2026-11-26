@@ -29,22 +29,22 @@ class AppTest < Minitest::Test
 
   def test_finds_the_built_in_plugins_in_crosslints_plugins_folder
     assert_equal File.join(ROOT, "plugins"), App::PLUGINS
-    write(@base, "app/.config/crosslint.kdl", %(plugin "debt"\n))
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "debt"\n))
     write(@base, "debt/plugin.kdl", MANIFEST)
     mistake = assert_raises(Mistake) { Dir.chdir(@base) { App.new.load_project(File.join(@base, "app")) } }
 
-    assert_equal ".config/crosslint.kdl:1: unknown built-in plugin \"debt\"; this CrossLint has none",
+    assert_equal ".config/crosslint/config.kdl:1: unknown built-in plugin \"debt\"; this CrossLint has none",
       "#{mistake.location}: #{mistake.message}"
   end
 
   def test_takes_each_folder_with_a_manifest_as_a_built_in_plugin
     write(@base, "plugins/debt/plugin.kdl", MANIFEST)
     FileUtils.mkdir_p(File.join(@base, "plugins/other"))
-    write(@base, "app/.config/crosslint.kdl", %(plugin "debt"\n))
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "debt"\n))
     app = App.new(plugins: File.join(@base, "plugins"))
 
     assert_equal [["debt", File.join(@base, "plugins/debt")]], app.load_project(File.join(@base, "app")).plugins.map { |plugin| [plugin.name, plugin.folder] }
-    write(@base, "app/.config/crosslint.kdl", %(plugin "other"\n))
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "other"\n))
     mistake = assert_raises(Mistake) { app.load_project(File.join(@base, "app")) }
 
     assert_equal %(unknown built-in plugin "other"; expected "debt"), mistake.message
@@ -93,7 +93,7 @@ class AppTest < Minitest::Test
   # a.txt beside it.
   def memory_app(files: ["a.md"])
     core = CrossLint::Core
-    configuration = core::Configuration.new(file: ".config/crosslint.kdl", warnings: nil, verbosity: nil, policies: [],
+    configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", warnings: nil, verbosity: nil, policies: [],
       plugins: [core::ListedPlugin.new(name: "./local", ref: nil, settings: [], line: 1)])
     artifact = core::ArtifactDeclaration.new(name: "a", files: core::PathPattern.new(source: "{path}.md"), line: 1,
       companions: [core::CompanionDeclaration.new(name: "c", pattern: core::PathPattern.new(source: "{path}.txt"), line: 2)])
