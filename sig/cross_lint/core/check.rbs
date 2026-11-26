@@ -92,6 +92,12 @@ module CrossLint
       # declaration whose files pattern matches no file.
       def notices: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds) -> Array[Notice]
 
+      # A notice for each of `plugin`'s artifact declarations that matches
+      # no file in `found`, its artifacts by declaration, leaving out the
+      # optional ones; or, when none matches a file and one is optional,
+      # one notice for the plugin.
+      def unmatched: (Plugin plugin, Hash[String, Array[Artifact]] found) -> Array[Notice]
+
       # The artifacts of the checked kinds that have no violation.
       def passed: (Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
                    Array[Violation] violations) -> Array[Artifact]

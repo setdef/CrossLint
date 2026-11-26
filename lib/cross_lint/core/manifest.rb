@@ -6,8 +6,8 @@ module CrossLint
   module Core
     class CompanionDeclaration < Data.define(:name, :pattern, :line); end
 
-    class ArtifactDeclaration < Data.define(:name, :files, :companions, :line, :key)
-      def initialize(key: nil, **fields) = super
+    class ArtifactDeclaration < Data.define(:name, :files, :companions, :line, :key, :optional)
+      def initialize(key: nil, optional: false, **fields) = super
 
       def companion(name) = companions.find { |companion| companion.name == name }
     end
@@ -38,8 +38,10 @@ module CrossLint
 
     class StepDeclaration < Data.define(:name, :line); end
 
-    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers, :step_policies, :settings, :flags, :steps)
-      def initialize(step_policies: [], settings: [], flags: [], steps: [], **declared) = super
+    class ArtifactsRuby < Data.define(:ruby, :line); end
+
+    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers, :step_policies, :settings, :flags, :steps, :artifacts_ruby)
+      def initialize(step_policies: [], settings: [], flags: [], steps: [], artifacts_ruby: nil, **declared) = super
     end
   end
 end

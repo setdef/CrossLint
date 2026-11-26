@@ -134,7 +134,7 @@ class LoadProjectTest < Minitest::Test
   def test_has_no_step_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], policies: [], warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}))
+      manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}), plugin_ruby: MemoryPluginRuby.new)
 
     assert_equal %(unknown step "track-debt"; this CrossLint has none), assert_raises(Mistake) { use_case.call(APP) }.message
   end
@@ -237,6 +237,92 @@ class LoadProjectTest < Minitest::Test
       manifest: tests_manifest(artifacts: [], policies: [policy(applies_to: nil, rules: [policy_rule("names-class")])], rules: [RuleDeclaration.new(name: "names-class", ruby: "a.rb", line: 2)])
     assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "companion-exist", did you mean "companion-exists"?),
       manifest: tests_manifest(policies: [policy(applies_to: nil, rules: [policy_rule("companion-exist", arguments: {})])])
+  end
+
+  def test_adds_the_artifacts_a_plugins_ruby_declares_from_its_settings
+    given = []
+    ruby = declaring do |settings|
+      given << settings
+      [artifact("ruby-file", files: "#{settings.first.name}/{path}.rb", companions: {"test" => "test/{path}_test.rb"}, key: "{path}", optional: true)]
+    end
+    manifest = declaring_manifest.with(settings: [SettingDeclaration.new(name: "lib", line: 2)])
+    project = load_project(plugins: [listing("./rules/tests", settings: [setting("lib", line: 3)])], manifest:, ruby:)
+    declared = project.plugins.first.manifest.artifacts
+
+    assert_equal [[setting("lib", line: 3)]], given
+    assert_equal [["ruby-file", "lib/{path}.rb", [["test", "test/{path}_test.rb", 4]], "{path}", true, 4]],
+      declared.map { |each| [each.name, each.files.source, each.companions.map { [_1.name, _1.pattern.source, _1.line] }, each.key.source, each.optional, each.line] }
+  end
+
+  def test_adds_the_artifacts_a_plugins_ruby_declares_to_those_its_manifest_declares
+    manifest = declaring_manifest.with(artifacts: [artifact("source-file")])
+    project = load_project(manifest:, ruby: declaring { |_| [artifact("ruby-file", files: "lib/{path}.rb")] })
+
+    assert_equal ["source-file", "ruby-file"], project.plugins.first.manifest.artifacts.map(&:name)
+  end
+
+  def test_names_a_file_of_its_plugin_that_a_plugins_ruby_requires_and_lacks
+    missing = LoadError.new("cannot load such file")
+    missing.define_singleton_method(:path) { "#{APP}/rules/tests/helpers/roles.rb" }
+
+    assert_mistake "rules/tests/plugin.kdl", 4, "fault in plugin tests: artifacts.rb requires helpers/roles.rb, which doesn't exist",
+      manifest: declaring_manifest, ruby: {"#{APP}/rules/tests/artifacts.rb" => ->(_) { raise missing }}
+  end
+
+  def test_checks_a_policy_against_the_artifacts_a_plugins_ruby_declares
+    ruby = declaring { |_| [artifact("ruby-file", files: "lib/{path}.rb")] }
+
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown companion "test"; artifact "ruby-file" declares none),
+      manifest: declaring_manifest(policies: [policy]), ruby:
+  end
+
+  def test_lets_a_policy_with_no_applies_to_apply_to_nothing_when_a_plugins_ruby_declares_its_artifacts
+    project = load_project(manifest: declaring_manifest, ruby: declaring { |_| [] })
+
+    assert_empty project.plugins.first.manifest.artifacts
+  end
+
+  def test_stops_at_the_mistake_a_plugins_ruby_makes_of_a_setting
+    ruby = declaring { |settings| raise mistake("lib takes a folder", settings.first) }
+    manifest = declaring_manifest.with(settings: [SettingDeclaration.new(name: "lib", line: 2)])
+
+    assert_mistake CONFIG, 3, "lib takes a folder", plugins: [listing("./rules/tests", settings: [setting("lib", line: 3)])], manifest:, ruby:
+  end
+
+  def test_stops_at_what_a_plugins_ruby_raises_naming_the_plugin_and_the_line_that_names_the_file
+    file = "rules/tests/plugin.kdl"
+    assert_mistake file, 4, "fault in plugin tests: artifacts.rb raised RuntimeError: broken", manifest: declaring_manifest,
+      ruby: declaring { |_| raise "broken" }
+    assert_mistake file, 4, "fault in plugin tests: artifacts.rb has no declare method", manifest: declaring_manifest, ruby: declaring
+    assert_mistake file, 4, "fault in plugin tests: artifacts.rb defines no class Artifacts", manifest: declaring_manifest,
+      ruby: {"#{APP}/rules/tests/artifacts.rb" => ->(namespace) { namespace.const_set(:Artifacts, 3) }}
+    assert_mistake file, 4, "fault in plugin tests: artifacts.rb defines no class Artifacts", manifest: declaring_manifest,
+      ruby: {"#{APP}/rules/tests/artifacts.rb" => ->(_) {}}
+    assert_mistake file, 4, "fault in plugin tests: artifacts.rb has a class Artifacts that doesn't inherit from CrossLint::Artifacts",
+      manifest: declaring_manifest, ruby: declaring("def declare(_) = []", superclass: Object)
+    assert_mistake file, 4, "fault in plugin tests: artifacts.rb returned Hash from declare, where declare returns an array of artifacts",
+      manifest: declaring_manifest, ruby: declaring { |_| {} }
+    assert_mistake file, 4, "fault in plugin tests: artifacts.rb returned Array from declare, where declare returns an array of artifacts",
+      manifest: declaring_manifest, ruby: declaring { |_| [3] }
+    assert_mistake file, 4, %(no file "artifacts.rb" in the plugin's folder), manifest: declaring_manifest
+  end
+
+  def test_finds_artifacts_in_the_plugins_namespace_alone_and_lets_them_set_up_in_initialize
+    ruby = declaring(<<~RUBY)
+      def initialize
+        @folder = "lib"
+      end
+
+      def declare(_) = [artifact("ruby-file", files: @folder + "/{path}.rb", companions: {"test" => "t/{path}"})]
+    RUBY
+    Object.const_set(:Artifacts, Class.new(CrossLint::Artifacts))
+    project = load_project(manifest: declaring_manifest, ruby:)
+
+    assert_equal ["lib/{path}.rb"], project.plugins.first.manifest.artifacts.map { _1.files.source }
+    assert_mistake "rules/tests/plugin.kdl", 4, "fault in plugin tests: artifacts.rb defines no class Artifacts", manifest: declaring_manifest,
+      ruby: {"#{APP}/rules/tests/artifacts.rb" => ->(_) {}}
+  ensure
+    Object.__send__(:remove_const, :Artifacts) if Object.const_defined?(:Artifacts, false)
   end
 
   def test_stops_at_a_policy_for_an_artifact_no_listed_plugin_declares
@@ -392,7 +478,8 @@ class LoadProjectTest < Minitest::Test
 
   def test_has_no_built_in_plugins_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("debt")], policies: [], warnings: nil, verbosity: nil)
-    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), manifests: MemoryPluginManifests.new)
+    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), manifests: MemoryPluginManifests.new,
+      plugin_ruby: MemoryPluginRuby.new)
     mistake = assert_raises(Mistake) { use_case.call(APP) }
 
     assert_equal %(unknown built-in plugin "debt"; this CrossLint has none), mistake.message
@@ -411,7 +498,7 @@ class LoadProjectTest < Minitest::Test
 
   def test_raises_the_mistakes_the_ports_raise
     configuration = MemoryConfiguration.new({APP => Mistake.new("broken", file: CONFIG, line: 2)})
-    mistake = assert_raises(Mistake) { LoadProject.new(configuration:, manifests: MemoryPluginManifests.new).call(APP) }
+    mistake = assert_raises(Mistake) { LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, plugin_ruby: MemoryPluginRuby.new).call(APP) }
 
     assert_equal "#{CONFIG}:2", mistake.location
   end
@@ -420,6 +507,7 @@ class LoadProjectTest < Minitest::Test
 
   MemoryConfiguration = CrossLint::Adapters::MemoryConfiguration
   MemoryPluginManifests = CrossLint::Adapters::MemoryPluginManifests
+  MemoryPluginRuby = CrossLint::Adapters::MemoryPluginRuby
 
   # A step that records the settings it is given to read, and raises
   # `mistake` when it reads them.
@@ -442,12 +530,25 @@ class LoadProjectTest < Minitest::Test
     def call(_input) = raise("not called")
   end
 
-  def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP)
+  def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {})
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), built_in:, steps:).call(start)
+      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), built_in:, steps:).call(start)
   end
+
+  # A plugin whose artifacts.rb defines Artifacts with `body`, as the
+  # plugin's code would, in the namespace CrossLint gives it.
+  def declaring(body = nil, superclass: CrossLint::Artifacts, &declare)
+    {"#{APP}/rules/tests/artifacts.rb" => lambda do |namespace|
+      found = Class.new(superclass)
+      found.define_method(:declare, &declare) if declare
+      found.class_eval(body) if body
+      namespace.const_set(:Artifacts, found)
+    end}
+  end
+
+  def declaring_manifest(policies: [policy(applies_to: nil)]) = tests_manifest(artifacts: [], policies:).with(artifacts_ruby: ArtifactsRuby.new(ruby: "artifacts.rb", line: 4))
 
   def assert_mistake(file, line, message, **options)
     mistake = assert_raises(Mistake) { load_project(**options) }

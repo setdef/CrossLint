@@ -16,6 +16,12 @@ class CoreValuesTest < Minitest::Test
 
   include CrossLint::Core
 
+  def test_an_artifact_declaration_has_no_key_and_isnt_optional_unless_given
+    declaration = ArtifactDeclaration.new(name: "doc", files: PathPattern.new(source: "{path}.md"), companions: [], line: 1)
+
+    assert_equal [nil, false], [declaration.key, declaration.optional]
+  end
+
   def test_a_policy_names_each_companion_its_condition_and_rules_name_once
     exists = ->(name) { Condition::CompanionExists.new(companion: name, line: 2) }
     rule = ->(arguments) { PolicyRule.new(name: "r", arguments:, severity: nil, line: 3) }

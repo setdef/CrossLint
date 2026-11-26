@@ -2,12 +2,18 @@
 
 require "pathname"
 
+require_relative "artifacts"
+require_relative "ruby_rule"
+
 module CrossLint
   module Core
     class LoadProject
-      def initialize(configuration:, manifests:, built_in: {}, steps: {})
+      DECLARER = :Artifacts
+
+      def initialize(configuration:, manifests:, plugin_ruby:, built_in: {}, steps: {})
         @configuration = configuration
         @manifests = manifests
+        @plugin_ruby = plugin_ruby
         @built_in = built_in
         @steps = steps
       end
@@ -24,6 +30,12 @@ module CrossLint
 
         plugins = configuration.plugins.each_with_index.with_object([]) do |(listing, index), loaded|
           loaded << plugin(root, configuration, index, loaded)
+        end
+        # Every plugin's artifacts before any policy is checked, since a
+        # policy can apply to another plugin's.
+        plugins = plugins.map do |plugin|
+          check_setting_names(plugin, configuration.file)
+          declare(plugin, configuration.file)
         end
         plugins.each do |plugin|
           check_manifest(plugin, plugins)
@@ -76,6 +88,39 @@ module CrossLint
         (cleaned == ".") ? "" : cleaned
       end
 
+      # The plugin with the artifacts its Ruby declares from its settings
+      # added to its manifest's. Whatever that Ruby raises but a mistake
+      # stops CrossLint the same way, since no check can run without the
+      # plugin's artifacts.
+      def declare(plugin, file)
+        ruby = plugin.manifest.artifacts_ruby
+        ruby ? declare_in_ruby(plugin, ruby, file) : plugin
+      end
+
+      def declare_in_ruby(plugin, ruby, file)
+        manifest = plugin.manifest
+        namespace = Module.new
+        @plugin_ruby.load(plugin, ruby.ruby, ruby.line, namespace)
+        found = namespace.const_get(DECLARER) if namespace.const_defined?(DECLARER, false)
+        raise PluginError, "defines no class Artifacts" unless found.instance_of?(Class)
+        raise PluginError, "has a class Artifacts that doesn't inherit from CrossLint::Artifacts" unless found < Artifacts
+
+        declarer = found.allocate
+        declarer.instance_variable_set(:@crosslint_configuration, file)
+        declarer.instance_variable_set(:@crosslint_line, ruby.line)
+        declarer.__send__(:initialize)
+        declared = declarer.declare(plugin.listing.settings)
+        unless declared.instance_of?(Array) && declared.all?(ArtifactDeclaration)
+          raise PluginError, "returned #{declared.class} from declare, where declare returns an array of artifacts"
+        end
+
+        plugin.with(manifest: manifest.with(artifacts: manifest.artifacts + declared))
+      rescue Mistake
+        raise
+      rescue *RubyRule::FAULTS => error
+        raise Mistake.new("fault in plugin #{plugin.name}: #{ruby.ruby} #{Fault.describe(error, plugin.folder)}", file: plugin.manifest.file, line: ruby.line)
+      end
+
       def check_manifest(plugin, plugins)
         manifest = plugin.manifest
         once(manifest.artifacts, "artifact", manifest.file)
@@ -119,16 +164,18 @@ module CrossLint
 
       # Each setting in the plugin's block is one its manifest declares,
       # and each step reads what it takes.
-      def check_settings(plugin, file)
-        settings = plugin.listing.settings
+      def check_setting_names(plugin, file)
         declared = plugin.manifest.settings.map(&:name)
-        settings.each do |setting|
+        plugin.listing.settings.each do |setting|
           next if declared.include?(setting.name)
 
           raise Mistake.new(Spelling.unknown("setting", setting.name, declared, none: "plugin #{plugin.name} takes none"), file:,
             line: setting.line)
         end
-        plugin.manifest.steps.each { |declaration| @steps.fetch(declaration.name).check_settings(settings, file) }
+      end
+
+      def check_settings(plugin, file)
+        plugin.manifest.steps.each { |declaration| @steps.fetch(declaration.name).check_settings(plugin.listing.settings, file) }
       end
 
       def check_artifact(artifact, file)
@@ -157,7 +204,9 @@ module CrossLint
         applies_to = policy.applies_to
         unless applies_to
           policy.rules.each { |rule| check_rule(plugin, nil, rule) }
-          return unless plugin.targets(policy).empty?
+          # Artifacts declared in Ruby depend on the settings, which can
+          # leave a policy nothing to apply to.
+          return unless plugin.targets(policy).empty? && !plugin.manifest.artifacts_ruby
 
           named = policy.companions.map(&:dump)
           having = named.empty? ? "declares no artifact" : "has no artifact with #{Spelling.list(named, "and")}, the companions it names"

@@ -20,7 +20,8 @@ module CrossLint
     end
 
     def load_project(start)
-      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, built_in: @built_in, steps: @steps).call(start)
+      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, plugin_ruby: @plugin_ruby, built_in: @built_in, steps: @steps)
+        .call(start)
     end
 
     def check(start, warnings: nil, verbosity: nil, all: false, flags: [])

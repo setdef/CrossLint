@@ -6,11 +6,15 @@ module CrossLint
     # mistake, naming the file and the line, and the nearest valid
     # spelling where one is close.
     class LoadProject
-      # A use case that reads through `configuration` and `manifests`.
-      # `built_in` has the folder of each built-in plugin, by name, and
-      # `steps` each step CrossLint has, by name.
-      def initialize: (configuration: _Configuration, manifests: _PluginManifests, ?built_in: Hash[String, String],
-                       ?steps: Hash[String, _Step]) -> void
+      # The name of the class a plugin's artifacts file defines.
+      DECLARER: Symbol
+
+      # A use case that reads through `configuration` and `manifests`, and
+      # runs the Ruby that declares a plugin's artifacts through
+      # `plugin_ruby`. `built_in` has the folder of each built-in plugin,
+      # by name, and `steps` each step CrossLint has, by name.
+      def initialize: (configuration: _Configuration, manifests: _PluginManifests, plugin_ruby: _PluginRuby,
+                       ?built_in: Hash[String, String], ?steps: Hash[String, _Step]) -> void
 
       # The project whose root is `start` or the nearest folder above it
       # with a configuration.
@@ -38,6 +42,15 @@ module CrossLint
       # empty segment, such as "x" for "./a/../x/".
       def clean: (String name) -> String
 
+      # `plugin`, with the artifacts its Ruby declares from its settings
+      # added to its manifest's when it has `artifacts ruby=`. `file` is
+      # the configuration's.
+      def declare: (Plugin plugin, String file) -> Plugin
+
+      # `plugin` with the artifacts `ruby` declares. Raises Mistake at
+      # whatever the Ruby raises.
+      def declare_in_ruby: (Plugin plugin, ArtifactsRuby ruby, String file) -> Plugin
+
       # Checks that a plugin's manifest declares each name once, and
       # agrees with itself and with the other plugins.
       def check_manifest: (Plugin plugin, Array[Plugin] plugins) -> void
@@ -57,8 +70,11 @@ module CrossLint
       def check_steps: (Manifest manifest) -> void
 
       # Checks that each setting in a plugin's block in the configuration
-      # at `file` is one its manifest declares, and that each of its steps
-      # can read them.
+      # at `file` is one its manifest declares.
+      def check_setting_names: (Plugin plugin, String file) -> void
+
+      # Checks that each of a plugin's steps can read the settings in its
+      # block in the configuration at `file`.
       def check_settings: (Plugin plugin, String file) -> void
 
       # Checks a policy's artifact, condition, and rules.

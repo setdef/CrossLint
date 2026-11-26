@@ -1,0 +1,55 @@
+module CrossLint
+  # The class a plugin's artifacts declared in Ruby inherit from, for a
+  # plugin whose artifacts depend on its settings. The plugin declares
+  # `artifacts ruby=FILE`, and `FILE`, relative to the plugin's folder,
+  # defines one class named `Artifacts` that inherits from this one, with
+  # a `declare` method. CrossLint runs the file and calls `declare` once,
+  # while it reads the configuration and before it checks anything, and
+  # adds the artifacts `declare` returns to those the plugin's manifest
+  # declares. A policy with no applies-to applies to these as to any.
+  #
+  # The file runs on CrossLint's Ruby, as a rule's does. A mistake from
+  # `mistake` stops CrossLint with exit status 2, naming the setting's
+  # line; anything else the file or `declare` raises stops it too,
+  # naming the plugin and the line of `artifacts` in its manifest.
+  #
+  # ```ruby
+  # class Artifacts < CrossLint::Artifacts
+  #   def declare(settings)
+  #     folder = settings.find { |setting| setting.name == "folder" }&.arguments&.first || "lib"
+  #     [artifact("ruby-file", files: "#{folder}/{path}.rb", companions: {"test" => "test/{path}_test.rb"})]
+  #   end
+  # end
+  # ```
+  class Artifacts
+    # The artifacts the plugin declares, given the settings in its block
+    # in the configuration, each a setting the manifest declares. Made
+    # with `artifact`. Raises Core::PluginError unless a subclass defines
+    # it.
+    def declare: (Array[Core::Setting] settings) -> Array[Core::ArtifactDeclaration]
+
+    # An artifact named `name`, found by the path pattern `files`, with a
+    # companion at each pattern of `companions` by its name, and a key
+    # from the pattern `key`, the name a debt entry can give each artifact
+    # by in place of its primary path. An `optional` artifact that
+    # matches no file is reported only when no artifact of the plugin
+    # matches one. A plugin's Ruby calls it with anything, so it takes
+    # anything, and raises Core::PluginError when a name isn't a string,
+    # `companions` isn't a hash, a pattern isn't one, or `optional` isn't
+    # true or false.
+    def artifact: (untyped name, files: untyped, ?companions: untyped, ?key: untyped, ?optional: untyped) -> Core::ArtifactDeclaration
+
+    # The mistake to raise for `setting`, one of those `declare` is
+    # given: it names the configuration and the setting's line.
+    def mistake: (String message, Core::Setting setting) -> Core::Mistake
+
+    private
+
+    @crosslint_line: Integer
+
+    @crosslint_configuration: String
+
+    # The path pattern `source`, for artifact `name`.
+    def pattern: (String name, untyped source) -> Core::PathPattern
+  end
+end

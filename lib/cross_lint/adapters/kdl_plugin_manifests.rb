@@ -7,7 +7,7 @@ module CrossLint
     class KDLPluginManifests
       FILE = "plugin.kdl"
 
-      NODES = %w[artifact policy rule helper setting flag step].freeze
+      NODES = %w[artifact artifacts policy rule helper setting flag step].freeze
 
       CONDITIONS = %w[companion-exists not all any].freeze
 
@@ -33,7 +33,8 @@ module CrossLint
           step_policies: blockless.map { |node| Core::StepPolicy.new(name: named(document, node, "policy NAME { ... }"), line: node.line) },
           settings: named_nodes(document, "setting") { |name, line| Core::SettingDeclaration.new(name:, line:) },
           flags: named_nodes(document, "flag") { |name, line| Core::FlagDeclaration.new(name:, line:) },
-          steps: named_nodes(document, "step") { |name, line| Core::StepDeclaration.new(name:, line:) })
+          steps: named_nodes(document, "step") { |name, line| Core::StepDeclaration.new(name:, line:) },
+          artifacts_ruby: artifacts_ruby(document))
       end
 
       private
@@ -143,6 +144,20 @@ module CrossLint
         raise document.mistake("rule #{name.dump} has no ruby=, the file its code is in", node) unless ruby
 
         Core::RuleDeclaration.new(name:, ruby:, line: node.line)
+      end
+
+      def artifacts_ruby(document)
+        first, again = document.nodes.select { |node| node.name == "artifacts" }
+        return unless first
+        raise document.mistake("artifacts is declared twice; the first is on line #{first.line}", again) if again
+
+        document.arguments(first, "artifacts ruby=FILE", 0)
+        document.properties(first, ["ruby"])
+        no_children(document, first)
+        ruby = document.string_property(first, "ruby")
+        raise document.mistake("artifacts has no ruby=, the file that declares them", first) unless ruby
+
+        Core::ArtifactsRuby.new(ruby:, line: first.line)
       end
 
       def helper(document, node)

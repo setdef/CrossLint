@@ -259,6 +259,20 @@ class CheckTest < Minitest::Test
     refute result.failed
   end
 
+  def test_warns_of_an_optional_artifact_that_matches_no_file_only_when_none_of_its_plugins_does
+    optional = ->(name, files, line) { declaration(name, files, "test" => "{path}.spec.ts").with(line:, optional: true) }
+    artifacts = [declaration("store", "src/{path}.store.ts", line: 4), optional.call("pipe", "src/{path}.pipe.ts", 2),
+      optional.call("component", "src/{path}.component.ts", 3)]
+    plugin = plugin("tests", artifacts:, policies: [policy("p", rules: [rule], applies_to: "pipe")])
+    some = check(project(plugin), files: ["src/a.component.ts"])
+    none = check(project(plugin), files: ["app/a.component.ts"])
+
+    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 4, message: %(no file matches "src/{path}.store.ts", the files of artifact "store"))],
+      some.notices
+    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 2,
+      message: %(no file matches the files of any artifact of plugin tests, such as "src/{path}.pipe.ts"))], none.notices
+  end
+
   def test_warns_of_a_ruby_rule_no_policy_runs
     result = check(project(tests_plugin, unused: true), files: ["lib/a.rb", "test/a_test.rb"])
 

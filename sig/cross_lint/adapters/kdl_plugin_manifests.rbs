@@ -54,6 +54,10 @@ module CrossLint
       # Reads a `rule` node, which declares a rule written in Ruby.
       def rule: (KDLDocument document, KDLDocument::Node node) -> Core::RuleDeclaration
 
+      # Reads the `artifacts` node, if there is one, which names the file
+      # whose Ruby declares more artifacts.
+      def artifacts_ruby: (KDLDocument document) -> Core::ArtifactsRuby?
+
       # Reads a `helper` node.
       def helper: (KDLDocument document, KDLDocument::Node node) -> Core::HelperDeclaration
 

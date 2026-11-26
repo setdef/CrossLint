@@ -139,7 +139,7 @@ class KDLPluginManifestsTest < Minitest::Test
   def test_refuses_a_node_it_does_not_know
     assert_refuses 2, %(unknown node "file", did you mean "files"?), %(artifact "a" {\n  file "lib/{path}.rb"\n}\n)
     assert_refuses 1, %(unknown node "artefact", did you mean "artifact"?), %(artefact "a")
-    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "policy", "rule", "helper", "setting", "flag", or "step"), %(zzz)
+    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "artifacts", "policy", "rule", "helper", "setting", "flag", or "step"), %(zzz)
     assert_refuses 2, %(unknown node "polcy", did you mean "policy"?), %(rule "r" ruby="r.rb"\npolcy "p")
   end
 
@@ -160,6 +160,19 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 2, %(path pattern "lib/{pth}.rb" has unknown placeholder "{pth}", did you mean "{path}"?),
       %(artifact "a" {\n  files "lib/{pth}.rb"\n}\n)
     assert_refuses 3, %(path pattern "" is empty), %(artifact "a" {\n  files "x"\n  companion "b" ""\n}\n)
+  end
+
+  def test_reads_the_file_whose_ruby_declares_artifacts
+    assert_equal [nil, ArtifactsRuby.new(ruby: "roles.rb", line: 2)],
+      [read(%(setting "x"\n)).artifacts_ruby, read(%(setting "x"\nartifacts ruby="roles.rb"\n)).artifacts_ruby]
+  end
+
+  def test_refuses_artifacts_written_wrong
+    assert_refuses 2, "artifacts is declared twice; the first is on line 1", %(artifacts ruby="a.rb"\nartifacts ruby="b.rb"\n)
+    assert_refuses 1, "artifacts has no ruby=, the file that declares them", %(artifacts\n)
+    assert_refuses 1, "artifacts has 1 argument; write it as artifacts ruby=FILE", %(artifacts "a.rb"\n)
+    assert_refuses 1, %(unknown property "rb"; expected "ruby"), %(artifacts rb="a.rb"\n)
+    assert_refuses 2, %(unknown node "x"; artifacts takes no children), %(artifacts ruby="a.rb" {\n  x\n}\n)
   end
 
   def test_reads_a_policy_with_no_applies_to

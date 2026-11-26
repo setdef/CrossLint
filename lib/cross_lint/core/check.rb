@@ -173,11 +173,24 @@ module CrossLint
       def notices(project, kinds)
         project.unused_rules.map do |plugin, rule|
           Notice.new(file: plugin.manifest.file, line: rule.line, message: "no policy runs rule #{rule.name.dump}, so CrossLint doesn't load it")
-        end + project.plugins.flat_map do |plugin|
-          plugin.manifest.artifacts.select { |declaration| kinds.fetch(plugin.name).fetch(declaration.name).empty? }.map do |declaration|
-            Notice.new(file: plugin.manifest.file, line: declaration.line,
-              message: "no file matches #{declaration.files.source.dump}, the files of artifact #{declaration.name.dump}")
-          end
+        end + project.plugins.sum([]) { |plugin| unmatched(plugin, kinds.fetch(plugin.name)) }
+      end
+
+      # An optional artifact is one a project may well not have, so its
+      # pattern is reported only when no artifact of its plugin matches a
+      # file, as when a setting names the wrong folder.
+      def unmatched(plugin, found)
+        declarations = plugin.manifest.artifacts
+        empty = declarations.select { |declaration| found.fetch(declaration.name).empty? }
+        optional = empty.find(&:optional)
+        if optional && empty.size == declarations.size
+          return [Notice.new(file: plugin.manifest.file, line: optional.line,
+            message: "no file matches the files of any artifact of plugin #{plugin.name}, such as #{optional.files.source.dump}")]
+        end
+
+        empty.reject(&:optional).map do |declaration|
+          Notice.new(file: plugin.manifest.file, line: declaration.line,
+            message: "no file matches #{declaration.files.source.dump}, the files of artifact #{declaration.name.dump}")
         end
       end
 
