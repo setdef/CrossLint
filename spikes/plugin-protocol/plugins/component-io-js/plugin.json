@@ -1,0 +1,18 @@
+{
+  "name": "component-io",
+  "protocol": 1,
+  "runtime": {
+    "command": "node",
+    "args": ["{plugin_dir}/plugin.mjs"],
+    "min_version": "20",
+    "provision": { "mise": "node@22" }
+  },
+  "lifetime": "per-check",
+  "artifacts": [
+    {
+      "name": "component",
+      "match": "src/**/*.component.ts",
+      "companions": { "interface": "{dir}/{base}.component.i.d.ts" }
+    }
+  ]
+}

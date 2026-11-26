@@ -1,0 +1,6 @@
+{
+  "name": "needs-a-runtime-nobody-has",
+  "protocol": 1,
+  "runtime": { "command": "crosslint-no-such-runtime", "args": ["{plugin_dir}/plugin.x"] },
+  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
+}

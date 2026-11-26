@@ -1,0 +1,13 @@
+{
+  "name": "spec-per-component",
+  "protocol": 1,
+  "runtime": { "command": "ruby", "args": ["{plugin_dir}/plugin.rb"], "min_version": "3.2" },
+  "lifetime": "per-check",
+  "artifacts": [
+    {
+      "name": "component",
+      "match": "src/**/*.component.ts",
+      "companions": { "spec": "{dir}/{base}.component.spec.ts" }
+    }
+  ]
+}

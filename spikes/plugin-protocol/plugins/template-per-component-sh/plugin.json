@@ -1,0 +1,13 @@
+{
+  "name": "template-per-component",
+  "protocol": 1,
+  "runtime": { "command": "sh", "args": ["{plugin_dir}/plugin.sh"], "also": ["jq"] },
+  "lifetime": "per-check",
+  "artifacts": [
+    {
+      "name": "component",
+      "match": "src/**/*.component.ts",
+      "companions": { "template": "{dir}/{base}.component.html" }
+    }
+  ]
+}

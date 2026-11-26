@@ -1,0 +1,6 @@
+{
+  "name": "needs-a-helper-tool",
+  "protocol": 1,
+  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "crash"], "also": ["crosslint-no-such-tool"] },
+  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
+}

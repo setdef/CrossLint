@@ -1,0 +1,6 @@
+{
+  "name": "speaks-protocol-2",
+  "protocol": 1,
+  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "wrong-protocol"] },
+  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "prints-garbage",
+  "protocol": 1,
+  "runtime": { "command": "sh", "args": ["{plugin_dir}/../broken.sh", "garbage"] },
+  "artifacts": [{ "name": "component", "match": "src/**/*.component.ts" }]
+}
