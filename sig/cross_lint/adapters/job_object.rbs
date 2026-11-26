@@ -27,7 +27,7 @@ module CrossLint
       # JobObjectExtendedLimitInformation.
       EXTENDED_LIMIT_INFORMATION: Integer
 
-      # PROCESS_SET_QUOTA and PROCESS_TERMINATE.
+      # PROCESS_SET_QUOTA, PROCESS_TERMINATE, and SYNCHRONIZE.
       ASSIGN: Integer
 
       # What OpenProcess answers for a pid no process has.
@@ -52,13 +52,17 @@ module CrossLint
 
       # Puts the process `pid` in the job, or does nothing when no process
       # has that pid, as one that has exited. Raises Core::PluginError when
-      # Windows doesn't open the process for another reason, or put it in.
+      # Windows doesn't open the process for another reason, or put it in
+      # while it is running.
       def hold: (Integer pid) -> void
 
       # What kernel32's function `name`, of `arguments` and `result`
       # Fiddle types, returns for `values`. Raises Core::PluginError, as
       # every call that fails by returning zero does.
       def checked: (String name, Array[Integer] arguments, Integer result, *untyped values) -> untyped
+
+      # Whether the process `process`, a handle, has exited.
+      def exited?: (untyped process) -> bool
 
       # The error for the call `name` that returned zero.
       def failed: (String name) -> Core::PluginError

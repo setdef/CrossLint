@@ -42,6 +42,17 @@ class JobObjectTest < Minitest::Test
     assert_equal 0, wait.value.exitstatus
   end
 
+  # Ruby keeps the handle of a process until it is reaped, so Windows
+  # opens one that has exited, and refuses to put it in a job with error 5.
+  def test_has_nothing_to_hold_of_a_process_that_has_exited_and_has_not_been_reaped
+    pid = Process.spawn("sh", "-c", "exit 0")
+    sleep 1
+    job = CrossLint::Adapters::JobObject.new(pid)
+    job.kill
+  ensure
+    Process.wait(pid) if pid
+  end
+
   def test_stops_at_each_call_windows_refuses_and_closes_what_it_made
     script = write(@base, "sleeps.sh", "sleep 30\n")
     _, _, _, wait = CrossLint::Adapters::JobObject.popen3(["sh", script], @base, {})

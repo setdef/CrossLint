@@ -22,8 +22,10 @@ module CrossLint
       EXTENDED_LIMIT_INFORMATION = 9
 
       # PROCESS_SET_QUOTA and PROCESS_TERMINATE, which
-      # AssignProcessToJobObject needs of the process's handle.
-      ASSIGN = 0x0101
+      # AssignProcessToJobObject needs of the process's handle, and
+      # SYNCHRONIZE, which WaitForSingleObject needs to tell whether the
+      # process has exited.
+      ASSIGN = 0x0101 | 0x00100000
 
       # What OpenProcess answers for a pid no process has, as a process that
       # has exited and been reaped.
@@ -88,6 +90,10 @@ module CrossLint
         end
         begin
           checked("AssignProcessToJobObject", [pointer, pointer], int, @job, process)
+        rescue Core::PluginError
+          # Windows refuses to put a process that has exited, but has not
+          # been reaped, in a job, with error 5, access denied.
+          raise unless exited?(process)
         ensure
           call("CloseHandle", [pointer], int, process)
         end
@@ -101,6 +107,10 @@ module CrossLint
 
         value
       end
+
+      # Whether the process that `process` is a handle of has exited,
+      # which WAIT_OBJECT_0, 0, answers.
+      def exited?(process) = call("WaitForSingleObject", [Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT], Fiddle::TYPE_INT, process, 0).to_i.zero?
 
       def failed(name) = Core::PluginError.new("couldn't be put in a job object: #{name} failed with Windows error #{Fiddle.win32_last_error.to_i}")
 
