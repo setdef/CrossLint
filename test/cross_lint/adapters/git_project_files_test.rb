@@ -112,6 +112,15 @@ class GitProjectFilesTest < Minitest::Test
     ENV["HOME"] = home
   end
 
+  def test_gives_gits_own_message_when_git_refuses_a_working_tree
+    port = project_files_port(listed: ["a.rb"])
+    write(project_root, ".git/index", "not an index\n")
+    mistake = assert_raises(Mistake) { port.files(project_root) }
+
+    assert_match(/\ACrossLint lists a project's files with Git, and Git refused #{Regexp.escape(project_root)}: .*index/, mistake.message)
+    refute_match(/isn't in a Git working tree/, mistake.message)
+  end
+
   def test_says_when_it_finds_no_git
     mistake = assert_raises(Mistake) { CrossLint::Adapters::GitProjectFiles.new(git: "no-such-git").files(@base) }
 

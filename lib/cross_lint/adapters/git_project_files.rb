@@ -17,8 +17,8 @@ module CrossLint
       def files(root)
         # RBS types Open3's env values as String, though nil unsets one.
         env = environment #: untyped
-        listed, _, status = Open3.capture3(env, @git, "-C", root, *LIST)
-        raise Core::Mistake, GitProjectFiles.outside(root) unless status.success?
+        listed, error, status = Open3.capture3(env, @git, "-C", root, *LIST)
+        raise Core::Mistake, refusal(env, root, error) unless status.success?
 
         # --cached lists a tracked file deleted from the working tree, and
         # --others lists an untracked repository as a folder.
@@ -55,6 +55,15 @@ module CrossLint
       private
 
       def environment = GitEnvironment.cleared
+
+      # A folder Git refuses for another reason, such as safe.directory, is
+      # a working tree, so Git's own message says why.
+      def refusal(env, root, error)
+        inside, _, status = Open3.capture3(env, @git, "-C", root, "rev-parse", "--is-inside-work-tree")
+        return GitProjectFiles.outside(root) unless status.success? && inside.strip == "true"
+
+        "CrossLint lists a project's files with Git, and Git refused #{root}: #{error.strip}"
+      end
 
       def entries(folder)
         @entries[folder] ||= begin
