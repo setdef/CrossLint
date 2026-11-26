@@ -12,7 +12,7 @@ failed=0
 mkdir -p "$here/.scratch"
 
 if [ ! -d "$here/fixture/node_modules/typescript" ]; then
-  npm --prefix "$here/fixture" install --no-audit --no-fund --package-lock=false >/dev/null
+  (cd "$here/fixture" && npm install --no-audit --no-fund --package-lock=false >/dev/null)
 fi
 
 ok() { echo "ok   $1"; }

@@ -186,6 +186,23 @@ What this shows:
 - **Install time:** `mise install` of the app, Node and `jq` together took 54 s on both, almost all of it Node.
 - **Fledge:** nothing new broke on these two. `fledge build` took 7 to 9 s in a workspace that already had Fledge's runtime; a build from nothing was not timed. The first attempt of `check.sh` failed because its `ls` of a `.zip` found nothing on these systems and stopped the script (fixed).
 
+## Windows
+
+Run on Windows 11 x64, as plain Ruby: Ruby 4.0.10 (RubyInstaller, `x64-mingw-ucrt`), Node 22.23.5 and `jq` 1.7 installed through mise, and `run.sh` run from MSYS2's `bash`. Every check passes, including the TypeScript plugin, the policies, the error paths and the check that a hung plugin's child is gone. Three plugin runtimes were involved: Ruby (`{host_ruby}`), Node, and `sh` with `jq` (MSYS2's `sh` and mise's `jq.exe`). Windows with no `sh` was not run; the PowerShell plugin is the equivalent there.
+
+| What broke | Fix |
+| --- | --- |
+| The host stopped at the first plugin: `wrong exec option symbol: pgroup`. Ruby on Windows has no `pgroup:` for `spawn`. | The option is `new_pgroup: true` on Windows. |
+| Every comparison with `expected/*.txt` failed. Ruby writes `\r\n` for each `\n` of `puts` on Windows. | `$stdout.binmode` in the host, so the output is the same on every system. |
+| `npm --prefix DIR install` in `run.sh` ignored `DIR` and looked for `package.json` in the working directory, under MSYS2's `bash`. | `run.sh` runs `npm install` from inside `fixture/`. |
+| A plugin that died made the host crash with `Errno::EPIPE` from `IO#close`. On Windows, closing the pipe to a dead process flushes into it and fails. | The host ignores `EPIPE` when it closes a plugin's stdin. |
+| `taskkill /T /F /PID` ended the `sh` that the host started and left its `sleep` child running. The `sleep` is an MSYS2 process, and the process tree that `taskkill` follows did not link it to the `sh`. | A job object: the host makes one for each plugin with `Fiddle` calls to `CreateJobObjectW`, `SetInformationJobObject` (kill on close), `OpenProcess` and `AssignProcessToJobObject`, and ends it with `TerminateJobObject` on timeout, after the plugin exits, and (through kill on close) when the host exits. With the job, `run.sh`'s check passes. `taskkill` is the fallback when Fiddle cannot load. About 20 lines. |
+| `Spike.which` found no `node` or `sh`: Windows executables have an extension. | The host tries each `PATHEXT` extension. |
+
+- **A shell plugin on Windows needs `sh` and `jq`.** MSYS2's `sh` was on `PATH` for these runs. For a Windows with neither, `plugins/template-per-component-ps1/` does the shell plugin's job in PowerShell with `ConvertFrom-Json` (about 20 lines, the `powershell` command), and `run.sh` checks that it gives the shell plugin's two violations when `powershell` is on `PATH`. It passed on Windows. It is skipped on the other systems here.
+- **Starting Node:** `node.exe` started without trouble. A `.cmd` shim (some mise setups on Windows put one on `PATH`) was not met; `npm` is one, and only `run.sh` calls it.
+- **Not run:** Windows ARM64; a Windows with no MSYS2 (where the shell plugin is skipped, PowerShell stands in); paths with spaces or non-ASCII characters; the host running with `--provision` on Windows.
+
 ## Cost per plugin call
 
 Measured on macOS 27 (arm64) with Ruby 4.0.10, Node 26.12.1 and `jq` through mise's shims, by `--timing`. "Start" is spawn plus handshake, and includes the `--version` call that `min_version` triggers for the Ruby and Node plugins. Ranges are two to four runs.
@@ -243,7 +260,7 @@ The project's `typescript` is still read from the project's `node_modules`, so p
 ## What broke
 
 - **The provisioning timeout and the user's mise configuration,** above.
-- **The host killed only the process it started.** The `hang` plugin is `sh` running `sleep 30`; after the host's `KILL` on timeout, the `sleep` kept running (on Linux until the run's end; on macOS the rerun found it alive after the host exited). The host now starts each plugin in a separate process group (`pgroup: true`) and, on a timeout, sends `KILL` to the whole group (`Process.kill("KILL", -pid)`). It also sweeps the group after every plugin exit and at host exit, so a plugin that exits and leaves a child behind is covered too. `run.sh` has the `hang` plugin write its child's pid to a file and checks that the child is gone after the timeout. On Windows the equivalent is `taskkill /T /F /PID`, see [Windows](#windows).
+- **The host killed only the process it started.** The `hang` plugin is `sh` running `sleep 30`; after the host's `KILL` on timeout, the `sleep` kept running (on Linux until the run's end; on macOS the rerun found it alive after the host exited). The host now starts each plugin in a separate process group (`pgroup: true`) and, on a timeout, sends `KILL` to the whole group (`Process.kill("KILL", -pid)`). It also sweeps the group after every plugin exit and at host exit, so a plugin that exits and leaves a child behind is covered too. `run.sh` has the `hang` plugin write its child's pid to a file and checks that the child is gone after the timeout. On Windows the host puts each plugin in a job object instead, see [Windows](#windows).
 - **A test for "no node" on this Mac passed for the wrong reason at first,** because Homebrew's directory was on the `PATH` I built, and it holds a `node`. `run.sh` now builds the `PATH` from Ruby's folder plus `/usr/bin:/bin` and skips the check when those hold a `node`.
 - **Shell and JSON.** The shell plugin needs `jq`, which the manifest lists in `also`. Without a JSON tool, a shell plugin would have to parse the host's line by hand.
 

@@ -14,6 +14,9 @@ require "optparse"
 require "rbconfig"
 require "timeout"
 
+# Ruby on Windows writes "\r\n" for each "\n" in text mode; the output is the same on every system with this.
+$stdout.binmode
+
 module Spike
   PROTOCOL = 1
 
@@ -37,14 +40,40 @@ module Spike
     ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).filter_map { found.(File.join(_1, command)) }.first
   end
 
+  # A Windows job object that holds a plugin and every process it starts, the Windows counterpart of a
+  # process group. Ending the job ends them all, MSYS2 children included (taskkill /T misses those).
+  module Job
+    def self.create_for(pid)
+      require "fiddle"
+      k = Fiddle.dlopen("kernel32")
+      fn = ->(name, args, ret) { Fiddle::Function.new(k[name], args, ret) }
+      v = Fiddle::TYPE_VOIDP
+      job = fn.("CreateJobObjectW", [v, v], v).call(nil, nil)
+      limits = Fiddle::Pointer.malloc(144, Fiddle::RUBY_FREE) # JOBOBJECT_EXTENDED_LIMIT_INFORMATION on x64
+      limits[0, 144] = "\0" * 144
+      limits[16, 4] = [0x2000].pack("L") # LimitFlags: JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+      fn.("SetInformationJobObject", [v, Fiddle::TYPE_INT, v, Fiddle::TYPE_INT], Fiddle::TYPE_INT).call(job, 9, limits, 144)
+      process = fn.("OpenProcess", [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], v).call(0x101, 0, pid) # SET_QUOTA | TERMINATE
+      fn.("AssignProcessToJobObject", [v, v], Fiddle::TYPE_INT).call(job, process)
+      fn.("CloseHandle", [v], Fiddle::TYPE_INT).call(process)
+      [job, ->(*) { fn.("TerminateJobObject", [v, Fiddle::TYPE_UINT], Fiddle::TYPE_INT).call(job, 1) }]
+    rescue LoadError, Fiddle::DLError
+      nil
+    end
+  end
+
   # Processes the host started and has not yet reaped, so that an exit or a signal can end them.
   LIVE = {}
+  JOBS = {}
   at_exit { LIVE.each_key { kill_tree(_1) } }
 
-  # Ends a plugin and everything it started: the process group on Unix, the process tree on Windows.
+  # Ends a plugin and everything it started: the process group on Unix, the job object on Windows
+  # (the process tree, by taskkill, when Fiddle could not make a job).
   def self.kill_tree(pid)
     if windows?
-      system("taskkill", "/T", "/F", "/PID", pid.to_s, out: File::NULL, err: File::NULL)
+      if (job = JOBS[pid]) then job[1].call
+      else system("taskkill", "/T", "/F", "/PID", pid.to_s, out: File::NULL, err: File::NULL)
+      end
     else
       begin
         Process.kill("KILL", -pid)
@@ -147,12 +176,15 @@ module Spike
       t0 = now
       argv_ = argv
       begin
-        # pgroup: true puts the plugin in a group of its own, so the host can end it and its children together.
-        @stdin, @stdout, stderr, @wait = Open3.popen3(@env || {}, *argv_, chdir: @root, pgroup: true)
+        # A separate process group lets the host end the plugin and its children together.
+        # Ruby spells the option pgroup on Unix and new_pgroup on Windows.
+        group = Spike.windows? ? { new_pgroup: true } : { pgroup: true }
+        @stdin, @stdout, stderr, @wait = Open3.popen3(@env || {}, *argv_, chdir: @root, **group)
       rescue Errno::ENOENT, Errno::EACCES => e
         fail!("runtime-missing", "could not start #{argv_.first}: #{e.message}")
       end
       LIVE[@wait.pid] = true
+      if Spike.windows? && (job = Job.create_for(@wait.pid)) then JOBS[@wait.pid] = job end
       @stderr_reader = Thread.new { stderr.read }
       @id = 0
       hello = call("handshake", { "protocol" => PROTOCOL, "host" => "crosslint-spike" })
@@ -172,7 +204,7 @@ module Spike
     def stop
       return unless @wait
 
-      @stdin.close unless @stdin.closed?
+      close_stdin
       @wait.join(5) || Spike.kill_tree(@wait.pid)
       reap
       @wait = nil
@@ -182,10 +214,18 @@ module Spike
 
     def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
+    # Closing flushes, and flushing into a pipe whose reader has died raises EPIPE (on Windows, whenever the plugin has died).
+    def close_stdin
+      @stdin.close unless @stdin.closed?
+    rescue Errno::EPIPE
+      nil
+    end
+
     # Ends whatever the plugin left in its group, and forgets the process.
     def reap
-      Spike.kill_tree(@wait.pid) unless Spike.windows?
+      Spike.kill_tree(@wait.pid) if !Spike.windows? || Spike::JOBS.key?(@wait.pid)
       LIVE.delete(@wait.pid)
+      Spike::JOBS.delete(@wait.pid)
     end
 
     def check_version(cmd, minimum)
@@ -222,7 +262,7 @@ module Spike
     end
 
     def died
-      @stdin.close unless @stdin.closed?
+      close_stdin
       status = @wait.value
       reap
       fail!("exited", "status #{status.exitstatus.inspect} before answering. stderr: #{@stderr_reader.value.strip[0, 300]}")

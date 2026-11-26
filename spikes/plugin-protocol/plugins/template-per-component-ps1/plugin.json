@@ -1,0 +1,13 @@
+{
+  "name": "template-per-component",
+  "protocol": 1,
+  "runtime": { "command": "powershell", "args": ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", "{plugin_dir}/plugin.ps1"] },
+  "lifetime": "per-check",
+  "artifacts": [
+    {
+      "name": "component",
+      "match": "src/**/*.component.ts",
+      "companions": { "template": "{dir}/{base}.component.html" }
+    }
+  ]
+}
