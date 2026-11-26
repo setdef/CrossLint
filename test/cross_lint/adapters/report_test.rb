@@ -75,12 +75,19 @@ class TextReportTest < Minitest::Test
     assert_equal "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning\n", @err.string
   end
 
-  def test_writes_only_ascii
+  def test_writes_a_path_and_other_text_from_the_project_as_they_are
     artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/é.rb", match: {}, companions: [])
     report_port.write(result_of([violation_of("lib/café.rb", "no tést"), artifact], notices: [Notice.new(file: "ü.kdl", line: 1, message: "ö")]))
 
-    assert_equal "lib/caf?.rb: no t?st (tests/has-test)\nlib/?.rb: ruby-file passes\n", @out.string
-    assert_equal "crosslint: ?.kdl:1: warning: ?\n", @err.string.lines.first
+    assert_equal "lib/café.rb: no tést (tests/has-test)\nlib/é.rb: ruby-file passes\n", @out.string
+    assert_equal "crosslint: ü.kdl:1: warning: ö\n", @err.string.lines.first
+    assert_equal [Encoding::UTF_8, Encoding::UTF_8], [@out.string.encoding, @err.string.encoding]
+  end
+
+  def test_writes_only_ascii_of_its_own_words
+    report_port.write(result_of([violation_of("lib/a.rb", "no test")], notices: [Notice.new(file: "p.kdl", line: 1, message: "x")]))
+
+    assert_predicate @out.string + @err.string, :ascii_only?
   end
 
   # A stream that holds its lines until it is flushed, as Ruby holds
@@ -112,10 +119,12 @@ class TextReportTest < Minitest::Test
     assert_equal ["lib/a.rb: no test (tests/has-test)", "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning"], log
   end
 
-  def test_writes_a_byte_that_isnt_utf_8_as_a_question_mark
-    report_port.write(result_of([violation_of("lib/a\xFF.rb".dup.force_encoding("UTF-8"), "no test")]))
+  def test_writes_the_bytes_of_a_path_that_isnt_utf_8_as_they_are
+    path = "lib/a\xFF.rb".dup.force_encoding("UTF-8")
+    report_port.write(result_of([violation_of(path, "no test")], notices: [Notice.new(file: path, line: 1, message: "x")]))
 
-    assert_equal "lib/a?.rb: no test (tests/has-test)\n", @out.string
+    assert_equal "lib/a\xFF.rb: no test (tests/has-test)\n".b, @out.string.b
+    assert_equal "crosslint: lib/a\xFF.rb:1: warning: x\n".b, @err.string.lines.first.b
   end
 end
 

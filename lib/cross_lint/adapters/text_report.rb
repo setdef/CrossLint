@@ -35,16 +35,14 @@ module CrossLint
           when Core::Violation
             message = (finding.severity == :warning) ? "warning: #{finding.message}" : finding.message
             message = "#{COLORS.fetch(finding.severity)}#{message}#{RESET}" if @color
-            @out.puts ascii("#{finding.artifact}: #{message} (#{finding.plugin}/#{finding.policy})")
+            @out.puts "#{finding.artifact}: #{message} (#{finding.plugin}/#{finding.policy})"
           else
-            @out.puts ascii("#{finding.path}: #{finding.role} passes")
+            @out.puts "#{finding.path}: #{finding.role} passes"
           end
         end
       end
 
-      def say(line) = @err.puts(ascii("#{PREFIX}#{line}"))
-
-      def ascii(text) = text.encode("US-ASCII", invalid: :replace, undef: :replace)
+      def say(line) = @err.puts("#{PREFIX}#{line}")
     end
   end
 end

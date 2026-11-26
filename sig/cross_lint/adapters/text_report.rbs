@@ -2,8 +2,9 @@ module CrossLint
   module Adapters
     # The report port as lines of text: each finding on a line of
     # standard output, and each notice and the summary on standard error,
-    # beginning with "crosslint: ". Every line is ASCII, with "?" for any
-    # other character.
+    # beginning with "crosslint: ". The words CrossLint writes are ASCII.
+    # A path or other text from the project is written as it is, in UTF-8,
+    # and the bytes of text that isn't valid UTF-8 are written unchanged.
     #
     # A violation's line is its path, its message, and its plugin and
     # policy, with "warning: " before the message of a warning:
@@ -44,9 +45,6 @@ module CrossLint
 
       # Writes `line` to standard error, after PREFIX.
       def say: (String line) -> void
-
-      # `text` in ASCII, with "?" for each character that isn't.
-      def ascii: (String text) -> String
     end
   end
 end
