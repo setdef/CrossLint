@@ -82,7 +82,9 @@ class LoadProjectTest < Minitest::Test
     "remove it, and give Git the credentials with a Git credential helper (git help credentials)"
 
   def test_stops_at_the_url_of_a_shared_plugin_that_has_a_user_name_or_password_and_doesnt_print_it
-    ["https://user:secret@example.com/o/signatures", "https://secret@example.com/o/signatures", "https://:secret@example.com/o/signatures"].each do |url|
+    ["https://user:secret@example.com/o/signatures", "https://secret@example.com/o/signatures", "https://:secret@example.com/o/signatures",
+      # Not shared plugins: no scheme but https is one, and CrossLint would print the name.
+      "http://user:secret@example.com/o/signatures", "HTTPS://user:secret@example.com/o/signatures"].each do |url|
       shared = shared_plugins({})
       mistake = assert_raises(Mistake) { load_project(plugins: [listing(url, ref: "v1.2.0", line: 2), listing(url, ref: "v1.2.0", line: 3)], shared_plugins: shared) }
 

@@ -43,10 +43,9 @@ module CrossLint
       # https://user:token@host/path.
       def self.credentials?: (String url) -> bool
 
-      # Raises Mistake.credentials, for the first shared plugin
-      # `configuration` lists, as `port` sees it, whose URL has a user name
-      # or password.
-      def self.refuse_credentials: (Configuration configuration, _SharedPlugins port) -> void
+      # Raises Mistake.credentials, for the first plugin `configuration`
+      # lists whose name is a URL with a user name or password.
+      def self.refuse_credentials: (Configuration configuration) -> void
 
       # The tag among `tags` with the highest version, or nil when none is
       # a version. Of the tags that have that version, such as v1.2.0 and

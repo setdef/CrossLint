@@ -31,10 +31,12 @@ module CrossLint
       def self.credentials?(url) = url.match?(%r{\A[a-z][a-z0-9+.-]*://[^/?#]*@}i)
 
       # Before any request is made, so that no secret is sent, or printed
-      # in a later message.
-      def self.refuse_credentials(configuration, port)
+      # in a later message. Every listing is checked, since a name that is
+      # no plugin, such as one with the scheme http, is printed in the
+      # mistake that says so.
+      def self.refuse_credentials(configuration)
         configuration.plugins.each do |listing|
-          raise Mistake.credentials(configuration.file, listing.line) if listing.shared?(port) && credentials?(listing.name)
+          raise Mistake.credentials(configuration.file, listing.line) if credentials?(listing.name)
         end
       end
 
