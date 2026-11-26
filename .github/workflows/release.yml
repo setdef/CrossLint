@@ -1,0 +1,165 @@
+# Every push to trunk, and every tag of the form v0.*.*: builds the app
+# with Fledge from a fresh checkout on each platform in the README's
+# Compatibility table, packs it as crosslint-VERSION-PLATFORM.tar.gz (.zip
+# on Windows), and unpacks each archive on a computer of the same platform,
+# with no Ruby on PATH, to run `crosslint --version` and `crosslint --help`.
+# VERSION is the version in crosslint.usage.kdl. On a tag, once every
+# archive passes, the last job checks that the tag is `v` plus that
+# version, and creates the GitHub release with the archives and a
+# SHA256SUMS file. Only that job can write to the repository.
+#
+# The Linux archive is built on Ubuntu 24.04, not a newer one: two gems
+# with C extensions compile on the build computer, and a newer glibc there
+# would raise the glibc version the README gives.
+
+name: Release
+
+on:
+  push:
+    branches: [trunk]
+    tags: ["v0.*.*"]
+
+permissions:
+  contents: read
+
+# Every push and every tag has a group of its own, and no run cancels
+# another.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # A missing precompiled Ruby fails the job instead of compiling one.
+  MISE_RUBY_COMPILE: "false"
+  # Install exactly what Gemfile.lock locks, or fail.
+  BUNDLE_FROZEN: "true"
+  # The archive leaves out the Gemfile's check group.
+  BUNDLE_WITHOUT: check
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-aarch64
+            runner: macos-15
+          - platform: linux-x86_64
+            runner: ubuntu-24.04
+          - platform: windows-x86_64
+            runner: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        if: runner.os != 'Windows'
+        with:
+          cache_save: ${{ github.ref == 'refs/heads/trunk' }}
+          version: 2026.10.11
+          install_args: ruby
+
+      # Windows' Ruby is RubyInstaller's, with the DLLs and the MSYS2 its
+      # gems compile with, all from mise.toml, as in ci.yml.
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        if: runner.os == 'Windows'
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        with:
+          cache_save: ${{ github.ref == 'refs/heads/trunk' }}
+          version: 2026.10.11
+          install_args: http:rubyinstaller-head http:msys2-zlib http:msys2-libgcc http:msys2
+          add_shims_to_path: false
+          mise_dir: ${{ runner.temp }}\mise
+
+      - name: Give Windows' Ruby the rest of its environment
+        if: runner.os == 'Windows'
+        run: .github/scripts/windows-ruby-env.sh
+
+      - name: Build the app and pack the archive
+        run: .github/scripts/build-archive.sh "$PLATFORM" archives
+        env:
+          PLATFORM: ${{ matrix.platform }}
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: archive-${{ matrix.platform }}
+          path: archives/
+          if-no-files-found: error
+          # The archives are compressed already.
+          compression-level: 0
+
+  # No Ruby is set up here, and the script runs the app with an empty PATH.
+  smoke:
+    name: Smoke test (${{ matrix.platform }})
+    needs: build
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-aarch64
+            runner: macos-15
+          - platform: linux-x86_64
+            runner: ubuntu-24.04
+          - platform: windows-x86_64
+            runner: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: archive-${{ matrix.platform }}
+          path: archives
+
+      - name: Run crosslint --version and --help from the archive
+        run: .github/scripts/smoke-archive.sh archives/crosslint-*-"$PLATFORM".*
+        env:
+          PLATFORM: ${{ matrix.platform }}
+
+  release:
+    name: Release
+    if: github.ref_type == 'tag'
+    needs: smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the tag against crosslint.usage.kdl
+        run: .github/scripts/check-release-tag.sh "$GITHUB_REF_NAME"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: archive-*
+          merge-multiple: true
+          path: archives
+
+      - name: Write SHA256SUMS
+        working-directory: archives
+        run: |
+          [ "$(ls | wc -l)" -eq 3 ] || { echo "expected three archives:"; ls; exit 1; }
+          sha256sum crosslint-* > SHA256SUMS
+          sha256sum --check SHA256SUMS
+
+      - name: Create the GitHub release
+        run: gh release create "$GITHUB_REF_NAME" archives/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
