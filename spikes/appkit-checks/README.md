@@ -67,5 +67,11 @@ mise x -- ./setup.sh                 # installs the gem, compiles the grammars i
 mise x -- bundle exec ruby check.rb --verify
 ```
 
+`mise.toml` pins Ruby 4.0. If `mise x -- which ruby` and `mise x -- which bundle` print another Ruby or Bundler, put mise's first on `PATH`, because `setup.sh` and `check.rb` use whichever `bundle` and `ruby` they find first:
+
+```sh
+export PATH="$(mise where ruby)/bin:$PATH"
+```
+
 Needs a C compiler, `curl`, and `shasum` or `sha256sum`. `--verify` compares the output with `fixture/expected.yml`. `--tests` counts test files as uses.
-The fixture matched `expected.yml` on Linux (29 query files, 11 bundles). macOS and Windows were not run.
+The fixture matched `expected.yml` on Linux and on macOS (arm64): 29 query files, 11 bundles. Windows was not run.
