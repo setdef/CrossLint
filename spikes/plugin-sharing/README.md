@@ -69,7 +69,7 @@ Assumption, from issue #1: CrossLint is a self-contained app that carries its ow
 `try-mise.sh` ran with mise 2026.11.12, the version in Fledge#123, on one platform (no Linux or Windows run). It built a tarball holding a data-only plugin (two YAML files), then:
 
 1. Installed it with `"http:crosslint-plugin-adr-index" = { version = "0.1.0", url = "file://.../adr-index-0.1.0.tar.gz", checksum = "sha256:..." }`. It installed in 52 ms. `mise where` printed the install directory, which held `adr-index/crosslint-plugin.yml` and `adr-index/rules/...` (the top folder was kept). With an empty `mise.lock` present, `mise lock` recorded the URL and checksum for seven platforms.
-2. Changed the archive and installed again into a fresh data directory. mise refused it with `Expected: sha256:f211...` and `Actual: sha256:c706...`.
+2. Changed the archive and installed again into a fresh data directory. mise refused it with `Expected: sha256:d126...` and `Actual: sha256:10c7...`.
 3. Pointed the same backend at a GitHub tag archive of a public repository (`https://github.com/rubocop/rubocop-rake/archive/refs/tags/v0.7.1.tar.gz`, a tag with no release attached). It installed, the top folder was stripped, and `mise lock` recorded the archive's checksum.
 
 What the run shows: a plugin can be fetched from a tag or a release URL, pinned and verified by checksum, with no Ruby, Node or Git, and with no registry. What it does not show: how CrossLint finds the install directory (it would call `mise where` or read `mise.lock`, or the project would set a path), a Linux or Windows run, or the `github:` backend.
