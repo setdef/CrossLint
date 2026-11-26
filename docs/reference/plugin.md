@@ -185,7 +185,7 @@ end
 | Method | Meaning |
 | --- | --- |
 | `declare(settings)` | Called once per check, before any rule runs. Each setting has `name`, `arguments`, `properties`, `children`, and `line`, as the configuration gives them. |
-| `artifact(NAME, files:, companions: {}, key: nil, optional: false, hidden: true)` | Declares an artifact as an `artifact` line does, with `files` and each companion's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `files` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. With `hidden: false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. |
+| `artifact(NAME, files:, companions: {}, key: nil, optional: false, dotfiles: true)` | Declares an artifact as an `artifact` line does, with `files` and each companion's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `files` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. With `dotfiles: false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. |
 | `mistake(MESSAGE, SETTING)` | A mistake in the configuration at that setting's line, for `declare` to raise. It stops CrossLint with exit status 2, as any mistake does. |
 
 Anything else `declare` raises stops CrossLint with exit status 2, naming the plugin, since no check can run without its artifacts.
