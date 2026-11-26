@@ -273,6 +273,24 @@ class CheckTest < Minitest::Test
       message: %(no file matches the files of any artifact of plugin tests, such as "src/{path}.pipe.ts"))], none.notices
   end
 
+  def test_finds_no_artifact_whose_match_has_a_name_that_starts_with_a_dot_when_its_declaration_leaves_hidden_files_out
+    plain = declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb")
+    solid = plain.with(hidden: false)
+    files = ["lib/a.rb", "lib/.b.rb", "lib/.c/d.rb", "lib/e/.f/g.rb", "lib/h/.i.rb", "lib/j.k.rb"]
+    found = ->(declaration) { check(project(plugin("tests", artifacts: [declaration], policies: [policy("has-test", rules: [rule])])), files:).findings.map(&:artifact) }
+
+    assert_equal files.sort, found.call(plain)
+    assert_equal ["lib/a.rb", "lib/j.k.rb"], found.call(solid)
+  end
+
+  # Any placeholder's value, and not every one's.
+  def test_finds_no_artifact_when_only_one_of_two_placeholders_matched_a_name_that_starts_with_a_dot
+    pair = declaration("pair", "{name}/{path}.rb", "test" => "test/{name}/{path}_test.rb").with(hidden: false)
+    files = ["x/y.rb", "x/.y.rb", ".x/y.rb", "x/z/.y.rb"]
+
+    assert_equal ["x/y.rb"], check(project(plugin("tests", artifacts: [pair], policies: [policy("has-test", rules: [rule], applies_to: "pair")])), files:).findings.map(&:artifact)
+  end
+
   def test_warns_of_a_ruby_rule_no_policy_runs
     result = check(project(tests_plugin, unused: true), files: ["lib/a.rb", "test/a_test.rb"])
 

@@ -33,11 +33,14 @@ module CrossLint
     # from the pattern `key`, the name a debt entry can give each artifact
     # by in place of its primary path. An `optional` artifact that
     # matches no file is reported only when no artifact of the plugin
-    # matches one. A plugin's Ruby calls it with anything, so it takes
-    # anything, and raises Core::PluginError when a name isn't a string,
-    # `companions` isn't a hash, a pattern isn't one, or `optional` isn't
-    # true or false.
-    def artifact: (untyped name, files: untyped, ?companions: untyped, ?key: untyped, ?optional: untyped) -> Core::ArtifactDeclaration
+    # matches one. With `hidden: false`, a file whose match of a
+    # placeholder has a file or a folder named with a leading `.` is no
+    # artifact, as in a glob that skips dotfiles. A plugin's Ruby calls
+    # it with anything, so it takes anything, and raises
+    # Core::PluginError when a name isn't a string, `companions` isn't a
+    # hash, a pattern isn't one, or `optional` or `hidden` isn't true or
+    # false.
+    def artifact: (untyped name, files: untyped, ?companions: untyped, ?key: untyped, ?optional: untyped, ?hidden: untyped) -> Core::ArtifactDeclaration
 
     # The mistake to raise for `setting`, one of those `declare` is
     # given: it names the configuration and the setting's line.

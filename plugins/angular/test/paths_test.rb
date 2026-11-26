@@ -92,6 +92,17 @@ class AngularPathsTest < Minitest::Test
     assert_equal ["app/a.pipe.ts", "src/b.pipe.ts"], findings(check(%(src-dir "."))).map(&:first)
   end
 
+  # ng-nudge's node-glob patterns skip a file or a folder whose name
+  # starts with a dot, below src-dir; src-dir itself can be one.
+  def test_finds_no_artifact_in_a_folder_or_file_under_src_dir_whose_name_starts_with_a_dot
+    %w[src/.cache/a.pipe.ts src/app/.hidden/b.pipe.ts src/app/.c.pipe.ts src/.d/e/f.service.ts src/pages/.g-page.ts src/app/h.pipe.ts
+      .app/i.pipe.ts .app/.j/k.pipe.ts].each { |path| write(@root, path, "") }
+    settings = %(role "page" files="pages/{name}-page.ts")
+
+    assert_equal [["src/app/h.pipe.ts", "pipe", "spec-exists", "no spec file at src/app/h.pipe.spec.ts"]], findings(check(settings))
+    assert_equal [[".app/i.pipe.ts", "pipe", "spec-exists", "no spec file at .app/i.pipe.spec.ts"]], findings(check(%(src-dir ".app")))
+  end
+
   def test_warns_once_when_no_role_matches_a_file_and_never_of_one_role_that_doesnt
     write(@root, "src/a.pipe.ts", "")
     write(@root, "src/a.pipe.spec.ts", "")

@@ -17,14 +17,14 @@ class ArtifactsTest < Minitest::Test
 
   def test_declares_an_artifact_on_the_line_that_names_its_file
     declared = @declarer.artifact("component", files: "src/{path}.component.ts", companions: {"spec" => "src/{path}.component.spec.ts"},
-      key: "{path}", optional: true)
+      key: "{path}", optional: true, hidden: false)
 
     assert_equal ArtifactDeclaration.new(name: "component", files: PathPattern.new(source: "src/{path}.component.ts"), line: 4,
       companions: [CompanionDeclaration.new(name: "spec", pattern: PathPattern.new(source: "src/{path}.component.spec.ts"), line: 4)],
-      key: PathPattern.new(source: "{path}"), optional: true), declared
+      key: PathPattern.new(source: "{path}"), optional: true, hidden: false), declared
   end
 
-  def test_declares_an_artifact_with_no_companions_no_key_and_not_optional_unless_given
+  def test_declares_an_artifact_with_no_companions_no_key_not_optional_and_hidden_files_unless_given
     assert_equal ArtifactDeclaration.new(name: "doc", files: PathPattern.new(source: "{path}.md"), companions: [], line: 4),
       @declarer.artifact("doc", files: "{path}.md")
   end
@@ -51,6 +51,7 @@ class ArtifactsTest < Minitest::Test
         %(declared artifact "doc" with a companion named :a, which is no string),
       -> { @declarer.artifact("doc", files: "{path}.md", companions: {"a" => nil}) } => %(declared artifact "doc" with the pattern nil, which is no string),
       -> { @declarer.artifact("doc", files: "{path}.md", optional: "yes") } => %(declared artifact "doc" with optional: "yes", which is neither true nor false),
+      -> { @declarer.artifact("doc", files: "{path}.md", hidden: nil) } => %(declared artifact "doc" with hidden: nil, which is neither true nor false),
       -> { @declarer.declare([]) } => "has no declare method"
     }.each do |call, message|
       assert_equal message, assert_raises(PluginError, &call).message

@@ -28,7 +28,8 @@ class Artifacts < CrossLint::Artifacts
       stem = files.delete_suffix(".ts")
       companions = given.fetch(:expects).to_h { |name| [name, within.call("#{stem}.spec.ts")] }
       companions.merge!(COMPONENT.transform_values { |suffix| within.call(stem + suffix) }, "tsconfig" => tsconfig) if role == "component"
-      artifact(role, files: within.call(files), companions:, key: files.delete_suffix(".#{role}.ts"), optional: given.fetch(:optional))
+      # node-glob, which ng-nudge's patterns were, skips what starts with a dot.
+      artifact(role, files: within.call(files), companions:, key: files.delete_suffix(".#{role}.ts"), optional: given.fetch(:optional), hidden: false)
     end
   end
 

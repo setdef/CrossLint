@@ -101,6 +101,7 @@ module CrossLint
         files.filter_map do |path|
           match = declaration.files.match(path)
           next unless match
+          next if !declaration.hidden && match.values.any? { |value| value.split("/").any? { |segment| segment.start_with?(".") } }
 
           companions = declaration.companions.map do |companion|
             companion_path = companion.pattern.expand(match)
