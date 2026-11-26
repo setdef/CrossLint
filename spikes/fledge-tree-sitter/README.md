@@ -93,7 +93,7 @@ Each file in `sample/project/.crosslint/rules/` was loaded by the installed app,
 | `06_vendored_pure_ruby.rb` | adds a `vendor/` folder of the project to `$LOAD_PATH` and requires a pure-Ruby file | works |
 | `07_own_gemfile.rb` | writes a Gemfile with `rainbow`, runs the app's `bundle install` and `bundle exec` in a subprocess | loads and prints the gem's output; needs `BUNDLE*`, `RUBY*`, `GEM_*` and `BUNDLER_*` variables removed (`unsetenv_others: true`), because the app starts under `bundler/setup` and a subprocess inherits it |
 
-The runs that loaded rules 05 and 07 took 349 s on Linux and 822 s on macOS, and a few seconds on a workstation: the time went to the network, and its cause was not investigated.
+The runs that loaded rules 05 and 07 took 349 s on Linux and 822 s on macOS, and a few seconds on a third computer (a Mac). The time went to the network on the first two; the cause was not investigated.
 
 So in a Fledge app, a project-local rule file can load and run, and it can use Ruby's standard library, the gems in the app's lockfile, and Ruby files the project carries. It stops at gems the app was not built with. Two routes past that exist, `bundler/inline` and a subprocess with a Gemfile of the project; both need a network and a writable folder at run time, and neither was tried with a gem that needs a compiler (a user's computer may have none).
 
