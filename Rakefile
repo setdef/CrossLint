@@ -3,6 +3,8 @@
 require "minitest/test_task"
 require "rbconfig"
 require "tmpdir"
+require "yaml"
+require_relative "tasks/gate_subjects"
 
 # CrossLint's tests, and each built-in plugin's in its own folder, so a
 # plugin can move to a repository of its own with its tests.
@@ -136,16 +138,52 @@ end
 task "check:without_mutant" => [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :crosslint, "usage:lint",
   "usage:reference", :reuse]
 
-desc "Run mutation testing on the subjects changed since origin/trunk (or GATE_BASE), which every mutation of must be killed; mutant forks, so it doesn't run on Windows"
+desc "Run mutation testing on the subjects changed since origin/trunk (or GATE_BASE), and those the changed tests cover, which every mutation of must be killed; " \
+  "mutant forks, so it doesn't run on Windows"
 task "gate:mutant" do
-  next puts("rake gate:mutant: mutant doesn't run on Windows") if WINDOWS
+  # An exit status of 0 from the gate must never mean mutation testing was
+  # skipped, which `rake mutant`, CI's own task, still allows itself.
+  abort "rake gate:mutant: the gate runs on Linux or macOS, where mutant runs, and not on Windows" if WINDOWS
 
   base = ENV.fetch("GATE_BASE", "origin/trunk")
   # Without the base, mutant fails in a way that says nothing of it, and a
   # build machine has origin/trunk only when its request says --base origin/trunk.
   abort "rake gate:mutant: no #{base} to compare with; fetch it, or set GATE_BASE" unless system("git", "rev-parse", "--verify", "--quiet", base, out: File::NULL)
 
-  sh "bundle", "exec", "mutant", "run", "--since", base
+  commit = ->(rev) { IO.popen(["git", "rev-parse", "--verify", "#{rev}^{commit}"], &:read).chomp }
+  abort "rake gate:mutant: #{base} is HEAD's own commit, so nothing is compared; set GATE_BASE to the commit your change starts from" if commit.call(base) == commit.call("HEAD")
+
+  # What mutant's --since asks Git for leaves out a file Git doesn't track yet.
+  untracked = IO.popen(%w[git ls-files --others --exclude-standard], &:read).lines(chomp: true).grep(/\.rb\z/)
+  unless untracked.empty?
+    pronoun = (untracked.size == 1) ? "it" : "them"
+    warn "rake gate:mutant: warning: Git doesn't track #{untracked.join(", ")} yet, so the diff leaves #{pronoun} out and no mutation testing covers #{pronoun}; git add #{pronoun}"
+  end
+
+  subjects = lambda do |*arguments|
+    listed = IO.popen(["bundle", "exec", "mutant", "environment", "subject", "list", *arguments], &:read)
+    abort "rake gate:mutant: mutant environment subject list failed" unless $?.success?
+    listed.lines(chomp: true).reject { |line| line.empty? || line.include?(" ") }
+  end
+
+  changed = subjects.call("--since", base)
+  tests = IO.popen(["git", "diff", "--name-only", "--no-renames", base], &:read).lines(chomp: true).select { |file| GateSubjects.test_file?(file) }
+  covered, unmapped = [[], []]
+  unless tests.empty?
+    configured = YAML.safe_load_file(".mutant.yml").dig("matcher", "subjects")
+    covered, unmapped = GateSubjects.covered(tests, subjects.call, configured, ->(expressions) { subjects.call(*expressions) })
+  end
+
+  if unmapped.empty?
+    selected = (changed + covered).uniq
+    puts "rake gate:mutant: since #{base}: #{selected.size} subjects (#{changed.size} changed, #{covered.size} more covered by the #{tests.size} changed test files)"
+    next if selected.empty?
+
+    sh "bundle", "exec", "mutant", "run", *selected
+  else
+    puts "rake gate:mutant: since #{base}: #{subjects.call.size} subjects, every one, since #{unmapped.join(", ")} covers no subject"
+    sh "bundle", "exec", "mutant", "run"
+  end
 end
 
 # The checks to run before a push, which are CI's build cut to what a
