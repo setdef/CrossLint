@@ -262,6 +262,21 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal folder, port.folder(repository_url, "v1.2.0")
   end
 
+  # A plugin in a folder of its repository (path=) is read from the saved
+  # copy, so the copy holds the whole commit, every folder of it.
+  def test_saves_every_folder_of_the_commit_whether_or_not_a_plugin_is_in_it
+    write(@origin, "plugins/alpha/plugin.kdl", "// alpha\n")
+    write(@origin, "plugins/beta/rules/check.rb", "# beta\n")
+    write(@origin, "docs/guide.md", "guide\n")
+    commit("folders")
+    git(@origin, "tag", "folders")
+    folder = port.fetch(repository_url, "folders")
+    saved = Dir.glob("**/*", File::FNM_DOTMATCH, base: folder).reject { |path| File.directory?(File.join(folder, path)) || path.start_with?(".git/") }
+
+    assert_equal %w[docs/guide.md plugin.kdl plugins/alpha/plugin.kdl plugins/beta/rules/check.rb], saved.sort
+    assert_equal "// alpha\n", File.binread(File.join(folder, "plugins", "alpha", "plugin.kdl"))
+  end
+
   def test_names_the_plugin_for_its_repository_without_dot_git
     assert_equal "signatures", File.basename(port.folder("https://example.com/OWNER/signatures.git/", "v1.0.0"))
     error = assert_raises(Core::FetchError) { port.folder("https://example.com/OWNER/a b", "v1.0.0") }
