@@ -213,6 +213,17 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_check_reports_a_fault_and_exits_with_2
+    fault = "crosslint: fault in plugin tests: rule raises on lib/a.rb raised RuntimeError: boom\n"
+
+    assert_equal ["", "#{fault}crosslint: run it again with --debug to see where each fault was raised\n" \
+      "crosslint: checked 2 ruby-file artifacts: 1 fault\n", 2], check("check", app: app(raises: true))
+    assert_equal ["", fault, 2], check("check", "--silent", app: app(raises: true))
+    debugged = check("check", "--debug", app: app(raises: true))[1].lines
+
+    assert_equal [fault, "crosslint:   from raises.rb:1:in 'check'\n"], debugged.take(2)
+  end
+
   def test_check_names_the_file_and_line_of_a_mistake
     mistake = CrossLint::Core::Mistake.new(%(unknown node "file", did you mean "files"?), file: ".config/tests/plugin.kdl", line: 2)
 
@@ -244,20 +255,28 @@ class CLITest < Minitest::Test
     [out.string, err.string, status]
   end
 
+  # A rule that raises.
+  RAISES_SOURCE = "class Raises < CrossLint::Rule; def check(_) = raise('boom'); end"
+
+  RAISES = ->(namespace) { namespace.module_eval(RAISES_SOURCE, "raises.rb", 1) }
+
   # A project with the plugin tests: every lib/{path}.rb has a test at
   # test/{path}_test.rb, and only lib/a.rb has one.
-  def app(files: ["lib/a.rb", "lib/b.rb", "test/a_test.rb"], severity: nil, unused: false, warnings: nil, verbosity: nil, broken: nil)
+  def app(files: ["lib/a.rb", "lib/b.rb", "test/a_test.rb"], severity: nil, unused: false, warnings: nil, verbosity: nil, broken: nil, raises: false)
     core = CrossLint::Core
     listed = [core::ListedPlugin.new(name: "./.config/tests", ref: nil, settings: [], line: 1)]
     rules = unused ? [core::RuleDeclaration.new(name: "unused", ruby: "unused.rb", line: 3)] : []
+    rules << core::RuleDeclaration.new(name: "raises", ruby: "raises.rb", line: 4) if raises
     artifact = core::ArtifactDeclaration.new(name: "ruby-file", files: core::PathPattern.new(source: "lib/{path}.rb"), line: 1,
       companions: [core::CompanionDeclaration.new(name: "test", pattern: core::PathPattern.new(source: "test/{path}_test.rb"), line: 2)])
     policy = core::Policy.new(name: "has-test", applies_to: core::AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, line: 5,
-      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "test"}, severity:, line: 7)])
+      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "test"}, severity:, line: 7)] +
+        (raises ? [core::PolicyRule.new(name: "raises", arguments: {}, severity: nil, line: 8)] : []))
     manifest = core::Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
     configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: listed, policies: [], warnings:, verbosity:)
     CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => broken || configuration}),
       manifests: CrossLint::Adapters::MemoryPluginManifests.new({"#{WORK}/app/.config/tests" => manifest}),
-      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}))
+      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}),
+      plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new({"#{WORK}/app/.config/tests/raises.rb" => RAISES}))
   end
 end

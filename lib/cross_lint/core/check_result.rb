@@ -6,7 +6,7 @@ module CrossLint
   module Core
     class Notice < Data.define(:file, :line, :message); end
 
-    class Summary < Data.define(:kinds, :errors, :warnings, :warnings_shown)
+    class Summary < Data.define(:kinds, :faults, :errors, :warnings, :warnings_shown)
       def artifacts = kinds.sum(&:last)
 
       def line
@@ -18,7 +18,7 @@ module CrossLint
       private
 
       def found
-        counts = {"error" => errors, "warning" => warnings}.reject { |_, count| count.zero? }
+        counts = {"fault" => faults, "error" => errors, "warning" => warnings}.reject { |_, count| count.zero? }
           .map { |word, count| "#{count} #{word}#{"s" unless count == 1}" }
         return counts.join(", ") unless counts.empty?
 
@@ -26,7 +26,7 @@ module CrossLint
       end
     end
 
-    class CheckResult < Data.define(:notices, :findings, :summary, :verbosity, :failed)
+    class CheckResult < Data.define(:notices, :findings, :summary, :verbosity, :failed, :faults)
       def violations
         findings.filter_map do |finding|
           case finding

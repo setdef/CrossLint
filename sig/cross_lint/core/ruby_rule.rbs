@@ -1,0 +1,57 @@
+module CrossLint
+  module Core
+    # A rule written in Ruby, loaded through the plugin-Ruby port, with
+    # the one instance of its class that checks every artifact.
+    class RubyRule
+      # What stops a plugin: a fault while a rule loads or checks.
+      class Stopped < StandardError
+        # The fault.
+        attr_reader fault: Fault
+
+        # An error that carries `fault`.
+        def initialize: (Fault fault) -> void
+      end
+
+      # What a class name looks like.
+      CLASS_NAME: Regexp
+
+      # The name of a rule's class: its name in camel case, with each word
+      # between `-` or `_` capitalized, as "SignatureNamesClass" for
+      # "signature-names-class".
+      #
+      # ```ruby
+      # CrossLint::Core::RubyRule.class_name("signature-names-class") # => "SignatureNamesClass"
+      # ```
+      def self.class_name: (String name) -> String
+
+      # Runs `declaration`'s file in `namespace`, and makes an instance of
+      # the rule's class. Raises Mistake when the file isn't there, and
+      # Stopped when anything else goes wrong.
+      def self.load: (_PluginRuby plugin_ruby, Plugin plugin, RuleDeclaration declaration, Module namespace) -> RubyRule
+
+      # The rule's class in `namespace`. Raises PluginError when there is
+      # none, or when it doesn't inherit from CrossLint::Rule.
+      def self.find: (RuleDeclaration declaration, Module namespace) -> singleton(Rule)
+
+      # The rule `name` of `plugin`, checked by `rule`.
+      def initialize: (plugin: Plugin, name: String, rule: Rule) -> void
+
+      # The severity of the rule's violations unless its policy line or
+      # the configuration gives one: `:error`.
+      def severity: () -> severity
+
+      # What the rule reports on `artifact`, reading files with `read`; a
+      # Ruby rule takes no `arguments`. Raises Stopped when the rule
+      # raises, or returns anything but violations of that artifact.
+      def results: (Artifact artifact, Hash[String, untyped] arguments, ^(String path) -> String read) -> Array[RuleResult]
+
+      private
+
+      @plugin: Plugin
+
+      @name: String
+
+      @rule: Rule
+    end
+  end
+end

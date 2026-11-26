@@ -206,11 +206,13 @@ class LoadProjectTest < Minitest::Test
       manifest: tests_manifest(artifacts: [artifact(companions: [])])
   end
 
-  def test_runs_a_ruby_rule_its_plugin_declares_with_any_arguments
+  def test_runs_a_ruby_rule_its_plugin_declares_with_no_arguments
     rules = [RuleDeclaration.new(name: "names-class", ruby: "rules/names_class.rb", line: 2)]
-    manifest = tests_manifest(rules:, policies: [policy(rules: [policy_rule("names-class", arguments: {"style" => "strict"})])])
+    manifest = tests_manifest(rules:, policies: [policy(rules: [policy_rule("names-class")])])
 
     assert_empty load_project(manifests: {"#{APP}/rules/tests" => manifest}).unused_rules
+    assert_mistake "rules/tests/plugin.kdl", 7, %(rule "names-class" is written in Ruby, and takes no style=),
+      manifest: tests_manifest(rules:, policies: [policy(rules: [policy_rule("names-class", arguments: {"style" => "strict"})])])
   end
 
   def test_reports_a_ruby_rule_no_policy_runs
@@ -369,7 +371,7 @@ class LoadProjectTest < Minitest::Test
     Policy.new(name: "has-test", applies_to: AppliesTo.new(artifact: applies_to, line: 6), condition:, rules:, line:)
   end
 
-  def policy_rule(name = "companion-exists", arguments: {"companion" => "test"})
+  def policy_rule(name = "companion-exists", arguments: BuiltInRule.named(name) ? {"companion" => "test"} : {})
     PolicyRule.new(name:, arguments:, severity: nil, line: 7)
   end
 end

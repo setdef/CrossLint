@@ -1,0 +1,97 @@
+module CrossLint
+  # The class a rule written in Ruby inherits from. A plugin declares the
+  # rule as `rule NAME ruby=FILE`, and `FILE`, relative to the plugin's
+  # folder, defines one class named after the rule in camel case, such
+  # as `SignatureNamesClass` for "signature-names-class", with a `check`
+  # method. CrossLint defines CrossLint::Rule before it runs the file, so
+  # the file requires nothing to use it, and makes one instance of the
+  # class for each check, with no arguments, so the instance can keep
+  # what it learns from one artifact for the next.
+  #
+  # The file runs on CrossLint's Ruby. It can require Ruby's standard
+  # library and files in its plugin's folder, and no gem CrossLint wasn't
+  # built with; bundler/inline is refused. Anything the file or `check`
+  # raises is a fault that stops the plugin, and the other plugins run.
+  #
+  # ```ruby
+  # class TestNamesItsFile < CrossLint::Rule
+  #   def check(artifact)
+  #     test = artifact.companion("test")
+  #     return [] if !test.exist? || test.read.include?(artifact.path)
+  #
+  #     [violation(artifact, "#{test.path} doesn't name #{artifact.path}")]
+  #   end
+  # end
+  # ```
+  class Rule
+    # The folder Ruby finds `bundler/inline` in before Bundler's: its
+    # `bundler/inline.rb` raises Core::PluginError.
+    REFUSED: String
+
+    # One of an artifact's companions, as a rule sees it.
+    class Companion
+      # The companion's name, as its artifact declares it, such as "test".
+      attr_reader name: String
+
+      # The companion's path, relative to the project's root, with `/`.
+      attr_reader path: String
+
+      # A view of `companion` that reads files with `read`.
+      def initialize: (Core::Companion companion, ^(String path) -> String read) -> void
+
+      # Whether a file or folder exists at `path`, by its exact name.
+      def exist?: () -> bool
+
+      # The companion's text, its bytes as UTF-8. Raises Errno::ENOENT when
+      # it doesn't exist.
+      def read: () -> String
+
+      private
+
+      @exists: bool
+
+      @read: ^(String path) -> String
+    end
+
+    # The artifact a rule checks: its primary file and its companions.
+    class Artifact
+      # The artifact's role: its declaration's name, such as "ruby-file".
+      attr_reader role: String
+
+      # The primary file's path, relative to the project's root, with `/`.
+      attr_reader path: String
+
+      # The text each placeholder of the files pattern matched in `path`,
+      # by name, such as `{"path" => "fledge/archive"}`; frozen.
+      attr_reader match: Hash[String, String]
+
+      # A view of `artifact` that reads files with `read`.
+      def initialize: (Core::Artifact artifact, ^(String path) -> String read) -> void
+
+      # The companion called `name`. Raises KeyError when the artifact's
+      # declaration has none of that name.
+      def companion: (String name) -> Companion
+
+      # The primary file's text, its bytes as UTF-8.
+      def read: () -> String
+
+      private
+
+      @companions: Array[Companion]
+
+      @read: ^(String path) -> String
+    end
+
+    # The rule's violations on `artifact`, each made with `violation`, or
+    # none. A rule's class defines it; this one raises Core::PluginError,
+    # which stops the plugin.
+    def check: (Artifact artifact) -> Array[Core::RuleResult]
+
+    # A violation of `artifact`, an Artifact `check` was given, with
+    # `message`, a String, and, where one artifact can fail the rule in
+    # several ways, a `detail` that tells them apart, a String such as a
+    # member's name. Rule files call it with anything, so it takes
+    # anything, and raises Core::PluginError for what isn't those.
+    def violation: (untyped artifact, untyped message, ?detail: untyped) -> Core::RuleResult
+  end
+end

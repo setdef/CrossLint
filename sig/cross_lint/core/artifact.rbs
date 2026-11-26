@@ -98,5 +98,30 @@ module CrossLint
       def initialize: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
                        detail: String?) -> void
     end
+  
+    # What a Ruby rule reports, made with CrossLint::Rule#violation: the
+    # artifact it checked, by its primary file and role, a message, and a
+    # detail where the rule gives one. The check adds the plugin, policy,
+    # and severity to make a Violation.
+    class RuleResult < Data
+      # The artifact's primary file, relative to the project's root.
+      attr_reader path: String
+
+      # The artifact's role.
+      attr_reader role: String
+
+      # What is wrong.
+      attr_reader message: String
+
+      # What tells this result from others of the rule on the artifact,
+      # or nil.
+      attr_reader detail: String?
+
+      # A result with these fields.
+      def self.new: (path: String, role: String, message: String, detail: String?) -> instance
+
+      # A result with these fields.
+      def initialize: (path: String, role: String, message: String, detail: String?) -> void
+    end
   end
 end
