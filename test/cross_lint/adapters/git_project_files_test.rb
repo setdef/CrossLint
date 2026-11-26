@@ -121,6 +121,36 @@ class GitProjectFilesTest < Minitest::Test
     refute_match(/isn't in a Git working tree/, mistake.message)
   end
 
+  def test_gives_gits_message_without_a_trailing_newline
+    port = project_files_port(listed: ["a.rb"])
+    write(project_root, ".git/index", "not an index\n")
+    mistake = assert_raises(Mistake) { port.files(project_root) }
+
+    refute_match(/\s\z/, mistake.message)
+  end
+
+  def test_says_a_folder_inside_the_git_directory_isnt_in_a_working_tree
+    port = project_files_port(listed: ["a.rb"])
+    mistake = assert_raises(Mistake) { port.files(File.join(project_root, ".git")) }
+
+    assert_equal CrossLint::Adapters::GitProjectFiles.outside(File.join(project_root, ".git")), mistake.message
+  end
+
+  def test_asks_whether_a_folder_is_a_working_tree_whatever_repository_git_variables_name
+    port = project_files_port(listed: ["a.rb"])
+    other = File.join(@base, "other")
+    FileUtils.mkdir_p(other)
+    Open3.capture3("git", "init", "-q", chdir: other)
+    ENV["GIT_DIR"] = File.join(other, ".git")
+    ENV["GIT_WORK_TREE"] = other
+    mistake = assert_raises(Mistake) { port.files(outside_root) }
+
+    assert_equal CrossLint::Adapters::GitProjectFiles.outside(outside_root), mistake.message
+  ensure
+    ENV.delete("GIT_DIR")
+    ENV.delete("GIT_WORK_TREE")
+  end
+
   def test_says_when_it_finds_no_git
     mistake = assert_raises(Mistake) { CrossLint::Adapters::GitProjectFiles.new(git: "no-such-git").files(@base) }
 
