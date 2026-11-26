@@ -83,9 +83,22 @@ In the project's root, `crosslint init --from-ng-nudge` writes `.config/crosslin
 
 CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't read and stylesheets it looks for in the wrong folder. Run `crosslint check --update-debt` once after moving, so the next check passes, and work through the entries it adds as you would any other debt.
 
+## Documentation
+
+- In the terminal: `crosslint --help` lists every command with examples, and `crosslint check --help` explains one.
+- [Getting started](docs/getting-started.md): add CrossLint to a project, write a rule for it, and keep the check passing with debt.
+- [Plugin reference](docs/reference/plugin.md): everything a `plugin.kdl` can declare, including rules written in Ruby.
+- [Configuration reference](docs/reference/configuration.md): everything `.config/crosslint.kdl` can hold, including the settings of the Angular and debt plugins.
+- [Command reference](docs/reference/cli.md): every command, flag, and exit status.
+- [Glossary](docs/glossary.md): the word CrossLint uses for each idea, and the words it avoids.
+
 ## Reporting problems
 
 Open an issue at [github.com/setdef/CrossLint/issues](https://github.com/setdef/CrossLint/issues). Include the command you ran, its output, and `crosslint --version`.
+
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) says how a change lands, how files are licensed, and how releases are cut.
 
 ## License
 
