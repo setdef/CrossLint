@@ -12,9 +12,6 @@ module CrossLint
     # violation, and the result leaves out what the steps excuse and adds
     # what they report.
     class Check
-      # The order findings that differ only in severity are listed in.
-      SEVERITIES: Array[Symbol]
-
       # A use case that reads the project's files through `project_files`,
       # loads plugins' Ruby through `plugin_ruby`, and runs their helpers
       # through `helpers`, and runs each plugin's steps from `steps`, by

@@ -8,9 +8,6 @@ require_relative "step"
 module CrossLint
   module Core
     class Check
-      # Errors sort before warnings.
-      SEVERITIES = %i[error warning].freeze
-
       def initialize(project_files:, plugin_ruby:, helpers:, steps:)
         @project_files = project_files
         @plugin_ruby = plugin_ruby
@@ -221,7 +218,7 @@ module CrossLint
       def sort(findings)
         findings.sort_by do |finding|
           case finding
-          when Violation then [finding.artifact, finding.plugin, finding.policy, finding.message, SEVERITIES.index(finding.severity)]
+          when Violation then [finding.artifact, finding.plugin, finding.policy, finding.message, finding.severity]
           when Stale then [finding.artifact, finding.plugin, finding.policy, finding.message]
           else [finding.path, finding.plugin, "", finding.role]
           end
