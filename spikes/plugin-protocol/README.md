@@ -1,7 +1,3 @@
-<!--
-  SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-  SPDX-License-Identifier: CC-BY-SA-4.0
--->
 # Plugins as separate programs
 
 A spike for [issue #4](https://github.com/setdef/CrossLint/issues/4). It is evidence, not CrossLint's design, and it makes none of #4's decisions.

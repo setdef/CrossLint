@@ -1,7 +1,3 @@
-<!--
-  SPDX-FileCopyrightText: 2026 setdef <kerrick@setdef.com>
-  SPDX-License-Identifier: CC-BY-SA-4.0
--->
 # Fledge app with ruby_tree_sitter
 
 This spike is throwaway evidence for step 3 of [#1](https://github.com/setdef/CrossLint/issues/1) ("Building it"). It is not CrossLint's design.
