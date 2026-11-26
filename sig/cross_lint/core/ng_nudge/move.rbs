@@ -1,0 +1,70 @@
+module CrossLint
+  module Core
+    module NgNudge
+      # What `crosslint init --from-ng-nudge` did, or would do.
+      class MoveResult < Data
+        # Each change, as a verb and what it acts on, such as "write
+        # .config/crosslint/config.kdl, with the plugins angular and debt".
+        attr_reader changes: Array[String]
+
+        # Whether it only listed the changes.
+        attr_reader dry_run: bool
+
+        # A result with these fields.
+        def self.new: (changes: Array[String], dry_run: bool) -> instance
+
+        # A result with these fields.
+        def initialize: (changes: Array[String], dry_run: bool) -> void
+      end
+
+      # Moves a project from ng-nudge 0.3.0: writes the configuration its
+      # rc.json converts to (Rc), and moves its debt file to
+      # `.config/crosslint/debt.tsv` as it is. Every key is checked, the
+      # debt file read, and the regular expression of `withComment.matching`
+      # tested by JavaScript and by its translation on each comment, before
+      # any change, and each change is listed to `planned` before the
+      # first. It raises Mistake, naming the file and the key, for
+      # anything it can't carry, and for a configuration or a debt file it
+      # would replace, unless it is told to.
+      class Move
+        # A use case that reads rc.json and the extension files through
+        # `ng_nudge`, writes the configuration through `configuration`,
+        # reads and moves the debt file through `debt_files`, and tests
+        # expressions through `javascript`.
+        def initialize: (configuration: _Configuration, ng_nudge: _NgNudge, debt_files: _DebtFiles, javascript: _JavaScript) -> void
+
+        # Moves the project whose root is `root`. With `force`, replaces
+        # a configuration and a debt file that are there; with `dry_run`,
+        # changes nothing. `planned` is called with the changes before the
+        # first is made.
+        def call: (String root, ?force: bool, ?dry_run: bool, ?planned: (^(Array[String]) -> void)?) -> MoveResult
+
+        private
+
+        @configuration: _Configuration
+
+        @ng_nudge: _NgNudge
+
+        @debt_files: _DebtFiles
+
+        @javascript: _JavaScript
+
+        # Raises a Mistake that says `what`, a file CrossLint would write,
+        # is there already.
+        def refuse_existing: (String file, String what) -> bot
+
+        # Raises a Mistake when `paths` has a file of artifacts or
+        # policies, which change what ng-nudge checks.
+        def refuse_code: (Array[String] paths) -> void
+
+        # The lines for the configuration written, and the debt file
+        # moved, if there is one.
+        def moved: (bool replaced, Rc::Result converted, bool moves, DebtFile debt) -> Array[String]
+
+        # Raises a Mistake when JavaScript and the translation of
+        # `matching` don't agree on a comment of `debt`.
+        def agree: (Matching matching, DebtFile debt) -> void
+      end
+    end
+  end
+end

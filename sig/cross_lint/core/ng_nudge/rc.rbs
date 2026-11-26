@@ -1,0 +1,199 @@
+module CrossLint
+  module Core
+    module NgNudge
+      # The JavaScript expression of an rc.json's `withComment.matching`,
+      # and the Ruby expression it was translated to.
+      class Matching < Data
+        # The key it came from, as messages name it.
+        attr_reader key: String
+
+        # The expression as rc.json has it.
+        attr_reader source: String
+
+        # The Ruby expression, as source text (Expression.translate).
+        attr_reader translated: String
+
+        # A matching with these fields.
+        def self.new: (key: String, source: String, translated: String) -> instance
+
+        # A matching with these fields.
+        def initialize: (key: String, source: String, translated: String) -> void
+      end
+
+      # An ng-nudge 0.3.0 rc.json, as the configuration CrossLint reads.
+      # Each key becomes what the issue that decided the conversion says:
+      # `srcDir` and `tsConfig` become `src-dir` and `tsconfig` of the
+      # Angular plugin, cleaned up and left out when they are the defaults;
+      # each `artifacts` role becomes a `role` of that plugin, with its
+      # pattern converted (Glob) and its `expects`; each of the six rules'
+      # `enabled` and `severity` become a `policy` line; `rules.has-debt`
+      # does too, with its `withComment` as the debt plugin's
+      # `report-entries`; and `options` become `warnings` and `verbosity`.
+      # A key or a value it can't carry raises a Mistake that names the
+      # file, the key, and what to change.
+      class Rc
+        # What converting an rc.json gives.
+        class Result < Data
+          # The configuration, listing the Angular and debt plugins.
+          attr_reader configuration: Configuration
+
+          # Each change that needs saying, as a verb and what it acts on,
+          # in the order of the keys.
+          attr_reader changes: Array[String]
+
+          # The expression to test on each comment of the debt file, or nil
+          # when no expression counts.
+          attr_reader matching: Matching?
+
+          # A result with these fields.
+          def self.new: (configuration: Configuration, changes: Array[String], matching: Matching?) -> instance
+
+          # A result with these fields.
+          def initialize: (configuration: Configuration, changes: Array[String], matching: Matching?) -> void
+        end
+
+        # A `report-entries` setting, and the expression it holds, if any.
+        class Report < Data
+          # The `report-entries` setting.
+          attr_reader setting: Setting
+
+          # The expression its `matching=` is the translation of, or nil.
+          attr_reader matching: Matching?
+
+          # A report with these fields.
+          def self.new: (setting: Setting, matching: Matching?) -> instance
+
+          # A report with these fields.
+          def initialize: (setting: Setting, matching: Matching?) -> void
+        end
+
+        # The configuration's path, as messages name it.
+        FILE: String
+
+        # The keys of rc.json that ng-nudge reads.
+        KEYS: Array[String]
+
+        # The names of the six rules the Angular plugin has.
+        RULES: Array[String]
+
+        # The name of the debt rule, which the debt plugin has.
+        DEBT_RULE: String
+
+        # The values of a rule's `severity`.
+        SEVERITIES: Array[String]
+
+        # The values of a `withComment` ceiling.
+        CEILINGS: Array[String]
+
+        # Each option and the values it takes.
+        OPTIONS: Hash[String, Array[String]]
+
+        # What a role's name can be made of.
+        ROLE: Regexp
+
+        # The lists an `expects` can be, as the Angular plugin reads them.
+        EXPECTS: Array[Array[String]]
+
+        # The line number of every setting a conversion makes, which has no
+        # line since it isn't read from a file.
+        LINE: Integer
+
+        # An object with no key, for a key that isn't there.
+        NONE: Hash[String, untyped]
+
+        # A conversion of the rc.json whose text is `text`, which Mistakes
+        # name as `file`.
+        def initialize: (String text, ?file: String) -> void
+
+        # The configuration and the changes. Raises Mistake, naming the key,
+        # for a key or a value it doesn't carry.
+        def call: () -> Result
+
+        private
+
+        @text: String
+
+        @file: String
+
+        @changes: Array[String]
+
+        # The conversion of the object `data`.
+        def convert: (Hash[String, untyped] data) -> Result
+
+        # Raises a Mistake that names `key` and says `message`.
+        def refuse: (String key, String message) -> bot
+
+        # The text parsed as JSON. Raises Mistake when it isn't.
+        def parse: () -> untyped
+
+        # Refuses the first key of `given` that isn't one of `known`, naming
+        # the nearest spelling, and saying `why`; the key is named inside
+        # `within`, the key of the object it is in, unless that is nil.
+        def refuse_unknown: (Hash[String, untyped] given, Array[String] known, String why, ?within: String?) -> void
+
+        # `value` when it is an object, as a Hash; else refuses, naming `key`.
+        def object: (untyped value, String key) -> Hash[String, untyped]
+
+        # `value` when it is a string; else refuses, naming `key`, and saying
+        # it takes `what`.
+        def string: (untyped value, String key, String what) -> String
+
+        # A listed plugin with these settings.
+        def plugin: (String name, Array[Setting] settings) -> ListedPlugin
+
+        # A setting, as the configuration holds it.
+        def setting: (String name, Array[untyped] arguments, ?Hash[String, untyped] properties, ?Array[Setting] children) -> Setting
+
+        # The setting `name` for the path `key` gives, cleaned up, or nil
+        # when there is none or it is `default`.
+        def folder: (Hash[String, untyped] data, String key, String name, String default) -> Setting?
+
+        # `path` with each `./`, `//`, trailing `/`, and `x/..` taken
+        # out, or nil when a `..` leaves the folder it starts in.
+        def clean: (String path) -> String?
+
+        # The `role` of each of `artifacts`.
+        def roles: (Hash[String, untyped] data) -> Array[Setting]
+
+        # The `role` setting for `name`, from its entry `given`.
+        def role: (String name, Hash[String, untyped] given) -> Setting
+
+        # The path pattern for the glob `pattern`, which `key` names.
+        def files: (String key, String pattern) -> String
+
+        # The `expects` setting for `given`, which `key` names.
+        def expects: (String key, untyped given) -> Setting
+
+        # The policy lines of the rules, and the `report-entries` the
+        # debt rule's `withComment` gives, if any.
+        def rules: (Hash[String, untyped] data) -> [Array[PolicySetting], Report?]
+
+        # The policy line for a rule's `enabled` and `severity`, or nil when
+        # they change nothing.
+        def policy: (String key, String name, Hash[String, untyped] body) -> PolicySetting?
+
+        # The `report-entries` setting for a `withComment`.
+        def report_entries: (String key, untyped given) -> Report
+
+        # `given`, when it is a ceiling; else refuses, naming `key`.
+        def ceiling: (String key, untyped given) -> String
+
+        # A `report-entries` setting for `ceiling`, with the translation
+        # `matching`, if there is one, as its `matching=`.
+        def report: (String ceiling, ?Matching? matching) -> Report
+
+        # The translation of `expression`, which `key` names, or nil when
+        # there is none to carry, or the ceiling is "error", which any
+        # expression leaves as it is.
+        def matching_of: (String ceiling, String key, String expression) -> Matching?
+
+        # The matching for the JavaScript expression `expression`, which
+        # `key` names.
+        def translate: (String key, String expression) -> Matching
+
+        # The `options` object, as a Hash, checked.
+        def options: (Hash[String, untyped] data) -> Hash[String, untyped]
+      end
+    end
+  end
+end

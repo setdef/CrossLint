@@ -6,6 +6,9 @@ module CrossLint
 
     ISSUES = "https://github.com/setdef/CrossLint/issues"
 
+    NEXT_STEPS = "moved from ng-nudge; next, replace ng-nudge's dev dependency and each npx ng-nudge in your scripts and CI with crosslint check, " \
+      "and run crosslint debt update once"
+
     WARNINGS = {"all" => :all, "none" => :none, "error" => :error}.freeze
 
     def initialize(argv, out:, err:, env:, spec: nil, app: nil)
@@ -165,13 +168,27 @@ module CrossLint
       result.failed ? 1 : 0
     end
 
-    # --silent leaves out the line that says what init wrote.
+    # --silent leaves out the lines that say what init changes and wrote.
     def init(spec, line)
-      return say("crosslint init --from-ng-nudge doesn't work yet") if line.flags.key?("from-ng-nudge")
-
       app = application(spec)
-      result = app.init(line.value("project") || Dir.pwd, force: line.flags.key?("force"), dry_run: line.flags.key?("dry-run"))
-      result.lines.each { |text| @err.puts(PREFIX + text) } unless line.flags.key?("silent")
+      root = line.value("project") || Dir.pwd
+      force = line.flags.key?("force")
+      dry_run = line.flags.key?("dry-run")
+      silent = line.flags.key?("silent")
+      return move_from_ng_nudge(app, root, force:, dry_run:, silent:) if line.flags.key?("from-ng-nudge")
+
+      result = app.init(root, force:, dry_run:)
+      result.lines.each { |text| @err.puts(PREFIX + text) } unless silent
+      0
+    end
+
+    # Lists every change before it makes the first, as "will" or, with
+    # --dry-run, "would", and then says what to do next.
+    def move_from_ng_nudge(app, root, force:, dry_run:, silent:)
+      tense = dry_run ? "would" : "will"
+      planned = ->(changes) { changes.each { |change| @err.puts("#{PREFIX}#{tense} #{change}") } unless silent }
+      app.move_from_ng_nudge(root, force:, dry_run:, planned:)
+      @err.puts("#{PREFIX}#{NEXT_STEPS}") unless dry_run || silent
       0
     end
 

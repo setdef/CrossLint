@@ -9,13 +9,17 @@ module CrossLint
 
     def initialize(configuration: Adapters::KDLConfiguration.new, manifests: Adapters::KDLPluginManifests.new,
       project_files: Adapters::GitProjectFiles.new, plugin_ruby: Adapters::FilePluginRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
-      debt_files: Adapters::TSVDebtFiles.new, reserved: nil, err: $stderr, debug: false)
+      debt_files: Adapters::TSVDebtFiles.new, ng_nudge: Adapters::FileNgNudge.new, javascript: Adapters::NodeJavaScript.new,
+      reserved: nil, err: $stderr, debug: false)
       @configuration = configuration
       @manifests = manifests
       @project_files = project_files
       @plugin_ruby = plugin_ruby
       @helpers = helpers || Adapters::ProcessHelpers.new(err:, debug:)
       @shared_plugins = shared_plugins || Adapters::GitSharedPlugins.new(err:)
+      @debt_files = debt_files
+      @ng_nudge = ng_nudge
+      @javascript = javascript
       @built_in = built_in_plugins(plugins)
       @reserved = reserved || UsageSpec.load.commands.map(&:name)
       @steps = {"track-debt" => Core::TrackDebt.new(debt_files:)} #: Hash[String, Core::_Step]
@@ -45,6 +49,11 @@ module CrossLint
 
     def init(start, force: false, dry_run: false)
       Core::InitConfiguration.new(configuration: @configuration).call(start, force:, dry_run:)
+    end
+
+    def move_from_ng_nudge(start, force: false, dry_run: false, planned: nil)
+      Core::NgNudge::Move.new(configuration: @configuration, ng_nudge: @ng_nudge, debt_files: @debt_files, javascript: @javascript)
+        .call(start, force:, dry_run:, planned:)
     end
 
     def report(out:, err:, json: false, color: false, debug: false)

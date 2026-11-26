@@ -30,6 +30,9 @@ module CrossLint
     # What begins each line CrossLint writes about itself.
     PREFIX: String
 
+    # What init says to do next, once it has moved a project from ng-nudge.
+    NEXT_STEPS: String
+
     # Where to report a bug.
     ISSUES: String
 
@@ -127,8 +130,15 @@ module CrossLint
     # Runs crosslint init: writes the configuration with the recommended
     # plugins in the project's folder, or with --dry-run lists what it
     # would write, and says on standard error what it wrote, nothing with
-    # --silent. Returns 0.
+    # --silent. With --from-ng-nudge, moves the project from ng-nudge
+    # instead. Returns 0.
     def init: (UsageSpec spec, CommandLine line) -> Integer
+
+    # Moves the project at `root` from ng-nudge, with `force` and
+    # `dry_run` as given: says each change before it makes the first, as
+    # "will" or, with `dry_run`, "would", and says what to do next after
+    # the last, unless `silent`. Returns 0.
+    def move_from_ng_nudge: (App app, String root, force: bool, dry_run: bool, silent: bool) -> Integer
 
     # Whether to color the report: never with --no-color, a NO_COLOR that
     # isn't empty, or TERM=dumb; else with a FORCE_COLOR that isn't empty,

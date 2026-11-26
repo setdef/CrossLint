@@ -590,9 +590,107 @@ class CLITest < Minitest::Test
     end
   end
 
-  def test_init_says_it_cannot_yet_move_a_project_from_ng_nudge
-    assert_equal ["", "crosslint: crosslint init --from-ng-nudge doesn't work yet\n", 2],
-      init("init", "--from-ng-nudge", app: CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new))
+  def test_init_from_ng_nudge_says_each_change_before_it_makes_it_and_what_to_do_next
+    app, configuration, debt_files = ng_nudge_app({"srcDir" => "./app/"})
+    lines = ["crosslint: will write .config/crosslint/config.kdl, with the plugins angular and debt\n",
+      "crosslint: will move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 0 entries\n",
+      %(crosslint: will convert srcDir "./app/" to src-dir "app"\n), "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n"]
+
+    assert_equal ["", lines.join, 0], init("init", "--from-ng-nudge", app:)
+    assert_equal [%w[angular debt], false], [configuration.read("#{WORK}/app").plugins.map(&:name), debt_files.exist?("#{WORK}/app", ".config/ng-nudge/debt.tsv")]
+    assert_equal "moved from ng-nudge; next, replace ng-nudge's dev dependency and each npx ng-nudge in your scripts and CI with crosslint check, " \
+      "and run crosslint debt update once", CrossLint::CLI::NEXT_STEPS
+  end
+
+  def test_init_from_ng_nudge_lists_what_it_would_change_and_changes_nothing_with_dry_run
+    %w[--dry-run -n].each do |flag|
+      app, configuration, debt_files = ng_nudge_app({})
+      lines = "crosslint: would write .config/crosslint/config.kdl, with the plugins angular and debt\n" \
+        "crosslint: would move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 0 entries\n"
+
+      assert_equal ["", lines, 0], init("init", "--from-ng-nudge", flag, app:)
+      refute configuration.exist?("#{WORK}/app")
+      assert debt_files.exist?("#{WORK}/app", ".config/ng-nudge/debt.tsv")
+    end
+  end
+
+  def test_init_from_ng_nudge_makes_the_changes_and_says_nothing_with_silent
+    app, configuration, = ng_nudge_app({})
+
+    assert_equal ["", "", 0], init("init", "--from-ng-nudge", "--silent", app:)
+    assert configuration.exist?("#{WORK}/app")
+  end
+
+  def test_init_from_ng_nudge_replaces_what_is_there_only_with_force
+    app, configuration, = ng_nudge_app({}, existing: true)
+    refusal = "crosslint: .config/crosslint/config.kdl: already exists, and crosslint init --from-ng-nudge changes nothing in the configuration; " \
+      "crosslint init --from-ng-nudge --force replaces it\n"
+
+    assert_equal ["", refusal, 2], init("init", "--from-ng-nudge", app:)
+    assert_equal [], configuration.read("#{WORK}/app").plugins
+    %w[--force -f].each do |flag|
+      app, configuration, = ng_nudge_app({}, existing: true)
+
+      assert_equal 0, init("init", "--from-ng-nudge", flag, app:)[2]
+      assert_equal ["angular", "debt"], configuration.read("#{WORK}/app").plugins.map(&:name)
+    end
+  end
+
+  def test_init_from_ng_nudge_names_the_key_it_cannot_carry_and_exits_with_2
+    app, configuration, = ng_nudge_app({"rules" => {"has-debt" => {"withComment" => 3}}})
+
+    assert_equal ["", "crosslint: .config/ng-nudge/rc.json: rules.has-debt.withComment: is 3, and it takes true, false, \"none\", \"warning\", \"error\", " \
+      "or an object with maxSeverity and matching\n", 2], init("init", "--from-ng-nudge", app:)
+    refute configuration.exist?("#{WORK}/app")
+  end
+
+  def test_init_from_ng_nudge_moves_a_project_with_the_real_files_and_node
+    Dir.mktmpdir do |project|
+      rc = {"srcDir" => "./app/", "artifacts" => {"store" => {"pattern" => "**/*.store.ts", "expects" => ["spec"]}},
+            "rules" => {"has-debt" => {"severity" => "warning", "withComment" => {"maxSeverity" => "warning", "matching" => "^ticket-\\d+\\b"}},
+                        "prefer-css-over-scss" => {"enabled" => false}}, "options" => {"verbosity" => "quiet"}}
+      debt = "Rule\tArtifact\tComment\r\nspec-exists\tapp/card\tticket-12 later\r\nstub-exists\tapp/list\t\r\n"
+      File.binwrite(File.join(project, ".config/ng-nudge/rc.json").tap { |path| FileUtils.mkdir_p(File.dirname(path)) }, JSON.generate(rc))
+      File.binwrite(File.join(project, ".config/ng-nudge/debt.tsv"), debt)
+      out, err, status = run_cli("init", "--from-ng-nudge", "-C", project, spec: shipped_spec)
+
+      assert_equal ["", 0], [out, status]
+      assert_includes err, "crosslint: will move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 2 entries\n"
+      assert_equal debt.b, File.binread(File.join(project, ".config/crosslint/debt.tsv"))
+      refute File.exist?(File.join(project, ".config/ng-nudge/debt.tsv"))
+      assert_equal <<~KDL, File.read(File.join(project, ".config/crosslint/config.kdl"), encoding: Encoding::UTF_8)
+        plugin "angular" {
+          src-dir "app"
+          role "store" files="{path}.store.ts" {
+            expects "spec"
+          }
+        }
+        plugin "debt" {
+          report-entries commented="warning" matching="\\\\Aticket-\\\\d+(?:(?<![A-Za-z0-9_])(?=[A-Za-z0-9_])|(?<=[A-Za-z0-9_])(?![A-Za-z0-9_]))"
+        }
+
+        policy "debt/has-debt" severity="warning"
+        policy "angular/prefer-css-over-scss" enabled=#false
+
+        verbosity "quiet"
+      KDL
+      assert_equal %w[angular debt], CrossLint::App.new(plugin_ruby: LoadedPlugins::PluginRuby.new).load_project(project).plugins.map(&:name)
+    end
+  end
+
+  def test_init_from_ng_nudge_refuses_a_matching_when_node_is_not_there_and_changes_nothing
+    Dir.mktmpdir do |project|
+      rc = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "none", "matching" => "^TODO"}}}}
+      write(project, ".config/ng-nudge/rc.json", JSON.generate(rc))
+      write(project, ".config/ng-nudge/debt.tsv", "Rule\tArtifact\tComment\nspec-exists\tapp/card\tTODO\n")
+      app = CrossLint::App.new(javascript: CrossLint::Adapters::NodeJavaScript.new(command: "crosslint-no-such-node"))
+      out, err, status = run_cli("init", "--from-ng-nudge", "-C", project, spec: shipped_spec, app:)
+
+      assert_equal ["", 2], [out, status]
+      assert_match(/\Acrosslint: \.config\/ng-nudge\/rc\.json: rules\.has-debt\.withComment\.matching: CrossLint tests the expression, "\^TODO", with JavaScript on each comment of the debt file, and couldn't run crosslint-no-such-node/, err)
+      refute File.exist?(File.join(project, ".config/crosslint"))
+      assert File.exist?(File.join(project, ".config/ng-nudge/debt.tsv"))
+    end
   end
 
   def test_init_names_the_folder_that_does_not_exist
@@ -639,6 +737,20 @@ class CLITest < Minitest::Test
     repositories[TWO] = tags.call(%w[v3.0.0]) unless missing
     shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new(repositories, err: StringIO.new)
     [CrossLint::App.new(configuration:, shared_plugins:), configuration]
+  end
+
+  # An app that holds an ng-nudge project at WORK/app, with the rc.json
+  # `rc` and an empty debt file, and the configuration and debt files it
+  # holds. With `existing`, the project has a configuration already.
+  def ng_nudge_app(rc, existing: false)
+    core = CrossLint::Core
+    root = "#{WORK}/app"
+    configuration = CrossLint::Adapters::MemoryConfiguration.new
+    configuration.write(root, core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: [], policies: [], warnings: nil, verbosity: nil)) if existing
+    debt = core::DebtFile.new(file: ".config/ng-nudge/debt.tsv", entries: [], header: "Rule\tArtifact\tComment\n")
+    debt_files = CrossLint::Adapters::MemoryDebtFiles.new({File.join(root, ".config/ng-nudge/debt.tsv") => debt})
+    ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({root => {".config/ng-nudge/rc.json" => JSON.generate(rc)}})
+    [CrossLint::App.new(configuration:, debt_files:, ng_nudge:), configuration, debt_files]
   end
 
   # What init prints in the project at WORK/app, as update does.

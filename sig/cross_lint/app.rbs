@@ -11,14 +11,16 @@ module CrossLint
     # helpers through `helpers`, with the built-in plugins in `plugins`,
     # and whose step track-debt reads and writes debt files through
     # `debt_files`. With no `helpers`, it runs them as processes, writing
-    # what they write to standard error to `err` with `debug`. It fetches
+    # what they write to standard error to `err` with `debug`. It reads
+    # ng-nudge's files through `ng_nudge` and tests regular expressions
+    # with Node by default, through `javascript`. It fetches
     # shared plugins through `shared_plugins`, with Git by default, saying
     # what it fetches on `err`. `reserved` has the name of each command of
     # CrossLint's, which no plugin that adds commands can be named; with
     # none given, they are the commands of the shipped usage spec.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
                      ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String,
-                     ?debt_files: _DebtFiles, ?reserved: Array[String]?, ?err: CLI::_Output, ?debug: bool) -> void
+                     ?debt_files: _DebtFiles, ?ng_nudge: _NgNudge, ?javascript: _JavaScript, ?reserved: Array[String]?, ?err: CLI::_Output, ?debug: bool) -> void
 
     # The project whose root is `start` or the nearest folder above it
     # with a configuration, read and checked (Core::LoadProject).
@@ -56,6 +58,13 @@ module CrossLint
     # configuration that is there.
     def init: (String start, ?force: bool, ?dry_run: bool) -> Core::InitResult
 
+    # The result of moving the project at `start` from ng-nudge
+    # (Core::NgNudge::Move): writing its configuration and moving its
+    # debt file, or listing what it would change with `dry_run`; with
+    # `force`, over a configuration and a debt file that are there.
+    # `planned` hears each change before the first is made.
+    def move_from_ng_nudge: (String start, ?force: bool, ?dry_run: bool, ?planned: (^(Array[String]) -> void)?) -> Core::NgNudge::MoveResult
+
     # The report that writes to `out` and `err`: JSON with `json`, else
     # text, in color with `color`, and each fault's trace with `debug`.
     def report: (out: CLI::_Output, err: CLI::_Output, ?json: bool, ?color: bool, ?debug: bool) -> _Report
@@ -80,6 +89,12 @@ module CrossLint
     @shared_plugins: _SharedPlugins
 
     @built_in: Hash[String, String]
+
+    @debt_files: _DebtFiles
+
+    @ng_nudge: _NgNudge
+
+    @javascript: _JavaScript
 
     @steps: Hash[String, Core::_Step]
 

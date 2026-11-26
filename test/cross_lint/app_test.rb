@@ -259,6 +259,33 @@ class AppTest < Minitest::Test
     assert_equal ["replaced .config/crosslint/config.kdl, with the recommended plugins: debt"], app.init("/app", force: true).lines
   end
 
+  def test_moves_a_project_from_ng_nudge_through_the_ports_it_is_given
+    configuration = CrossLint::Adapters::MemoryConfiguration.new
+    debt = Core::DebtFile.new(file: ".config/ng-nudge/debt.tsv", entries: [], header: "Rule\tArtifact\tComment\n")
+    debt_files = CrossLint::Adapters::MemoryDebtFiles.new({"/app/.config/ng-nudge/debt.tsv" => debt})
+    ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({"/app" => {".config/ng-nudge/rc.json" => "{}"}})
+    javascript = CrossLint::Adapters::MemoryJavaScript.new
+    app = App.new(configuration:, debt_files:, ng_nudge:, javascript:)
+    seen = []
+    dry = app.move_from_ng_nudge("/app", dry_run: true, planned: ->(changes) { seen << changes })
+
+    assert_equal [dry.changes, true, false], [seen.first, dry.dry_run, configuration.exist?("/app")]
+    assert_equal [false, ["angular", "debt"]], [app.move_from_ng_nudge("/app").dry_run, configuration.read("/app").plugins.map(&:name)]
+    assert_equal [false, true], [debt_files.exist?("/app", ".config/ng-nudge/debt.tsv"), debt_files.exist?("/app", ".config/crosslint/debt.tsv")]
+    assert_raises(Mistake) { app.move_from_ng_nudge("/app") }
+    assert_equal "replace .config/crosslint/config.kdl, with the plugins angular and debt", app.move_from_ng_nudge("/app", force: true).changes.first
+  end
+
+  def test_moves_a_project_from_ng_nudge_with_its_files_and_node_unless_it_is_given_other_ports
+    write(@base, ".config/ng-nudge/rc.json", %({"rules": {"has-debt": {"withComment": {"maxSeverity": "none", "matching": "^a"}}}}))
+    write(@base, ".config/ng-nudge/debt.tsv", "Rule\tArtifact\tComment\nspec-exists\tapp/card\tabc\n")
+    result = App.new.move_from_ng_nudge(@base)
+
+    assert_equal [false, true], [result.dry_run, File.file?(File.join(@base, ".config/crosslint/config.kdl"))]
+    assert_equal ["Rule\tArtifact\tComment\nspec-exists\tapp/card\tabc\n", false],
+      [File.binread(File.join(@base, ".config/crosslint/debt.tsv")), File.exist?(File.join(@base, ".config/ng-nudge/debt.tsv"))]
+  end
+
   # The https URLs these tests use differ, so that the cache the tests
   # share holds no fetch of another test's.
   def test_fetches_a_shared_plugin_with_git_into_the_cache_of_the_user_unless_it_is_given_another_port
