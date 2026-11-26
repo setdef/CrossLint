@@ -72,7 +72,7 @@ CrossLint is not released yet; this README specifies what its first release does
 
 Download the archive for your computer from [the releases page](https://github.com/setdef/CrossLint/releases), check it against the release's `SHA256SUMS` file, unpack it anywhere, and put `crosslint` on your `PATH`. The archive contains everything CrossLint needs, so you install no Ruby or other runtime. CrossLint sends no usage data anywhere.
 
-To uninstall CrossLint, delete the unpacked folder.
+To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugin, also delete the cache folder CrossLint fetched it into: `$XDG_CACHE_HOME/crosslint`, or `~/.cache/crosslint` when `XDG_CACHE_HOME` isn't set, or `%LOCALAPPDATA%\crosslint\cache` on Windows.
 
 ## Usage
 

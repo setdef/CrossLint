@@ -30,11 +30,14 @@ What loading and running a plugin must guarantee, and the traps known so far. Th
 
 ## Shared plugins
 
-- A shared plugin is fetched at the tag or full commit SHA the configuration gives, never at a branch, into the user's cache, outside the project, and reused from there. A ref that has moved since it was fetched is the copy in the cache until `crosslint update` changes the configuration.
-- **Print a line on standard error before every network request,** and make none during a check otherwise.
+- **A shared plugin is fetched at its ref,** a tag or a full 40-character commit SHA, never a branch, and only that commit is fetched. A ref that names a branch and no tag, or a SHA the repository doesn't have, stops CrossLint with exit status 2, naming the plugin and the URL. Git does the fetching, and reads `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` itself.
+- **The copy goes in the user's cache, outside the project,** in `$XDG_CACHE_HOME/crosslint/plugins`, or `~/.cache/crosslint/plugins` when `XDG_CACHE_HOME` isn't an absolute path, or `%LOCALAPPDATA%\crosslint\cache\plugins` on Windows. It is fetched into a folder of its own and renamed into place, so an interrupted fetch leaves no partial copy. Later checks use the copy and make no request, even after the tag moves upstream, until `crosslint update` changes the configuration.
+- **Print a line on standard error before every network request,** `crosslint: fetching URL at REF` or `crosslint: listing the tags of URL`, and make none during a check otherwise.
+- **A fetch or a listing of tags that takes more than 60 seconds is ended,** with everything it started, and stops CrossLint with exit status 2.
 - A plugin that can't be fetched stops CrossLint with exit status 2, naming the plugin and the URL; it never runs the check without it.
 
 ## Known limits
 
 - **A plugin is trusted code.** CrossLint refuses a gem it wasn't built with when a rule requires it, but it doesn't sandbox a plugin: a plugin written to get around the refusal can load code another way, and can do anything the user running CrossLint can. List only plugins you would run as a script.
 - **A process can escape being ended.** On Windows, a helper joins its job object just after it starts, so a process it starts in that instant isn't in the job. On macOS and Linux, a process that leaves the helper's process group, such as one that calls `setsid`, isn't in the group CrossLint ends. CrossLint stops waiting for such a process, and it keeps running.
+- **A shared plugin's submodules aren't fetched,** so a plugin that keeps files in a submodule can't use them.

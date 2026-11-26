@@ -26,7 +26,9 @@ CrossLint finds the configuration by looking in the current folder and then in e
 `plugin NAME { ... }` runs a plugin. List each plugin once. No plugin runs unless the configuration lists it, the built-in ones included.
 
 - A name that starts with `.` or `/` is a local plugin: the folder at that path, relative to the project's root, with a `plugin.kdl` in it ([plugin reference](plugin.md)).
-- A name that starts with `https://` is a shared plugin: a Git repository, at the tag or full commit SHA its `ref` property gives, such as `plugin "https://github.com/OWNER/REPO" ref="v1.2.0"`. A branch is refused, so a plugin's version changes only when the configuration does. The first time `crosslint check` needs a shared plugin, it prints a line on standard error, fetches it into the user's cache, and uses that copy from then on. `crosslint update` moves each shared plugin's `ref` to its newest tag.
+- A name that starts with `https://` is a shared plugin: a Git repository, at the tag or full commit SHA its `ref` property gives, such as `plugin "https://github.com/OWNER/REPO" ref="v1.2.0"`. A branch is refused, so a plugin's version changes only when the configuration does. The plugin's name is the repository's name, the URL's last segment without `.git`, and its `plugin.kdl` is at the repository's root. The first time `crosslint check` needs a shared plugin, it prints a line on standard error, fetches that commit into the user's cache (`$XDG_CACHE_HOME/crosslint/plugins`, or `~/.cache/crosslint/plugins`, or `%LOCALAPPDATA%\crosslint\cache\plugins` on Windows), and uses that copy from then on. `crosslint update` moves each shared plugin's `ref` to its newest version tag.
+
+  > **Warning:** a shared plugin's Ruby and helpers run with your rights, and CrossLint doesn't sandbox them. List only a plugin you would run as a script, at a ref you have read.
 - Any other name is a built-in plugin: `angular` or `debt`.
 
 The block holds the settings the plugin's `plugin.kdl` declares, and can be left out when there are none. A setting the plugin doesn't declare stops CrossLint with exit status 2, naming it.
