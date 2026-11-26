@@ -19,7 +19,7 @@ CrossLint uses trunk-based development. The trunk is `trunk`.
 
 ## Licensing
 
-CrossLint is MIT-licensed, copyright setdef. `LICENSE` has the text. The copyright and license of every file are declared in `REUSE.toml`, following the [REUSE specification](https://reuse.software/spec/).
+CrossLint is MIT-licensed, copyright setdef. `LICENSE` has the text, and `REUSE.toml` gives every file its copyright and license, following the [REUSE specification](https://reuse.software/spec/).
 
 Code and prose derived from ng-nudge (MIT, Copyright 2026 Over The Top Marketing) keep its notice. Credit them with SPDX headers and snippets, the way [setdef/Tokra](https://github.com/setdef/Tokra) credits Tauri: wrap each derived passage in `SPDX-SnippetBegin` and `SPDX-SnippetEnd`, and give it the original copyright holder and license in `SPDX-SnippetCopyrightText` and `SPDX-License-Identifier`. Add the text of each new license to `LICENSES/` with `reuse download`.
 
