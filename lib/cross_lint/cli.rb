@@ -51,8 +51,12 @@ module CrossLint
       warnings = WARNINGS.fetch(given) if given
       verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?
       flags = command.flags.map(&:long).select { |flag| line.given?(flag) } - CHECK_FLAGS
-      result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"), flags:)
-      app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line), debug: debug?).write(result)
+      report = app.report(out: @out, err: @err, json: line.flags.key?("json"), color: color?(line), debug: debug?)
+      # Steep reads a lambda's one argument, an array of pairs, as one pair,
+      # so the argument goes untyped.
+      result = app.check(line.value("project") || Dir.pwd, warnings:, verbosity:, all: line.flags.key?("all"), flags:,
+        started: ->(kinds) { report.start(_ = kinds) })
+      report.write(result)
       return 2 unless result.faults.empty?
 
       result.failed ? 1 : 0

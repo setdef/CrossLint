@@ -113,6 +113,17 @@ class AppTest < Minitest::Test
     assert_equal [["a.md", "hi"]], App.new.check(@base).violations.map { |violation| [violation.artifact, violation.message] }
   end
 
+  def test_says_what_it_will_check_before_any_rule_runs
+    write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/local"\n))
+    write(@base, ".config/crosslint/local/plugin.kdl", MANIFEST)
+    write(@base, "a.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    started = []
+    App.new.check(@base, started: ->(kinds) { started << kinds })
+
+    assert_equal [[["a", 1]]], started
+  end
+
   def test_runs_the_ruby_that_declares_a_plugins_artifacts_from_its_file
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r" {\n  folder "docs"\n}\n))
     write(@base, ".config/crosslint/r/plugin.kdl", %(setting "folder"\nartifacts ruby="artifacts.rb"\npolicy "p" {\n  rule "companion-exists" companion="c"\n}\n))

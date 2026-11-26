@@ -27,9 +27,11 @@ module CrossLint
       # isn't there, each before any rule runs, and for a flag in `flags`,
       # each without its dashes, that no listed plugin takes. Each step
       # gets the flags its plugin takes. Ends every helper before it
-      # returns.
+      # returns. At the normal verbosity, calls `started` with the counts
+      # of the artifacts it will check once it has found them, before any
+      # rule runs or any helper starts.
       def call: (Project project, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                 ?all: bool, ?flags: Array[String]) -> CheckResult
+                 ?all: bool, ?flags: Array[String], ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> CheckResult
 
       private
 
@@ -101,6 +103,10 @@ module CrossLint
       # The artifacts of the checked kinds that have no violation.
       def passed: (Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
                    Array[Violation] violations) -> Array[Artifact]
+
+      # How many artifacts of each kind in `checked` `kinds` has, named
+      # PLUGIN/ARTIFACT where two plugins' kinds share a name.
+      def counts: (Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked) -> Array[[String, Integer]]
 
       # The summary of the violations shown, with `hidden` true when
       # --warnings=none hides warnings.

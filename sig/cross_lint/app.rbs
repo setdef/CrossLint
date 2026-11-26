@@ -23,9 +23,10 @@ module CrossLint
     # The result of checking that project (Core::Check), under the
     # command line's `warnings` and `verbosity`, nil where it gives none,
     # with each passing artifact under `all`, and with `flags`, the
-    # plugins' flags given, without their dashes.
+    # plugins' flags given, without their dashes. `started` hears the
+    # counts of the artifacts before any rule runs.
     def check: (String start, ?warnings: (:all | :none | :error)?, ?verbosity: (:normal | :quiet | :silent)?,
-                ?all: bool, ?flags: Array[String]) -> Core::CheckResult
+                ?all: bool, ?flags: Array[String], ?started: (^(Array[[String, Integer]] kinds) -> void)?) -> Core::CheckResult
 
     # The report that writes to `out` and `err`: JSON with `json`, else
     # text, in color with `color`, and each fault's trace with `debug`.

@@ -111,6 +111,13 @@ class CLITest < Minitest::Test
       "crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], check("check", app: app)
   end
 
+  # docs/design/checking.md: a line within 100 ms on a terminal, so a
+  # large project never sits silent while a rule reads its files.
+  def test_check_says_what_it_is_checking_first_when_standard_error_is_a_terminal
+    assert_equal "crosslint: checking 2 ruby-file artifacts\ncrosslint: checked 2 ruby-file artifacts: 1 error\n", check("check", app: app, err_tty: true)[1]
+    assert_equal "", check("check", "--quiet", app: app, err_tty: true)[1]
+  end
+
   def test_check_exits_with_0_when_every_check_passes
     assert_equal ["", "crosslint: checked 1 ruby-file artifact: no violations\n", 0],
       check("check", app: app(files: ["lib/a.rb", "test/a_test.rb"]))
@@ -263,10 +270,10 @@ class CLITest < Minitest::Test
     [out.string, err.string, status]
   end
 
-  def check(*argv, app: nil, tty: false, env: {})
+  def check(*argv, app: nil, tty: false, env: {}, err_tty: false)
     argv += ["-C", "#{WORK}/app"] if app && !argv.include?("-C") && !argv.include?("--project")
     out = tty ? Terminal.new : StringIO.new
-    err = StringIO.new
+    err = err_tty ? Terminal.new : StringIO.new
     status = CrossLint::CLI.new(argv, out:, err:, env:, spec: shipped_spec, app:).run
     [out.string, err.string, status]
   end

@@ -73,6 +73,11 @@ module CrossLint
       # The summary as one line, without the "crosslint: " that begins it.
       def line: () -> String
 
+      # How many artifacts of each kind `kinds` counts, as "3 component and
+      # 2 service artifacts", leaving out a kind with none when another has
+      # some.
+      def self.count: (Array[[String, Integer]] kinds) -> String
+
       private
 
       # The faults, errors, warnings, and stale entries, as words, and what

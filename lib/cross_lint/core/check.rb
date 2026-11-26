@@ -15,7 +15,7 @@ module CrossLint
         @steps = steps
       end
 
-      def call(project, warnings: nil, verbosity: nil, all: false, flags: [])
+      def call(project, warnings: nil, verbosity: nil, all: false, flags: [], started: nil)
         flags.each do |flag|
           next if project.plugins.any? { |plugin| plugin.manifest.flags.any? { |declared| declared.name == flag } }
 
@@ -28,6 +28,9 @@ module CrossLint
         kinds = project.plugins.to_h do |plugin|
           [plugin.name, plugin.manifest.artifacts.to_h { |declaration| [declaration.name, find(project, plugin, declaration, files)] }]
         end
+        # Before any rule runs, since a rule that asks a helper to read a
+        # language's files can keep a large project silent for a while.
+        started&.call(counts(kinds, checked_kinds(project, policies))) if verbosity == :normal
         helpers = @helpers.start(project.root, project.plugins)
         begin
           violations, faults = run_plugins(project, policies, kinds, helpers)
@@ -199,12 +202,15 @@ module CrossLint
         checked.flat_map { |owner, name| kinds.fetch(owner).fetch(name) }.reject { |artifact| failed.include?([artifact.path, artifact.role]) }
       end
 
-      def summary(kinds, checked, shown, hidden, faults)
+      def counts(kinds, checked)
         names = checked.map(&:last)
-        counted = checked.map do |owner, name|
+        checked.map do |owner, name|
           [(names.count(name) > 1) ? "#{owner}/#{name}" : name, kinds.fetch(owner).fetch(name).size] #: [String, Integer]
         end
-        Summary.new(kinds: counted, faults:, errors: shown.count { |violation| violation.severity == :error },
+      end
+
+      def summary(kinds, checked, shown, hidden, faults)
+        Summary.new(kinds: counts(kinds, checked), faults:, errors: shown.count { |violation| violation.severity == :error },
           warnings: shown.count { |violation| violation.severity == :warning }, warnings_shown: !hidden)
       end
 

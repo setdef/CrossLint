@@ -9,13 +9,17 @@ module CrossLint
     class Summary < Data.define(:kinds, :faults, :errors, :warnings, :warnings_shown, :stale, :steps)
       def initialize(stale: 0, steps: [], **counts) = super
 
+      # A kind with no artifact is left out when another has some, as the
+      # Angular plugin's pipes are in a project with none.
+      def self.count(kinds)
+        found = kinds.reject { |_, count| count.zero? }
+        each = (found.empty? ? kinds : found).map { |name, count| "#{count} #{name}" }
+        "#{each.empty? ? "0" : Spelling.list(each, "and")} #{(kinds.sum(&:last) == 1) ? "artifact" : "artifacts"}"
+      end
+
       def artifacts = kinds.sum(&:last)
 
-      def line
-        counted = kinds.map { |name, count| "#{count} #{name}" }
-        checked = counted.empty? ? "0" : Spelling.list(counted, "and")
-        "checked #{checked} #{(artifacts == 1) ? "artifact" : "artifacts"}: #{found}"
-      end
+      def line = "checked #{Summary.count(kinds)}: #{found}"
 
       private
 

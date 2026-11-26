@@ -18,6 +18,12 @@ module CrossLint
         @debug = debug
       end
 
+      # Only on a terminal, where someone waits; a log or a script gets the
+      # summary at the end.
+      def start(kinds)
+        say("checking #{Core::Summary.count(kinds)}") if @err.tty?
+      end
+
       def write(result)
         result.notices.each { |notice| say("#{notice.file}:#{notice.line}: warning: #{notice.message}") }
         write_findings(result)

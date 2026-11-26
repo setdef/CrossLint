@@ -17,7 +17,13 @@ class CheckResultTest < Minitest::Test
     assert_equal "checked 0 ruby-file artifacts: no violations", summary([["ruby-file", 0]]).line
     assert_equal "checked 0 artifacts: no violations", summary([]).line
     assert_equal "checked 1 ruby-file and 1 adr artifacts: 2 warnings", summary([["ruby-file", 1], ["adr", 1]], warnings: 2).line
-    assert_equal "checked 2 a, 0 b, and 1 c artifacts: 1 error, 1 warning", summary([["a", 2], ["b", 0], ["c", 1]], errors: 1, warnings: 1).line
+    assert_equal "checked 2 a, 3 b, and 1 c artifacts: 1 error, 1 warning", summary([["a", 2], ["b", 3], ["c", 1]], errors: 1, warnings: 1).line
+  end
+
+  def test_leaves_out_a_kind_with_no_artifacts_when_another_has_some
+    assert_equal "checked 2 a and 1 c artifacts: no violations", summary([["a", 2], ["b", 0], ["c", 1]]).line
+    assert_equal "1 c artifact", Summary.count([["b", 0], ["c", 1]])
+    assert_equal "checked 0 b and 0 c artifacts: no violations", summary([["b", 0], ["c", 0]]).line
   end
 
   def test_says_how_many_entries_are_stale_and_what_each_step_says

@@ -270,6 +270,9 @@ module CrossLint
       # write reports notices, and none of them as a finding.
       def test_reports_each_notice_apart_from_the_findings: () -> void
 
+      # start reports no finding, notice, or summary.
+      def test_reports_no_finding_and_no_summary_when_a_check_starts: () -> void
+
       # write reports the summary at the normal verbosity.
       def test_reports_the_summary_unless_quiet_or_silent: () -> void
 

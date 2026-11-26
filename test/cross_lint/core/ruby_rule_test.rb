@@ -267,6 +267,24 @@ class RubyRuleTest < Minitest::Test
     assert_equal [[{"path" => "lib/x.rb"}], [["no a", "a"], ["no b", "b"]]], [seen, result.findings.map { |violation| [violation.message, violation.detail] }]
   end
 
+  # docs/design/checking.md: a line on a terminal before any TypeScript is
+  # read, so before any helper starts or any rule runs.
+  def test_says_what_it_will_check_before_any_helper_starts_or_any_rule_runs
+    events = []
+    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { (events << :asked) && [] }}, commands: ["node"])
+    port.define_singleton_method(:start) { |root, plugins| (events << :helpers) && super(root, plugins) }
+    started = ->(kinds) { events << kinds }
+    check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => "", "lib/y.rb" => ""}, helpers: {"members" => nil}, running: port, started:)
+
+    assert_equal [[["ruby-file", 2]], :helpers, :asked, :asked], events
+    events.clear
+    %i[quiet silent].each do |verbosity|
+      check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port, started:, verbosity:)
+    end
+
+    assert_equal [:helpers, :asked, :helpers, :asked], events
+  end
+
   def test_stops_a_plugin_whose_rule_calls_a_helper_that_fails_or_that_it_doesnt_declare
     failing = ->(_) { raise PluginError, "called helper members, which exited with status 1 before it answered" }
 
@@ -331,7 +349,8 @@ class RubyRuleTest < Minitest::Test
   # "names-class" of its own. The plugin "tests" declares a helper of
   # each name in `helpers`, which answers with its proc, run on "node".
   def check(files:, code: {"names_class.rb" => NAMES_CLASS}, name: "names-class", severity: nil, override: nil, enabled: nil, policies: 1,
-    others: false, helpers: {}, running: CrossLint::Adapters::MemoryHelpers.new(helpers.transform_keys { |helper| "tests/#{helper}" }, commands: ["node"]))
+    others: false, helpers: {}, running: CrossLint::Adapters::MemoryHelpers.new(helpers.transform_keys { |helper| "tests/#{helper}" }, commands: ["node"]),
+    **options)
     if others.is_a?(String)
       source = others
       code = code.merge("../../other/rules/names_class.rb" => source)
@@ -357,7 +376,7 @@ class RubyRuleTest < Minitest::Test
       [path, text.is_a?(String) ? ->(namespace) { namespace.module_eval(text, path, 1) } : text]
     end
     Check.new(project_files:, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(loaded), helpers: running, steps: {})
-      .call(Project.new(root: ROOT, configuration:, plugins:))
+      .call(Project.new(root: ROOT, configuration:, plugins:), **options)
   end
 
   def plugin(name, manifest)

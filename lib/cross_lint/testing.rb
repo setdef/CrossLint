@@ -297,6 +297,14 @@ module CrossLint
         assert_equal [[".config/tests/plugin.kdl", 3, "no file matches"]], reported.fetch(:notices)
       end
 
+      def test_reports_no_finding_and_no_summary_when_a_check_starts
+        report_port.start([["ruby-file", 2]])
+
+        assert_empty reported.fetch(:findings)
+        assert_empty reported.fetch(:notices)
+        assert_nil reported.fetch(:summary)
+      end
+
       def test_reports_the_summary_unless_quiet_or_silent
         port = report_port
         port.write(result([]))

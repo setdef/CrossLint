@@ -63,6 +63,20 @@ class TextReportTest < Minitest::Test
       ["run it again with --debug to see where each fault was raised", "checked 9 ruby-file artifacts: 1 error, 1 warning"], own_lines
   end
 
+  # Standard error on a terminal.
+  class Terminal < StringIO
+    def tty? = true
+  end
+
+  def test_says_what_a_check_is_checking_only_on_a_terminal
+    kinds = [["component", 3], ["pipe", 0], ["service", 1]]
+    terminal = Terminal.new
+    CrossLint::Adapters::TextReport.new(out: @out, err: terminal).start(kinds)
+    report_port.start(kinds)
+
+    assert_equal ["crosslint: checking 3 component and 1 service artifacts\n", "", ""], [terminal.string, @err.string, @out.string]
+  end
+
   def test_writes_each_faults_trace_with_debug
     CrossLint::Adapters::TextReport.new(out: @out, err: @err, debug: true).write(result_of([], verbosity: :quiet, faults: [fault_of]))
 
@@ -267,5 +281,13 @@ class MemoryReportTest < Minitest::Test
     port.write(second)
 
     assert_equal [first, second], port.results
+  end
+
+  def test_holds_the_counts_of_every_start_in_order
+    port = report_port
+    port.start([["ruby-file", 2]])
+    port.start([["doc", 1]])
+
+    assert_equal [[[["ruby-file", 2]], [["doc", 1]]], []], [port.starts, port.results]
   end
 end
