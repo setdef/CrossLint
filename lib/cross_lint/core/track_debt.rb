@@ -192,7 +192,10 @@ module CrossLint
           rule = resolve(project, input, debt, entry)
           unless rule
             written << entry
-            rewritten += 1 unless entry.source
+            unless entry.source
+              rewritten += 1
+              changes.concat(rewrite(entry))
+            end
             next
           end
 
@@ -211,8 +214,7 @@ module CrossLint
           else
             unless entry.source
               rewritten += 1
-              changes << "replace #{described(entry)}, line #{entry.line}"
-              changes << "add #{described(entry)}"
+              changes.concat(rewrite(entry))
             end
             written << entry
           end
@@ -226,6 +228,9 @@ module CrossLint
 
         changes.map { |change| "would #{change}" } + ["would write #{debt.file}: #{counts.join(", ")}"]
       end
+
+      # The lines that say an entry is written again as it now is.
+      def rewrite(entry) = ["replace #{described(entry)}, line #{entry.line}", "add #{described(entry)}"]
 
       # An entry as a person reads it: its policy, its artifact, and its
       # detail when it has one.

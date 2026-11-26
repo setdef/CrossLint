@@ -156,6 +156,8 @@ module CrossLint
 
       # `entry` as a line says it: its policy, its artifact, and its detail
       # when it has one.
+      def rewrite: (DebtEntry entry) -> Array[String]
+
       def described: (DebtEntry entry) -> String
 
       # A new entry for `identity`, with `comment`.

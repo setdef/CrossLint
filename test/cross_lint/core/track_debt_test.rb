@@ -243,6 +243,35 @@ class TrackDebtTest < Minitest::Test
     assert_equal ["lib/c.rb", "lib/a/b.rb", "lib/new.rb"], written.map(&:artifact)
   end
 
+  def test_a_dry_run_lists_an_entry_rewritten_for_a_plugin_it_doesnt_check
+    entries = [entry("gone/has-test", "lib\\old\\a.rb", "elsewhere", line: 2), entry("tests/has-signature", "lib\\b.rb", "off", line: 3)]
+    options = {disabled: ["tests/has-signature"]}
+    dry = step([], entries, update: true, dry_run: true, **options)
+
+    assert_equal ["would replace gone/has-test on lib/old/a.rb, line 2", "would add gone/has-test on lib/old/a.rb",
+      "would replace tests/has-signature on lib/b.rb, line 3", "would add tests/has-signature on lib/b.rb",
+      "would write #{FILE}: 0 entries added, 0 removed, 2 rewritten"], dry.wrote
+  end
+
+  def test_a_dry_run_lists_what_an_update_writes_for_an_entry_of_each_kind_it_rewrites
+    violations = [violation("lib/a/b.rb"), violation("lib/c.rb", detail: "x"), violation("lib/d.rb", detail: "y"), violation("lib/new.rb")]
+    entries = [entry("tests/has-test", "lib\\a\\b.rb", "slashes", line: 2), entry("has-test", "lib/c.rb", "coarse", line: 3),
+      entry("gone/has-test", "lib\\z.rb", "unlisted", line: 4), entry("tests/has-test", "lib/d.rb", "kept", detail: "y", line: 5),
+      entry("tests/has-test", "lib/old.rb", "fixed", line: 6)]
+    dry = step(violations, entries, update: true, dry_run: true)
+    step(violations, entries, update: true)
+    rewritten = written.reject { |each| each.source&.start_with?("src") }
+
+    assert_equal ["would replace tests/has-test on lib/a/b.rb, line 2", "would add tests/has-test on lib/a/b.rb",
+      "would replace has-test on lib/c.rb, line 3", "would add tests/has-test on lib/c.rb (x)",
+      "would replace gone/has-test on lib/z.rb, line 4", "would add gone/has-test on lib/z.rb",
+      "would remove tests/has-test on lib/old.rb, line 6"], dry.wrote.first(7)
+    assert_equal rewritten.map { |each| "would add #{each.rule} on #{each.artifact}#{" (#{each.detail})" if each.detail}" },
+      dry.wrote.grep(/\Awould add/)
+    assert_equal ["would write #{FILE}: 1 entry added, 1 removed, 3 rewritten"], dry.wrote.last(1)
+    assert_equal ["lib/a/b.rb", "lib/c.rb", "lib/z.rb", "lib/d.rb", "lib/new.rb"], written.map(&:artifact)
+  end
+
   def test_a_dry_run_says_which_entry_it_would_replace_with_which
     violations = [violation("app/card", role: "service"), violation("app/card", role: "component")]
     dry = step(violations, [entry("tests/has-test", "app/card", "both")], update: true, dry_run: true)
