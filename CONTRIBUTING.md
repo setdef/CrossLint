@@ -41,4 +41,4 @@ Code or prose taken from [ng-nudge](https://github.com/OverTheTopMarketing/ng-nu
 
 ## Releases
 
-Releases are tags and GitHub releases, cut whenever `trunk` is ready. Every version is `0.X.Y`, three plain integers, with no prerelease form such as `-rc.1` and no build metadata, and the version stays below 1.0.0. Nothing is published to a registry outside GitHub.
+Releases are tags and GitHub releases, cut whenever `trunk` is ready. To cut one, tag a commit CI passed as `v` and the version in `crosslint.usage.kdl`, such as `v0.1.0`, and push the tag: the Release workflow builds each platform's archive from a clean checkout, runs each with no Ruby installed, and publishes the archives with a `SHA256SUMS` file. It refuses a tag that doesn't match the spec's version. Every version is `0.X.Y`, three plain integers, with no prerelease form such as `-rc.1` and no build metadata, and the version stays below 1.0.0. Nothing is published to a registry outside GitHub.
