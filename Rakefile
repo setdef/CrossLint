@@ -42,6 +42,11 @@ task :doctest do
   ruby "-Ilib", "tasks/doctest.rb"
 end
 
+desc "Check the style of every Ruby file with Standard (.standard.yml)"
+task :standard do
+  sh "standardrb"
+end
+
 desc "Check lib/ against sig/ with Steep (Steepfile)"
 task :steep do
   sh "steep", "check"
@@ -81,7 +86,7 @@ task :reuse do
 end
 
 desc "Run every check CI runs"
-task check: ["rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :mutant, "usage:lint", "usage:reference", :reuse]
+task check: [:standard, "rbs:validate", "rbs:comments", :steep, :test, "test:rbs", :doctest, :mutant, "usage:lint", "usage:reference", :reuse]
 
 task default: :check
 

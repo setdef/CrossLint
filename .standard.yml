@@ -1,0 +1,7 @@
+# Standard (rake standard) checks the style of every Ruby file, for
+# Ruby 3.3's syntax: mutant's parser reads no later syntax, and every
+# change is mutation-tested (docs/design/architecture.md).
+ruby_version: 3.3
+ignore:
+  - ".scratch/**/*"
+  - "build/dist/**/*"
