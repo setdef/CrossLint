@@ -13,6 +13,20 @@ $ usage generate markdown --file crosslint.usage.kdl --out-file docs/reference/c
 
 What each part of CrossLint must guarantee is in [`docs/design/`](docs/design/README.md), and each requirement there becomes a test that fails when the requirement is broken. Architecture decisions are in [`docs/decisions/`](docs/decisions/). To change one, write a new record with the next number and delete the old one.
 
+## Checks
+
+`bundle exec rake check` runs every check CI runs, and a change passes all of them before it's pushed:
+
+- the test suite, covering every line and branch of `lib/`;
+- the same suite under RBS's runtime type checker, which compares every call into CrossLint with `sig/`;
+- mutation testing with mutant, which a test must catch every change of;
+- Steep, checking `lib/` against `sig/`, and `rbs validate`;
+- Standard, for style;
+- every Ruby example in the documentation, run and checked against the results it shows;
+- `usage lint`, the check that `docs/reference/cli.md` matches the spec, and `reuse lint`.
+
+Every public class, module, method, and constant has an RDoc comment, in Markdown. How the code divides, and why, is in [Architecture](docs/design/architecture.md).
+
 ## Landing a change
 
 Commit straight to `trunk`, one change at a time, each one complete and releasable. Run the checks that apply to the change before you push, and rebase and run them again when a push is refused because `trunk` moved.
