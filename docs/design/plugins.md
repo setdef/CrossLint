@@ -13,6 +13,7 @@ What loading and running a plugin must guarantee, and the traps known so far. Th
 - A rule written in Ruby runs on the Ruby CrossLint carries, so a project needs no Ruby. It can require Ruby's standard library and files in its plugin's folder.
 - **A gem CrossLint wasn't built with can't be loaded,** and requiring one stops the plugin with a message naming the gem, not a Ruby `LoadError`. `bundler/inline` would install a gem into CrossLint's install folder at run time, so CrossLint must not offer it.
 - A rule that raises an exception is reported as a fault in its plugin, naming the plugin, the rule, and the artifact, with the trace under `--debug`. The other plugins still run, and the check exits with 2.
+- **A rule that runs for 60 seconds on one artifact is a fault,** and so is one that recurses until Ruby raises `SystemStackError`; neither may hang the check or end it for the other plugins.
 - **Files a rule requires load into one Ruby,** so two plugins whose required files define the same top-level constant collide. A rule keeps its constants inside its class.
 
 ## Helpers
@@ -21,6 +22,8 @@ What loading and running a plugin must guarantee, and the traps known so far. Th
 - **On Windows, find the command with each extension in `PATHEXT`,** since `node` is `node.exe` or `node.cmd` there.
 - Requests and responses are JSON on the helper's standard input and output, one per line. Its standard error goes to CrossLint's standard error under `--debug`, and to its message when it fails.
 - **A helper that gives no answer for 60 seconds is ended, with everything it started.** Ending only the helper's process leaves its children running: on macOS and Linux, start it in a new process group and end the group; on Windows, put it in a job object. On Windows, `taskkill /T` alone leaves an MSYS2 child running.
+- **At the end of a check, end every helper at once.** Close each helper's input, give each 2 seconds to exit, then end its process tree; helpers are ended in parallel, so one slow helper doesn't hold up the rest. On Ctrl-C, end every helper's tree without waiting.
+- **A helper CrossLint can't put in its process group or job object is ended at once, and is a fault,** never left running. On Windows, check every call that creates the job object and assigns the helper to it.
 - **A helper runs with the environment CrossLint was started with,** not the one the app sets up for the Ruby it carries, so `RUBYOPT`, `BUNDLE_*`, and the app's folders on `PATH` never reach it; a helper that runs `ruby` gets the project's Ruby, not CrossLint's.
 - **On Windows, write to a helper in binary mode,** or Ruby turns each `\n` into `\r\n`; and a helper that has already exited makes closing its input raise `EPIPE`, which is not an error of the check.
 - The Angular plugin's helper asks the project's `typescript` package, from its `node_modules`, so its answers match the project's compiler version.
@@ -30,3 +33,8 @@ What loading and running a plugin must guarantee, and the traps known so far. Th
 - A shared plugin is fetched at the tag or full commit SHA the configuration gives, never at a branch, into the user's cache, outside the project, and reused from there. A ref that has moved since it was fetched is the copy in the cache until `crosslint update` changes the configuration.
 - **Print a line on standard error before every network request,** and make none during a check otherwise.
 - A plugin that can't be fetched stops CrossLint with exit status 2, naming the plugin and the URL; it never runs the check without it.
+
+## Known limits
+
+- **A plugin is trusted code.** CrossLint refuses a gem it wasn't built with when a rule requires it, but it doesn't sandbox a plugin: a plugin written to get around the refusal can load code another way, and can do anything the user running CrossLint can. List only plugins you would run as a script.
+- **A process can escape being ended.** On Windows, a helper joins its job object just after it starts, so a process it starts in that instant isn't in the job. On macOS and Linux, a process that leaves the helper's process group, such as one that calls `setsid`, isn't in the group CrossLint ends. CrossLint stops waiting for such a process, and it keeps running.
