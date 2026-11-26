@@ -3,6 +3,7 @@
 # Compatibility table, packs it as crosslint-VERSION-PLATFORM.tar.gz (.zip
 # on Windows), and unpacks each archive on a computer of the same platform,
 # with no Ruby on PATH, to run `crosslint --version` and `crosslint --help`.
+# The Linux archive runs in an Ubuntu 24.04 container that has no Ruby.
 # VERSION is the version in crosslint.usage.kdl. On a tag, once every
 # archive passes, the last job checks that the tag is `v` plus that
 # version, and creates the GitHub release with the archives and a
@@ -99,10 +100,15 @@ jobs:
           compression-level: 0
 
   # No Ruby is set up here, and the script runs the app with an empty PATH.
+  # The macOS and Windows runners ship a Ruby, which an empty PATH hides
+  # only from a lookup through PATH. The Linux job runs in a container
+  # whose image has no Ruby at all, so an archive that falls back to a
+  # Ruby outside itself fails there.
   smoke:
     name: Smoke test (${{ matrix.platform }})
     needs: build
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -112,6 +118,7 @@ jobs:
             runner: macos-15
           - platform: linux-x86_64
             runner: ubuntu-24.04
+            container: ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b
           - platform: windows-x86_64
             runner: windows-2025
     steps:
