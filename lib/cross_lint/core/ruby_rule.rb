@@ -36,20 +36,22 @@ module CrossLint
       # the check with a status that says nothing of the rule, and
       # SystemStackError, which a rule that recurses without end raises
       # and which is no StandardError.
-      def self.load(plugin_ruby, plugin, declaration, namespace, helpers)
+      def self.load(plugin_ruby, plugin, declaration, namespace, helpers, files, read)
         plugin_ruby.load(plugin, declaration.ruby, declaration.line, namespace)
-        new(plugin:, name: declaration.name, rule: make(find(declaration, namespace), helpers))
+        new(plugin:, name: declaration.name, rule: make(find(declaration, namespace), helpers, files, read))
       rescue Mistake
         raise
       rescue *FAULTS => error
         raise Stopped, Fault.of(error, plugin:, rule: declaration.name)
       end
 
-      # A rule's class may define initialize, and helper works there too,
-      # so the instance has its helpers before initialize runs.
-      def self.make(rule_class, helpers)
+      # A rule's class may define initialize, and helper, project_files and
+      # read work there too, so the instance has them before initialize runs.
+      def self.make(rule_class, helpers, files, read)
         rule = rule_class.allocate
         rule.instance_variable_set(:@crosslint_helpers, helpers)
+        rule.instance_variable_set(:@crosslint_files, files)
+        rule.instance_variable_set(:@crosslint_read, read)
         rule.__send__(:initialize)
         rule
       end

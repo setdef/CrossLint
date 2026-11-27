@@ -60,6 +60,41 @@ class RubyRuleTest < Minitest::Test
     assert_equal [["lib/x/a.rb", "ruby-file", {"path" => "x/a"}, true, "# a\n"], ["signature", "sig/x/a.rbs", true, "class A\n"]], seen
   end
 
+  # For a rule that checks a path an artifact's text names, such as a
+  # link's target, which no companion can give.
+  def test_shows_a_rule_the_projects_files_frozen_from_initialize_on
+    seen = []
+    rule = Class.new(CrossLint::Rule) do
+      define_method(:initialize) { seen << project_files }
+      define_method(:check) do |_artifact|
+        seen << project_files
+        []
+      end
+    end
+    files = {"lib/a.rb" => "", "docs/b.md" => "", "lib/c.rb" => ""}
+    check(code: {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}, files:)
+
+    assert_equal [files.keys] * 3, seen
+    assert_equal [true, true], [seen.first.frozen?, seen.first.all?(&:frozen?)]
+    assert_same seen.first, seen.last
+  end
+
+  def test_lets_a_rule_read_any_file_of_the_project_from_initialize_on
+    seen = []
+    rule = Class.new(CrossLint::Rule) do
+      define_method(:initialize) { seen << read("docs/b.md") }
+      define_method(:check) do |artifact|
+        seen << read("docs/b.md")
+        read("docs/#{artifact.match["path"]}.md")
+      end
+    end
+    files = {"lib/a.rb" => "", "docs/b.md" => "# B\n"}
+    result = check(code: {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}, files:)
+
+    assert_equal ["# B\n"] * 2, seen
+    assert_equal ["raised Errno::ENOENT: No such file or directory - docs/a.md"], result.faults.map(&:message)
+  end
+
   def test_makes_one_instance_of_a_rule_for_the_whole_check
     counting = <<~RUBY
       class NamesClass < CrossLint::Rule
@@ -169,7 +204,7 @@ class RubyRuleTest < Minitest::Test
   def test_gives_a_rule_a_minute_on_each_artifact_unless_told_otherwise
     assert_equal 60, RubyRule::TIME_LIMIT
     tests = plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []))
-    rule = RubyRule.make(Class.new(CrossLint::Rule), ->(_name, _input) {})
+    rule = RubyRule.make(Class.new(CrossLint::Rule), ->(_name, _input) {}, [], ->(_path) { "" })
 
     assert_equal 60, RubyRule.new(plugin: tests, name: "n", rule:).instance_variable_get(:@time_limit)
   end
@@ -181,7 +216,7 @@ class RubyRuleTest < Minitest::Test
     artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, companions: [])
     tests = plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []))
     faults = rules.map do |rule_class|
-      rule = RubyRule.new(plugin: tests, name: "slow", rule: RubyRule.make(rule_class, ->(_name, _input) {}), time_limit: 0.2)
+      rule = RubyRule.new(plugin: tests, name: "slow", rule: RubyRule.make(rule_class, ->(_name, _input) {}, [], ->(_path) { "" }), time_limit: 0.2)
       assert_raises(RubyRule::Stopped) { rule.results(artifact, {}, ->(_) { "" }) }.fault
     end
 
@@ -370,7 +405,8 @@ class RubyRuleTest < Minitest::Test
     end
     settings = [PolicySetting.new(name: "tests/names-match", enabled:, severity: override, line: 4)]
     configuration = Configuration.new(file: ".config/crosslint/config.kdl", plugins: plugins.map(&:listing), policies: settings, warnings: nil, verbosity: nil)
-    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files.keys}, contents: {ROOT => files})
+    # Unfrozen, as Git's list is.
+    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files.keys.map(&:dup)}, contents: {ROOT => files})
     loaded = code.to_h do |file, text|
       path = File.expand_path(file, RULES)
       [path, text.is_a?(String) ? ->(namespace) { namespace.module_eval(text, path, 1) } : text]

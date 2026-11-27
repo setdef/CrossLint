@@ -35,15 +35,19 @@ module CrossLint
       def self.class_name: (String name) -> String
 
       # Runs `declaration`'s file in `namespace`, and makes an instance of
-      # the rule's class that calls the plugin's helpers with `helpers`.
+      # the rule's class that calls the plugin's helpers with `helpers`,
+      # sees `files` as the project's files, and reads them with `read`.
       # Raises Mistake when the file isn't there, and Stopped when anything
       # else goes wrong.
       def self.load: (_PluginRuby plugin_ruby, Plugin plugin, RuleDeclaration declaration, Module namespace,
-                      ^(String name, untyped input) -> untyped helpers) -> RubyRule
+                      ^(String name, untyped input) -> untyped helpers, Array[String] files,
+                      ^(String path) -> String read) -> RubyRule
 
-      # An instance of `rule_class` that calls helpers with `helpers`,
-      # made with no arguments.
-      def self.make: (singleton(Rule) rule_class, ^(String name, untyped input) -> untyped helpers) -> Rule
+      # An instance of `rule_class` that calls helpers with `helpers`, sees
+      # `files` as the project's files, and reads them with `read`, made
+      # with no arguments.
+      def self.make: (singleton(Rule) rule_class, ^(String name, untyped input) -> untyped helpers, Array[String] files,
+                      ^(String path) -> String read) -> Rule
 
       # The rule's class in `namespace`. Raises PluginError when there is
       # none, or when it doesn't inherit from CrossLint::Rule.

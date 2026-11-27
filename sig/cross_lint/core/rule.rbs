@@ -95,6 +95,23 @@ module CrossLint
     # it.
     def helper: (String name) -> ^(untyped input) -> untyped
 
+    # The project's files, among which CrossLint found the artifacts: the
+    # files Git tracks, and the untracked files it doesn't ignore, with
+    # nothing under `.git/`. Each is a path relative to the project's
+    # root, with `/` between folders, in no particular order. The array
+    # and its strings are frozen, and are the same for every artifact of
+    # the check, so a rule can index them once, in `initialize` or at its
+    # first artifact. For a rule that checks a path its artifact's text
+    # names, such as a link's target, which no companion can give.
+    def project_files: () -> Array[String]
+
+    # The text of the file at `path`, relative to the project's root with
+    # `/` between folders, its bytes as UTF-8, as `Artifact#read` gives
+    # an artifact's. Raises Errno::ENOENT when no file is at `path` by its
+    # exact name. A file Git ignores can be read, though it isn't among
+    # `project_files`.
+    def read: (String path) -> String
+
     # A violation of `artifact`, an Artifact `check` was given, with
     # `message`, a String, and, where one artifact can fail the rule in
     # several ways, a `detail` that tells them apart, a String such as a
@@ -106,5 +123,11 @@ module CrossLint
 
     # What calls the plugin's helpers, by name, set before initialize.
     @crosslint_helpers: ^(String name, untyped input) -> untyped
+
+    # The project's files, set before initialize.
+    @crosslint_files: Array[String]
+
+    # What reads a file of the project, set before initialize.
+    @crosslint_read: ^(String path) -> String
   end
 end

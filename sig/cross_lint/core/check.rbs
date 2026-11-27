@@ -45,9 +45,10 @@ module CrossLint
       @helpers: _Helpers
 
       # The violations of every plugin that didn't stop, and each fault
-      # that stopped one, with Ruby rules calling `helpers`.
+      # that stopped one, with Ruby rules calling `helpers` and seeing
+      # `files`, frozen, as the project's files.
       def run_plugins: (Project project, Array[[Plugin, Policy]] policies, Hash[String, Hash[String, Array[Artifact]]] kinds,
-                        _RunningHelpers helpers) -> [Array[Violation], Array[Fault]]
+                        _RunningHelpers helpers, Array[String] files) -> [Array[Violation], Array[Fault]]
 
       # Each policy the configuration doesn't disable, with its plugin.
       def enabled_policies: (Project project) -> Array[[Plugin, Policy]]
@@ -56,8 +57,10 @@ module CrossLint
       def setting: (Project project, Plugin plugin, Policy policy) -> PolicySetting?
 
       # Each Ruby rule an enabled policy runs, loaded, by its plugin's and
-      # its name, and the fault of each plugin that stopped while loading.
-      def load_rules: (Array[[Plugin, Policy]] policies, _RunningHelpers helpers) -> [Hash[[String, String], RubyRule], Array[Fault]]
+      # its name, and the fault of each plugin that stopped while loading,
+      # each seeing `files` as the project's files and reading them with
+      # `read`.
+      def load_rules: (Array[[Plugin, Policy]] policies, _RunningHelpers helpers, Array[String] files, ^(String path) -> String read) -> [Hash[[String, String], RubyRule], Array[Fault]]
 
       # What `plugin`'s helper `name` answers `input` with. Raises
       # PluginError when the plugin declares no such helper.

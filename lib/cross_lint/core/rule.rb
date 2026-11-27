@@ -52,6 +52,10 @@ module CrossLint
 
     def helper(name) = ->(input) { @crosslint_helpers.call(name, input) }
 
+    def project_files = @crosslint_files
+
+    def read(path) = @crosslint_read.call(path)
+
     def violation(artifact, message, detail: nil)
       raise Core::PluginError, "made a violation of #{artifact.inspect}, which is no artifact it was given" unless artifact.instance_of?(Artifact)
       raise Core::PluginError, "made a violation whose message is #{message.inspect}, which is no string" unless message.instance_of?(String)

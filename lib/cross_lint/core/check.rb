@@ -28,7 +28,7 @@ module CrossLint
         started&.call(counts(kinds, checked_kinds(project, policies))) if verbosity == :normal
         helpers = @helpers.start(project.root, project.plugins)
         begin
-          violations, faults = run_plugins(project, policies, kinds, helpers)
+          violations, faults = run_plugins(project, policies, kinds, helpers, files.map { -it }.freeze)
         rescue Interrupt
           # Before stop, which waits for each helper to finish.
           helpers.kill
@@ -54,9 +54,9 @@ module CrossLint
         project.configuration.policies.find { |setting| setting.name == "#{plugin.name}/#{policy.name}" }
       end
 
-      def run_plugins(project, policies, kinds, helpers)
-        rules, faults = load_rules(policies, helpers)
+      def run_plugins(project, policies, kinds, helpers, files)
         read = ->(path) { @project_files.read(project.root, path) }
+        rules, faults = load_rules(policies, helpers, files, read)
         stopped = faults.map(&:plugin)
         violations = project.plugins.reject { |plugin| stopped.include?(plugin.name) }.flat_map do |plugin|
           policies.select { |owner, _| owner == plugin }.flat_map { |_, policy| run(project, plugin, policy, kinds, rules, read) }
@@ -69,7 +69,7 @@ module CrossLint
 
       # Each plugin's files run in a namespace of the plugin's own, and a
       # plugin stops at its first fault.
-      def load_rules(policies, helpers)
+      def load_rules(policies, helpers, files, read)
         loaded = {} #: Hash[[String, String], RubyRule]
         faults = [] #: Array[Fault]
         policies.group_by(&:first).each do |plugin, owned|
@@ -77,7 +77,7 @@ module CrossLint
           declarations = plugin.manifest.rules.to_h { |rule| [rule.name, rule] }
           names = owned.flat_map { |_, policy| policy.rules.map(&:name) }.uniq.reject { |name| BuiltInRule.named(name) }
           call = ->(name, input) { call_helper(helpers, plugin, name, input) }
-          names.each { |name| loaded[[plugin.name, name]] = RubyRule.load(@plugin_ruby, plugin, declarations.fetch(name), namespace, call) }
+          names.each { |name| loaded[[plugin.name, name]] = RubyRule.load(@plugin_ruby, plugin, declarations.fetch(name), namespace, call, files, read) }
         rescue RubyRule::Stopped => error
           faults << error.fault
         end
