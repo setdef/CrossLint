@@ -2,32 +2,17 @@
 
 module CrossLint
   module Core
-    class VersionTag < Data.define(:text, :numbers)
-      include Comparable
-
+    class VersionTag < Data.define(:text, :version)
       PATTERN = /\Av?(\d+)\.(\d+)\.(\d+)\z/
 
       def self.parse(text)
         found = PATTERN.match(text)
-        new(text:, numbers: found.captures.map(&:to_i)) if found
+        new(text:, version: Version.new(numbers: found.captures.map(&:to_i))) if found
       end
 
-      def <=>(other) = numbers <=> other.numbers
-
-      # Comparable's == would call v1.2.0 and 1.2.0 equal; they are two tags.
-      def ==(other) = other.is_a?(VersionTag) && text == other.text
-
-      def compatible_with?(other) = group == other.group
-
-      def group
-        if numbers.fetch(0).positive?
-          numbers.first(1)
-        elsif numbers.fetch(1).positive?
-          numbers.first(2)
-        else
-          numbers
-        end
-      end
+      # A tag pairs its text with the version that text names, so only parse makes one.
+      private_class_method :new, :[]
+      private :with
 
       def v? = text.start_with?("v")
     end

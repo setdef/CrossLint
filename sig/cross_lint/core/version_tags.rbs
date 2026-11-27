@@ -23,8 +23,8 @@ module CrossLint
       # is left out.
       def self.parse: (Array[String] texts) -> VersionTags
 
-      # The tags that are compatible with `version`.
-      def compatible_with: (VersionTag version) -> VersionTags
+      # The tags that are compatible with `current`.
+      def compatible_with: (VersionTag current) -> VersionTags
 
       # The tag with the highest version, or nil when there is none. Of
       # the tags that have that version, such as v1.2.0 and 1.2.0, `keep`
@@ -35,10 +35,10 @@ module CrossLint
       def newest: (?keep: VersionTag?) -> VersionTag?
 
       # The tag with the highest version of each set of mutually
-      # compatible versions above `version`, the lowest first. Of tags
-      # tied for a version, the one `newest` picks with `version` as its
+      # compatible versions above `current`, the lowest first. Of tags
+      # tied for a version, the one `newest` picks with `current` as its
       # `keep`.
-      def newer_incompatible: (VersionTag version) -> Array[VersionTag]
+      def newer_incompatible: (VersionTag current) -> Array[VersionTag]
     end
   end
 end

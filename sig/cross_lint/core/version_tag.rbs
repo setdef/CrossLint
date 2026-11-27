@@ -1,19 +1,18 @@
 module CrossLint
   module Core
     # A tag that names a version, vX.Y.Z or X.Y.Z with integers, and no
-    # prerelease or build part, as written in the tag. Tags order by their
-    # numbers, so v1.10.0 is above v1.9.0, and v1.2.0 and 1.2.0 tie. Two
-    # tags are equal only when their text is.
+    # prerelease or build part, as written in the tag. Two tags are equal
+    # only when their text is, so v1.2.0 and 1.2.0 are two tags of one
+    # version. To order tags, compare their versions. Only `parse` makes
+    # one, so a tag's text and version always agree.
     #
     # ```ruby
     # tag = CrossLint::Core::VersionTag.parse("v1.4.0")
-    # tag.compatible_with?(CrossLint::Core::VersionTag.parse("1.10.0")) # => true
-    # tag.compatible_with?(CrossLint::Core::VersionTag.parse("v2.0.0")) # => false
+    # tag.version.compatible_with?(CrossLint::Core::VersionTag.parse("1.10.0").version) # => true
+    # tag.version.compatible_with?(CrossLint::Core::VersionTag.parse("v2.0.0").version) # => false
     # CrossLint::Core::VersionTag.parse("v1.4.0-rc.1") # => nil
     # ```
     class VersionTag < Data
-      include Comparable
-
       # A tag that is a version: three integers, with an optional "v"
       # before them and nothing after.
       PATTERN: Regexp
@@ -21,38 +20,23 @@ module CrossLint
       # The tag as written, such as "v1.4.0".
       attr_reader text: String
 
-      # The tag's major, minor, and patch numbers.
-      attr_reader numbers: Array[Integer]
-
-      # The tag with these fields.
-      def self.new: (text: String, numbers: Array[Integer]) -> instance
-
-      # The tag with these fields.
-      def initialize: (text: String, numbers: Array[Integer]) -> void
+      # The version the text names.
+      attr_reader version: Version
 
       # The version tag that `text` is, or nil when it is no version tag,
       # such as a prerelease tag, a branch, or a commit SHA.
       def self.parse: (String text) -> VersionTag?
 
-      # Orders by the numbers, and is 0 for two tags of one version.
-      def <=>: (VersionTag other) -> Integer?
-
-      # Whether `other` is the same tag, text and all.
-      def ==: (untyped other) -> bool
-
-      # Whether `other` is compatible with this version, by the caret rule
-      # of Cargo and npm, which Semantic Versioning's 0.y.z rule leads to:
-      # the same X from X.Y.Z on, the same 0.Y at 0.Y.Z, and only 0.0.Z
-      # itself at 0.0.Z.
-      def compatible_with?: (VersionTag other) -> bool
-
-      # The leading numbers that stay the same across the versions
-      # compatible with this one: X from X.Y.Z on, 0 and Y at 0.Y.Z, and
-      # all three at 0.0.Z.
-      def group: () -> Array[Integer]
-
       # Whether the tag is written with a "v" before its numbers.
       def v?: () -> bool
+
+      private
+
+      def self.new: (text: String, version: Version) -> instance
+
+      def initialize: (text: String, version: Version) -> void
+
+      def with: (?text: String, ?version: Version) -> instance
     end
   end
 end

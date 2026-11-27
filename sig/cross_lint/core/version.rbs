@@ -1,0 +1,39 @@
+module CrossLint
+  module Core
+    # A version, X.Y.Z with integers, that orders by its numbers, so 1.10.0
+    # is above 1.9.0, and that knows which versions it is compatible with.
+    #
+    # ```ruby
+    # version = CrossLint::Core::Version.new(numbers: [1, 4, 0])
+    # version.compatible_with?(CrossLint::Core::Version.new(numbers: [1, 10, 0])) # => true
+    # version.compatible_with?(CrossLint::Core::Version.new(numbers: [2, 0, 0])) # => false
+    # version < CrossLint::Core::Version.new(numbers: [1, 10, 0]) # => true
+    # ```
+    class Version < Data
+      include Comparable
+
+      # The version's major, minor, and patch numbers.
+      attr_reader numbers: Array[Integer]
+
+      # The version with these numbers.
+      def self.new: (numbers: Array[Integer]) -> instance
+
+      # The version with these numbers.
+      def initialize: (numbers: Array[Integer]) -> void
+
+      # Orders by the numbers, and is nil for anything that is no version.
+      def <=>: (untyped other) -> Integer?
+
+      # Whether `other` is compatible with this version, by the caret rule
+      # of Cargo and npm, which Semantic Versioning's 0.y.z rule leads to:
+      # the same X from X.Y.Z on, the same 0.Y at 0.Y.Z, and only 0.0.Z
+      # itself at 0.0.Z.
+      def compatible_with?: (Version other) -> bool
+
+      # The leading numbers that stay the same across the versions
+      # compatible with this one: X from X.Y.Z on, 0 and Y at 0.Y.Z, and
+      # all three at 0.0.Z.
+      def group: () -> Array[Integer]
+    end
+  end
+end

@@ -14,54 +14,34 @@ class VersionTagTest < Minitest::Test
     assert_equal [versions, []], [versions.select { |ref| VersionTag.parse(ref) }, others.select { |ref| VersionTag.parse(ref) }]
   end
 
-  def test_keeps_the_text_as_written_and_its_three_numbers
+  def test_keeps_the_text_as_written_and_its_version
     tag = VersionTag.parse("v1.02.30")
 
-    assert_equal ["v1.02.30", [1, 2, 30], true], [tag.text, tag.numbers, tag.v?]
+    assert_equal ["v1.02.30", [1, 2, 30], true], [tag.text, tag.version.numbers, tag.v?]
     assert_equal ["1.2.3", false], [VersionTag.parse("1.2.3").text, VersionTag.parse("1.2.3").v?]
   end
 
-  def test_orders_by_number_not_by_text
-    tags = %w[v1.10.0 v1.2.0 v1.9.9 v0.99.99 v10.0.0 v1.2.10].map { |text| VersionTag.parse(text) }
-
-    assert_equal %w[v0.99.99 v1.2.0 v1.2.10 v1.9.9 v1.10.0 v10.0.0], tags.sort.map(&:text)
-    assert_equal "v10.0.0", tags.max.text
-  end
-
-  def test_one_version_in_two_forms_ties_but_the_two_tags_are_not_equal
+  def test_two_tags_of_one_version_are_not_equal
     with_v = VersionTag.parse("v1.2.0")
     plain = VersionTag.parse("1.2.0")
+    same = VersionTag.parse("v1.2.0")
 
-    assert_equal [0, false, true], [with_v <=> plain, with_v == plain, with_v == VersionTag.parse("v1.2.0")]
+    assert_equal [false, false, true, true], [with_v == plain, with_v.eql?(plain), with_v == same, with_v.eql?(same)]
+    assert_equal [with_v, plain], [with_v, plain, same].uniq
+    assert_equal [with_v, plain], {with_v => 1, plain => 2, same => 3}.keys
     refute_equal with_v, "v1.2.0"
   end
 
-  # The caret rule of Cargo and npm: the leftmost number that isn't zero
-  # stays, and the ones before it are all zeros.
-  def test_is_compatible_with_the_versions_that_share_its_leftmost_number_that_isnt_zero
-    one = VersionTag.parse("v1.4.0")
-    results = %w[v1.0.0 v1.9.0 1.10.0 v2.0.0 v0.9.0].map { |text| one.compatible_with?(VersionTag.parse(text)) }
-
-    assert_equal [true, true, true, false, false], results
+  def test_two_tags_of_one_version_share_it
+    assert_equal VersionTag.parse("v1.2.0").version, VersionTag.parse("1.2.0").version
+    refute_equal VersionTag.parse("v1.2.0").version, VersionTag.parse("v1.2.1").version
   end
 
-  def test_is_compatible_at_zero_y_z_with_the_same_zero_y_only
-    zero = VersionTag.parse("0.3.0")
-    results = %w[v0.3.1 v0.3.9 v0.4.0 v0.0.3 v1.3.0].map { |text| zero.compatible_with?(VersionTag.parse(text)) }
+  def test_only_parse_makes_a_tag
+    tag = VersionTag.parse("v1.2.0")
 
-    assert_equal [true, true, false, false, false], results
-  end
-
-  def test_is_compatible_at_zero_zero_z_with_that_version_only
-    triple_zero = VersionTag.parse("v0.0.3")
-    results = %w[v0.0.3 0.0.3 v0.0.4 v0.0.2 v0.1.3 v1.0.3].map { |text| triple_zero.compatible_with?(VersionTag.parse(text)) }
-
-    assert_equal [true, true, false, false, false, false], results
-  end
-
-  def test_groups_the_versions_that_are_compatible
-    groups = %w[v1.0.0 1.9.9 v2.0.0 v0.3.0 v0.3.9 v0.0.3 v0.0.4].map { |text| VersionTag.parse(text).group }
-
-    assert_equal [[1], [1], [2], [0, 3], [0, 3], [0, 0, 3], [0, 0, 4]], groups
+    assert_raises(NoMethodError) { VersionTag.new(text: "v1", version: tag.version) }
+    assert_raises(NoMethodError) { VersionTag[text: "v1", version: tag.version] }
+    assert_raises(NoMethodError) { tag.with(text: "v9.9.9") }
   end
 end
