@@ -115,6 +115,13 @@ The artifact a rule gets has these methods:
 | `read` | The primary file's contents. |
 | `companion(NAME)` | The companion of that name, with `name`, `path`, `exist?`, and `read`. |
 
+A rule can also look beyond its artifact, for a path written in the artifact's text, such as a link's target, which no companion can give:
+
+| Method | Returns |
+| --- | --- |
+| `project_files` | Every file the project has, as CrossLint sees them: the files Git lists, tracked or not, minus those Git ignores, and nothing under `.git/`. Each is a path relative to the project's root, with `/` between folders, in no particular order. It is the same frozen list for every artifact of a check, so a rule can index it once, in `initialize` or at its first artifact. |
+| `read(PATH)` | The text of the file at `PATH`, relative to the project's root with `/` between folders. It raises `Errno::ENOENT` when no file has that exact name. A file Git ignores can be read, though it isn't in `project_files`. |
+
 `violation(artifact, message, detail: TEXT)` makes a violation with a detail, for a rule that can find several things wrong with one artifact, such as each missing member by name. Debt records each detail as a separate entry.
 
 CrossLint makes one instance of the class per check, with no arguments, and calls `check` once for each artifact a policy applies the rule to. A policy's `rule` line gives a rule written in Ruby no arguments; a line that does is a mistake. A rule no policy runs isn't loaded, and CrossLint says so in a warning.

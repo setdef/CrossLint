@@ -82,6 +82,17 @@ To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugi
 4. **Accept what you can't fix yet** with `crosslint debt update`, a command of the debt plugin, which writes every current violation to `.config/crosslint/debt.tsv`. Add a comment to each line saying why it's there. From then on, `crosslint check` passes as long as no violation is new, and fails when a recorded one is fixed, until `crosslint debt update` removes it from the file. `crosslint debt update --dry-run` lists what an update would change, and writes nothing.
 5. **Run it in CI** as you run the project's tests, so a pull request with a new violation fails.
 
+### Plugins for any project
+
+This repository also keeps shared plugins for checks many projects want, each in its folder under [`plugins/`](plugins/), with a README that says what it checks and how to list it:
+
+- [markdown-links](plugins/markdown-links/README.md): every relative link in the project's Markdown resolves, anchors included.
+- [decision-log](plugins/decision-log/README.md): a decision log's index links to exactly the records in its folder.
+- [agents-md](plugins/agents-md/README.md): every `AGENTS.md` has a `CLAUDE.md` beside it whose first line is `@AGENTS.md`.
+- [page-features](plugins/page-features/README.md): every page component of an app has a Gherkin feature file.
+
+A project lists one by this repository's URL, a tag, and the plugin's folder, such as `plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/markdown-links"`. `TAG` is a release of CrossLint that has the plugin's folder.
+
 ### Moving from ng-nudge
 
 In the project's root, run `crosslint init --from-ng-nudge --dry-run` first: it lists every change the move would make, and makes none. Then run `crosslint init --from-ng-nudge`, which:
