@@ -1,28 +1,124 @@
-# Contributing to CrossLint
+<!-- ONLY HUMANS MAY EDIT THIS FILE! -->
+
+# Working on CrossLint
+
+These are the working rules for everyone who changes this repository: people, and the AI agents they run. They are the project's shared rules, so they apply to every contributor, humans and AI agents alike.
+
+## The Tao of CrossLint
+
+_TODO_
+
+## What the project is
+
+_TODO_
+
+## Committing to the trunk
+
+The project practices trunk-based development.
+
+- **Run the tests** with `BUNDLE_PATH` set to a folder outside the repository: `mise exec -- bundle exec rake test`, and again under RBS's runtime type checker, `mise exec -- bundle exec rake test:rbs`. `mise exec` runs them on the Ruby version that `mise.toml` lists.
+- **Check code or tests that behave differently on Windows, on Windows.** This covers anything that reads `File::ALT_SEPARATOR` or `Gem.win_platform?`, and anything that depends on paths, line endings, `fork`, or signals.
+- **Check a change to `.github/workflows/*.yml`** by loading the file with `YAML.safe_load_file` and running each changed `run:` string exactly as YAML parsed it.
+- **When the push is refused because `trunk` moved,** read the diff, rebase, run the gate again if risky, and push again. Read the diff every time, even when the incoming commit messages look unrelated: two changes can rebase cleanly and still break each other.
+- **After you push, wait for nothing.** Don't watch a CI/Proof run or poll for its result. Check work before the push, not after it.
+- **Keep every push releasable.** When a goal takes several commits, hide the unfinished code behind a feature flag or build it by branch by abstraction, and land it in slices.
+- **Every agent pushes the commits it wrote immediately.** Nobody collects other agents' commits to land them, nobody sets a landing order or asks others to stop pushing, and nobody keeps working with gate-passing unpushed commits.
+- **Fix or quarantine a flaky test right away,** recording the reason, instead of rerunning it until it passes. Never delete or disable a test to make the build faster.
+- **Review on origin.** Review never blocks a push that passes the gate, because follow-up commits and reverts handle feedback.
+
+## Spikes
+
+A spike, prototype, or probe is throwaway code. It never reaches `trunk`, and nobody pushes it anywhere else either, except a probe that needs CI's runners, which may go on a throwaway branch if needed. When it's done and you've [written things down](#writing-things-down) delete the spike. Write production code afresh after the decision, and never grow it from a spike.
+
+## Commit messages
+
+Write every commit message in the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format: `<type>(<scope>): <description>`, or `<type>: <description>` with no scope.
+
+- The type is one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, or `revert`, in lowercase.
+- The scope is optional. It is the part of the code the change affects, in lowercase.
+- The description is a short summary in the imperative mood ("add", not "added" or "adds"), with no period at the end.
+- A body, after a blank line, explains why this implementation was chosen over others. It never re-states the diff or explains anything obvious from reading the patch.
+- A breaking change has a `BREAKING CHANGE: <description>` footer.
+- An agent commit has a `Co-authored-by: <model-and-version>` footer.
+
+For example: `feat(plugins): add plugin auto-update option`, or `docs: describe the configuration file`.
+
+## Writing code
+
+- **Get each fact from its source.** Run the tool, read the current documentation or source, or read a run's result. This matters most for facts that depend on a version, such as a gem's API or how Ruby behaves in a given version, because memory about a dependency goes stale, especially for projects that change often. Never pass on an AI agent's or a tool's claim as fact without checking it, and say which facts you checked and which you didn't.
+- **Reuse before you build.** The project carries as little code as it can. Before you write a parser, protocol, server, format reader, cryptographic primitive, or anything else of that kind, look for reliable code that already exists: the Ruby standard library first, then gems that are maintained, documented, and tested. Code written for this repository in place of a library needs the same written reason that a new dependency does.
+- **Code is a liability.** The more code the project carries, the more can go wrong and the harder it is to maintain.
+- **Improve software design** according to the Boy Scout Rule, with refactorings in separate commits before implementation. Make the change easy (warning: this may be hard), then make the easy change.
+- **TDD tests every change in behavior.** Confirm that each new test fails without the change: a test that passes either way proves nothing.
+- **Update the user documentation** in the same commit as a change to anything users see. Watch your prose style, and use best practices for developer docs.
+- **Write the doc comment** for every public class, module, constant, and method in the matching `.rbs` declaration in `sig/`. A comment directly above a `def`, `class`, or `module` in `lib/` would be RDoc documentation, which doesn't go in `.rb` files. Don't leave commented-out code, history notes, or decorative divider comments in the source.
+- **Comment why, not what.** Rename a variable or extract a method instead of explaining unclear code. Write a comment for a reason the code can't show, such as a constraint from outside the project or the choice of an algorithm. Therefore, `.rb` files should have very few comments.
 
 ## Writing things down
 
-Record each thing where the next contributor will find it, in its one home, and nowhere else. What lives only in a chat, or on one machine, is lost.
+### Glossary
 
-| What | As it is | As it will be |
-| --- | --- | --- |
-| Requirements: what CrossLint does for its users | The README and the pages of `docs/` outside `docs/design/` | Issues |
-| Contract: what a caller can rely on | Doc comments, in the RBS signatures under `sig/` | Issues |
-| Architecture: the few decisions the structure rests on | Accepted ADRs in [`docs/decisions/`](docs/decisions/) | Proposed ADRs there |
-| Design: how each part works, and why | The design documents in [`docs/design/`](docs/design/README.md) | Nowhere |
-| Behavior: what the code does | Tests, under `test/` and each built-in plugin's `test/` | Nowhere |
+Use [the glossary](docs/glossary.md)'s words, in code as in prose; a new idea gets a glossary entry before it gets a name.
+
+### When and Where
+
+Record these where the next contributor will find it. (What lives only in a chat, or on one machine, gets lost.) Write each thing in its axis's home, and nowhere else:
+
+| Axis | As it is | As it will be |
+| - | - | - |
+| Requirements: what the software does for its users | User documentation† | Issues |
+| Contract: what a caller can rely on | Doc comments; the changelog, for changes over time | Issues |
+| Architecture: the few decisions the structure rests on | Accepted ADRs | Proposed ADRs |
+| Design: how each part works, and why | Design documents | Nowhere |
+| Behavior: what the code does | Tests | Nowhere |
 | Facts that constrain the design | The design document or ADR they constrain; until that exists, the issue whose work they constrain | Nowhere |
 
 - **Decide a design at the last responsible moment,** while building it, with the facts in hand, then record it as it is. Never write a design, or a behavior, ahead of the code, in an issue or anywhere else.
-- **A design document explains a part to the people who change it:** its concepts, how its pieces fit, why it is shaped this way, its traps, and what it deliberately doesn't do. It doesn't restate the code: no fields, option lists, step-by-step restatements, exact messages, or private call graphs.
-- **Change a design document when a design decision changes,** never because behavior did. The two change independently.
+- **A design document explains a part to the people who change it:** its concepts, how its pieces fit, why it is shaped this way, its traps, and what it deliberately doesn't do. It doesn't restate the code: no fields, option types, step-by-step restatements of the code, or private call graphs.
+- **Change a design document when a design decision changes,** never because behavior did. The two vary independently.
 - **A doc comment describes the contract from the caller's side,** never how the code does the work inside.
-- **Check a fact at its source before anything rests on it,** on the system it's about. A decision that rests on an unchecked fact waits.
-- **Record a fact found before its design exists as a fact, not a decision:** what was tried or checked, how, on which system and version, and the result. It waits in the issue whose work it constrains, and moves to the design document or ADR once that is decided.
-- **An issue may hold a proposed or an accepted requirement or contract,** and one that doesn't say which is neither accepted nor refused.
-- **The README was written ahead of the code, as CrossLint's requirements.** The rest of the user documentation describes only what CrossLint does today.
+- **Check a fact at its source before anything rests on it,** on the platform it's about. A decision that rests on an unchecked fact waits.
+- **Record a fact found before its design exists as a fact, not a decision:** what was spiked or checked, how, on which platform and version, and the result. It waits in the issue whose work it constrains. When the design or architecture is decided, the relevant facts go in that design document or ADR.
+- **Issues may represent proposed or accepted** requirements or contracts, and an issue that doesn't specify which can't be assumed to have already been accepted or denied.
+- † **In a project being built under README-Driven Development,** the user documentation is written ahead of the code, as its requirements. Everywhere else, it describes only what the software does today.
 
-Use [the glossary](docs/glossary.md)'s words, in code as in prose; a new idea gets a glossary entry before it gets a name. To change an architecture decision, write a new record with the next number and delete the old one.
+## Security
+
+This software runs other people's plugins and reads and writes their files, so treat every path, setting, and line of output that comes from them as untrusted input.
+
+- Start a subprocess with an array of arguments, never a single string a shell would parse.
+- Build file paths from parts with `File.join` or `Pathname`, and check that a path built from outside input stays inside the directory you meant it for.
+- Never hardcode a secret, such as an API key. Take a secret from a file or standard input, never from a flag or an environment variable: the system shows every process's arguments to other users in its process listing, and every child process inherits the environment. Never print a secret.
+- Before every network request, have the program say on standard error what it is about to do, and give the request a time limit, so that no command waits on the network in silence or forever.
+- A plugin's code runs with the user's rights. Never widen what it can reach.
+- Never call `Marshal.load` or `YAML.unsafe_load` on data from outside the process.
+- Commits, issues, comments, docs, and code hold only what anyone could find in public sources. Never put in them your machine's names, paths, or hardware, or anything said in a private conversation, and never quote a person from one. An ADR lists its deciders by role, with links to the public issues.
+
+## Quality gates
+
+`bundle exec rake` runs the quality gates: RubyCritic, RuboCop, Steep, test coverage, documentation coverage, CrossLint, LintLedger, and `reuse lint`. Every change has to pass all of them, with zero errors and zero warnings. Their thresholds only ever go up. When a change fails a gate, fix the change; never lower a threshold, turn off a check, or exclude code to get it through.
+
+Coverage is 100% for each file, on every system CI tests. A test skipped on one system can drop that system's branch coverage below 100% and turn its job red, even though every test passes. Never skip a test on one system to make it pass. Pass the system-dependent value in, such as a path separator or a platform flag, so the test runs everywhere.
+
+When a gate (a RubyCritic score, a Reek smell, a RuboCop length limit) pushes the design, it's actually pushing you to remember OOA&D & OOP best practices. They properly flag bad code, but their suggestions are naive. Don't game them or comply naively; take responsibility for the object design improving over time.
+
+### What the maintainer decides
+
+Ask the maintainer before you change any of these:
+
+- product scope
+- licensing
+- significant changes to UX/DX (commands, flags, environment variables, file formats, etc).
+
+## Copyright and licenses
+
+The project follows the [REUSE Specification](https://reuse.software/spec-3.3/). SPDX headers in files are only for content under a copyleft or share-alike license. Snippet comments are used for ported code, complying with their license. Examples in documentation also use Snippet comments, MIT-0. `REUSE.toml` holds the license information for content under a permissive or public-domain license. The project's own files are MIT, which is permissive, so they have no SPDX headers; `REUSE.toml` covers them.
+
+A file under a copyleft or share-alike license must not be copied from elsewhere without permission from the maintainer. An approved copyleft or share-alike file, or a file copied under a permissive or public-domain license, has that license in its own SPDX header. Run `reuse lint` before you push when copying or porting code.
+
+Code ported from another project (an algorithm translated into Ruby, a table, a regex, etc.), as opposed to code only inspired by it, goes between `# SPDX-SnippetBegin` and `# SPDX-SnippetEnd` comments in its file. Inside them, give the upstream license as `SPDX-License-Identifier`, the upstream copyright as `SPDX-SnippetCopyrightText`, and an `SPDX-SnippetComment` that names the upstream project and file and says what the port changed. `reuse lint` must still pass.
+
+## Miscellaneous
 
 The command reference, [`docs/reference/cli.md`](docs/reference/cli.md), is generated from [`crosslint.usage.kdl`](crosslint.usage.kdl). After changing the spec, check it and regenerate the reference in the same commit:
 
@@ -31,32 +127,4 @@ $ usage lint crosslint.usage.kdl
 $ usage generate markdown --file crosslint.usage.kdl --out-file docs/reference/cli.md
 ```
 
-Every public class, module, method, and constant has a doc comment in its RBS signature under `sig/`, in Markdown. A `.rb` file has a comment only where the code needs a reason: why it's written this way, or what makes it tricky.
 
-## Checks
-
-After `bundle install`, run `bundle exec rake fixtures` once: it installs the packages the Angular plugin's test fixtures lock, with `npm ci`, using the Node that `mise.toml` pins. No test task runs it, and a test whose fixture lacks them fails saying to run it. `bundle exec rake check` runs every check; the Rakefile says which. Before a push, run `bundle exec rake gate`, which runs `rake check`, in about a minute, on any system. CI runs it again after the push, in two tiers: `fast.yml` judges each push on Linux, and `ci.yml` runs in batches, one run at a time on `trunk`, with the tests on macOS and Windows.
-
-The tests cover every line and branch of `lib/` and of each built-in plugin's Ruby, but the other system's process tree. Mutation testing is off until Stryker (for Ruby) can run it (#23). Write each test as if it still ran: see each new test fail on the code without the change before it passes; give each branch and each boundary a test that fails when the branch is removed or the boundary moves by one; and assert the exact value, message, or exit status, not only that something happened.
-
-## Landing a change
-
-Commit straight to `trunk`, one change at a time, each one complete and releasable. A spike, an experiment written to answer a question, is throwaway code and stays off `trunk`; its answer goes in the issue it serves. Run `rake gate` before you push, and rebase and run it again when a push is refused because `trunk` moved.
-
-When a run of `fast.yml` or `ci.yml` on `trunk` fails, `trunk` is red: revert the commit that broke it at once, whoever wrote it, and tell its author in the issue the commit names; the fix lands again afterwards, with a test. Nobody fixes forward on a red `trunk`.
-
-### Known flaky tests
-
-A test that fails without a change to what it tests is a fault in the test, fixed or set aside with its reason recorded here, never rerun until it passes. Running it again never closes it.
-
-## Licensing
-
-CrossLint is MIT-licensed, copyright setdef. [`REUSE.toml`](REUSE.toml) declares the copyright and license of every file, following the [REUSE specification](https://reuse.software/spec/), and `reuse lint` must pass.
-
-A file under a permissive license carries no SPDX header; `REUSE.toml` covers it. A file under a copyleft or share-alike license carries an SPDX header naming its license, and the license's text goes in `LICENSES/`.
-
-Code or prose taken from [ng-nudge](https://github.com/OverTheTopMarketing/ng-nudge) (MIT, Copyright 2026 Over The Top Marketing) keeps its notice: wrap each passage in `SPDX-SnippetBegin` and `SPDX-SnippetEnd`, with `SPDX-SnippetCopyrightText` and `SPDX-License-Identifier` naming its copyright holder and license, the way [setdef/Tokra](https://github.com/setdef/Tokra) credits Tauri.
-
-## Releases
-
-Releases are tags and GitHub releases, cut whenever `trunk` is ready. To cut one, tag a commit at the head of a passing run of `ci.yml` as `v` and the version in `crosslint.usage.kdl`, such as `v0.1.0`, and push the tag: the Release workflow, which a push to `trunk` doesn't start, builds each platform's archive from a clean checkout, runs each with no Ruby to fall back on (on Linux in a container with no Ruby, and on macOS and Windows with an empty `PATH`), and publishes the archives with a `SHA256SUMS` file. It refuses a tag that doesn't match the spec's version, and a tag whose commit isn't the head of a passing run of `ci.yml` from a push to `trunk`. A tag pushed before that run passes fails its Release run; rerun the Release run once it has passed. Every version is `0.X.Y`, three plain integers, with no prerelease form such as `-rc.1` and no build metadata, and the version stays below 1.0.0. To try a build without publishing, run the Release workflow by hand and give it an existing tag: it builds and smoke-tests that tag and publishes nothing. Nothing is published to a registry outside GitHub.

@@ -1,3 +1,6 @@
+.claude/
+.idea/
+
 # Scratch files, and the bundle and Bundler settings of a checkout.
 /.scratch/
 /.bundle/
