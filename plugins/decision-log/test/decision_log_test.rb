@@ -88,6 +88,15 @@ class DecisionLogTest < Minitest::Test
       findings(check({"docs/decisions/README.md" => index, "guide.md" => text}))
   end
 
+  def test_reads_no_citation_in_a_word_joined_to_adr_by_a_hyphen
+    index = %w[0001-use-ruby.md 0002-use-kdl.md 0003-use-git.md].map { "[x](#{it})" }.join("\n")
+    text = "X-ADR 5, MADR-ADR 6, and 1-ADR 7 cite nothing; ADR 8 and ADR-9 do.\n"
+
+    assert_equal [["guide.md", "citations-resolve", "line 1: ADR 8 matches no record in docs/decisions", "ADR 8"],
+      ["guide.md", "citations-resolve", "line 1: ADR-9 matches no record in docs/decisions", "ADR-9"]],
+      findings(check({"docs/decisions/README.md" => index, "guide.md" => text}))
+  end
+
   def test_finds_the_log_and_its_index_where_the_settings_say
     write(@root, "doc/adr/0001-record-decisions.md", "")
     write(@root, "doc/adr/0002-use-ruby.md", "Unlike ADR 0001 of docs/decisions, this cites ADR 3.\n")
