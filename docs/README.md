@@ -3,6 +3,7 @@
 Where to start depends on what you're doing:
 
 - **New to CrossLint?** Work through [Getting started](getting-started.md). In about 15 minutes, it adds CrossLint to a project, writes one rule, and keeps the check passing with debt.
+- **Adding a check to a project?** The [cookbook](cookbook/README.md) has one recipe per check, each with a plugin to copy and what it reports, such as [every Rails route has its action](cookbook/rails-routes.md) and [Vue components scope their styles](cookbook/scoped-vue-styles.md).
 - **Moving from ng-nudge?** Read [Moving from ng-nudge](../README.md#moving-from-ng-nudge) in the README.
 - **Looking something up?** The references list everything:
   - [Command reference](reference/cli.md): every command, flag, and exit status, generated from [`crosslint.usage.kdl`](../crosslint.usage.kdl).

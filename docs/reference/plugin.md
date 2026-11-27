@@ -1,6 +1,6 @@
 # Plugin reference
 
-A plugin is a folder with a `plugin.kdl` at its root, which declares the plugin's artifacts, policies, and rules in [KDL](https://kdl.dev/). This page lists everything `plugin.kdl` can hold. A local plugin and a shared one use the same file; [the configuration reference](configuration.md) says how a project lists either, and [the glossary for plugin authors](plugin-glossary.md) defines the words this page uses.
+A plugin is a folder with a `plugin.kdl` at its root, which declares the plugin's artifacts, policies, and rules in [KDL](https://kdl.dev/). This page lists everything `plugin.kdl` can hold; [the cookbook](../cookbook/README.md) has whole plugins for single checks, such as the actions of a Rails app's routes. A local plugin and a shared one use the same file; [the configuration reference](configuration.md) says how a project lists either, and [the glossary for plugin authors](plugin-glossary.md) defines the words this page uses.
 
 Every example on this page comes from one plugin, kept in a Ruby project at `.config/crosslint/signatures/`, that checks each Ruby file under `lib/` for a signature file under `sig/` and a test under `test/`:
 

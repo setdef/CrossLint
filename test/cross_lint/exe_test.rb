@@ -60,6 +60,26 @@ class ExeTest < Minitest::Test
     end
   end
 
+  # A recipe's files are its blocks whose first line is a comment with
+  # the file's path, each written whole, in the page's order, and each
+  # `$ crosslint check` runs where the page shows it.
+  def test_runs_each_cookbook_recipe_as_it_shows_it
+    {"docs/cookbook/rails-routes.md" => [1, 1], "docs/cookbook/scoped-vue-styles.md" => [0, 0]}.each do |page, statuses|
+      Dir.mktmpdir("crosslint") do |project|
+        Open3.capture3("git", "init", "-q", chdir: project)
+        ran = File.read(File.join(ROOT, page)).scan(/^```\w+\n(.*?)^```$/m).flatten.filter_map do |block|
+          next crosslint("check", chdir: project).then { |out, err, status| ["$ crosslint check\n#{out}#{err}", status] } if block.start_with?("$ crosslint check\n")
+
+          path = block[%r{\A(?://|#|<!--) (\S+)(?: -->)?\n}, 1]
+          write(project, path, block) if path
+          nil
+        end
+
+        assert_equal doc_blocks(page, "console").zip(statuses), ran, page
+      end
+    end
+  end
+
   def test_runs_the_plugin_references_ruby_rule_as_written
     plugin, _regexes, _methods, _helpers, rule = doc_blocks("docs/reference/plugin.md", "kdl")
     code = doc_blocks("docs/reference/plugin.md", "ruby").first
