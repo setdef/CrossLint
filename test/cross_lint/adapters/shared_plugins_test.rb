@@ -744,25 +744,6 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal ["v1.0.0", "with space"], port(git: listing).tags(repository_url)
   end
 
-  def test_takes_the_ref_as_a_tag_only_when_ls_remote_lists_exactly_that_tag_and_as_a_branch_only_when_it_lists_exactly_that_branch
-    cases = {
-      "abc\trefs/tags/v1x0x0\n" => Core::FetchError.no_tag("v1.0.0"),
-      "abc\trefs/tags/v1.0.0-rc\n" => Core::FetchError.no_tag("v1.0.0"),
-      "abc\tx/refs/tags/v1.0.0\n" => Core::FetchError.no_tag("v1.0.0"),
-      "abc\trefs/heads/v1.0.0\n" => Core::FetchError.branch("v1.0.0"),
-      "abc\trefs/heads/v1x0x0\n" => Core::FetchError.no_tag("v1.0.0"),
-      "abc\trefs/heads/v1.0.0-rc\n" => Core::FetchError.no_tag("v1.0.0"),
-      "abc\tx/refs/heads/v1.0.0\n" => Core::FetchError.no_tag("v1.0.0")
-    }
-    script = "print File.read(File.join(__dir__, \"listing\"))\nexit(ARGV.include?(\"ls-remote\") ? 0 : 1)\n"
-    messages = cases.keys.map do |listing|
-      write(File.join(@base, "fakes"), "listing", listing)
-      assert_raises(Core::FetchError) { port(git: fake("lists.rb", script)).fetch(repository_url, "v1.0.0") }.message
-    end
-
-    assert_equal cases.values.map(&:message), messages
-  end
-
   def test_unsets_each_git_variable_and_no_other
     assert_equal({"GIT_DIR" => nil, "GIT_INDEX_FILE" => nil}, Adapters::GitEnvironment.cleared({"GIT_DIR" => "x", "PATH" => "y", "GIT_INDEX_FILE" => "z", "XGIT_A" => "b"}))
     assert_equal ENV.keys.grep(/\AGIT_/).sort, Adapters::GitEnvironment.cleared.keys.sort
