@@ -179,7 +179,7 @@ Open an issue at [github.com/setdef/CrossLint/issues](https://github.com/setdef/
 
 ## License
 
-CrossLint is released under the [MIT License](LICENSE). It places no conditions on the projects you check with it. The examples in the documentation are under [MIT-0](LICENSES/MIT-0.txt), so you may copy them without a notice.
+CrossLint is released under the [MIT License](LICENSE). It places no conditions on the projects you check with it. An example between SPDX snippet comments, in this README, the plugins' READMEs, or the guides and references under `docs/`, is under [MIT-0](LICENSES/MIT-0.txt), so you may copy it without a notice. The command reference and its examples are under the MIT License, like the rest.
 
 ## How this was made
 

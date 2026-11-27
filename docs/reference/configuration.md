@@ -60,7 +60,7 @@ Debt tracking: violations listed in the debt file don't fail the check, and an e
 
 The debt file is tab-separated, in ng-nudge's format, so a file moved from ng-nudge reads unchanged: a header row `Rule`, `Artifact`, `Comment`, and an optional fourth column `Detail`, then one entry per line. `Rule` is `PLUGIN/POLICY`, or a bare policy name, which stands for the policy of that name when exactly one listed plugin has one. `Artifact` is the artifact's name, which is its primary path unless its declaration has a [`name`](plugin.md#artifact), or its [key](plugin-glossary.md#declaring), such as ng-nudge's base path `app/card/card`, alone or as `NAME.ROLE`. A field holding a tab, a newline, or `"` is wrapped in `"`, with each `"` doubled. Paths are written with `/` on every system, a path read with `\` is read as `/`, and the file keeps the line endings it had. An entry with no rule or no artifact stops CrossLint with exit status 2, naming the file and the line.
 
-An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is: it is neither reported as paid off nor reported as debt, and `crosslint debt update` keeps it with its comment.
+An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is. The check doesn't count it as paid off, which would fail the check, and `report-entries` doesn't report it. `crosslint debt update` keeps it with its comment.
 
 The debt plugin adds one command:
 
@@ -74,7 +74,7 @@ The debt plugin adds one command:
 
 | Property | Meaning |
 | --- | --- |
-| `enabled=#false` | Don't run the policy. Its entries in the debt file are kept, and are neither reported as paid off nor reported as debt. |
+| `enabled=#false` | Don't run the policy. Its entries in the debt file are kept. They aren't paid-off entries, which would fail the check, and `report-entries` doesn't report them. |
 | `severity="error"` or `severity="warning"` | Report the policy's violations at this severity, in place of what its plugin declares. |
 
 A policy that no listed plugin has stops CrossLint with exit status 2.

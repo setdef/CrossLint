@@ -66,11 +66,11 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
 
   **Default:** `all`
 - **`-a --all`** — List every artifact checked, passing ones included; --json leaves passing ones out
-- **`--json`** — Prints one JSON object on one line of standard output in place of lines, with every character that isn't ASCII escaped. The summary line, the notices, and the faults go to standard error, as without --json.
+- **`--json`** — Prints one JSON object on one line of standard output in place of lines, with every character that isn't ASCII escaped. Everything else goes to standard error, as without --json: the faults, the summary line (not with --quiet or --silent), and the notices (not with --warnings=none or --silent, and with --quiet only under --warnings=error).
 
   The object has these keys, in this order:
 
-  - "findings": an array with one object for each violation, with these keys, in this order. "path" is the artifact's primary file. "message", "plugin", and "policy" are strings. "artifact" is the artifact's name, which is its path unless its declaration names it otherwise. "role" is the artifact's kind. "severity" is "error" or "warning". "detail" is a string, or null when the rule gives none. "line" is the number of the line the artifact was found on, or null for an artifact that is a whole file. Every value but "detail" and "line" is a string.
+  - "findings": an array with one object for each violation, with these keys, in this order. "path" is the artifact's primary file. "message", "plugin", and "policy" are strings. "artifact" is the artifact's name, which is its path unless its declaration names it otherwise. "role" is the artifact's kind. "severity" is "error" or "warning". "detail" is a string, or null when the rule gives none. "line" is the number of the line the artifact was found on, or null for an artifact that is a whole file. Every value but "detail" and "line" is a string. A violation the debt plugin adds when its report-entries setting is on, for an entry in the debt file, has the debt file as "artifact" and "path", "debt-file" as "role", the entry's line number as a string in "detail", and null as "line".
   - "paid_off": an array with one object for each paid-off entry. "file" is the debt file, and "line" is the entry's line in it, a number. "plugin", "policy", "artifact", and "message" are strings.
   - "summary": an object of four numbers: "artifacts", the artifacts checked, passing ones included; "errors"; "warnings"; and "paid_off".
 
