@@ -35,7 +35,7 @@ The block holds the settings the plugin's `plugin.kdl` declares, and can be left
 
 ### `angular`
 
-ng-nudge's checks for Angular projects: a spec for every component, directive, pipe, service, guard, resolver, and interceptor; a stub and an interface for a component that has either, with the same inputs and outputs as the component; and a warning for a `.scss` stylesheet with no `.css`. It reads TypeScript with a helper that runs on [Node](https://nodejs.org/), with the ts-morph the plugin carries, which reads TypeScript 6.0. Its six policies have the names of ng-nudge's rules: `spec-exists`, `stub-exists`, `interface-exists`, `stub-matches-component`, `interface-matches-component`, and `prefer-css-over-scss`. It compares a component's inputs and outputs with its stub's and its interface's by their public names, aliases included, and reads TypeScript only for a component that has a stub or an interface.
+ng-nudge's checks for Angular projects: a spec for every component, directive, pipe, service, guard, resolver, and interceptor; a stub and an interface for a component that has either, with the same inputs and outputs as the component; and a warning for a `.scss` stylesheet with no `.css`. It reads TypeScript with a helper that runs on [Node](https://nodejs.org/), with the ts-morph the plugin carries, which reads TypeScript 6.0. Its six policies have the names of ng-nudge's rules: `spec-exists`, `stub-exists`, `interface-exists`, `stub-matches-component`, `interface-matches-component`, and `prefer-css-over-scss`. It compares a component's inputs and outputs with its stub's and its interface's by their public names, aliases included, and reads TypeScript only for a component that has a stub or an interface. Its words, such as stub and base path, are in [its glossary](../../plugins/angular/glossary.md).
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ ng-nudge's checks for Angular projects: a spec for every component, directive, p
 
 ### `debt`
 
-Debt tracking: violations listed in the debt file don't fail the check, and an entry no violation matches does.
+Debt tracking: violations listed in the debt file don't fail the check, and an entry no violation matches does. Its words, such as entry and stale entry, are in [its glossary](../../plugins/debt/glossary.md).
 
 | Setting | Meaning | Default |
 | --- | --- | --- |

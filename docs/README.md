@@ -8,7 +8,9 @@ Where to start depends on what you're doing:
   - [Command reference](reference/cli.md): every command, flag, and exit status, generated from [`crosslint.usage.kdl`](../crosslint.usage.kdl).
   - [Configuration reference](reference/configuration.md): everything `.config/crosslint/config.kdl` can hold, including the built-in plugins' settings.
   - [Plugin reference](reference/plugin.md): everything a `plugin.kdl` can declare, including rules in Ruby and helpers.
-  - [Glossary](glossary.md): the word CrossLint uses for each idea, and the words it avoids.
+  - [Glossary](glossary.md): the words CrossLint's checking is made of, and the words it avoids.
+  - [Glossary for plugin authors](reference/plugin-glossary.md): the words for writing a plugin.
+  - The [debt plugin's](../plugins/debt/glossary.md) and the [Angular plugin's](../plugins/angular/glossary.md) glossaries: the words only those plugins use.
 - **Working on CrossLint itself?** Read [CONTRIBUTING.md](../CONTRIBUTING.md), then the [design pages](design/README.md), which say how each part works and why, and the [decision log](decisions/), which says why it's built the way it is.
 
 To report a mistake in any page, [open an issue](https://github.com/setdef/CrossLint/issues) naming the page.

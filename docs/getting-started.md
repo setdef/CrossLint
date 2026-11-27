@@ -2,7 +2,7 @@
 
 In this tutorial, we add CrossLint to a Ruby project and write a rule for it: every Ruby file under `lib/` has a test under `test/`. By the end, you'll have run a check that fails, fixed a violation, and accepted the rest as debt, so the check passes in CI today and fails on any new violation. It takes about 15 minutes.
 
-If you get stuck, [open an issue](https://github.com/setdef/CrossLint/issues) with the command you ran and everything it printed. Words in bold are defined in the [glossary](glossary.md).
+If you get stuck, [open an issue](https://github.com/setdef/CrossLint/issues) with the command you ran and everything it printed. Words in bold are defined in the [glossary](glossary.md), the [glossary for plugin authors](reference/plugin-glossary.md), or the [debt plugin's glossary](../plugins/debt/glossary.md).
 
 ## What you need
 
@@ -25,7 +25,7 @@ $ crosslint init
 crosslint: wrote .config/crosslint/config.kdl, with the recommended plugins: debt
 ```
 
-`.config/crosslint/config.kdl` is the project's **configuration**. It lists the **plugins** CrossLint runs, and no plugin runs until it's listed there. So far it lists one, `debt`, which we'll use at the end.
+`.config/crosslint/config.kdl` is the project's configuration. It lists the **plugins** CrossLint runs, and no plugin runs until it's listed there. So far it lists one, `debt`, which we'll use at the end.
 
 ## Declare the rule
 
@@ -45,7 +45,7 @@ policy "has-test" {
 
 This declares all three kinds of thing CrossLint works with:
 
-- The **artifact** `ruby-file` is each Ruby file under `lib/`, found by the **path pattern** `lib/{path}.rb`. For `lib/invoices/total.rb`, `{path}` matches `invoices/total`, so its `test` **companion** is `test/invoices/total_test.rb`.
+- Each **artifact** of the **role** `ruby-file` has a Ruby file under `lib/` as its primary **piece**, found by the **path pattern** `lib/{path}.rb`. For `lib/invoices/total.rb`, `{path}` matches `invoices/total`, so its `test` piece, which `plugin.kdl` declares with `companion`, is `test/invoices/total_test.rb`.
 - The **policy** `has-test` says when to check: every `ruby-file`.
 - The **rule** `companion-exists` does the checking: it reports a `ruby-file` whose `test` doesn't exist.
 
