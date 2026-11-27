@@ -20,11 +20,13 @@ plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/page-featur
 | `page` | The path pattern that finds the page components, relative to the project's root. | `src/pages/{path}.tsx` |
 | `feature` | The path pattern of each page's feature file, with only placeholders `page` has. | `features/{path}.feature` |
 
-A path pattern is CrossLint's: `{path}` matches a file name and the folders before it, and `{name}` matches one folder or file name. With the settings above, `web/src/screens/cart/CartScreen.tsx` is a page, and its feature file is `specs/screens/cart/CartScreen.feature`. A file beside it, such as `useCart.ts` or `CartScreen.test.tsx`, isn't a page.
+A path pattern is CrossLint's: `{path}` matches a file name and the folders before it, and `{name}` matches one folder or file name. With the settings above, `web/src/screens/cart/CartScreen.tsx` is a page, and its feature file is `specs/screens/cart/CartScreen.feature`. A file beside it, such as `useCart.ts`, isn't a page, since `page` doesn't match it.
+
+Whatever `page` matches, a file is a page only when its name has one suffix: `Home.tsx` is a page, and `Home.test.tsx`, `Home.stories.tsx`, and `Home.spec.tsx` aren't. A folder's name doesn't count, so `v1.2/About.tsx` is a page. A `page` pattern that ends in a second suffix, such as `{path}.page.tsx`, matches no page, since every file it matches has two.
 
 ## What it checks
 
-Each file `page` matches is a `page` artifact. The policy `page-features/feature-exists` reports a page with no feature file at the path `feature` gives, by its exact name. It doesn't read the feature file: the test runner that runs the scenarios reports one it can't parse.
+The policy `page-features/feature-exists` reports a page with no feature file at the path `feature` gives, by its exact name. It doesn't read the feature file: the test runner that runs the scenarios reports one it can't parse.
 
 A project whose files `page` doesn't match gets CrossLint's warning that no file matches the artifact `page`, which usually means `page` needs the project's layout.
 

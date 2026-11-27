@@ -7,7 +7,9 @@ setting "feature"
 // "feature", declared from the settings.
 artifacts ruby="artifacts.rb"
 
+rule "feature-exists" ruby="rules/feature_exists.rb"
+
 policy "feature-exists" {
   applies-to "page"
-  rule "companion-exists" companion="feature"
+  rule "feature-exists"
 }

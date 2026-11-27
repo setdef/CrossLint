@@ -35,6 +35,15 @@ class PageFeaturesTest < Minitest::Test
     assert_equal "checked 2 page artifacts: 1 error", result.summary.line
   end
 
+  def test_takes_a_file_for_a_page_only_when_its_name_has_no_second_suffix
+    %w[src/pages/Home.tsx src/pages/Home.test.tsx src/pages/Home.stories.tsx src/pages/Home.spec.tsx src/pages/v1.2/About.tsx
+      src/pages/Other.page.tsx features/Home.feature].each { write(@root, it, "") }
+    result = check
+
+    assert_equal [["src/pages/v1.2/About.tsx", "page", "feature-exists", "no feature file at features/v1.2/About.feature"]], findings(result)
+    assert_equal "checked 6 page artifacts: 1 error", result.summary.line
+  end
+
   def test_takes_a_feature_pattern_with_fewer_placeholders_than_the_page_pattern
     write(@root, "app/a/one/page.tsx", "")
     write(@root, "features/one.feature", "")
