@@ -11,7 +11,7 @@ If you get stuck, [open an issue](https://github.com/setdef/CrossLint/issues) wi
 
   ```console
   $ crosslint --version
-  crosslint 0.1.0
+  crosslint 0.2.0
   ```
 
 You don't need Ruby installed; CrossLint carries the Ruby it runs on.
