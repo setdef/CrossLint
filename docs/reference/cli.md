@@ -37,8 +37,8 @@ crosslint init --from-ng-nudge
 ## Global Flags
 - **`-q --quiet`** — Print only what fails the check, with no summary
 - **`-s --silent`** — Print nothing but errors that stop CrossLint; only the exit status gives the result
-- **`--no-color`** — Print no color, as when NO_COLOR is set or the output isn't a terminal
-- **`--debug`** — Print what CrossLint does at each step, to standard error, as when DEBUG is set
+- **`--no-color`** — Prints no color. CrossLint colors only a finding's severity, and only on a terminal, and never when NO_COLOR is set to a value that isn't empty or TERM is dumb. FORCE_COLOR turns color on even off a terminal.
+- **`--debug`** — Prints what CrossLint does at each step, to standard error, as when DEBUG is set, and the trace of a fault. An error CrossLint expects, such as a mistake in the configuration, prints its message and the fix with no trace; one it doesn't expect says it is a bug in CrossLint and where to report it.
 - **`-C --project <dir>`** — Use the project whose root, the folder with .config/crosslint/config.kdl, contains this folder
 
 ## Exit Status
@@ -66,7 +66,7 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
 
   **Default:** `all`
 - **`-a --all`** — List every artifact checked, passing ones included; --json leaves passing ones out
-- **`--json`** — Print the findings and the summary as one JSON object in place of lines
+- **`--json`** — Prints the findings and the summary as one JSON object in place of lines, with every character that isn't ASCII escaped.
 
 ### Exit Status
 

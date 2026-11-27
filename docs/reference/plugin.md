@@ -117,7 +117,7 @@ The artifact a rule gets has these methods:
 
 `violation(artifact, message, detail: TEXT)` makes a violation with a detail, for a rule that can find several things wrong with one artifact, such as each missing member by name. Debt records each detail as a separate entry.
 
-CrossLint makes one instance of the class per check, with no arguments, and calls `check` once for each artifact a policy applies the rule to. A policy's `rule` line gives a rule written in Ruby no arguments; a line that does is a mistake.
+CrossLint makes one instance of the class per check, with no arguments, and calls `check` once for each artifact a policy applies the rule to. A policy's `rule` line gives a rule written in Ruby no arguments; a line that does is a mistake. A rule no policy runs isn't loaded, and CrossLint says so in a warning.
 
 The rule's file runs on the Ruby that CrossLint carries, so a project needs no Ruby installed. It can use Ruby's standard library and other files in the plugin's folder. Requiring a gem CrossLint wasn't built with, or `bundler/inline`, stops the plugin with a message naming it. Anything the file or `check` raises is a fault: the plugin reports nothing else, the other plugins still run, and `crosslint check` exits with 2. `--debug` shows where it was raised. A `check` that runs for 60 seconds on one artifact, or recurses until Ruby raises `SystemStackError`, is a fault too.
 
