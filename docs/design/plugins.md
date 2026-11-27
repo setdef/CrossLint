@@ -1,6 +1,6 @@
 # Plugins
 
-How CrossLint loads and runs plugins, and why each is done the way it is. The decisions these rest on are [ADR 0003](../decisions/0003-a-plugin-reaches-the-engine-only-through-what-its-manifest-declares.md) and [ADR 0004](../decisions/0004-crosslint-is-ruby-and-a-plugins-code-may-be-in-any-language.md). What a plugin can declare is in [the plugin reference](../reference/plugin.md), and how a project lists one is in [the configuration reference](../reference/configuration.md#plugin).
+How CrossLint loads and runs plugins, and why each is done the way it is. The decisions these rest on are [ADR 0005](../decisions/0005-crosslint-is-ruby-and-a-plugins-code-may-be-in-any-language.md) and [ADR 0006](../decisions/0006-a-plugin-reaches-the-engine-only-through-what-its-manifest-declares.md). What a plugin can declare is in [the plugin reference](../reference/plugin.md), and how a project lists one is in [the configuration reference](../reference/configuration.md#plugin).
 
 ## The engine and its plugins
 
@@ -11,7 +11,7 @@ How CrossLint loads and runs plugins, and why each is done the way it is. The de
 ## Plugin commands
 
 - **A plugin's commands are under its name,** as `crosslint debt update`, so the plugin's name keeps them apart from CrossLint's commands and from other plugins', and no plugin adds a flag to CrossLint's commands: `crosslint check` takes the same flags in every project, and a script that runs it doesn't break when a project lists another plugin.
-- **A command runs the check and then tells the plugin's step its name and its command flags,** and the step does the work. A command is therefore a way to ask a step for something, not code the plugin brings; a shared plugin can't bring a step CrossLint doesn't have (ADR 0003).
+- **A command runs the check and then tells the plugin's step its name and its command flags,** and the step does the work. A command is therefore a way to ask a step for something, not code the plugin brings; a shared plugin can't bring a step CrossLint doesn't have (ADR 0006).
 - **CrossLint keeps names for commands it may add,** and refuses a plugin that has commands and one of those names, so a command CrossLint adds later never takes over a plugin's. A built-in plugin's name is refused for any other plugin, so `debt` always means CrossLint's debt plugin.
 - **The first word on the line is settled before any plugin is loaded or fetched,** from CrossLint's commands and the names the configuration lists; a shared plugin's name comes from its URL. Only a word that names a shared plugin not fetched yet fetches it, so a typo never reaches the network.
 - **Help never fails.** Asking for help reads only what is on disk, never fetches, and shows what it can when the configuration can't be read, because help is what someone reaches for when something is wrong.

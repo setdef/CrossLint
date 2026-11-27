@@ -1,18 +1,18 @@
 ---
 status: proposed
 date: 2026-11-26
-deciders: the agent acting as CrossLint's architect chose the structure, within ADR 0004
+deciders: the agent acting as CrossLint's architect chose the structure, within ADR 0005
 ---
 
 # The engine is a core of plain Ruby objects, and everything it reaches is an adapter behind a port
 
 ## Context and Problem Statement
 
-CrossLint reads a configuration and plugin manifests in KDL and a debt file in TSV, asks Git which files the working tree has, runs Ruby rules and helpers in other languages, and reports to a terminal or as JSON, as `check`, `init`, and `update`. Its rules about artifacts, policies, violations, and debt stay the same whichever format, filesystem, or output they meet, and ADR 0004 makes the Angular checks and debt tracking plugins of an engine with no role, language, or policy built in. How should the code be divided, so the rules can be tested and changed apart from the formats and systems around them?
+CrossLint reads a configuration and plugin manifests in KDL and a debt file in TSV, asks Git which files the working tree has, runs Ruby rules and helpers in other languages, and reports to a terminal or as JSON, as `check`, `init`, and `update`. Its rules about artifacts, policies, violations, and debt stay the same whichever format, filesystem, or output they meet, and ADR 0005 makes the Angular checks and debt tracking plugins of an engine with no role, language, or policy built in. How should the code be divided, so the rules can be tested and changed apart from the formats and systems around them?
 
 ## Decision Drivers
 
-* The engine has no role, language, or policy built in (ADR 0004).
+* The engine has no role, language, or policy built in (ADR 0005).
 * Each requirement in `docs/design/` becomes a test, and a test touches a file, a process, or the network only when its requirement is about one.
 * A format can change, such as CrossLint's debt format beside ng-nudge's, without touching the rules.
 
@@ -35,7 +35,7 @@ Option 2 lost because a command class that reads files and prints can only be te
 
 How the parts fit is in `docs/design/architecture.md`.
 
-Confidence: the deciding agent's judgment alone; no comparison was recorded. Nothing in CrossLint yet shows it pays off.
+Confidence: the deciding agent's judgment alone; no comparison was recorded. The structure works as described: the use cases' tests run against the in-memory adapters, and each port's adapters pass the same contract tests, in `lib/cross_lint/testing.rb`. Nothing yet shows it pays off against options 2 and 3.
 
 ### Consequences
 
