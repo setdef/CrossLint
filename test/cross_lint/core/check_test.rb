@@ -67,6 +67,45 @@ class CheckTest < Minitest::Test
     assert_equal [["lib/a.rb", "lib/a.rb"]], [[violation.path, violation.artifact]]
   end
 
+  def test_reports_a_piece_that_is_a_match_in_a_file_by_the_line_of_its_first_match
+    style = PieceDeclaration.new(name: "unscoped-style", pattern: PathPattern.new(source: "src/{path}.vue"), line: 2,
+      regex: Regex.new(source: '<style(?![^>]*\bscoped)[^>]*>'))
+    vue = plugin("vue", artifacts: [ArtifactDeclaration.new(name: "vue-component", primary: PathPattern.new(source: "src/{path}.vue"), pieces: [style], line: 1)],
+      policies: [policy("scoped-styles", rules: [rule("piece-absent", piece: "unscoped-style")], applies_to: "vue-component")])
+    contents = {"src/a.vue" => "<template/>\r\n<style>\n</style>\n<style>\n", "src/b.vue" => "<style scoped>\n</style>\n", "src/c.vue" => ""}
+
+    assert_equal [["src/a.vue", "unscoped-style at src/a.vue:2"]], check(project(vue), files: [], contents:).findings.map { [it.artifact, it.message] }
+  end
+
+  def test_tells_a_piece_whose_file_has_no_match_from_one_with_no_file
+    action = PieceDeclaration.new(name: "action", pattern: PathPattern.new(source: "app/{name}_controller.rb"), line: 2,
+      regex: Regex.new(source: 'def {name}\b'))
+    routes = plugin("routes", artifacts: [ArtifactDeclaration.new(name: "page", primary: PathPattern.new(source: "pages/{name}.md"), pieces: [action], line: 1)],
+      policies: [policy("has-action", rules: [rule(piece: "action")], applies_to: "page"),
+        policy("documented", rules: [rule("piece-absent", piece: "action")], applies_to: "page",
+          condition: Condition::PieceExists.new(piece: "action", line: 7))])
+    pages = %w[show index edit new].to_h { ["pages/#{it}.md", ""] }
+    contents = pages.merge("app/show_controller.rb" => "def show_all\n", "app/index_controller.rb" => "def index\n", "app/edit_controller.rb/x" => "")
+
+    assert_equal [["pages/edit.md", "no action in app/edit_controller.rb, which isn't a file"],
+      ["pages/new.md", "no action in app/new_controller.rb, which isn't a file"], ["pages/show.md", "no action in app/show_controller.rb"]],
+      check(project(routes), files: [], contents:).findings.select { it.policy == "has-action" }.map { [it.artifact, it.message] }
+    assert_equal [["pages/index.md", "action at app/index_controller.rb:1"]],
+      check(project(routes), files: [], contents:).findings.reject { it.policy == "has-action" }.map { [it.artifact, it.message] }
+  end
+
+  def test_stops_a_plugin_at_a_fault_when_a_pieces_regex_runs_past_its_time_limit_or_meets_text_that_isnt_utf_8
+    slow = PieceDeclaration.new(name: "slow", pattern: PathPattern.new(source: "{path}.txt"), line: 2,
+      regex: Regex.new(source: '^(a+)+\1$', time_limit: 0.01))
+    plugin = plugin("texts", artifacts: [ArtifactDeclaration.new(name: "text", primary: PathPattern.new(source: "{path}.txt"), pieces: [slow], line: 1)],
+      policies: [policy("fast", rules: [rule(piece: "slow")], applies_to: "text")])
+
+    assert_equal ["fault in plugin texts: artifact text ran past the 0.01-second time limit searching a.txt with the regex of piece \"slow\""],
+      check(project(plugin), files: [], contents: {"a.txt" => ("a" * 32) + "c"}).faults.map(&:line)
+    assert_equal ["fault in plugin texts: artifact text can't search a.txt with the regex of piece \"slow\", since it isn't UTF-8"],
+      check(project(plugin), files: [], contents: {"a.txt" => "caf\xE9".b.force_encoding(Encoding::UTF_8)}).faults.map(&:line)
+  end
+
   def test_passes_when_every_piece_exists
     result = check(project(tests_plugin), files: ["lib/a.rb", "lib/a/b.rb", "test/a_test.rb", "test/a/b_test.rb", "README.md"])
 
@@ -499,8 +538,8 @@ class CheckTest < Minitest::Test
 
   private
 
-  def check(project, files:, ignored: [], steps: {}, ruby: {}, **options)
-    port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files}, ignored: {ROOT => ignored})
+  def check(project, files:, ignored: [], steps: {}, ruby: {}, contents: {}, **options)
+    port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files + contents.keys}, ignored: {ROOT => ignored}, contents: {ROOT => contents})
     Check.new(project_files: port, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(ruby), helpers: CrossLint::Adapters::MemoryHelpers.new, steps:)
       .call(project, **options)
   end

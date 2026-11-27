@@ -40,6 +40,11 @@ module CrossLint
       # ```
       def messages: (Artifact artifact, Hash[String, untyped] arguments) -> Array[String]
 
+      # What a violation of the rule says about `piece`: its path, and for
+      # a piece with a regex, the line of its first match, or whether its
+      # file has no match or isn't a file.
+      def message: (Piece piece) -> String
+
       # A built-in rule with these fields.
       def self.new: (name: String, arguments: Array[String], severity: severity) -> instance
 

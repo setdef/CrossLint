@@ -12,11 +12,15 @@ module CrossLint
       # The line the declaration is on.
       attr_reader line: Integer
 
-      # A piece with these fields.
-      def self.new: (name: String, pattern: PathPattern, line: Integer) -> instance
+      # The regex the piece is a match of in the file at its path, or nil
+      # for a piece that is the whole file.
+      attr_reader regex: Regex?
 
-      # A piece with these fields.
-      def initialize: (name: String, pattern: PathPattern, line: Integer) -> void
+      # A piece with these fields, and no regex unless given.
+      def self.new: (name: String, pattern: PathPattern, line: Integer, ?regex: Regex?) -> instance
+
+      # A piece with these fields, as for `new`.
+      def initialize: (name: String, pattern: PathPattern, line: Integer, ?regex: Regex?) -> void
     end
 
     # A kind of artifact a plugin declares: the pattern that finds its

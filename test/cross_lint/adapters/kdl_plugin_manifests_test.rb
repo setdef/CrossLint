@@ -82,10 +82,11 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_every_example_in_the_plugin_reference
-    first, helpers, ruby_rule, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
+    first, regexes, helpers, ruby_rule, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
 
     assert_equal [["ruby-file", ["signature", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.pieces.map(&:name)] }
     assert_equal [["has-signature", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
+    assert_equal [nil, '^\s*(?:class|module) '], regexes.artifacts.first.pieces.map { it.regex&.source }
     assert_equal [["signature-names-class", "rules/signature_names_class.rb", 2]],
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
     assert_equal Condition::PieceExists.new(piece: "signature", line: 6), ruby_rule.policies.first.condition
@@ -160,7 +161,7 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 2, %(unknown property "glob"; primary takes none), %(artifact "a" {\n  primary "x" glob=#true\n}\n)
     assert_refuses 2, %(unknown node "x"; primary takes no children), %(artifact "a" {\n  primary "x" { x; }\n}\n)
     assert_refuses 3, "piece has 1 argument; write it as piece NAME PATTERN", %(artifact "a" {\n  primary "x"\n  piece "b"\n}\n)
-    assert_refuses 3, %(unknown property "optional"; piece takes none),
+    assert_refuses 3, %(unknown property "optional"; expected "regex"),
       %(artifact "a" {\n  primary "x"\n  piece "b" "c" optional=#true\n}\n)
   end
 
@@ -177,6 +178,20 @@ class KDLPluginManifestsTest < Minitest::Test
       %(artifact "a" {\n  primary "lib/{path}.rb"\n  name "{name}"\n}\n)
     assert_refuses 3, %(path pattern "{pth}" has unknown placeholder "{pth}", did you mean "{path}"?),
       %(artifact "a" {\n  primary "lib/{path}.rb"\n  name "{pth}"\n}\n)
+  end
+
+  def test_reads_the_regex_of_a_piece
+    artifact = read(%(artifact "a" {\n  primary "src/{path}.vue"\n  piece "style" "src/{path}.vue" regex=#"<style {path}"#\n  piece "b" "x"\n}\n)).artifacts.first
+
+    assert_equal ["<style {path}", nil], artifact.pieces.map { it.regex&.source }
+  end
+
+  def test_refuses_a_pieces_regex_that_is_not_one
+    assert_refuses 3, %(regex "{name}" has unknown placeholder "{name}"; expected "{path}"),
+      %(artifact "a" {\n  primary "lib/{path}.rb"\n  piece "b" "x" regex="{name}"\n}\n)
+    assert_refuses 3, %(regex "\\\\h" has \\h, which Ruby reads as a hex digit and PCRE as a space or a tab; write [0-9a-fA-F] or [ \\t]),
+      %(artifact "a" {\n  primary "lib/{path}.rb"\n  piece "b" "x" regex=#"\\h"#\n}\n)
+    assert_refuses 3, %(regex= takes a string, not 1), %(artifact "a" {\n  primary "lib/{path}.rb"\n  piece "b" "x" regex=1\n}\n)
   end
 
   def test_refuses_a_path_pattern_that_is_not_one

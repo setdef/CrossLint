@@ -18,9 +18,17 @@ module CrossLint
 
       def messages(artifact, arguments)
         piece = artifact.piece(arguments.fetch("piece"))
-        return (piece.exist? ? [] : ["no #{piece.name} file at #{piece.path}"]) if name == "piece-exists"
+        return [] if piece.exist? == (name == "piece-exists")
 
-        piece.exist? ? ["#{piece.name} file exists at #{piece.path}"] : []
+        [message(piece)]
+      end
+
+      def message(piece)
+        return "#{piece.name} at #{piece.path}:#{piece.line}" if piece.exist? && piece.line
+        return "#{piece.name} file exists at #{piece.path}" if piece.exist?
+        return "no #{piece.name} file at #{piece.path}" if piece.readable.nil?
+
+        "no #{piece.name} in #{piece.path}#{", which isn't a file" unless piece.readable}"
       end
     end
   end

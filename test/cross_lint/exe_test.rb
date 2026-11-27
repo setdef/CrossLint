@@ -61,7 +61,7 @@ class ExeTest < Minitest::Test
   end
 
   def test_runs_the_plugin_references_ruby_rule_as_written
-    plugin, _helpers, rule = doc_blocks("docs/reference/plugin.md", "kdl")
+    plugin, _regexes, _helpers, rule = doc_blocks("docs/reference/plugin.md", "kdl")
     code = doc_blocks("docs/reference/plugin.md", "ruby").first
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/signatures/plugin.kdl", "#{plugin}\n#{rule}")

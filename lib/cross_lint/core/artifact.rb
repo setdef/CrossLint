@@ -2,7 +2,9 @@
 
 module CrossLint
   module Core
-    class Piece < Data.define(:name, :path, :exists)
+    class Piece < Data.define(:name, :path, :exists, :line, :readable)
+      def initialize(line: nil, readable: nil, **fields) = super
+
       def exist? = exists
     end
 

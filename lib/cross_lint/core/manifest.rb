@@ -4,7 +4,9 @@ require_relative "mistake"
 
 module CrossLint
   module Core
-    class PieceDeclaration < Data.define(:name, :pattern, :line); end
+    class PieceDeclaration < Data.define(:name, :pattern, :line, :regex)
+      def initialize(regex: nil, **declared) = super
+    end
 
     class ArtifactDeclaration < Data.define(:name, :primary, :pieces, :line, :key, :optional, :dotfiles, :name_pattern)
       def initialize(key: nil, optional: false, dotfiles: true, name_pattern: nil, **fields) = super

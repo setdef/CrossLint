@@ -72,6 +72,10 @@ module CrossLint
       # of `primary`.
       def name_pattern: (KDLDocument document, KDLDocument::Node node, Core::PathPattern primary) -> Core::PathPattern
 
+      # The regex= of `node`, which may use the placeholders in `known`, or
+      # nil when it has none.
+      def regex: (KDLDocument document, KDLDocument::Node node, Array[String] known) -> Core::Regex?
+
       # The path pattern `source`, written on `node`.
       def pattern: (KDLDocument document, KDLDocument::Node node, String source) -> Core::PathPattern
 

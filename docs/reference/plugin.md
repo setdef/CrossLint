@@ -32,7 +32,7 @@ A plugin's name is its folder's name, here `signatures`. CrossLint names each vi
 | --- | --- |
 | `primary PATTERN` | The path pattern that finds each artifact's primary piece, relative to the project's root. Required, once. |
 | `name PATTERN` | The artifact's name, from the placeholders of `primary`, such as `name "{path}"`. CrossLint calls the artifact by its name in every violation and debt entry, and writes it after the primary piece's path in a report. Optional, once; without it, an artifact's name is its primary piece's path. Two artifacts of one role with one name are a fault, since a debt entry for one would match the other too. |
-| `piece NAME PATTERN` | A piece called `NAME`, at the path `PATTERN` gives for each primary piece. Any number, each name once. |
+| `piece NAME PATTERN` | A piece called `NAME`, at the path `PATTERN` gives for each primary piece. With `regex=REGEX`, the piece is a part of that file: it exists when [the regex](#regexes) has a match there. Any number, each name once. |
 
 A path pattern is a path with placeholders in braces. In `primary`, `{path}` matches a file name and the folders before it, if any, and `{name}` matches one segment of a path, with no `/`. In a piece's pattern, each placeholder stands for what it matched in `primary`. For `lib/fledge/archive.rb`, the pattern `lib/{path}.rb` matches with `{path}` as `fledge/archive`, so the piece `sig/{path}.rbs` is `sig/fledge/archive.rbs`; for `lib/fledge.rb`, `{path}` is `fledge`.
 
@@ -40,6 +40,61 @@ A path pattern is a path with placeholders in braces. In `primary`, `{path}` mat
 - Files that Git ignores, and anything under `.git/`, never match.
 - A file that two artifacts' `primary` patterns both match is the primary piece of each, and both are checked.
 - An artifact whose `primary` pattern matches no file is reported once as a warning, since a pattern that finds nothing usually has a typo.
+
+### Regexes
+
+A piece with `regex=` is a part of a file rather than the whole file, such as a method in a class or a `<style>` block in a component. Here each Ruby file's signature has to declare a class or a module:
+
+```kdl
+artifact "ruby-file" {
+  primary "lib/{path}.rb"
+  piece "signature" "sig/{path}.rbs"
+  piece "declaration" "sig/{path}.rbs" regex=#"^\s*(?:class|module) "#
+}
+
+policy "declares-a-class" {
+  applies-to "ruby-file"
+  when piece-exists "signature"
+  rule "piece-exists" piece="declaration"
+}
+```
+
+Write a regex as a KDL raw string, `#"..."#`, so that its backslashes and quotes reach CrossLint as written. The piece exists when its file has at least one match. A file that isn't there, or a path that is a folder, has no match, and the violation's message says which of the two CrossLint found:
+
+| Rule | The file has a match | The file has none | No file is at the path |
+| --- | --- | --- | --- |
+| `piece-exists` | Passes. | `no declaration in sig/a.rbs` | `no declaration in sig/a.rbs, which isn't a file` |
+| `piece-absent` | `declaration at sig/a.rbs:3`, the line of the first match | Passes. | Passes. |
+
+The same holds for `when piece-exists`, for a rule in CrossLint's Ruby, and for a helper: the piece exists only when its file has a match.
+
+A placeholder in a regex stands for what it matched in `primary`, as literal text: in `def {name}\b`, a `{name}` that matched `show.all` matches `show.all` and never `showXall`. `\{` is a brace, and `{2}` and `{2,3}` stay counts. A placeholder the primary pattern doesn't have stops CrossLint with exit status 2.
+
+#### The dialect
+
+A regex is in Ruby's dialect, Onigmo, as [Ruby's documentation](https://docs.ruby-lang.org/en/master/regexp_rdoc.html) describes it, with no options. CrossLint refuses what Ruby reads without an error but PCRE or JavaScript, the dialects most tools share, reads another way, and stops with exit status 2, saying what to write instead:
+
+| Written | Ruby reads | Elsewhere | Write instead |
+| --- | --- | --- | --- |
+| `(?m)`, `(?m:...)` | `.` matches a newline | PCRE and JavaScript: `^` and `$` match at each line | `[\s\S]` for any character |
+| `\h`, `\H` | a hex digit, or anything else | PCRE: a space or a tab, or anything else | `[0-9a-fA-F]` or `[ \t]` |
+| `\v` | a vertical tab | PCRE: any vertical space | `\x0B` or `[\n\f]` |
+| `\pL` | the letters `pL` | PCRE: a Unicode property | `\p{L}` |
+| `\Q`, `\N`, or another letter Ruby has no escape for | the letter alone | PCRE: an escape or an error | the letter |
+| `{,3}` | `{0,3}` | JavaScript: the text `{,3}` | `{0,3}` |
+| `[[:alpha:]]` and the other POSIX brackets | every Unicode character in the class | PCRE: its ASCII characters alone | `\p{Alpha}`, or `[A-Za-z]` |
+
+Some differences have no other way to write them, so CrossLint reads them as Ruby does:
+
+- `^` and `$` match at the start and end of each line, as with `m` in PCRE and JavaScript, and `\A` and `\z` match at the start and end of the file.
+- `.` matches any character but a newline.
+- `\d`, `\w`, and `\s` match ASCII characters alone, while `\b` counts a letter such as `é` as part of a word, so `a\b` doesn't match in `aé`, as it does in PCRE and JavaScript.
+
+#### Line endings, encoding, and time
+
+- Before CrossLint searches a file, it reads each `\r\n` and each `\r` alone as `\n`, and drops a byte order mark at its start, so a regex matches the same on every system, whatever line endings Git checked out. Write `\n` for a line ending, never `\r`.
+- A file has to be UTF-8. A file that isn't is a fault: the plugin reports nothing else, and `crosslint check` exits with 2.
+- One search for a match may run for 1 second. A search that runs longer, as one for `(a+)+\1` can on a long line of `a`s, is a fault, never a hang.
 
 ## `policy`
 
@@ -74,8 +129,8 @@ A rule is built into CrossLint, or run by one of the plugin's helpers.
 
 | Rule | Arguments | Reports | Default severity |
 | --- | --- | --- | --- |
-| `piece-exists` | `piece=NAME` | The artifact's piece doesn't exist, with its path. | error |
-| `piece-absent` | `piece=NAME` | The artifact's piece exists, with its path. For a file that shouldn't be there, such as a `.scss` beside a `.css`. | error |
+| `piece-exists` | `piece=NAME` | The artifact's piece doesn't exist, with its path. For a piece with a regex, whether its file has no match or isn't a file. | error |
+| `piece-absent` | `piece=NAME` | The artifact's piece exists, with its path. For a file that shouldn't be there, such as a `.scss` beside a `.css`, or, with a regex, a part that shouldn't be in a file, with the line of its first match. | error |
 
 ### Helpers
 
@@ -135,7 +190,7 @@ The artifact a rule gets has these methods:
 | `role` | The artifact's name, such as `ruby-file`. |
 | `match` | What each placeholder matched, by name: `artifact.match["path"]`. |
 | `read` | The primary piece's contents. |
-| `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`. |
+| `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`. For a piece with a regex, `exist?` says whether its file has a match, and `read` gives the whole file. |
 
 A rule can also look beyond its artifact, for a path written in the artifact's text, such as a link's target, which no piece can give:
 

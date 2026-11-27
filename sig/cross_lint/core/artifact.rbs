@@ -1,7 +1,8 @@
 module CrossLint
   module Core
     # One of an artifact's pieces: its name, its path for the
-    # artifact's primary file, and whether a file or folder is there.
+    # artifact's primary file, and whether it exists: a file or folder at
+    # the path, or, for a piece with a regex, a match in the file there.
     class Piece < Data
       # The piece's name, as its artifact declares it, such as "test".
       attr_reader name: String
@@ -9,16 +10,27 @@ module CrossLint
       # The piece's path, relative to the project's root, with `/`.
       attr_reader path: String
 
-      # Whether a file or folder exists at `path`, by its exact name.
+      # Whether a file or folder exists at `path`, by its exact name, or,
+      # for a piece with a regex, whether the file there has a match.
       attr_reader exists: bool
 
-      # A piece with these fields.
-      def self.new: (name: String, path: String, exists: bool) -> instance
+      # For a piece with a regex, the line of the first match in its file,
+      # from 1, or nil when there is none; nil for any other piece.
+      attr_reader line: Integer?
 
-      # A piece with these fields.
-      def initialize: (name: String, path: String, exists: bool) -> void
+      # For a piece with a regex, whether its file could be read: false
+      # for no file, a folder, or a link out of the project. Nil for any
+      # other piece.
+      attr_reader readable: bool?
 
-      # Whether a file or folder exists at `path`.
+      # A piece with these fields, with no line and no readable unless
+      # given.
+      def self.new: (name: String, path: String, exists: bool, ?line: Integer?, ?readable: bool?) -> instance
+
+      # A piece with these fields, as for `new`.
+      def initialize: (name: String, path: String, exists: bool, ?line: Integer?, ?readable: bool?) -> void
+
+      # Whether the piece exists.
       def exist?: () -> bool
     end
 

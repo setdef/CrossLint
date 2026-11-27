@@ -1,0 +1,117 @@
+module CrossLint
+  module Core
+    # A regex on a piece, in Ruby's dialect, with placeholders in braces,
+    # such as `def {action}\b`: each stands for what that placeholder
+    # matched for the artifact, as literal text. `{2}` and `{2,3}` stay
+    # quantifiers, and `\{` is a brace. Before a search, every line
+    # ending reads as `\n` and a leading byte order mark is dropped, so
+    # `^` and `$` match at the start and end of each line and `.` matches
+    # anything but `\n`, on every system.
+    #
+    # ```ruby
+    # regex = CrossLint::Core::Regex.new(source: "def (?<action>\\w+)")
+    # regex.matches("class A\r\n  def show\nend\n", {}) # => [[{"action" => "show"}, 2]]
+    # regex.first_line("end\n", {}) # => nil
+    # ```
+    class Regex < Data
+      # How long one search for a match may run, in seconds, before it
+      # raises Regexp::TimeoutError.
+      TIME_LIMIT: Integer
+
+      # One unit of a source, read from the left.
+      TOKEN: Regexp
+
+      # A token that is a placeholder, with its name.
+      PLACEHOLDER: Regexp
+
+      # The letters whose escapes Ruby and PCRE read alike.
+      ESCAPES: String
+
+      # Why each escape of a letter that Ruby and PCRE read differently is
+      # refused, after "which Ruby reads as".
+      REASONS: Hash[String, String]
+
+      # A source that isn't a regex, with a message that says why.
+      class Invalid < ArgumentError
+      end
+
+      # Text a regex can't search, such as bytes that aren't UTF-8.
+      class NotText < StandardError
+      end
+
+      # The regex as written.
+      attr_reader source: String
+
+      # How long one search may run, in seconds.
+      attr_reader time_limit: Integer | Float
+
+      # What makes `source` no regex, with `known` the placeholders it may
+      # use, or nil when it is one: an unknown placeholder, something Ruby
+      # reads without an error and PCRE or JavaScript reads another way,
+      # or something Ruby can't read.
+      #
+      # ```ruby
+      # CrossLint::Core::Regex.problem("def {action}", ["action"]) # => nil
+      # CrossLint::Core::Regex.problem("x{,3}", []) # => "regex \"x{,3}\" has {,3}, which Ruby reads as {0,3} and JavaScript as the text {,3}; write {0,3}"
+      # ```
+      def self.problem: (String source, Array[String] known) -> String?
+
+      # The units of `source`, from the left, which joined are `source`:
+      # an escape with the character after it, a placeholder, an inline
+      # option group's opening, a POSIX bracket, a `{,n}` quantifier, or
+      # one other character.
+      #
+      # ```ruby
+      # CrossLint::Core::Regex.tokens('\{a}{b}') # => ["\\{", "a", "}", "{b}"]
+      # ```
+      def self.tokens: (String source) -> Array[String]
+
+      # Why `token` is refused, or nil.
+      def self.refusal: (String token, Array[String] known) -> String?
+
+      # Why a placeholder that isn't one of `known` is refused.
+      def self.unknown: (String placeholder, Array[String] known) -> String
+
+      # Why `token`, the escape of a letter, is refused, or nil.
+      def self.escape: (String token) -> String?
+
+      # The regex `source`, whose searches may each run `time_limit`
+      # seconds. Raises Invalid with its problem when it has one, any
+      # placeholder aside.
+      def self.new: (source: String, ?time_limit: Integer | Float) -> instance
+
+      # The regex `source`, as for `new`.
+      def initialize: (source: String, ?time_limit: Integer | Float) -> void
+
+      # The names of the placeholders in the source, each once, in order.
+      def placeholders: () -> Array[String]
+
+      # The names of the source's named captures, in order.
+      def captures: () -> Array[String]
+
+      # Each match in `text`, with `values` for the placeholders: what each
+      # named capture matched, nil for one that took no part, and the line
+      # the match starts on, from 1. Raises NotText for text that isn't
+      # UTF-8, and Regexp::TimeoutError when one search runs past the time
+      # limit.
+      def matches: (String text, Hash[String, String] values) -> Array[[Hash[String, String?], Integer]]
+
+      # The line of the first match in `text`, with `values` for the
+      # placeholders, from 1, or nil when there is none. Raises as
+      # `matches` does.
+      def first_line: (String text, Hash[String, String] values) -> Integer?
+
+      private
+
+      # The placeholders in `text`, each once.
+      def placeholders_of: (String text) -> Array[String]
+
+      # `text` with every line ending as `\n` and no byte order mark.
+      def lines: (String text) -> String
+
+      # The source as a Regexp, each placeholder its value in `values` as
+      # literal text.
+      def regexp: (Hash[String, String] values) -> Regexp
+    end
+  end
+end
