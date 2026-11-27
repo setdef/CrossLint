@@ -9,6 +9,6 @@ Where to start depends on what you're doing:
   - [Configuration reference](reference/configuration.md): everything `.config/crosslint/config.kdl` can hold, including the built-in plugins' settings.
   - [Plugin reference](reference/plugin.md): everything a `plugin.kdl` can declare, including rules in Ruby and helpers.
   - [Glossary](glossary.md): the word CrossLint uses for each idea, and the words it avoids.
-- **Working on CrossLint itself?** Read [CONTRIBUTING.md](../CONTRIBUTING.md), then the [design pages](design/README.md), which say what each part must guarantee, and the [decision log](decisions/), which says why it's built the way it is.
+- **Working on CrossLint itself?** Read [CONTRIBUTING.md](../CONTRIBUTING.md), then the [design pages](design/README.md), which say how each part works and why, and the [decision log](decisions/), which says why it's built the way it is.
 
 To report a mistake in any page, [open an issue](https://github.com/setdef/CrossLint/issues) naming the page.
