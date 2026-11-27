@@ -16,7 +16,7 @@ CrossLint checks how a project's files relate to each other: that each group of 
 Findings go to standard output, one per line. The lines CrossLint prints about itself go to standard error, and each begins with "crosslint:".
 """#
 after_long_help #"""
-Documentation: https://github.com/setdef/CrossLint/tree/trunk/docs Report a problem: https://github.com/setdef/CrossLint/issues
+Documentation: https://github.com/setdef/CrossLint/tree/trunk/docs Report a problem: https://forum.setdef.com/c/crosslint
 """#
 
 unknown_flags "error"

@@ -14,4 +14,4 @@ Where to start depends on what you're doing:
   - The [debt plugin's](../plugins/debt/glossary.md) and the [Angular plugin's](../plugins/angular/glossary.md) glossaries: the words only those plugins use.
 - **Working on CrossLint itself?** Read [CONTRIBUTING.md](../CONTRIBUTING.md), then the [design pages](design/README.md), which say how each part works and why, and the [decision log](decisions/), which says why it's built the way it is.
 
-To report a mistake in any page, [open an issue](https://github.com/setdef/CrossLint/issues) naming the page.
+To report a mistake in any page, [post on the forum](https://forum.setdef.com/c/crosslint) naming the page.

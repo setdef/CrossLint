@@ -95,7 +95,7 @@ class CLITest < Minitest::Test
     assert_equal ["", 2], [out, status]
     assert_equal <<~ERR, err
       crosslint: stopped on a bug in CrossLint: RuntimeError: boom
-      crosslint: please report it at https://github.com/setdef/CrossLint/issues, with the command you ran and what crosslint --version prints
+      crosslint: please report it at https://forum.setdef.com/c/crosslint, with the command you ran and what crosslint --version prints
       crosslint: run it again with --debug to see where it stopped
     ERR
   end
@@ -112,7 +112,7 @@ class CLITest < Minitest::Test
     lines = err.lines(chomp: true)
 
     assert_equal 2, status
-    assert_equal "crosslint: please report it at https://github.com/setdef/CrossLint/issues, with the command you ran and what crosslint --version prints", lines[1]
+    assert_equal "crosslint: please report it at https://forum.setdef.com/c/crosslint, with the command you ran and what crosslint --version prints", lines[1]
     assert_match(/\Acrosslint:   from .*cli_test\.rb:\d+:in 'CLITest::BrokenSpec#flags'\z/, lines[2])
     assert_operator lines.size, :>, 3
     assert(lines.drop(2).all? { |line| line.start_with?("crosslint:   from ") })

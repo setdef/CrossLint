@@ -34,7 +34,7 @@ module CrossLint
     NEXT_STEPS: String
 
     # Where to report a bug.
-    ISSUES: String
+    FORUM: String
 
     # Each value of --warnings, as Core::Check takes it.
     WARNINGS: Hash[String, :all | :none | :error]

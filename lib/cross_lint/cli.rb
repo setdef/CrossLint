@@ -4,7 +4,7 @@ module CrossLint
   class CLI
     PREFIX = "crosslint: "
 
-    ISSUES = "https://github.com/setdef/CrossLint/issues"
+    FORUM = "https://forum.setdef.com/c/crosslint"
 
     NEXT_STEPS = "moved from ng-nudge; next, replace ng-nudge's dev dependency and each npx ng-nudge in your scripts and CI with crosslint check, " \
       "and run crosslint debt update once"
@@ -238,7 +238,7 @@ module CrossLint
 
     def bug(error)
       say("stopped on a bug in CrossLint: #{error.class}: #{error}")
-      say("please report it at #{ISSUES}, with the command you ran and what crosslint --version prints")
+      say("please report it at #{FORUM}, with the command you ran and what crosslint --version prints")
       return say("run it again with --debug to see where it stopped") unless debug?
 
       error.backtrace.to_a.each { |line| say("  from #{line}") }

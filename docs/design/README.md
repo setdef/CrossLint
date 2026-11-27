@@ -8,4 +8,4 @@ How each part of CrossLint works, and why: its concepts, how its pieces fit, why
 - [Debt](debt.md): the debt file's format, matching violations to entries, and updating.
 - [Replacing ng-nudge](ng-nudge.md): what must carry over from ng-nudge, and its defects CrossLint doesn't copy.
 
-To report a mistake in any of these pages, [open an issue](https://github.com/setdef/CrossLint/issues).
+To report a mistake in any of these pages, [post on the forum](https://forum.setdef.com/c/crosslint).
