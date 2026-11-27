@@ -1,0 +1,13 @@
+// The page-features plugin: every page component has a Gherkin feature
+// file at the path its pattern gives.
+setting "page"
+setting "feature"
+
+// The page components, each with its feature file as the companion
+// "feature", declared from the settings.
+artifacts ruby="artifacts.rb"
+
+policy "feature-exists" {
+  applies-to "page"
+  rule "companion-exists" companion="feature"
+}
