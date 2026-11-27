@@ -7,12 +7,6 @@ require "open3"
 # it keeps from ng-nudge, with a test for each ng-nudge defect these checks
 # could copy and don't.
 class AngularPathsTest < Minitest::Test
-  # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage
-  # follows it.
-  cover "Artifacts*"
-  cover "StubMatchesComponent*"
-  cover "InterfaceMatchesComponent*"
-
   Core = CrossLint::Core
 
   def setup
@@ -202,8 +196,8 @@ class AngularPathsTest < Minitest::Test
   end
 
   # The tsconfig setting names the file the plugin's TypeScript checks
-  # read, and a project with no TypeScript package stops there, before any
-  # helper reads a file.
+  # read: the project's tsconfig.json is valid, and the file the setting
+  # names is the one whose fault stops the plugin.
   def test_reads_typescript_with_the_file_the_tsconfig_setting_names
     write(@root, "src/a/a.component.ts", "")
     %w[spec stub].each { |kind| write(@root, "src/a/a.component.#{kind}.ts", "") }
@@ -213,12 +207,12 @@ class AngularPathsTest < Minitest::Test
     # Each of the two rules that read TypeScript, with the other off.
     alone = %w[stub interface].to_h { |rule| [rule, (%w[stub interface] - [rule]).map { |off| %(policy "angular/#{off}-matches-component" enabled=#false\n) }.join] }
     missing = alone.transform_values { |lines| check(settings, lines:).faults.map(&:message).uniq }
-    write(@root, "config/tsconfig.app.json", "{}\n")
+    write(@root, "config/tsconfig.app.json", "[]\n")
     found = alone.transform_values { |lines| check(settings, lines:).faults.map(&:message).uniq }
 
-    assert_equal %w[stub interface].to_h { |rule| [rule, ["raised RuntimeError: reads TypeScript with config/tsconfig.app.json, the tsconfig setting's file, which doesn't exist"]] },
+    assert_equal %w[stub interface].to_h { |rule| [rule, [%(failed in helper "angular": reads TypeScript with config/tsconfig.app.json, the tsconfig setting's file, which doesn't exist)]] },
       missing
-    assert_equal %w[stub interface].to_h { |rule| [rule, ["raised RuntimeError: found no typescript package for config/tsconfig.app.json; install the project's packages, as with npm ci"]] },
+    assert_equal %w[stub interface].to_h { |rule| [rule, [%(failed in helper "angular": The root value of a 'tsconfig.json' file must be an object.)]] },
       found
   end
 

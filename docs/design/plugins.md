@@ -25,7 +25,7 @@ How CrossLint loads and runs plugins, and why each is done the way it is. The de
 
 ## Helpers
 
-- **A helper reads files of its language with that language's tools,** on the project's runtime, found on the `PATH`, so its answers match the project's: the Angular plugin's helper asks the project's `typescript` package. On Windows, the command is found with each extension in `PATHEXT`, since `node` is `node.exe` or `node.cmd` there.
+- **A helper reads files of its language with that language's tools,** on the project's runtime, found on the `PATH`, so it runs with the versions the project has. The Angular plugin's helper runs on the project's Node and reads TypeScript with the ts-morph the plugin carries, which carries TypeScript 6.0, so a project installs no package for it. On Windows, the command is found with each extension in `PATHEXT`, since `node` is `node.exe` or `node.cmd` there.
 - **A helper gets the environment CrossLint was started with,** not the one the app sets up for the Ruby it carries, so `RUBYOPT`, `BUNDLE_*`, and the app's folders on `PATH` never reach it, and a helper that runs `ruby` gets the project's Ruby.
 - **Ending a helper ends everything it started.** Ending only its process leaves its children running, so on macOS and Linux it starts in a process group of its own, and on Windows in a job object; `taskkill /T` alone leaves an MSYS2 child running. A helper CrossLint can't contain is ended at once, never left running, which is why every call that sets up the job object is checked.
 - **Helpers end in parallel** at the end of a check, so one slow helper doesn't hold up the rest.

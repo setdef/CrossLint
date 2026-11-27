@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "checkJs": true,
+    "strict": true,
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
+    "maxNodeModuleJsDepth": 0
+  },
+  "include": ["lib/**/*.js", "lib/**/*.d.ts"],
+  "exclude": ["node_modules"]
+}

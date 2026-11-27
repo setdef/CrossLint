@@ -1,0 +1,22 @@
+{
+  "name": "crosslint-angular",
+  "version": "0.2.0",
+  "private": true,
+  "description": "CrossLint's Angular plugin: a spec for every component, directive, pipe, service, guard, resolver, and interceptor, and a stub and an interface that match each component that has either.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "plugin.kdl",
+    "lib/",
+    "glossary.md"
+  ],
+  "dependencies": {
+    "ts-morph": "28.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p jsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

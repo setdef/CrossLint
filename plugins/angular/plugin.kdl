@@ -5,10 +5,14 @@ setting "src-dir"
 setting "tsconfig"
 setting "role"
 
+// The helper, in lib/, which declares the artifacts and runs the rules
+// that read TypeScript, with ts-morph.
+helper "angular" command="node" file="lib/helper.js"
+
 // The roles component, directive, pipe, service, guard, resolver, and
 // interceptor, inside src-dir, and each role the configuration changes or
 // adds, declared from the settings.
-artifacts ruby="artifacts.rb"
+artifacts helper="angular"
 
 // Each artifact whose role expects a spec has one.
 policy "spec-exists" {
@@ -30,10 +34,9 @@ policy "interface-exists" {
 }
 
 // A component's stub and its interface have each input and output the
-// component has, which the helper reads with the project's typescript.
-rule "stub-matches-component" ruby="rules/stub_matches_component.rb"
-rule "interface-matches-component" ruby="rules/interface_matches_component.rb"
-helper "members" command="node" file="helpers/members.mjs"
+// component has.
+rule "stub-matches-component" helper="angular"
+rule "interface-matches-component" helper="angular"
 
 policy "stub-matches-component" {
   applies-to "component"

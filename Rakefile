@@ -13,23 +13,45 @@ Minitest::TestTask.create(:test) do |task|
   task.warning = true
 end
 
-# The packages a built-in plugin's test fixture locks in its
-# package-lock.json, installed with npm ci. Setup does this, once, after
-# installing the tools: no test task depends on it, and a test whose
-# fixture has no packages fails saying to run it. A fixture installed from
-# the same lockfile is left as it is. CACHEDIR.TAG marks node_modules as
-# a folder a tool makes, which the Fledge build leaves out of the app.
-desc "Install the packages each built-in plugin's test fixtures lock, with npm ci"
-task :fixtures do
-  Dir.glob("plugins/*/test/**/package-lock.json").reject { |lock| lock.include?("/node_modules/") }.each do |lock|
-    modules = File.join(File.dirname(lock), "node_modules")
-    installed = File.join(modules, ".crosslint-package-lock.json")
-    next if File.file?(installed) && File.binread(installed) == File.binread(lock)
-
-    sh "npm", "ci", "--no-audit", "--no-fund", chdir: File.dirname(lock)
-    File.binwrite(File.join(modules, "CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n# rake fixtures makes this folder again with npm ci.\n")
-    File.binwrite(installed, File.binread(lock))
+# The packages each built-in plugin needs when it runs, which its
+# package-lock.json locks, installed with npm ci and no dev dependencies.
+# The app carries them: Fledge copies the plugin's node_modules with the
+# rest of the project, and leaves out only a folder a CACHEDIR.TAG marks.
+# The release build (.github/scripts/build-archive.sh) runs this task
+# before it builds; setup runs it with the fixtures. A plugin installed
+# from the same lockfile is left as it is.
+desc "Install the packages each built-in plugin runs with, with npm ci"
+task :packages do
+  Dir.glob("plugins/*/package-lock.json").each do |lock|
+    install_packages(lock, "--omit=dev")
   end
+end
+
+# The packages a built-in plugin's test fixture locks in its
+# package-lock.json, installed with npm ci, after each plugin's own.
+# Setup does this, once, after installing the tools: no test task depends
+# on it, and a test whose fixture has no packages fails saying to run it.
+# A fixture installed from the same lockfile is left as it is.
+# CACHEDIR.TAG marks a fixture's node_modules as a folder a tool makes,
+# which the Fledge build leaves out of the app.
+desc "Install the packages each built-in plugin and its test fixtures lock, with npm ci"
+task fixtures: :packages do
+  Dir.glob("plugins/*/test/**/package-lock.json").reject { |lock| lock.include?("/node_modules/") }.each do |lock|
+    install_packages(lock, tag: true)
+  end
+end
+
+# Installs the packages LOCK locks into the node_modules beside it, with
+# npm ci and OPTIONS, unless that lockfile installed them already; with
+# TAG, marks the folder as one the app leaves out.
+def install_packages(lock, *options, tag: false)
+  modules = File.join(File.dirname(lock), "node_modules")
+  installed = File.join(modules, ".crosslint-package-lock.json")
+  return if File.file?(installed) && File.binread(installed) == File.binread(lock)
+
+  sh "npm", "ci", "--no-audit", "--no-fund", *options, chdir: File.dirname(lock)
+  File.binwrite(File.join(modules, "CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n# rake fixtures makes this folder again with npm ci.\n") if tag
+  File.binwrite(installed, File.binread(lock))
 end
 
 # The same tests under RBS's runtime type checker, which raises at every
@@ -212,9 +234,9 @@ end
 # A project that lists the built-in Angular plugin, which the app
 # carries, with a component that has SCSS and no spec, and a stub that
 # lacks its input, which the plugin's helper reads on Node with the
-# typescript rake fixtures installed for a plugin's tests. PATH holds only
-# the folders of Git and Node.
-task "build:check:angular", [:app] => :fixtures do |_, arguments|
+# ts-morph the app carries in the plugin's node_modules, so the project
+# installs no package. PATH holds only the folders of Git and Node.
+task "build:check:angular", [:app] do |_, arguments|
   app = File.expand_path(arguments.fetch(:app))
   component = %(import { Component, input } from '@angular/core';\n\n@Component({ selector: 'app-card', template: '' })\n)
   files = {
@@ -226,7 +248,6 @@ task "build:check:angular", [:app] => :fixtures do |_, arguments|
     "src/app/card/card.component.i.d.ts" => %(export interface CardApi {\n  title: unknown;\n}\n),
     "src/app/card/card.component.scss" => ""
   }
-  typescript = Dir.glob("plugins/*/test/*/node_modules/typescript").first || abort("rake build:check: no typescript; run rake fixtures")
   finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
   path = %w[git node].map { |command| File.dirname(finder.find(command) || abort("rake build:check: no #{command} on the PATH")) }.uniq
   Dir.mktmpdir do |project|
@@ -234,8 +255,6 @@ task "build:check:angular", [:app] => :fixtures do |_, arguments|
       FileUtils.mkdir_p(File.dirname(File.join(project, file)))
       File.binwrite(File.join(project, file), text)
     end
-    FileUtils.mkdir_p(File.join(project, "node_modules"))
-    FileUtils.cp_r(typescript, File.join(project, "node_modules"))
     Bundler.with_unbundled_env do
       system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
       actual = IO.popen({"PATH" => path.join(File::PATH_SEPARATOR)}, [app, "check", "-C", project], err: %i[child out], &:read)

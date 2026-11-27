@@ -6,16 +6,10 @@ require "open3"
 # The Angular plugin on its fixture, an Angular-shaped project with a
 # component, stub, and interface for each form of input and output, a
 # file of each role, and a debt file moved unchanged from ng-nudge. Its
-# helper runs on Node with the typescript rake fixtures installs. What it
+# helper runs on Node with the plugin's own ts-morph. What it
 # keeps from ng-nudge, with a test for each ng-nudge defect that reading
 # TypeScript could copy and doesn't.
 class AngularFixtureTest < Minitest::Test
-  # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage
-  # follows it.
-  cover "Artifacts*"
-  cover "StubMatchesComponent*"
-  cover "InterfaceMatchesComponent*"
-
   FIXTURE = File.join(__dir__, "fixture")
 
   Core = CrossLint::Core
@@ -96,10 +90,13 @@ class AngularFixtureTest < Minitest::Test
     status = CrossLint::CLI.new(["check", "-C", FIXTURE], out: StringIO.new, err:, env: {}, app: without_node).run
 
     assert_equal 2, status
-    assert_match %(plugin angular needs node on the PATH for its helper "members", and there is none), err.string
+    assert_match %(plugin angular needs node on the PATH for its helper "angular", and there is none), err.string
   end
 
-  def test_stops_the_plugin_at_a_project_without_typescript_or_its_tsconfig
+  # The plugin reads TypeScript with its own ts-morph, so a project needs
+  # its tsconfig and no typescript package of its own; a tsconfig the
+  # helper can't read stops the plugin with what the helper said.
+  def test_stops_the_plugin_at_a_project_without_its_tsconfig_or_with_one_the_helper_cant_read
     root = Dir.mktmpdir("crosslint")
     write(root, ".config/crosslint/config.kdl", %(plugin "angular"\n))
     write(root, "src/a/a.component.ts", "")
@@ -110,10 +107,13 @@ class AngularFixtureTest < Minitest::Test
     missing = app.check(root).faults.map(&:message)
     write(root, "tsconfig.json", "{}\n")
     found = app.check(root).faults.map(&:message)
+    write(root, "tsconfig.json", "[]\n")
+    unreadable = app.check(root).faults.map(&:message)
 
-    assert_equal [["raised RuntimeError: reads TypeScript with tsconfig.json, the tsconfig setting's file, which doesn't exist"]],
+    assert_equal [[%(failed in helper "angular": reads TypeScript with tsconfig.json, the tsconfig setting's file, which doesn't exist)]],
       [missing.uniq]
-    assert_equal ["raised RuntimeError: found no typescript package for tsconfig.json; install the project's packages, as with npm ci"], found.uniq
+    assert_empty found
+    assert_equal [%(failed in helper "angular": The root value of a 'tsconfig.json' file must be an object.)], unreadable.uniq
   ensure
     FileUtils.rm_rf(root)
   end
@@ -122,9 +122,10 @@ class AngularFixtureTest < Minitest::Test
 
   def app(**options) = CrossLint::App.new(plugin_ruby: LoadedPlugins::PluginRuby.new, **options)
 
-  # Installing the fixture's packages is a setup step (rake fixtures),
-  # which no test runs.
+  # Installing the plugin's own packages is a setup step, npm ci in
+  # plugins/angular, which no test runs.
   def packages_installed
-    flunk "plugins/angular/test/fixture/node_modules doesn't exist; run rake fixtures, which installs the packages the fixture locks" unless File.directory?(File.join(FIXTURE, "node_modules"))
+    modules = File.join(__dir__, "..", "node_modules", "ts-morph")
+    flunk "plugins/angular/node_modules/ts-morph doesn't exist; run npm ci in plugins/angular" unless File.directory?(modules)
   end
 end

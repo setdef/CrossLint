@@ -65,7 +65,7 @@ Each finding is one line on standard output, with the file, the message, and the
 | --- | --- |
 | Where `crosslint` runs | macOS on Apple silicon; Linux on x86-64, with glibc 2.39 or later; Windows on x86-64 |
 | Projects | Any language, in any folder layout |
-| The Angular plugin | Angular projects with [Node](https://nodejs.org/) and the project's `typescript` package installed |
+| The Angular plugin | Angular projects with [Node](https://nodejs.org/) on the `PATH` |
 | Moving from ng-nudge | Projects that use ng-nudge 0.3.0; one whose `rc.json` sets `withComment.matching` needs Node on the `PATH` |
 
 ## Installation
