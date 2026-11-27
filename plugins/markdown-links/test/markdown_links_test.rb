@@ -107,6 +107,14 @@ class MarkdownLinksTest < Minitest::Test
       ["docs/index.md", %(line 1: guide.md#setup points to docs/guide.md, which has no heading or anchor "setup"), "guide.md#setup"]], findings(check("docs/index.md" => text))
   end
 
+  def test_checks_no_anchor_of_a_link_to_a_markdown_files_source
+    text = "[a](guide.md?plain=1#L3) [b](guide.md?x=1&plain=1#L3-L5) [c](guide.md?plain=0#L3) [d](guide.md?plain=10#L3)\n"
+
+    assert_equal [["docs/index.md", %(line 1: guide.md?plain=0#L3 points to docs/guide.md, which has no heading or anchor "L3"), "guide.md?plain=0#L3"],
+      ["docs/index.md", %(line 1: guide.md?plain=10#L3 points to docs/guide.md, which has no heading or anchor "L3"), "guide.md?plain=10#L3"]],
+      findings(check("docs/index.md" => text))
+  end
+
   def test_makes_each_headings_anchor_as_github_does
     headings = <<~MARKDOWN
       # The `files` setting

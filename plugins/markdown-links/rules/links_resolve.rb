@@ -4,7 +4,8 @@
 # Markdown: a path from the file's folder, or from the project's root when
 # it starts with /, to a file or folder among the project's files, and an
 # anchor, when it has one, to a heading or an HTML id or name in the
-# Markdown file it points to.
+# Markdown file it points to. A link with ?plain=1 has no anchor to check,
+# since its anchor names a line of the source.
 class LinksResolve < CrossLint::Rule
   MARKDOWN = /\.(?:md|markdown)\z/
 
@@ -38,11 +39,13 @@ class LinksResolve < CrossLint::Rule
     return if written.match?(ABSOLUTE)
 
     path, _, anchor = written.partition("#")
-    path = path.partition("?").first
+    path, _, query = path.partition("?")
     target = path.empty? ? from : resolve(from, decode(path))
     return "points outside the project" unless target
     return "points to #{target}, which isn't a file or folder of the project" unless @files[target] || @folders[target]
     return if anchor.empty? || !target.match?(MARKDOWN) || !@files[target]
+    # With ?plain=1 GitHub shows the file's source, where #L3 is a line.
+    return if query.split("&").include?("plain=1")
 
     "points to #{target}, which has no heading or anchor #{decode(anchor).dump}" unless anchors(target).include?(decode(anchor))
   end
