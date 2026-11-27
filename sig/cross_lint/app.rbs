@@ -67,7 +67,7 @@ module CrossLint
     # configuration to the newest tag of its repository that is
     # compatible with its ref (Core::UpdatePlugins), or of listing what
     # it would move, with `dry_run`; with `latest`, to the highest
-    # version whatever its major version.
+    # version even when it isn't compatible.
     def update: (String start, ?dry_run: bool, ?latest: bool) -> Core::UpdateResult
 
     # The result of writing the configuration with the recommended

@@ -185,7 +185,7 @@ class UpdatePluginsTest < Minitest::Test
       "#{TWO}: is at its newest compatible tag, v0.0.3; newer incompatible versions: v0.0.4; crosslint update --latest moves to v0.0.4"], result.lines
   end
 
-  def test_moves_to_the_highest_version_whatever_its_major_version_with_latest
+  def test_moves_to_the_highest_version_even_when_it_isnt_compatible_with_latest
     configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "v0.0.3", 2)], ONE => %w[v1.4.0 v1.5.0 v2.0.0 v3.0.0], TWO => %w[v0.0.4])
     result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, latest: true)
 
