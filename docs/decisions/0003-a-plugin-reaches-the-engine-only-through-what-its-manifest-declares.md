@@ -1,7 +1,7 @@
 ---
 status: proposed
 date: 2026-11-27
-deciders: @Kerrick chose that a plugin adds commands under the plugin's name, in #20; the agent acting as CrossLint's architect chose the rest of the surface, within ADR 0001
+deciders: setdef's maintainer chose that a plugin adds commands under the plugin's name, in #20; the agent acting as CrossLint's architect chose the rest of the surface, within ADR 0001
 ---
 
 # A plugin reaches the engine only through what its manifest declares, and adds commands under the plugin's name
