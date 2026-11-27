@@ -4,9 +4,8 @@ require "test_helper"
 require "open3"
 
 # The Angular plugin's checks of which files exist, through the app: what
-# docs/design/ng-nudge.md requires it to carry over, with each of
-# ng-nudge's defects it lists that these checks could copy as a test that
-# they don't.
+# it keeps from ng-nudge, with a test for each ng-nudge defect these checks
+# could copy and don't.
 class AngularPathsTest < Minitest::Test
   # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage
   # follows it.

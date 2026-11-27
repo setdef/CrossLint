@@ -4,7 +4,8 @@ require "test_helper"
 require "open3"
 require "rbconfig"
 
-# What docs/design/architecture.md requires of how the code divides.
+# How the code divides: what the core may load, what may name the Angular
+# plugin, what the app ships, and which files have signatures.
 class ArchitectureTest < Minitest::Test
   def test_the_core_loads_with_nothing_outside_rubys_standard_library
     script = 'require "cross_lint/core"; puts $LOADED_FEATURES'

@@ -6,10 +6,9 @@ require "open3"
 # The Angular plugin on its fixture, an Angular-shaped project with a
 # component, stub, and interface for each form of input and output, a
 # file of each role, and a debt file moved unchanged from ng-nudge. Its
-# helper runs on Node with the typescript rake fixtures installs. What
-# docs/design/ng-nudge.md requires it to carry over, with each of
-# ng-nudge's defects it lists that reading TypeScript could copy as a test
-# that it doesn't.
+# helper runs on Node with the typescript rake fixtures installs. What it
+# keeps from ng-nudge, with a test for each ng-nudge defect that reading
+# TypeScript could copy and doesn't.
 class AngularFixtureTest < Minitest::Test
   # The plugin's Ruby, which test/plugin_ruby.rb loads once so that coverage
   # follows it.
@@ -88,8 +87,8 @@ class AngularFixtureTest < Minitest::Test
       result.notices.map { |notice| "#{notice.file}:#{notice.line}: #{notice.message}" }
   end
 
-  # docs/design/plugins.md: a project without the helper's command gets
-  # exit status 2, naming the plugin and the command.
+  # A project without the helper's command gets exit status 2, naming the
+  # plugin and the command.
   def test_stops_with_2_naming_the_plugin_and_node_when_node_isnt_on_the_path
     packages_installed
     without_node = app(helpers: CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env: {"PATH" => ""}))

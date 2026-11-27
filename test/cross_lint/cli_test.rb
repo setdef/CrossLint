@@ -146,8 +146,9 @@ class CLITest < Minitest::Test
       "crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], check("check", app: app)
   end
 
-  # docs/design/checking.md: a line within 100 ms on a terminal, so a
-  # large project never sits silent while a rule reads its files.
+  # On a terminal, the first line comes before CrossLint reads any project
+  # file beyond its configuration, or starts a helper, so a large project
+  # never sits silent while a rule reads its files.
   def test_check_says_what_it_is_checking_first_when_standard_error_is_a_terminal
     assert_equal "crosslint: checking 2 ruby-file artifacts\ncrosslint: checked 2 ruby-file artifacts: 1 error\n", check("check", app: app, err_tty: true)[1]
     assert_equal "", check("check", "--quiet", app: app, err_tty: true)[1]

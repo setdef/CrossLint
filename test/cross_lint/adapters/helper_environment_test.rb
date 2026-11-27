@@ -2,8 +2,8 @@
 
 require "test_helper"
 
-# What environment a helper starts with: docs/design/plugins.md says it is
-# the one CrossLint was started with.
+# What environment a helper starts with: the one CrossLint was started
+# with, as its launcher saved it.
 class HelperEnvironmentTest < Minitest::Test
   cover "CrossLint::Adapters::HelperEnvironment*"
 

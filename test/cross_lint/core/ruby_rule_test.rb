@@ -3,8 +3,8 @@
 require "test_helper"
 
 # Rules written in Ruby, run by Core::Check through the in-memory
-# plugin-Ruby port: what docs/design/plugins.md requires of Ruby rules,
-# except what only files on disk show (FilePluginRubyTest).
+# plugin-Ruby port: what a Ruby rule can do and how its faults stop a
+# plugin, except what only files on disk show (FilePluginRubyTest).
 class RubyRuleTest < Minitest::Test
   cover "CrossLint::Core::RubyRule*"
   cover "CrossLint::Core::Fault*"
@@ -267,8 +267,8 @@ class RubyRuleTest < Minitest::Test
     assert_equal [[{"path" => "lib/x.rb"}], [["no a", "a"], ["no b", "b"]]], [seen, result.findings.map { |violation| [violation.message, violation.detail] }]
   end
 
-  # docs/design/checking.md: a line on a terminal before any TypeScript is
-  # read, so before any helper starts or any rule runs.
+  # The line saying what CrossLint will check comes before any helper
+  # starts or any rule runs, so before any TypeScript is read.
   def test_says_what_it_will_check_before_any_helper_starts_or_any_rule_runs
     events = []
     port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { (events << :asked) && [] }}, commands: ["node"])

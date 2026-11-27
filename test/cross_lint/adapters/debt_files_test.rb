@@ -36,8 +36,8 @@ class MemoryDebtFilesTest < Minitest::Test
 end
 
 # The format is ng-nudge's: what ng-nudge 0.3.0's DebtFile and d3-dsv 3
-# read and write (lib/config/debt-file.js), with the defects
-# docs/design/debt.md lists left out.
+# read and write (lib/config/debt-file.js), without the defects listed in
+# docs/design/debt.md#defects-not-to-copy.
 class TSVDebtFilesTest < Minitest::Test
   cover "CrossLint::Adapters::TSVDebtFiles*"
 

@@ -2,9 +2,9 @@
 
 require "test_helper"
 
-# Core::TrackDebt against the in-memory debt-files adapter: what
-# docs/design/debt.md requires of matching and updating, with each of
-# ng-nudge's defects it lists as a test that it isn't copied.
+# Core::TrackDebt against the in-memory debt-files adapter: how entries
+# match violations and how an update changes them, with a test for each
+# ng-nudge defect that CrossLint doesn't copy.
 class TrackDebtTest < Minitest::Test
   cover "CrossLint::Core::TrackDebt*"
 
@@ -130,8 +130,8 @@ class TrackDebtTest < Minitest::Test
     assert_equal entries.map(&:source), written.map(&:source)
   end
 
-  # docs/design/debt.md: an entry for a disabled policy, or for a plugin
-  # the configuration doesn't list, is neither stale nor reported.
+  # An entry for a disabled policy, or for a plugin the configuration
+  # doesn't list, is neither stale nor reported.
   def test_reports_no_entry_for_a_disabled_policy_an_unlisted_plugin_or_a_plugin_that_stopped_and_reports_the_others
     entries = [entry("tests/has-signature", "lib/a.rb", "off for now"), entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
       entry("spec-exists", "app/card", "angular later", line: 4), entry("other/has-test", "lib/a.rb", "stopped", line: 5),
