@@ -83,10 +83,7 @@ module CrossLint
         versions = VersionTags.parse(listed)
         return Update.new(listing:, newest: versions.newest(keep: current)&.text) if latest
 
-        # A repository with a version tag but none compatible with the
-        # ref leaves the plugin where it is.
-        newest = versions.compatible_with(current).newest(keep: current) || (current if versions.newest)
-        Update.new(listing:, newest: newest&.text, newer: versions.newer_incompatible(current).map(&:text))
+        Update.new(listing:, newest: versions.compatible_update(current)&.text, newer: versions.newer_incompatible(current).tags.map(&:text))
       rescue FetchError => error
         raise Mistake.new("couldn't list the tags of shared plugin #{listing.name}: " + error.message, file:, line: listing.line)
       end

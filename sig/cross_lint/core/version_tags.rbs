@@ -5,8 +5,9 @@ module CrossLint
     #
     # ```ruby
     # tags = CrossLint::Core::VersionTags.parse(%w[v1.2.0 v1.10.0 v2.0.0-rc.1 v2.0.0 latest])
-    # tags.newest.text # => "v2.0.0"
-    # tags.compatible_with(CrossLint::Core::VersionTag.parse("v1.0.0")).newest.text # => "v1.10.0"
+    # current = CrossLint::Core::VersionTag.parse("v1.0.0")
+    # tags.newest(keep: current).text # => "v2.0.0"
+    # tags.compatible_update(current).text # => "v1.10.0"
     # ```
     class VersionTags < Data
       # The version tags, in the order the repository listed them.
@@ -26,19 +27,26 @@ module CrossLint
       # The tags that are compatible with `current`.
       def compatible_with: (VersionTag current) -> VersionTags
 
+      # The tag a project at `current` moves to when it stays among the
+      # compatible versions: the `newest` of the tags compatible with
+      # `current`. `current` itself when there are version tags but none is
+      # compatible, so that the project stays where it is. Nil when there
+      # is no version tag.
+      def compatible_update: (VersionTag current) -> VersionTag?
+
       # The tag with the highest version, or nil when there is none. Of
       # the tags that have that version, such as v1.2.0 and 1.2.0, `keep`
       # when it is one, else the first by name that has a "v" only when
       # `keep` has one, else the first by name. A `keep` of a higher
       # version than any tag is the answer, so that no update moves a
       # project to a lower version, unless there are no tags.
-      def newest: (?keep: VersionTag?) -> VersionTag?
+      def newest: (keep: VersionTag) -> VersionTag?
 
-      # The tag with the highest version of each set of mutually
+      # The tags with the highest version of each set of mutually
       # compatible versions above `current`, the lowest first. Of tags
       # tied for a version, the one `newest` picks with `current` as its
       # `keep`.
-      def newer_incompatible: (VersionTag current) -> Array[VersionTag]
+      def newer_incompatible: (VersionTag current) -> VersionTags
     end
   end
 end
