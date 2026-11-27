@@ -23,11 +23,11 @@ class AppTest < Minitest::Test
   end
 
   def test_reads_crosslints_own_configuration_and_plugins
-    project = App.new.load_project(File.join(ROOT, "lib", "cross_lint"))
+    project = App.new(plugin_ruby: LoadedPlugins::PluginRuby.new).load_project(File.join(ROOT, "lib", "cross_lint"))
 
-    assert_equal [ROOT, [["signatures", File.join(ROOT, ".config/crosslint/signatures")], ["markdown-links", File.join(ROOT, "plugins/markdown-links")]]],
+    assert_equal [ROOT, [["signatures", File.join(ROOT, ".config/crosslint/signatures")], ["markdown-links", File.join(ROOT, "plugins/markdown-links")], ["decision-log", File.join(ROOT, "plugins/decision-log")]]],
       [project.root, project.plugins.map { |plugin| [plugin.name, plugin.folder] }]
-    assert_equal [["ruby-file"], ["markdown-file"]], project.plugins.map { it.manifest.artifacts.map(&:name) }
+    assert_equal [["ruby-file"], ["markdown-file"], %w[index document]], project.plugins.map { it.manifest.artifacts.map(&:name) }
   end
 
   def test_a_dry_run_of_a_plugins_command_lists_the_changes_and_writes_nothing
@@ -157,7 +157,9 @@ class AppTest < Minitest::Test
     result = App.new(plugin_ruby: LoadedPlugins::PluginRuby.new).check(ROOT)
     markdown, = Open3.capture3("git", "-C", ROOT, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "*.md")
 
-    assert_equal [false, [["ruby-file", Dir.glob("lib/**/*.rb", base: ROOT).size], ["markdown-file", markdown.split("\0").uniq.size]]],
+    documents = markdown.split("\0").uniq.size
+
+    assert_equal [false, [["ruby-file", Dir.glob("lib/**/*.rb", base: ROOT).size], ["markdown-file", documents], ["index", 1], ["document", documents]]],
       [result.failed, result.summary.kinds]
   end
 

@@ -32,11 +32,12 @@ class ExeTest < Minitest::Test
     assert_equal ["", "crosslint: crosslint has no flag --quite; did you mean --quiet?\n", 2], crosslint("--quite")
   end
 
-  def test_checks_that_every_file_under_lib_has_its_signature_and_every_markdown_link_resolves
+  def test_checks_that_every_file_has_its_signature_every_link_resolves_and_the_decision_index_is_exact
     count = Dir.glob("lib/**/*.rb", base: ROOT).size
     markdown, = Open3.capture3("git", "-C", ROOT, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "*.md")
+    documents = markdown.split("\0").uniq.size
 
-    assert_equal ["", "crosslint: checked #{count} ruby-file and #{markdown.split("\0").uniq.size} markdown-file artifacts: no violations\n", 0],
+    assert_equal ["", "crosslint: checked #{count} ruby-file, #{documents} markdown-file, 1 index, and #{documents} document artifacts: no violations\n", 0],
       crosslint("check", chdir: File.join(ROOT, "lib"))
   end
 

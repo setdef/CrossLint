@@ -3,3 +3,4 @@
 // that fit this repository, from their folders.
 plugin ".config/crosslint/signatures"
 plugin "./plugins/markdown-links"
+plugin "./plugins/decision-log"
