@@ -35,13 +35,29 @@ class PageFeaturesTest < Minitest::Test
     assert_equal "checked 2 page artifacts: 1 error", result.summary.line
   end
 
-  def test_takes_a_file_for_a_page_only_when_its_name_has_no_second_suffix
+  def test_takes_a_file_for_a_page_only_when_the_text_of_path_has_no_dot_in_its_last_segment
     %w[src/pages/Home.tsx src/pages/Home.test.tsx src/pages/Home.stories.tsx src/pages/Home.spec.tsx src/pages/v1.2/About.tsx
       src/pages/Other.page.tsx features/Home.feature].each { write(@root, it, "") }
     result = check
 
     assert_equal [["src/pages/v1.2/About.tsx", "page", "feature-exists", "no feature file at features/v1.2/About.feature"]], findings(result)
     assert_equal "checked 6 page artifacts: 1 error", result.summary.line
+  end
+
+  def test_takes_a_file_for_a_page_when_a_suffix_is_in_the_page_pattern_and_not_in_what_path_matched
+    %w[src/pages/Home.page.tsx src/pages/Home.test.page.tsx src/pages/v1.2/About.page.tsx src/pages/Home.tsx].each { write(@root, it, "") }
+    result = check(%(page "src/pages/{path}.page.tsx"))
+
+    assert_equal [["src/pages/Home.page.tsx", "page", "feature-exists", "no feature file at features/Home.feature"],
+      ["src/pages/v1.2/About.page.tsx", "page", "feature-exists", "no feature file at features/v1.2/About.feature"]], findings(result)
+    assert_equal "checked 3 page artifacts: 2 errors", result.summary.line
+  end
+
+  def test_takes_a_file_for_a_page_whatever_its_name_when_the_page_pattern_has_no_path
+    %w[src/pages/Home.test.tsx].each { write(@root, it, "") }
+    result = check(%(page "src/pages/{name}.tsx"\n  feature "features/all.feature"))
+
+    assert_equal [["src/pages/Home.test.tsx", "page", "feature-exists", "no feature file at features/all.feature"]], findings(result)
   end
 
   def test_takes_a_feature_pattern_with_fewer_placeholders_than_the_page_pattern

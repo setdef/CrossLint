@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
-# A page's file has one suffix, as in Home.tsx. A file whose name has a
-# second, as in Home.test.tsx, Home.stories.tsx, or Home.spec.tsx, is a
-# test, a story, or another file about a page, whatever the page setting
-# matched it with.
+# A file is a page unless the text that {path} matched has a dot in its
+# last segment: with {path}.tsx, Home.test.tsx, Home.stories.tsx, and
+# Home.spec.tsx are files about a page, and with {path}.page.tsx,
+# Home.page.tsx is a page and Home.test.page.tsx isn't. A page pattern
+# with no {path} takes every file it matches.
 class FeatureExists < CrossLint::Rule
   def check(artifact)
-    return [] if File.basename(artifact.path, ".*").include?(".")
+    return [] if File.basename(artifact.match.fetch("path", "")).include?(".")
 
     feature = artifact.companion("feature")
     return [] if feature.exist?
