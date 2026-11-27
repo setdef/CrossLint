@@ -121,4 +121,4 @@ You've finished when all of these are true:
 - `.config/crosslint/debt.tsv` has a comment on every entry.
 - A Ruby file you add under `lib/` with no test makes `crosslint check` exit with 1.
 
-You should now be comfortable declaring an artifact, a policy and a rule, and keeping a check passing with debt. To check something a path can't show, such as what a file contains, read [the plugin reference](reference/plugin.md#rules-in-crosslints-ruby).
+You should now be comfortable declaring an artifact, a policy and a rule, and keeping a check passing with debt. To check something a path can't show, such as what a file contains, read [Regexes](reference/plugin.md#regexes) and [Helpers](reference/plugin.md#helpers) in the plugin reference.

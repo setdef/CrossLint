@@ -8,6 +8,7 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | --- | --- | --- |
 | **manifest** | A plugin's `plugin.kdl`, which declares its roles, policies, rules, helpers, settings, commands, and steps. CrossLint stops at any line it doesn't know. | plugin config, descriptor |
 | **artifact declaration** | What a manifest says about one role: the path pattern that finds each artifact's primary piece, the pattern of each artifact's name, and the path pattern of each of its other pieces. Written `artifact ROLE { ... }`, or made by the helper on the `artifacts` line. | |
+| **key** | A second name of an artifact, which a debt entry can hold in place of the artifact's name, such as ng-nudge's base path `app/card/card` for an Angular component. Only an artifact declared by a helper has one, from the path pattern the helper gives as `key`. | |
 | **path pattern** | A path with placeholders in braces, such as `lib/{path}.rb`, matched case-sensitively with `/` on every system. CrossLint finds primary pieces with the pattern in `primary`; in another piece's pattern, each placeholder stands for what it matched there. | glob (a path pattern is not a glob) |
 | **placeholder** | `{path}`, which matches a file name and the folders before it, or `{name}`, which matches one segment of a path; or a named capture of a primary's regex, such as `{controller}`. | variable, wildcard |
 | **regex** | A regular expression in Ruby's dialect, written `regex=`. On `primary`, each of its matches in a file is an artifact; on a piece, the piece is a part of its file, and exists when the regex has a match there. A placeholder in it stands for its value, as literal text. | regexp, pattern (a regex is not a path pattern) |
@@ -23,8 +24,8 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | **project files** | The files a Ruby rule sees through `project_files`: those Git tracks, and the untracked ones it doesn't ignore. | |
 | **detail** | What tells apart the violations one rule finds on one artifact, such as a missing input's name, so the debt plugin can excuse each alone. | |
 | **helper** | A command and a file a plugin carries, which run its rules or declare its artifacts: on the Ruby CrossLint carries, written `command=(crosslint)"ruby"`, so that every project can run it, or on a program on the project's `PATH`, such as the Angular plugin's, which runs on Node and reads TypeScript with ts-morph. | adapter, sidecar |
-| **fault** | What stops a plugin: an exception its Ruby raises, a gem it requires that CrossLint wasn't built with, or a helper that fails. The plugin reports nothing else, and `crosslint check` exits with 2. | crash |
-| **mistake** | A line of a manifest or a configuration that CrossLint can't use, CrossLint stops at it with exit status 2, before it checks anything, and says which file and line. | invalid config |
+| **fault** | What stops a plugin, such as an exception its Ruby raises, a gem it requires that CrossLint wasn't built with, a helper that fails, a regex search that runs past its time limit, or two artifacts of one role with one name. The plugin reports nothing else, and `crosslint check` exits with 2. | crash |
+| **mistake** | A line of a manifest or a configuration that CrossLint can't use. CrossLint stops at it with exit status 2, before it checks anything, and says which file and line. | invalid config |
 | **notice** | A warning CrossLint gives about a plugin rather than an artifact, such as an artifact declaration whose `primary` pattern matches nothing. | |
 
 ## Steps and commands

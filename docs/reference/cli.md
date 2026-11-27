@@ -55,7 +55,7 @@ crosslint init --from-ng-nudge
 - **Usage:** `crosslint check [FLAGS]`
 - **Effect:** read-only
 
-Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the file, the message, and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
+Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the file, with the line for an artifact found inside it; the artifact's name, when it isn't the file's path; the message; and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
 
 A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report stale entries, which fail the check: an entry that no violation matches any more fails it until crosslint debt update removes it.
 

@@ -26,7 +26,7 @@ A plugin's name is its folder's name, here `signatures`. CrossLint names each vi
 
 ## `artifact`
 
-`artifact NAME { ... }` declares a role: the path pattern that finds each artifact's primary piece, the artifact's name, and where each of its other pieces belongs. `NAME` is unique within the plugin.
+`artifact ROLE { ... }` declares a role: the path pattern that finds each artifact's primary piece, the artifact's name, and where each of its other pieces belongs. `ROLE` is unique within the plugin.
 
 | Child | Meaning |
 | --- | --- |
@@ -130,8 +130,8 @@ Some differences have no other way to write them, so CrossLint reads them as Rub
 
 | Child | Meaning |
 | --- | --- |
-| `applies-to ARTIFACT` | The artifact the policy covers, by name: one of this plugin's, or another listed plugin's as `PLUGIN/ARTIFACT`. At most once. Without it, the policy covers each of its plugin's artifacts that has every piece its `when` and its rules name; a policy that would then cover none stops CrossLint with exit status 2, unless the plugin declares its artifacts with a helper. |
-| `when CONDITION` | Apply the policy only to artifacts the condition holds for. Optional; without it, the policy applies to every artifact of the kind in `applies-to`. |
+| `applies-to ROLE` | The role the policy covers: one this plugin declares, or another listed plugin's as `PLUGIN/ROLE`. At most once. Without it, the policy covers each of its plugin's artifacts that has every piece its `when` and its rules name; a policy that would then cover none stops CrossLint with exit status 2, unless the plugin declares its artifacts with a helper. |
+| `when CONDITION` | Apply the policy only to artifacts the condition holds for. Optional; without it, the policy applies to every artifact of the role in `applies-to`. |
 | `rule RULE ...` | A rule the policy runs on each artifact it applies to, with the rule's arguments as properties. At least one. |
 
 A `rule` line also takes `severity="error"` or `severity="warning"`, which overrides the rule's default severity for this policy. The project's configuration can override it again.
@@ -215,7 +215,7 @@ The artifact a rule gets has these methods:
 | Method | Returns |
 | --- | --- |
 | `path` | The primary piece's path, relative to the project's root. |
-| `role` | The artifact's name, such as `ruby-file`. |
+| `role` | The artifact's role, such as `ruby-file`. |
 | `match` | What each placeholder matched, and each capture of the primary's regex, by name: `artifact.match["path"]`. |
 | `read` | The primary piece's contents. |
 | `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`. For a piece with a regex, `exist?` says whether its file has a match, and `read` gives the whole file. |
@@ -313,7 +313,7 @@ end
 | Method | Meaning |
 | --- | --- |
 | `declare(settings)` | Called once per check, before any rule runs. Each setting has `name`, `arguments`, `properties`, `children`, and `line`, as the configuration gives them. |
-| `artifact(NAME, primary:, pieces: {}, key: nil, optional: false, dotfiles: true)` | Declares an artifact as an `artifact` line does, with `primary` and each piece's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `primary` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. With `dotfiles: false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. |
+| `artifact(ROLE, primary:, pieces: {}, key: nil, optional: false, dotfiles: true)` | Declares a role as an `artifact` line does, with `primary` and each piece's path as path patterns. `key` is a second path pattern, for the artifact's [key](plugin-glossary.md#declaring), which a debt entry can hold in place of the artifact's name. With `optional: true`, a `primary` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. With `dotfiles: false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. |
 | `mistake(MESSAGE, SETTING)` | A mistake in the configuration at that setting's line, for `declare` to raise. It stops CrossLint with exit status 2, as any mistake does. |
 
 Anything else `declare` raises stops CrossLint with exit status 2, naming the plugin, since no check can run without its artifacts.
@@ -326,4 +326,4 @@ When the helper is a program, CrossLint starts it once, before any rule runs, se
 {"settings": [{"name": "lib-dir", "arguments": ["src"], "properties": {}, "children": [], "line": 3}]}
 ```
 
-The helper answers with the artifacts, each with the fields of `artifact` in the table for artifacts declared in CrossLint's Ruby, and only `name` and `primary` needed: `{"artifacts": [{"name": "ruby-file", "primary": "src/{path}.rb", "pieces": {"signature": "sig/{path}.rbs"}}]}`. For a setting it can't use, it answers `{"mistake": {"message": TEXT, "line": LINE}}`, with the setting's line, and CrossLint stops with exit status 2 at that line of the configuration. CrossLint also stops with exit status 2 at an error, at an answer of any other shape, and at an artifact that isn't one, naming the plugin and the manifest's `artifacts` line. A manifest has one `artifacts` line.
+The helper answers with the roles, each with the fields of `artifact` in the table for artifacts declared in CrossLint's Ruby, the role as `name`, and only `name` and `primary` needed: `{"artifacts": [{"name": "ruby-file", "primary": "src/{path}.rb", "pieces": {"signature": "sig/{path}.rbs"}}]}`. For a setting it can't use, it answers `{"mistake": {"message": TEXT, "line": LINE}}`, with the setting's line, and CrossLint stops with exit status 2 at that line of the configuration. CrossLint also stops with exit status 2 at an error, at an answer of any other shape, and at an artifact that isn't one, naming the plugin and the manifest's `artifacts` line. A manifest has one `artifacts` line.
