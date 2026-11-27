@@ -1,0 +1,9 @@
+# Design of markdown-links
+
+Why the plugin reads links the way its [README](README.md) says.
+
+- **GitHub's rendering is what a link must survive.** A Markdown file in a repository is read on GitHub more than anywhere else, so a link resolves when it would work there: a leading `/` means the repository's root, an anchor is GitHub's slug of a heading, and a name must match exactly, as on Linux. A site generator that resolves `/` from the site's root, or that makes other anchors, would need another rule.
+- **The plugin reads Markdown with Ruby's standard library alone,** since CrossLint loads no gem it wasn't built with. Its reader in `rules/links_resolve.rb` reads the forms a link takes in a repository's documents, and skips the places GitHub renders no link, not the whole of CommonMark.
+- **An indented code block is read as text.** Telling one from a list item's indented lines takes a full parser. Reading it as text checks a link in such a block that nobody meant as a link, which an author sees and can fix or record as debt; the other choice would skip every link in the second paragraph of a list item, which nobody would see.
+- **A link to a file Git ignores is reported,** because it resolves on the author's computer and nowhere else. The plugin resolves links among the files a rule's `project_files` gives, not among the files on disk.
+- **One policy reports both a missing file and a missing anchor.** A rule written in Ruby takes no arguments from its policy, so two policies would need two rules that read every file twice. The messages tell the two apart, and a debt entry excuses one link either way.
