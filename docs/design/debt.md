@@ -5,13 +5,13 @@ How the debt plugin keeps a project's debt, and why each is done the way it is. 
 ## The file
 
 - **The format is ng-nudge's, read and written byte for byte,** so a debt file moved from ng-nudge reads unchanged, and a row CrossLint keeps is written back exactly as it was read, quoting included. A diff after an update then shows only real changes, which is what a reviewer reads the debt file for.
-- **Keys use `/` on every system,** and line endings stay as the file had them, so one debt file, committed from any computer, matches on macOS, Linux, and Windows.
+- **Paths use `/` on every system,** and line endings stay as the file had them, so one debt file, committed from any computer, matches on macOS, Linux, and Windows.
 - **The file is replaced whole,** through a temporary file with a name of its own beside it, renamed into place, so an interrupted update leaves the previous file.
 
 ## Matching
 
 - **A violation's identity is its plugin and policy, its artifact with the artifact's role, and its detail,** such as a missing member's name. An entry matches one violation with the same identity, so fixing one of an artifact's problems shows as one stale entry, not as the artifact's whole entry.
-- **An entry may name its artifact by path or by key.** The key is a second name an artifact declaration gives, such as ng-nudge's base path for an Angular artifact, so entries ng-nudge wrote match without being rewritten.
+- **An entry may hold its artifact's name or its key.** An artifact's name is its primary piece's path unless its declaration has a `name`, and the key is a second name a helper's declaration can give, such as ng-nudge's base path for an Angular artifact, so entries ng-nudge wrote match without being rewritten.
 - **ng-nudge's coarse entries still match, once.** ng-nudge wrote one entry per rule and artifact, with no detail, so such an entry matches every violation of its policy on its artifact, with a warning, until the next update rewrites it as one entry per violation. Moving from ng-nudge then adds no failures, and the coarse matching ends after one update.
 - **An entry for a disabled policy, or for a plugin the configuration doesn't list, is left alone:** neither stale nor reported, and kept by an update with its comment. ng-nudge treated such entries as paid off and deleted them with their comments, so turning a rule off for a week lost the reasons written down for it.
 - **Matching sees every violation,** whatever `--warnings` or `--quiet` hides, so a hidden warning can't look like a fixed one.
