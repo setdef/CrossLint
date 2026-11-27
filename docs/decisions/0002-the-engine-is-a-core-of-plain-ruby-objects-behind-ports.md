@@ -1,18 +1,18 @@
 ---
 status: proposed
 date: 2026-11-26
-deciders: the agent acting as CrossLint's architect chose the structure, within ADR 0001
+deciders: the agent acting as CrossLint's architect chose the structure, within ADR 0004
 ---
 
 # The engine is a core of plain Ruby objects, and everything it reaches is an adapter behind a port
 
 ## Context and Problem Statement
 
-CrossLint reads a configuration and plugin manifests in KDL and a debt file in TSV, asks Git which files the working tree has, runs Ruby rules and helpers in other languages, and reports to a terminal or as JSON, as `check`, `init`, and `update`. Its rules about artifacts, policies, violations, and debt stay the same whichever format, filesystem, or output they meet, and ADR 0001 makes the Angular checks and debt tracking plugins of an engine with no role, language, or policy built in. How should the code be divided, so the rules can be tested and changed apart from the formats and systems around them?
+CrossLint reads a configuration and plugin manifests in KDL and a debt file in TSV, asks Git which files the working tree has, runs Ruby rules and helpers in other languages, and reports to a terminal or as JSON, as `check`, `init`, and `update`. Its rules about artifacts, policies, violations, and debt stay the same whichever format, filesystem, or output they meet, and ADR 0004 makes the Angular checks and debt tracking plugins of an engine with no role, language, or policy built in. How should the code be divided, so the rules can be tested and changed apart from the formats and systems around them?
 
 ## Decision Drivers
 
-* The engine has no role, language, or policy built in (ADR 0001).
+* The engine has no role, language, or policy built in (ADR 0004).
 * Each requirement in `docs/design/` becomes a test, and a test touches a file, a process, or the network only when its requirement is about one.
 * A format can change, such as CrossLint's debt format beside ng-nudge's, without touching the rules.
 

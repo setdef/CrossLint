@@ -1,11 +1,11 @@
 # Plugins
 
-How CrossLint loads and runs plugins, and why each is done the way it is. The decisions these rest on are [ADR 0001](../decisions/0001-crosslint-is-ruby-and-a-plugin-may-read-files-in-their-language.md) and [ADR 0003](../decisions/0003-a-plugin-reaches-the-engine-only-through-what-its-manifest-declares.md). What a plugin can declare is in [the plugin reference](../reference/plugin.md), and how a project lists one is in [the configuration reference](../reference/configuration.md#plugin).
+How CrossLint loads and runs plugins, and why each is done the way it is. The decisions these rest on are [ADR 0003](../decisions/0003-a-plugin-reaches-the-engine-only-through-what-its-manifest-declares.md) and [ADR 0004](../decisions/0004-crosslint-is-ruby-and-a-plugins-code-may-be-in-any-language.md). What a plugin can declare is in [the plugin reference](../reference/plugin.md), and how a project lists one is in [the configuration reference](../reference/configuration.md#plugin).
 
 ## The engine and its plugins
 
 - **The engine has no role, language, or policy built in.** It loads the configuration and the plugins, finds each artifact's files, applies policies, runs rules, applies severities and settings, prints the report, and sets the exit status. Angular and debt tracking are plugins like any other, and a project that lists neither runs without them.
-- **The built-in plugins use only what any plugin can.** Debt tracking needs a step that sees every violation after the rules have run, a command under its name, and settings; the Angular plugin needs Ruby that declares its artifacts from its settings, and a key for each artifact that debt entries can name. Each is a kind of line in `plugin.kdl`, so a shared plugin can have the same reach, and the surface is used before strangers rely on it.
+- **The built-in plugins use only what any plugin can.** Debt tracking needs a step that sees every violation after the rules have run, a command under its name, and settings; the Angular plugin needs a helper that declares its artifacts from its settings and runs its rules, and a key for each artifact that debt entries can name. Each is a kind of line in `plugin.kdl`, so a shared plugin can have the same reach, and the surface is used before strangers rely on it.
 - **A local plugin, a shared plugin, and a built-in one load the same way,** from a folder with a `plugin.kdl`. A built-in plugin's folder ships inside CrossLint. Nothing outside `plugins/angular/` depends on what's inside it, so it can move to a repository of its own.
 
 ## Plugin commands
