@@ -1,34 +1,32 @@
 # frozen_string_literal: true
 
-# A built-in plugin's Ruby, which a check loads anew into a namespace of
-# its own. Coverage follows a file's methods from the time it loads, so a
-# file loaded anew for each check is measured as the last check loaded it.
-# Here each file loads once, at the top level, before any test runs
-# (test/test_helper.rb requires this file); the plugins' tests give
-# CrossLint::App a PluginRuby, which puts the classes that file defined in
-# the namespace a check asks for.
+# The Ruby of the plugins in plugins/, which a check loads anew into a
+# namespace of the plugin's own. Coverage follows a file's methods from the
+# time it loads, so a file loaded anew for each check is measured as the
+# last check loaded it. Here each file a manifest names loads once, before
+# any test runs (test/test_helper.rb requires this file), into a module of
+# its plugin's own, since two plugins can each define Artifacts; the
+# plugins' tests give CrossLint::App a PluginRuby, which puts the classes
+# that file defined in the namespace a check asks for. A file no manifest
+# names loads as a check loads it, by a require from one that is named.
 require "cross_lint"
 
 module LoadedPlugins
   FOLDER = File.expand_path("../plugins", __dir__)
 
-  # Each plugin's Ruby, by its file's path: the constants the file defines,
-  # kept here because a test may remove one from the top level.
+  # Each named file's constants, by the file's path.
   FILES = {}
   private_constant :FILES
 
-  Dir.glob("*/**/*.rb", base: FOLDER).sort.each do |file|
-    next if file.split("/")[1] == "test"
-
-    path = File.join(FOLDER, file)
-    before = Object.constants
-    Kernel.load(path)
-    defined = (Object.constants - before).to_h { |name| [name, Object.const_get(name)] }
-    # A constant a file defines that another already defined is reopened,
-    # which is no definition of its own.
-    raise "#{file} defines no constant that is new, so a plugin's file of that name was loaded before it" if defined.empty?
-
-    FILES[path] = defined
+  Dir.glob("*/plugin.kdl", base: FOLDER).sort.each do |manifest|
+    folder = File.join(FOLDER, File.dirname(manifest))
+    namespace = Module.new
+    File.read(File.join(FOLDER, manifest)).scan(/\bruby="([^"]+)"/).flatten.uniq.each do |file|
+      path = File.expand_path(file, folder)
+      before = namespace.constants
+      Kernel.load(path, namespace)
+      FILES[path] = (namespace.constants - before).to_h { |name| [name, namespace.const_get(name)] }
+    end
   end
 
   # The port of CrossLint::Adapters::FilePluginRuby that gives each file

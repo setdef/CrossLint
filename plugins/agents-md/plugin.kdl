@@ -1,0 +1,15 @@
+// The agents-md plugin: every AGENTS.md has a CLAUDE.md beside it whose
+// first line is @AGENTS.md, which Claude Code reads as an import of the
+// AGENTS.md beside it.
+artifacts ruby="artifacts.rb"
+
+policy "claude-md-exists" {
+  rule "companion-exists" companion="claude"
+}
+
+rule "claude-md-imports-agents-md" ruby="rules/claude_md_imports_agents_md.rb"
+
+policy "claude-md-imports-agents-md" {
+  when companion-exists "claude"
+  rule "claude-md-imports-agents-md"
+}

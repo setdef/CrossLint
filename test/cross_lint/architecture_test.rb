@@ -39,6 +39,15 @@ class ArchitectureTest < Minitest::Test
     assert_empty shipped.grep(%r{\Aplugins/[^/]+/test(/|\z)})
   end
 
+  # The other folders of plugins/ are shared plugins, which a project
+  # fetches.
+  def test_the_app_ships_the_built_in_plugins_alone
+    shipped = Gem::Specification.load(File.join(ROOT, "cross_lint.gemspec")).files
+
+    assert_equal CrossLint::App::BUILT_IN, shipped.grep(%r{\Aplugins/}).map { it.split("/")[1] }.uniq.sort
+    assert_includes Dir.children(File.join(ROOT, "plugins")), "agents-md"
+  end
+
   def test_every_file_under_lib_has_a_signature_at_the_matching_path_under_sig
     missing = Dir.glob("lib/**/*.rb", base: ROOT).map { |file| file.sub(%r{\Alib/(.*)\.rb\z}, 'sig/\1.rbs') }
       .reject { |signature| File.file?(File.join(ROOT, signature)) }

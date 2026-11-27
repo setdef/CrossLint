@@ -15,9 +15,11 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 4.1.0.a"
 
   # The built-in plugins' folders ship in the app beside lib/, each without
-  # its test folder, whose fixtures are for the plugin's tests alone.
+  # its test folder, whose fixtures are for the plugin's tests alone. The
+  # other folders of plugins/ are shared plugins, which a project fetches
+  # (CrossLint::App::BUILT_IN).
   spec.files = Dir.chdir(__dir__) do
-    Dir["crosslint.usage.kdl", "exe/*", "lib/**/*.rb", "plugins/**/*", "LICENSE"].grep_v(%r{\Aplugins/[^/]+/test(/|\z)})
+    Dir["crosslint.usage.kdl", "exe/*", "lib/**/*.rb", "plugins/{angular,debt}/**/*", "LICENSE"].grep_v(%r{\Aplugins/[^/]+/test(/|\z)})
   end
   spec.bindir = "exe"
   spec.executables = ["crosslint"]
