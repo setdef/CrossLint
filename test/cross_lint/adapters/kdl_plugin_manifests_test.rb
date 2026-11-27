@@ -164,6 +164,21 @@ class KDLPluginManifestsTest < Minitest::Test
       %(artifact "a" {\n  primary "x"\n  piece "b" "c" optional=#true\n}\n)
   end
 
+  def test_reads_the_name_pattern_of_an_artifact
+    artifact = read(%(artifact "a" {\n  primary "lib/{path}.rb"\n  name "{path} class"\n}\n)).artifacts.first
+
+    assert_equal ["{path} class", nil], [artifact.name_pattern.source, read(%(artifact "a" { primary "x"; })).artifacts.first.name_pattern]
+  end
+
+  def test_refuses_a_name_pattern_written_wrong
+    assert_refuses 3, "artifact has name twice; the first is on line 2", %(artifact "a" {\n  name "x"\n  name "y"\n  primary "x"\n}\n)
+    assert_refuses 2, %(unknown property "kind"; name takes none), %(artifact "a" {\n  name "x" kind="y"\n  primary "x"\n}\n)
+    assert_refuses 3, %(name "{name}" uses {name}, which the primary pattern "lib/{path}.rb" doesn't have),
+      %(artifact "a" {\n  primary "lib/{path}.rb"\n  name "{name}"\n}\n)
+    assert_refuses 3, %(path pattern "{pth}" has unknown placeholder "{pth}", did you mean "{path}"?),
+      %(artifact "a" {\n  primary "lib/{path}.rb"\n  name "{pth}"\n}\n)
+  end
+
   def test_refuses_a_path_pattern_that_is_not_one
     assert_refuses 2, %(path pattern "lib/{pth}.rb" has unknown placeholder "{pth}", did you mean "{path}"?),
       %(artifact "a" {\n  primary "lib/{pth}.rb"\n}\n)

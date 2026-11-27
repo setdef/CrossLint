@@ -4,7 +4,9 @@ module CrossLint
   module Core
     class PluginError < StandardError; end
 
-    class Fault < Data.define(:plugin, :rule, :artifact, :message, :trace)
+    class Fault < Data.define(:plugin, :rule, :artifact, :message, :trace, :role)
+      def initialize(rule: nil, role: nil, **fields) = super
+
       def self.of(error, plugin:, rule:, artifact: nil)
         new(plugin: plugin.name, rule:, artifact:, message: describe(error, plugin.folder), trace: error.backtrace || [])
       end
@@ -31,7 +33,7 @@ module CrossLint
 
       def line
         where = " on #{artifact}" if artifact
-        "fault in plugin #{plugin}: rule #{rule}#{where} #{message}"
+        "fault in plugin #{plugin}: #{role ? "artifact #{role}" : "rule #{rule}"}#{where} #{message}"
       end
     end
   end

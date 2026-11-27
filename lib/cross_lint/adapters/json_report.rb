@@ -18,7 +18,7 @@ module CrossLint
         summary = result.summary
         @out.puts JSON.generate({
           "findings" => result.violations.map do |violation|
-            {"path" => violation.artifact, "message" => violation.message, "plugin" => violation.plugin, "policy" => violation.policy,
+            {"path" => violation.path, "message" => violation.message, "plugin" => violation.plugin, "policy" => violation.policy,
              "artifact" => violation.artifact, "role" => violation.role, "severity" => violation.severity, "detail" => violation.detail}
           end,
           "stale" => result.stale.map do |stale|

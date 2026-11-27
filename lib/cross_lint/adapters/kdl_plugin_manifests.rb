@@ -83,16 +83,26 @@ module CrossLint
       def artifact(document, node)
         name = document.string(node, "artifact NAME { ... }")
         document.properties(node, [])
-        document.children(node, %w[primary piece])
+        document.children(node, %w[primary name piece])
         primary = document.required_child(node, "primary")
         primary_pattern = pattern(document, primary, document.string(primary, "primary PATTERN"))
         no_more(document, primary)
+        name_pattern = document.optional_child(node, "name")&.then { |child| name_pattern(document, child, primary_pattern) }
         pieces = node.children.select { |child| child.name == "piece" }.map do |child|
           words = document.strings(child, "piece NAME PATTERN", 2)
           no_more(document, child)
           Core::PieceDeclaration.new(name: words.first, pattern: pattern(document, child, words.last), line: child.line)
         end
-        Core::ArtifactDeclaration.new(name:, primary: primary_pattern, pieces:, line: node.line)
+        Core::ArtifactDeclaration.new(name:, primary: primary_pattern, pieces:, line: node.line, name_pattern:)
+      end
+
+      def name_pattern(document, node, primary)
+        named = pattern(document, node, document.string(node, "name PATTERN"))
+        no_more(document, node)
+        extra = named.placeholders - primary.placeholders
+        return named if extra.empty?
+
+        raise document.mistake("name #{named.source.dump} uses {#{extra.first}}, which the primary pattern #{primary.source.dump} doesn't have", node)
       end
 
       def pattern(document, node, source)

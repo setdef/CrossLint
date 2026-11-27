@@ -4,12 +4,22 @@ module CrossLint
     # pattern matches, with its pieces, and whether each exists, by its
     # exact name.
     class ArtifactFinder
+      # What stops finding a plugin's artifacts, with the fault to report.
+      class Stopped < StandardError
+        # The fault, of the role whose artifacts CrossLint was finding.
+        attr_reader fault: Fault
+
+        # The error for `fault`.
+        def initialize: (Fault fault) -> void
+      end
+
       # A finder among `files`, the project's files relative to `root`,
       # which asks `project_files` whether each piece exists.
       def initialize: (project_files: _ProjectFiles, root: String, files: Array[String]) -> void
 
       # The artifacts of each of `plugin`'s declarations, by the
-      # declaration's name, each in the order of the files.
+      # declaration's name, each in the order of the files. Raises Stopped
+      # when two artifacts of one declaration have one name.
       def artifacts: (Plugin plugin) -> Hash[String, Array[Artifact]]
 
       private
@@ -19,6 +29,10 @@ module CrossLint
       @root: String
 
       @files: Array[String]
+
+      # The artifacts `declaration` finds, after checking that no two
+      # have one name.
+      def named_once: (Plugin plugin, ArtifactDeclaration declaration) -> Array[Artifact]
 
       # The artifacts `declaration` finds.
       def find: (Plugin plugin, ArtifactDeclaration declaration) -> Array[Artifact]

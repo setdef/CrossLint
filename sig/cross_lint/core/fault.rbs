@@ -7,8 +7,9 @@ module CrossLint
     end
 
     # What stopped a plugin: its name, the rule that was loading or
-    # running, the artifact it was checking, if any, what went wrong, and
-    # the trace, which the report shows under --debug.
+    # running or the role whose artifacts CrossLint was finding, the
+    # artifact it was checking, if any, what went wrong, and the trace,
+    # which the report shows under --debug.
     #
     # ```ruby
     # fault = CrossLint::Core::Fault.new(plugin: "tests", rule: "names-class", artifact: "lib/a.rb",
@@ -19,8 +20,12 @@ module CrossLint
       # The name of the plugin that stopped.
       attr_reader plugin: String
 
-      # The name of the rule.
-      attr_reader rule: String
+      # The name of the rule, or nil for a fault in finding artifacts.
+      attr_reader rule: String?
+
+      # The role whose artifacts CrossLint was finding, or nil for a fault
+      # in a rule.
+      attr_reader role: String?
 
       # The primary file of the artifact the rule was checking, or nil
       # when the rule was loading.
@@ -52,14 +57,20 @@ module CrossLint
       # What a LoadError says the code did.
       def self.loading: (LoadError error, String folder) -> String
 
-      # A fault with these fields.
-      def self.new: (plugin: String, rule: String, artifact: String?, message: String, trace: Array[String]) -> instance
+      # A fault with these fields, of a rule or a role.
+      def self.new: (plugin: String, ?rule: String?, artifact: String?, message: String, trace: Array[String], ?role: String?) -> instance
 
-      # A fault with these fields.
-      def initialize: (plugin: String, rule: String, artifact: String?, message: String, trace: Array[String]) -> void
+      # A fault with these fields, as for `new`.
+      def initialize: (plugin: String, ?rule: String?, artifact: String?, message: String, trace: Array[String], ?role: String?) -> void
 
-      # The fault as one line: the plugin, the rule, the artifact, and the
-      # message.
+      # The fault as one line: the plugin, the rule or the role, the
+      # artifact, and the message.
+      #
+      # ```ruby
+      # fault = CrossLint::Core::Fault.new(plugin: "tests", role: "ruby-file", artifact: nil,
+      #   message: "has two artifacts named card, src/a/card.rb and src/b/card.rb", trace: [])
+      # fault.line # => "fault in plugin tests: artifact ruby-file has two artifacts named card, src/a/card.rb and src/b/card.rb"
+      # ```
       def line: () -> String
     end
   end

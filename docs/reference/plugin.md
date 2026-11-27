@@ -26,11 +26,12 @@ A plugin's name is its folder's name, here `signatures`. CrossLint names each vi
 
 ## `artifact`
 
-`artifact NAME { ... }` declares a role: the path pattern that finds each artifact's primary piece, and where each of its other pieces belongs. `NAME` is unique within the plugin.
+`artifact NAME { ... }` declares a role: the path pattern that finds each artifact's primary piece, the artifact's name, and where each of its other pieces belongs. `NAME` is unique within the plugin.
 
 | Child | Meaning |
 | --- | --- |
 | `primary PATTERN` | The path pattern that finds each artifact's primary piece, relative to the project's root. Required, once. |
+| `name PATTERN` | The artifact's name, from the placeholders of `primary`, such as `name "{path}"`. CrossLint calls the artifact by its name in every violation and debt entry, and writes it after the primary piece's path in a report. Optional, once; without it, an artifact's name is its primary piece's path. Two artifacts of one role with one name are a fault, since a debt entry for one would match the other too. |
 | `piece NAME PATTERN` | A piece called `NAME`, at the path `PATTERN` gives for each primary piece. Any number, each name once. |
 
 A path pattern is a path with placeholders in braces. In `primary`, `{path}` matches a file name and the folders before it, if any, and `{name}` matches one segment of a path, with no `/`. In a piece's pattern, each placeholder stands for what it matched in `primary`. For `lib/fledge/archive.rb`, the pattern `lib/{path}.rb` matches with `{path}` as `fledge/archive`, so the piece `sig/{path}.rbs` is `sig/fledge/archive.rbs`; for `lib/fledge.rb`, `{path}` is `fledge`.

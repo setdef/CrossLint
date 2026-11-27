@@ -7,7 +7,7 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | Word | Meaning | Avoid |
 | --- | --- | --- |
 | **manifest** | A plugin's `plugin.kdl`, which declares its roles, policies, rules, helpers, settings, commands, and steps. CrossLint stops at any line it doesn't know. | plugin config, descriptor |
-| **artifact declaration** | What a manifest says about one role: the path pattern that finds each artifact's primary piece, and the path pattern of each of its other pieces. Written `artifact ROLE { ... }`, or made by the helper on the `artifacts` line. | |
+| **artifact declaration** | What a manifest says about one role: the path pattern that finds each artifact's primary piece, the pattern of each artifact's name, and the path pattern of each of its other pieces. Written `artifact ROLE { ... }`, or made by the helper on the `artifacts` line. | |
 | **path pattern** | A path with placeholders in braces, such as `lib/{path}.rb`, matched case-sensitively with `/` on every system. CrossLint finds primary pieces with the pattern in `primary`; in another piece's pattern, each placeholder stands for what it matched there. | glob (a path pattern is not a glob) |
 | **placeholder** | `{path}`, which matches a file name and the folders before it, or `{name}`, which matches one segment of a path. | variable, wildcard |
 | **condition** | What a policy's `when` says must hold before its rules run on an artifact: that a piece exists, or `not`, `all`, or `any` of other conditions. | filter, predicate |

@@ -49,15 +49,18 @@ module CrossLint
       # no artifact, as in a glob that skips dotfiles.
       attr_reader dotfiles: bool
 
-      # An artifact with these fields, with no key pattern, not optional,
-      # and with dot-named files unless given.
-      def self.new: (name: String, primary: PathPattern, pieces: Array[PieceDeclaration], line: Integer,
-                     ?key: PathPattern?, ?optional: bool, ?dotfiles: bool) -> instance
+      # The pattern that gives each artifact's name, from the primary
+      # pattern's placeholders, or nil to name each by its primary path.
+      attr_reader name_pattern: PathPattern?
 
-      # An artifact with these fields, with no key pattern, not optional,
-      # and with dot-named files unless given.
+      # An artifact with these fields, with no key or name pattern, not
+      # optional, and with dot-named files unless given.
+      def self.new: (name: String, primary: PathPattern, pieces: Array[PieceDeclaration], line: Integer,
+                     ?key: PathPattern?, ?optional: bool, ?dotfiles: bool, ?name_pattern: PathPattern?) -> instance
+
+      # An artifact with these fields, as for `new`.
       def initialize: (name: String, primary: PathPattern, pieces: Array[PieceDeclaration], line: Integer,
-                       ?key: PathPattern?, ?optional: bool, ?dotfiles: bool) -> void
+                       ?key: PathPattern?, ?optional: bool, ?dotfiles: bool, ?name_pattern: PathPattern?) -> void
 
       # The piece called `name`, or nil.
       def piece: (String name) -> PieceDeclaration?

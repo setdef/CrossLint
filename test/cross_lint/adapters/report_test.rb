@@ -123,6 +123,15 @@ class TextReportTest < Minitest::Test
     assert_equal "lib/a.rb: ruby-file passes\n", @out.string
   end
 
+  def test_writes_an_artifacts_name_after_its_path_when_the_two_differ
+    named = Violation.new(plugin: "tests", policy: "has-test", artifact: "app/a", path: "lib/app/a.rb", role: "ruby-file", message: "no test",
+      severity: :error, detail: nil)
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/app/b.rb", name: "app/b", match: {}, pieces: [])
+    report_port.write(result_of([named, artifact]))
+
+    assert_equal "lib/app/a.rb: app/a: no test (tests/has-test)\nlib/app/b.rb: app/b: ruby-file passes\n", @out.string
+  end
+
   def test_colors_only_the_message_by_its_severity
     CrossLint::Adapters::TextReport.new(out: @out, err: @err, color: true)
       .write(result_of([violation_of("lib/a.rb", "no test"), violation_of("lib/b.rb", "no sig", :warning)]))
@@ -210,6 +219,14 @@ class JSONReportTest < Minitest::Test
       "stale":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}
     JSON
     assert_equal "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning\n", @err.string
+  end
+
+  def test_writes_a_violations_primary_piece_as_its_path_and_its_name_as_its_artifact
+    named = Violation.new(plugin: "tests", policy: "has-test", artifact: "app/a", path: "lib/app/a.rb", role: "ruby-file", message: "no test",
+      severity: :error, detail: nil)
+    report_port.write(result_of([named]))
+
+    assert_equal [["lib/app/a.rb", "app/a"]], JSON.parse(@out.string).fetch("findings").map { [it.fetch("path"), it.fetch("artifact")] }
   end
 
   def test_writes_each_stale_entry_with_its_keys_in_order

@@ -43,6 +43,30 @@ class CheckTest < Minitest::Test
     assert_equal [["lib/app/a.rb", "app/a"], ["tasks.rake", nil]], check(project(plugin), files: ["lib/app/a.rb", "tasks.rake"]).findings.map { [it.artifact, it.key] }
   end
 
+  def test_names_each_artifact_and_its_violations_by_its_declarations_name_pattern_and_lists_one_that_passes_by_it
+    named = declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb").with(name_pattern: PathPattern.new(source: "{path} class"))
+    result = check(project(plugin("tests", artifacts: [named], policies: [policy("has-test", rules: [rule])])),
+      files: ["lib/app/b.rb", "lib/app/a.rb", "test/app/a_test.rb"], all: true)
+
+    assert_equal [["lib/app/a.rb", "app/a class", Artifact], ["lib/app/b.rb", "app/b class", Violation]],
+      result.findings.map { |finding| [finding.path, finding.is_a?(Violation) ? finding.artifact : finding.name, finding.class] }
+  end
+
+  def test_stops_a_plugin_at_a_fault_when_two_of_its_artifacts_of_one_role_have_one_name_and_runs_the_others
+    named = declaration("ruby-file", "src/{path}/{name}.rb", "test" => "test/{name}_test.rb").with(name_pattern: PathPattern.new(source: "{name}"))
+    plugin = plugin("named", artifacts: [named], policies: [policy("has-test", rules: [rule])])
+    result = check(project(plugin, tests_plugin), files: ["src/a/card.rb", "src/b/card.rb", "lib/c.rb"])
+
+    assert_equal ["fault in plugin named: artifact ruby-file has two artifacts named card, src/a/card.rb and src/b/card.rb"], result.faults.map(&:line)
+    assert_equal [%w[tests lib/c.rb]], result.findings.map { [it.plugin, it.artifact] }
+  end
+
+  def test_names_an_artifact_by_its_primary_piece_unless_its_declaration_gives_a_name_pattern
+    violation = check(project(tests_plugin), files: ["lib/a.rb"]).findings.first
+
+    assert_equal [["lib/a.rb", "lib/a.rb"]], [[violation.path, violation.artifact]]
+  end
+
   def test_passes_when_every_piece_exists
     result = check(project(tests_plugin), files: ["lib/a.rb", "lib/a/b.rb", "test/a_test.rb", "test/a/b_test.rb", "README.md"])
 

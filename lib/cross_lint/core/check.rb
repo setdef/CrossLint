@@ -23,13 +23,21 @@ module CrossLint
         policies = enabled_policies(project)
         files = @project_files.files(project.root)
         finder = ArtifactFinder.new(project_files: @project_files, root: project.root, files:)
-        kinds = project.plugins.to_h { |plugin| [plugin.name, finder.artifacts(plugin)] }
+        stopped = [] #: Array[Fault]
+        kinds = project.plugins.to_h do |plugin|
+          [plugin.name, finder.artifacts(plugin)]
+        rescue ArtifactFinder::Stopped => error
+          stopped << error.fault
+          [plugin.name, plugin.manifest.artifacts.to_h { |declaration| [declaration.name, []] }]
+        end
         # Before any rule runs, since a rule that asks a helper to read a
         # language's files can keep a large project silent for a while.
         started&.call(counts(kinds, checked_kinds(project, policies))) if verbosity == :normal
         helpers = @helpers.start(project.root, project.plugins)
         begin
-          violations, faults = run_plugins(project, policies, kinds, helpers, files.map { -it }.freeze)
+          running = policies.reject { |plugin, _| stopped.any? { |fault| fault.plugin == plugin.name } }
+          violations, faults = run_plugins(project, running, kinds, helpers, files.map { -it }.freeze)
+          faults = stopped + faults
         rescue Interrupt
           # Before stop, which waits for each helper to finish.
           helpers.kill
@@ -118,8 +126,8 @@ module CrossLint
           policy.rules.flat_map do |rule|
             checker = BuiltInRule.named(rule.name) || rules.fetch([plugin.name, rule.name])
             checker.results(artifact, rule.arguments, read).map do |result|
-              Violation.new(plugin: plugin.name, policy: policy.name, artifact: result.path, role: result.role, message: result.message,
-                severity: override || rule.severity || checker.severity, detail: result.detail, key: artifact.key)
+              Violation.new(plugin: plugin.name, policy: policy.name, artifact: artifact.name, path: result.path, role: result.role,
+                message: result.message, severity: override || rule.severity || checker.severity, detail: result.detail, key: artifact.key)
             end
           end
         end
@@ -190,7 +198,7 @@ module CrossLint
 
       def passed(kinds, checked, violations)
         failed = violations.map { |violation| [violation.artifact, violation.role] }
-        checked.flat_map { |owner, name| kinds.fetch(owner).fetch(name) }.reject { |artifact| failed.include?([artifact.path, artifact.role]) }
+        checked.flat_map { |owner, name| kinds.fetch(owner).fetch(name) }.reject { |artifact| failed.include?([artifact.name, artifact.role]) }
       end
 
       def counts(kinds, checked)
@@ -208,9 +216,9 @@ module CrossLint
       def sort(findings)
         findings.sort_by do |finding|
           case finding
-          when Violation then [finding.artifact, finding.plugin, finding.policy, finding.message, finding.severity]
-          when Stale then [finding.artifact, finding.plugin, finding.policy, finding.message]
-          else [finding.path, finding.plugin, "", finding.role]
+          when Violation then [finding.path, finding.artifact, finding.plugin, finding.policy, finding.message, finding.severity]
+          when Stale then [finding.artifact, finding.artifact, finding.plugin, finding.policy, finding.message]
+          else [finding.path, finding.name, finding.plugin, "", finding.role]
           end
         end
       end

@@ -10,9 +10,10 @@ module CrossLint
     #       "policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null}],
     #      "stale":[],"summary":{"artifacts":9,"errors":1,"warnings":0,"stale":0}}
     #
-    # A violation's `path` is its primary file, and its `artifact` is the
-    # key a debt file's entry for it has, the same path for every plugin
-    # so far. A stale entry has its `file` and `line`, its `plugin`,
+    # A violation's `path` is its artifact's primary file, and its
+    # `artifact` is the artifact's name, which a debt file's entry for it
+    # has: the same path, unless the artifact's declaration names it
+    # otherwise. A stale entry has its `file` and `line`, its `plugin`,
     # `policy`, and `artifact`, and a `message`. The keys are in those
     # orders, and every character that isn't ASCII is escaped.
     class JSONReport < TextReport

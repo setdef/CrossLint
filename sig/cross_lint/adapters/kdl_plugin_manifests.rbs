@@ -68,6 +68,10 @@ module CrossLint
       # Reads an `artifact` node.
       def artifact: (KDLDocument document, KDLDocument::Node node) -> Core::ArtifactDeclaration
 
+      # The pattern of a `name` node, which may use only the placeholders
+      # of `primary`.
+      def name_pattern: (KDLDocument document, KDLDocument::Node node, Core::PathPattern primary) -> Core::PathPattern
+
       # The path pattern `source`, written on `node`.
       def pattern: (KDLDocument document, KDLDocument::Node node, String source) -> Core::PathPattern
 

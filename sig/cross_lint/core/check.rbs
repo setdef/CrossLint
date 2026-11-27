@@ -7,8 +7,8 @@ module CrossLint
     # project's files only through `project_files`, plugins' Ruby only
     # through `plugin_ruby`, and runs helpers only through `helpers`, and
     # writes nothing itself. A plugin whose Ruby rule has a fault, while
-    # it loads or checks, reports the fault alone, and the other plugins
-    # run. Then each step of each plugin that didn't stop runs on every
+    # it loads or checks, or whose artifacts can't be told apart by name,
+    # reports the fault alone, and the other plugins run. Then each step of each plugin that didn't stop runs on every
     # violation, and the result leaves out what the steps excuse and adds
     # what they report.
     class Check

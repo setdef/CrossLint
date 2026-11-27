@@ -6,8 +6,8 @@ module CrossLint
   module Core
     class PieceDeclaration < Data.define(:name, :pattern, :line); end
 
-    class ArtifactDeclaration < Data.define(:name, :primary, :pieces, :line, :key, :optional, :dotfiles)
-      def initialize(key: nil, optional: false, dotfiles: true, **fields) = super
+    class ArtifactDeclaration < Data.define(:name, :primary, :pieces, :line, :key, :optional, :dotfiles, :name_pattern)
+      def initialize(key: nil, optional: false, dotfiles: true, name_pattern: nil, **fields) = super
 
       def piece(name) = pieces.find { |piece| piece.name == name }
     end
