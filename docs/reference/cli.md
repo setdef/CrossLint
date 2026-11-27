@@ -135,7 +135,7 @@ crosslint init --from-ng-nudge --dry-run
 - **Usage:** `crosslint update [-n --dry-run]`
 - **Effect:** modifies state
 
-Moves each shared plugin the configuration lists, a Git repository with a ref, to the highest version among the repository's tags written vX.Y.Z or X.Y.Z, and rewrites only that ref's text in .config/crosslint/config.kdl. A plugin whose ref isn't a plain vX.Y.Z or X.Y.Z tag, such as a prerelease tag or a commit SHA, stays where it is, and so does one with no such tag. A plugin never moves to a lower version. Writes one line to standard error for each shared plugin, saying what changed or why nothing did. Local and built-in plugins are left as they are.
+Moves each shared plugin the configuration lists, a Git repository with a ref, to the highest version among the repository's tags written vX.Y.Z or X.Y.Z, and rewrites only that ref's text in .config/crosslint/config.kdl. A plugin whose ref isn't a plain vX.Y.Z or X.Y.Z tag, such as a prerelease tag or a commit SHA, stays where it is, and so does one with no such tag. A plugin never moves to a lower version. When a repository has both vX.Y.Z and X.Y.Z, a ref keeps the form it was written in, and a plugin listed with path= keeps its path. Writes one line to standard error for each shared plugin, saying what changed or why nothing did. Local and built-in plugins are left as they are.
 
 ### Flags
 - **`-n --dry-run`** — List the changes, and make none

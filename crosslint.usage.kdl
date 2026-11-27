@@ -73,7 +73,7 @@ With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a confi
 }
 
 cmd "update" effect="write" help="Move each shared plugin in the configuration to its newest tag" {
-  long_help "Moves each shared plugin the configuration lists, a Git repository with a ref, to the highest version among the repository's tags written vX.Y.Z or X.Y.Z, and rewrites only that ref's text in .config/crosslint/config.kdl. A plugin whose ref isn't a plain vX.Y.Z or X.Y.Z tag, such as a prerelease tag or a commit SHA, stays where it is, and so does one with no such tag. A plugin never moves to a lower version. Writes one line to standard error for each shared plugin, saying what changed or why nothing did. Local and built-in plugins are left as they are."
+  long_help "Moves each shared plugin the configuration lists, a Git repository with a ref, to the highest version among the repository's tags written vX.Y.Z or X.Y.Z, and rewrites only that ref's text in .config/crosslint/config.kdl. A plugin whose ref isn't a plain vX.Y.Z or X.Y.Z tag, such as a prerelease tag or a commit SHA, stays where it is, and so does one with no such tag. A plugin never moves to a lower version. When a repository has both vX.Y.Z and X.Y.Z, a ref keeps the form it was written in, and a plugin listed with path= keeps its path. Writes one line to standard error for each shared plugin, saying what changed or why nothing did. Local and built-in plugins are left as they are."
   flag "-n --dry-run" help="List the changes, and make none"
   example "crosslint update"
   example "crosslint update --dry-run" header="See which plugins have a newer tag"
