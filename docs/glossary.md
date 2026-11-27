@@ -4,7 +4,7 @@ The words CrossLint's checking is made of, with the meaning each has here. A wor
 
 | Word | Meaning | Avoid |
 | --- | --- | --- |
-| **artifact** | A logical unit of a project, such as an Angular component, an entity in a C# domain model, a Rails route, or the project's list of debt. An artifact has a name, such as `app/card/card` or `GET /cart`, and CrossLint calls it by that name in every message and debt entry. It has pieces, and it is not a file. | file, set of files |
+| **artifact** | A logical unit of a project, such as an Angular component, an entity in a C# domain model, a Rails route, or the project's list of debt. An artifact has a name, such as `lib/invoices/total.rb` or `GET /cart`, and CrossLint calls it by that name in every message and debt entry. It has pieces, and it is not a file. | file, set of files |
 | **piece** | One of an artifact's files, or a part of a file, any of which may be missing: an Angular component's `.component.ts`, `.component.html`, and `.spec.ts`, or a Vue component's `<template>`, `<script>`, and `<style>`. One piece is primary: the one where the artifact is declared, such as a route's line in `config/routes.rb`, by which CrossLint usually finds it. | part, companion |
 | **role** | What kind of artifact one is, such as a component, a service, or a route. | |
 | **policy** | When rules apply: to which artifacts of a role, such as every component whose stub exists. | |
