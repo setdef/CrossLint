@@ -173,6 +173,8 @@ CrossLint finds some violations ng-nudge misses, such as inputs ng-nudge doesn't
 
 Ask questions and report problems on the [CrossLint forum](https://forum.setdef.com/c/crosslint). Include the command you ran, its output, `crosslint --version`, and your system. GitHub Issues are open to the project's collaborators only.
 
+Report a security problem privately, as [SECURITY.md](SECURITY.md) says, never on the forum.
+
 To send a patch, post it on the forum, or email it with `git send-email` to `replies+crosslint@forum.setdef.com`. [git-send-email.io](https://git-send-email.io) shows how to set that up.
 
 ## Contributing
