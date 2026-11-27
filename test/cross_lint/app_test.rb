@@ -187,7 +187,7 @@ class AppTest < Minitest::Test
 
   def test_runs_a_ruby_rule_from_its_file_in_the_plugins_folder
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r"\n))
-    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nrule "says-hi" ruby="hi.rb"\n) +
+    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nhelper "hi" command=(crosslint)"ruby" file="hi.rb"\nrule "says-hi" helper="hi"\n) +
       %(policy "p" {\n  applies-to "a"\n  rule "says-hi"\n}\n))
     write(@base, ".config/crosslint/r/hi.rb", %(class SaysHi < CrossLint::Rule\n  def check(artifact) = [violation(artifact, "hi")]\nend\n))
     write(@base, "a.md", "")
@@ -209,7 +209,7 @@ class AppTest < Minitest::Test
 
   def test_runs_the_ruby_that_declares_a_plugins_artifacts_from_its_file
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r" {\n  folder "docs"\n}\n))
-    write(@base, ".config/crosslint/r/plugin.kdl", %(setting "folder"\nartifacts ruby="artifacts.rb"\npolicy "p" {\n  rule "piece-exists" piece="c"\n}\n))
+    write(@base, ".config/crosslint/r/plugin.kdl", %(setting "folder"\nhelper "artifacts" command=(crosslint)"ruby" file="artifacts.rb"\nartifacts helper="artifacts"\npolicy "p" {\n  rule "piece-exists" piece="c"\n}\n))
     write(@base, ".config/crosslint/r/artifacts.rb", <<~RUBY)
       class Artifacts < CrossLint::Artifacts
         def declare(settings) = [artifact("doc", primary: settings.first.arguments.first + "/{path}.md", pieces: {"c" => "{path}.txt"})]
@@ -224,7 +224,7 @@ class AppTest < Minitest::Test
 
   def test_runs_a_helper_as_a_process_writing_its_standard_error_with_debug
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r"\n))
-    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nrule "asks" ruby="asks.rb"\n) +
+    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nhelper "asks" command=(crosslint)"ruby" file="asks.rb"\nrule "asks" helper="asks"\n) +
       %(helper "h" command="sh" file="h.sh"\npolicy "p" {\n  applies-to "a"\n  rule "asks"\n}\n))
     write(@base, ".config/crosslint/r/asks.rb", %(class Asks < CrossLint::Rule\n  def check(artifact) = [violation(artifact, helper("h").call(1))]\nend\n))
     write(@base, ".config/crosslint/r/h.sh", %(while read -r line; do echo said >&2; echo '"hi"'; done\n))

@@ -103,7 +103,7 @@ module CrossLint
       # The program and file `plugin`'s `helper` runs. Raises Core::Mistake
       # when the program isn't on the PATH or the file isn't in the
       # plugin's folder.
-      def command: (Core::Plugin plugin, Core::HelperDeclaration helper) -> [String, String]
+      def command: (Core::Plugin plugin, Core::HelperDeclaration helper) -> Array[String]
 
       # The helpers of one check.
       class Running
@@ -111,7 +111,7 @@ module CrossLint
 
         # Helpers that run `commands`, each a program and a file by the
         # plugin's and the helper's names, in `root`.
-        def initialize: (String root, Hash[[String, String], [String, String]] commands, err: CLI::_Output, debug: bool,
+        def initialize: (String root, Hash[[String, String], Array[String]] commands, err: CLI::_Output, debug: bool,
                          time_limit: Numeric, stop_limit: Numeric, tree: _Tree, environment: Hash[String, String?]) -> void
 
         private
@@ -122,7 +122,7 @@ module CrossLint
 
         @root: String
 
-        @commands: Hash[[String, String], [String, String]]
+        @commands: Hash[[String, String], Array[String]]
 
         @err: CLI::_Output
 
@@ -141,7 +141,7 @@ module CrossLint
         # `environment`'s changes to CrossLint's environment.
         # Raises Core::PluginError, after ending the helper, when `tree`
         # can't hold it.
-        def initialize: (String name, [String, String] command, root: String, err: CLI::_Output, debug: bool,
+        def initialize: (String name, Array[String] command, root: String, err: CLI::_Output, debug: bool,
                          time_limit: Numeric, stop_limit: Numeric, tree: _Tree, environment: Hash[String, String?]) -> void
 
         # Writes `input` as a line of JSON, and returns the line of JSON

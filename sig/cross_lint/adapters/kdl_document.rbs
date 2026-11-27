@@ -10,6 +10,22 @@ module CrossLint
     # document.strings(document.nodes.first, "primary PATTERN", 1) # => ["lib/{path}.rb"]
     # ```
     class KDLDocument
+      # A property's value written with a type annotation its document
+      # allows, such as (crosslint)"ruby": the annotation, and the value.
+      class Typed < Data
+        # The annotation, such as "crosslint".
+        attr_reader type: String
+
+        # The value, such as "ruby".
+        attr_reader value: untyped
+
+        # A typed value with these fields.
+        def self.new: (type: String, value: untyped) -> instance
+
+        # A typed value with these fields.
+        def initialize: (type: String, value: untyped) -> void
+      end
+
       # A node: its name, its line, its arguments and properties as plain
       # Ruby values, and its children.
       class Node < Data
@@ -88,11 +104,15 @@ module CrossLint
       attr_reader nodes: Array[Node]
 
       # Reads the file at `path`, as UTF-8, and parses it as for `new`.
-      def self.load: (String path, String file) -> KDLDocument
+      def self.load: (String path, String file, ?typed: Hash[String, Hash[String, Array[String]]]) -> KDLDocument
 
       # Parses `source`, from `file`. Raises Core::Mistake when it isn't
-      # valid KDL or UTF-8, or has a type annotation.
-      def initialize: (String source, String file) -> void
+      # valid KDL or UTF-8, or has a type annotation that `typed` doesn't
+      # allow. `typed` gives, by the name of a node at the top of the file
+      # and the name of its property, the annotations that property may
+      # have, as `{"helper" => {"command" => ["crosslint"]}}`; such a
+      # property's value is a Typed.
+      def initialize: (String source, String file, ?typed: Hash[String, Hash[String, Array[String]]]) -> void
 
       # A mistake in the file, on the node's line.
       def mistake: (String message, Node node) -> Core::Mistake
@@ -131,9 +151,15 @@ module CrossLint
 
       private
 
-      # The kdl gem's `node`, as a Node. Raises Core::Mistake at a type
-      # annotation on the node or on one of its values.
-      def convert: (::KDL::Node node) -> Node
+      @typed: Hash[String, Hash[String, Array[String]]]
+
+      # The kdl gem's `node`, as a Node, with `top` true for a node at the
+      # top of the file. Raises Core::Mistake at a type annotation on the
+      # node or on one of its values, but for one `typed` allows.
+      def convert: (::KDL::Node node, ?top: bool) -> Node
+
+      # Raises the mistake for the type annotation `type` on `node`, on `line`.
+      def refuse: (::KDL::Node node, String type, Integer line) -> bot
     end
   end
 end

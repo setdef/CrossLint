@@ -19,7 +19,8 @@ class KDLPluginManifestsTest < Minitest::Test
       rule "piece-exists" piece="signature" severity="warning"
     }
 
-    rule "names-class" ruby="rules/names_class.rb"
+    helper "names-class" command=(crosslint)"ruby" file="rules/names_class.rb"
+    rule "names-class" helper="names-class"
     helper "members" command="node" file="helpers/members.mjs"
   KDL
 
@@ -53,7 +54,8 @@ class KDLPluginManifestsTest < Minitest::Test
       rule "piece-absent" piece="signature"
     }
 
-    rule "names-class" ruby="rules/names_class.rb"
+    helper "names-class" command=(crosslint)"ruby" file="rules/names_class.rb"
+    rule "names-class" helper="names-class"
     helper "members" command="node" file="helpers/members.mjs"
 
     policy "has-debt"
@@ -80,16 +82,17 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_every_example_in_the_plugin_reference
-    first, ruby_rule, helper, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
+    first, helpers, ruby_rule, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
 
     assert_equal [["ruby-file", ["signature", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.pieces.map(&:name)] }
     assert_equal [["has-signature", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
-    assert_equal [["signature-names-class", "rules/signature_names_class.rb", 1]],
+    assert_equal [["signature-names-class", "rules/signature_names_class.rb", 2]],
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
-    assert_equal Condition::PieceExists.new(piece: "signature", line: 5), ruby_rule.policies.first.condition
-    assert_equal [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 1)], helper.helpers
+    assert_equal Condition::PieceExists.new(piece: "signature", line: 6), ruby_rule.policies.first.condition
+    assert_equal [HelperDeclaration.new(name: "angular", command: "node", file: "lib/helper.js", line: 2),
+      HelperDeclaration.new(name: "routes", command: "bundle", arguments: ["exec", "ruby"], file: "routes.rb", line: 3)], helpers.helpers
     assert_equal [[RuleDeclaration.new(name: "stub-matches-component", helper: "angular", line: 2)], ["angular"]], [helped.rules, helped.helpers.map(&:name)]
-    assert_equal [ArtifactsRuby.new(ruby: "artifacts.rb", line: 3)], [artifacts.artifacts_ruby]
+    assert_equal [ArtifactsRuby.new(ruby: "artifacts.rb", line: 4)], [artifacts.artifacts_ruby]
     assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update"]],
       [steps.steps, steps.step_policies, steps.settings, steps.commands].map { |list| list.map(&:name) }
     flag = CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "List the entries update would add and remove, and write nothing", line: 9)
@@ -137,7 +140,7 @@ class KDLPluginManifestsTest < Minitest::Test
     artifact = manifest.artifacts.first
     policy = manifest.policies.first
 
-    assert_equal [1, 3, 6, 7, 8, 11, 12], [artifact.line, artifact.pieces.first.line, policy.line, policy.applies_to.line,
+    assert_equal [1, 3, 6, 7, 8, 12, 13], [artifact.line, artifact.pieces.first.line, policy.line, policy.applies_to.line,
       policy.rules.first.line, manifest.rules.first.line, manifest.helpers.first.line]
   end
 
@@ -145,7 +148,7 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 2, %(unknown node "primay", did you mean "primary"?), %(artifact "a" {\n  primay "lib/{path}.rb"\n}\n)
     assert_refuses 1, %(unknown node "artefact", did you mean "artifact"?), %(artefact "a")
     assert_refuses 1, %(unknown node "zzz"; expected "artifact", "artifacts", "policy", "rule", "helper", "setting", "command", or "step"), %(zzz)
-    assert_refuses 2, %(unknown node "polcy", did you mean "policy"?), %(rule "r" ruby="r.rb"\npolcy "p")
+    assert_refuses 2, %(unknown node "polcy", did you mean "policy"?), %(rule "r" helper="h"\npolcy "p")
   end
 
   def test_refuses_an_artifact_written_wrong
@@ -167,9 +170,11 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 3, %(path pattern "" is empty), %(artifact "a" {\n  primary "x"\n  piece "b" ""\n}\n)
   end
 
-  def test_reads_the_file_whose_ruby_declares_artifacts
-    assert_equal [nil, ArtifactsRuby.new(ruby: "roles.rb", line: 2)],
-      [read(%(setting "x"\n)).artifacts_ruby, read(%(setting "x"\nartifacts ruby="roles.rb"\n)).artifacts_ruby]
+  def test_reads_the_file_whose_ruby_declares_artifacts_from_a_helper_on_crosslints_ruby
+    carried = read(%(setting "x"\nhelper "roles" command=(crosslint)"ruby" file="roles.rb"\nartifacts helper="roles"\n))
+
+    assert_equal [nil, ArtifactsRuby.new(ruby: "roles.rb", line: 3), nil, []],
+      [read(%(setting "x"\n)).artifacts_ruby, carried.artifacts_ruby, carried.artifacts_helper, carried.helpers]
   end
 
   def test_reads_the_helper_that_declares_artifacts
@@ -180,13 +185,18 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_refuses_artifacts_written_wrong
-    assert_refuses 2, "artifacts is declared twice; the first is on line 1", %(artifacts ruby="a.rb"\nartifacts ruby="b.rb"\n)
-    assert_refuses 1, "artifacts has neither ruby=, the file that declares them, nor helper=, the helper that declares them", %(artifacts\n)
-    assert_refuses 1, "artifacts has both ruby= and helper=; artifacts are declared in the plugin's Ruby or by its helper", %(artifacts ruby="a.rb" helper="h"\n)
-    assert_refuses 1, "artifacts has 1 argument; write it as artifacts ruby=FILE or artifacts helper=HELPER", %(artifacts "a.rb"\n)
-    assert_refuses 1, %(unknown property "rb"; expected "ruby" or "helper"), %(artifacts rb="a.rb"\n)
+    assert_refuses 2, "artifacts is declared twice; the first is on line 1", %(artifacts helper="a"\nartifacts helper="b"\n)
+    assert_refuses 1, "artifacts has no helper=, the helper that declares them", %(artifacts\n)
+    assert_refuses 1, "artifacts has 1 argument; write it as artifacts helper=HELPER", %(artifacts "a.rb"\n)
+    assert_refuses 1, %(unknown property "rb"; expected "helper"), %(artifacts rb="a.rb"\n)
     assert_refuses 1, "helper= takes a string, not 1", %(artifacts helper=1\n)
-    assert_refuses 2, %(unknown node "x"; artifacts takes no children), %(artifacts ruby="a.rb" {\n  x\n}\n)
+    assert_refuses 2, %(unknown node "x"; artifacts takes no children), %(artifacts helper="a" {\n  x\n}\n)
+  end
+
+  def test_tells_how_to_write_what_ruby_declared_before
+    gone = %(ruby= is gone; declare the file as a helper on the Ruby CrossLint carries, helper NAME command=(crosslint)"ruby" file=FILE, and write %s helper=NAME)
+    assert_refuses 1, format(gone, "artifacts"), %(artifacts ruby="a.rb"\n)
+    assert_refuses 1, format(gone, %(rule "r")), %(rule "r" ruby="r.rb")
   end
 
   def test_reads_a_policy_with_no_applies_to
@@ -251,13 +261,17 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_equal [RuleDeclaration.new(name: "r", helper: "h", line: 1)], read(%(rule "r" helper="h"\n)).rules
   end
 
-  def test_refuses_a_ruby_rule_written_wrong
-    assert_refuses 1, %(rule "r" has neither ruby=, the file its code is in, nor helper=, the helper that runs it), %(rule "r")
-    assert_refuses 1, %(rule "r" has both ruby= and helper=; a rule is in the plugin's Ruby or run by its helper), %(rule "r" ruby="r.rb" helper="h")
+  def test_reads_a_rule_whose_helper_is_on_crosslints_ruby_as_that_helpers_ruby
+    manifest = read(%(helper "names" command=(crosslint)"ruby" file="names.rb"\nrule "names-class" helper="names"\n))
+
+    assert_equal [[RuleDeclaration.new(name: "names-class", ruby: "names.rb", line: 2)], []], [manifest.rules, manifest.helpers]
+  end
+
+  def test_refuses_a_rule_written_wrong
+    assert_refuses 1, %(rule "r" has no helper=, the helper that runs it), %(rule "r")
     assert_refuses 1, "helper= takes a string, not 1", %(rule "r" helper=1)
-    assert_refuses 1, %(unknown property "rubby", did you mean "ruby"?), %(rule "r" rubby="r.rb")
-    assert_refuses 1, %(unknown node "x"; rule takes no children), %(rule "r" ruby="r.rb" { x; })
-    assert_refuses 1, "ruby= takes a string, not 1", %(rule "r" ruby=1)
+    assert_refuses 1, %(unknown property "helpr", did you mean "helper"?), %(rule "r" helpr="h")
+    assert_refuses 1, %(unknown node "x"; rule takes no children), %(rule "r" helper="h" { x; })
   end
 
   def test_reads_a_command_with_its_help
@@ -309,14 +323,31 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 1, %(helper "h" has no command=, the program it runs on), %(helper "h" file="h.mjs")
     assert_refuses 1, %(helper "h" has no file=, the program's file in the plugin), %(helper "h" command="node")
     assert_refuses 1, %(unknown property "cmd"; expected "command" or "file"), %(helper "h" cmd="node" file="h.mjs")
-    assert_refuses 1, %(unknown node "x"; helper takes no children), %(helper "h" command="node" file="h.mjs" { x; })
+    assert_refuses 1, %(unknown node "x"; expected "command"), %(helper "h" command="node" file="h.mjs" { x; })
+    assert_refuses 1, %(helper "h" has both command= and a command node; write one), %(helper "h" command="node" file="h.rb" { command "ruby"; })
+    assert_refuses 1, "command has no words; write it as command PROGRAM ARGUMENT ...", %(helper "h" file="h.rb" { command; })
+    assert_refuses 1, %(command takes strings, as in command "bundle" "exec" "ruby"), %(helper "h" file="h.rb" { command "ruby" 1; })
+    assert_refuses 1, "command= takes a string, not 1", %(helper "h" command=1 file="h.rb")
+    assert_refuses 1, %(command=(crosslint) names a runtime CrossLint carries, and it carries "ruby", not "node"),
+      %(helper "h" command=(crosslint)"node" file="h.mjs")
+    assert_refuses 1, %(helper has the type annotation (other), which CrossLint doesn't read), %(helper "h" command=(other)"ruby" file="h.rb")
+    assert_refuses 1, %(helper has the type annotation (crosslint), which CrossLint doesn't read), %(helper "h" file=(crosslint)"h.rb" command="ruby")
+    assert_refuses 2, %(helper "a" is declared twice; the first is on line 1),
+      %(helper "a" command="node" file="a.mjs"\nhelper "a" command=(crosslint)"ruby" file="a.rb")
+  end
+
+  def test_reads_a_helpers_command_and_the_words_after_it
+    manifest = read(%(helper "routes" file="routes.rb" {\n  command "bundle" "exec" "ruby"\n}\nhelper "angular" command="node" file="lib/helper.js"\n))
+
+    assert_equal [["routes", "bundle", ["exec", "ruby"], "routes.rb"], ["angular", "node", [], "lib/helper.js"]],
+      manifest.helpers.map { [it.name, it.command, it.arguments, it.file] }
   end
 
   def test_shows_how_to_write_each_node_with_the_wrong_arguments
     {
       %(artifact) => "artifact has 0 arguments; write it as artifact NAME { ... }",
       %(policy) => "policy has 0 arguments; write it as policy NAME { ... }",
-      %(rule) => "rule has 0 arguments; write it as rule NAME ruby=FILE or rule NAME helper=HELPER",
+      %(rule) => "rule has 0 arguments; write it as rule NAME helper=HELPER",
       %(helper) => "helper has 0 arguments; write it as helper NAME command=COMMAND file=FILE",
       %(artifact "a" { primary; }) => "primary has 0 arguments; write it as primary PATTERN",
       %(artifact "a" { primary "x"; piece; }) => "piece has 0 arguments; write it as piece NAME PATTERN",

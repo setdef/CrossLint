@@ -5,7 +5,8 @@ artifact "markdown-file" {
   primary "{path}.md"
 }
 
-rule "links-resolve" ruby="rules/links_resolve.rb"
+helper "links-resolve" command=(crosslint)"ruby" file="rules/links_resolve.rb"
+rule "links-resolve" helper="links-resolve"
 
 policy "links-resolve" {
   applies-to "markdown-file"

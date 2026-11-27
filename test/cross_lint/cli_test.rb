@@ -558,7 +558,7 @@ class CLITest < Minitest::Test
   def test_check_writes_what_a_helper_writes_to_standard_error_with_debug
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
-      write(project, "plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nrule "asks" ruby="asks.rb"\nhelper "h" command="sh" file="h.sh"\n) +
+      write(project, "plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nhelper "asks" command=(crosslint)"ruby" file="asks.rb"\nrule "asks" helper="asks"\nhelper "h" command="sh" file="h.sh"\n) +
         %(policy "p" {\n  applies-to "a"\n  rule "asks"\n}\n))
       write(project, "asks.rb", %(class Asks < CrossLint::Rule\n  def check(artifact) = (helper("h").call(1) && [])\nend\n))
       write(project, "h.sh", %(while read -r line; do echo said >&2; echo 1; done\n))

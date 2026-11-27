@@ -27,7 +27,9 @@ module CrossLint
       def initialize(ruby: nil, helper: nil, **declared) = super
     end
 
-    class HelperDeclaration < Data.define(:name, :command, :file, :line)
+    class HelperDeclaration < Data.define(:name, :command, :file, :line, :arguments)
+      def initialize(arguments: [], **declared) = super
+
       def missing_command(plugin)
         Mistake.new("plugin #{plugin.name} needs #{command} on the PATH for its helper #{name.dump}, and there is none",
           file: plugin.manifest.file, line:)

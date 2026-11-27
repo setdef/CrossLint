@@ -8,6 +8,9 @@ module CrossLint
     class KDLDocument
       class Node < Data.define(:name, :line, :arguments, :properties, :children); end
 
+      # A property's value with the one type annotation its document allows there.
+      class Typed < Data.define(:type, :value); end
+
       # The kdl gem's nodes and values carry no line, so this parser hands
       # each name and string to the gem as a String that knows its line.
       class Parser < ::KDL::Parser
@@ -41,10 +44,11 @@ module CrossLint
 
       # Read as bytes and taken as UTF-8, so a file reads the same whatever
       # the system's default encoding.
-      def self.load(path, file) = new(File.binread(path).force_encoding(Encoding::UTF_8), file)
+      def self.load(path, file, typed: {}) = new(File.binread(path).force_encoding(Encoding::UTF_8), file, typed:)
 
-      def initialize(source, file)
+      def initialize(source, file, typed: {})
         @file = file
+        @typed = typed
         raise Core::Mistake.new("isn't valid UTF-8", file:) unless source.valid_encoding?
 
         @nodes = Parser.new(parse_types: false).parse(source).map { |node| convert(node) }
@@ -125,15 +129,25 @@ module CrossLint
 
       private
 
-      def convert(node)
+      def convert(node, top: true)
         line = node.name.line
-        [node, *node.arguments, *node.properties.values].each do |typed|
-          next unless typed.type
-
-          raise Core::Mistake.new("#{node.name} has the type annotation (#{typed.type}), which CrossLint doesn't read", file:, line:)
+        none = {} #: Hash[String, Array[String]]
+        allowed = top ? @typed.fetch(node.name.to_s, none) : none
+        [node, *node.arguments].each do |typed|
+          refuse(node, typed.type, line) if typed.type
         end
-        Node.new(name: node.name, line:, arguments: node.arguments.map(&:value),
-          properties: node.properties.transform_values(&:value), children: node.map { |child| convert(child) })
+        properties = node.properties.to_h do |key, value|
+          next [key, value.value] unless value.type
+          refuse(node, value.type, line) unless allowed.fetch(key, []).include?(value.type)
+
+          [key, Typed.new(type: value.type, value: value.value)]
+        end
+        Node.new(name: node.name, line:, arguments: node.arguments.map(&:value), properties:,
+          children: node.map { |child| convert(child, top: false) })
+      end
+
+      def refuse(node, type, line)
+        raise Core::Mistake.new("#{node.name} has the type annotation (#{type}), which CrossLint doesn't read", file:, line:)
       end
     end
   end

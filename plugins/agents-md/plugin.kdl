@@ -1,13 +1,15 @@
 // The agents-md plugin: every AGENTS.md has a CLAUDE.md beside it whose
 // first line is @AGENTS.md, which Claude Code reads as an import of the
 // AGENTS.md beside it.
-artifacts ruby="artifacts.rb"
+helper "artifacts" command=(crosslint)"ruby" file="artifacts.rb"
+artifacts helper="artifacts"
 
 policy "claude-md-exists" {
   rule "piece-exists" piece="claude"
 }
 
-rule "claude-md-imports-agents-md" ruby="rules/claude_md_imports_agents_md.rb"
+helper "claude-md-imports-agents-md" command=(crosslint)"ruby" file="rules/claude_md_imports_agents_md.rb"
+rule "claude-md-imports-agents-md" helper="claude-md-imports-agents-md"
 
 policy "claude-md-imports-agents-md" {
   when piece-exists "claude"

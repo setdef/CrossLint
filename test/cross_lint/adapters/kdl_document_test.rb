@@ -51,6 +51,17 @@ class KDLDocumentTest < Minitest::Test
     assert_mistake "n has the type annotation (date), which CrossLint doesn't read", "a.kdl", 1, %(n (date)"nope")
   end
 
+  def test_reads_a_type_annotation_it_is_told_a_property_at_the_top_may_have
+    typed = {"helper" => {"command" => ["crosslint"]}}
+    helper = Document.new(%(helper command=(crosslint)"ruby" file="a.rb"), "a.kdl", typed:).nodes.first
+
+    assert_equal [Document::Typed.new(type: "crosslint", value: "ruby"), "a.rb"], helper.properties.values_at("command", "file")
+    [%(helper command=(other)"ruby"), %(helper file=(crosslint)"a.rb"), %(other command=(crosslint)"ruby"), %(helper (crosslint)"x"),
+      %(a {\n  helper command=(crosslint)"ruby"\n}\n)].each do |source|
+      assert_raises(Mistake, source) { Document.new(source, "a.kdl", typed:) }
+    end
+  end
+
   def test_refuses_what_is_not_utf_8
     assert_mistake "isn't valid UTF-8", "a.kdl", nil, %(n "\xFF")
   end

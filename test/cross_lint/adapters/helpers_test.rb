@@ -166,6 +166,20 @@ class ProcessHelpersTest < Minitest::Test
     assert_equal %(called helper short, which answered with a line that isn't JSON: "nope"), error.message
   end
 
+  # A command of several words, such as bundle exec ruby, runs with its
+  # words between the program and the helper's file.
+  def test_starts_a_helper_with_the_words_its_command_has_before_its_file
+    write(@base, "tests/wraps.sh", %(read -r line; printf '{"wrapped":"%s"}\\n' "$1"\n))
+    helper = CrossLint::Core::HelperDeclaration.new(name: "echo", command: "sh", arguments: [File.join(@base, "tests", "wraps.sh")],
+      file: "echo.sh", line: 4)
+    plugin = helper_plugin.then { |given| given.with(manifest: given.manifest.with(helpers: [helper])) }
+    running = helpers_port.start(helper_root, [plugin])
+
+    assert_equal({"wrapped" => File.join(@base, "tests", "echo.sh")}, running.call(plugin, "echo", 1))
+  ensure
+    running&.stop
+  end
+
   def test_finds_no_command_with_no_path
     assert_nil CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env: {}).find("sh")
   end

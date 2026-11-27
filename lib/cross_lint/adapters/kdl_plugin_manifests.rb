@@ -14,6 +14,20 @@ module CrossLint
 
       SEVERITIES = %w[error warning].freeze
 
+      # The one type annotation a manifest reads: a helper's command=,
+      # written (crosslint)"ruby", runs the helper on the Ruby CrossLint
+      # carries, where no project command could ever be found.
+      TYPED = {"helper" => {"command" => ["crosslint"]}}.freeze
+
+      # What a helper's command=(crosslint) may name: the runtimes
+      # CrossLint carries.
+      CARRIED = ["ruby"].freeze
+
+      HELPER = "helper NAME command=COMMAND file=FILE"
+
+      GONE = "ruby= is gone; declare the file as a helper on the Ruby CrossLint carries, " \
+        "helper NAME command=(crosslint)\"ruby\" file=FILE, and write %s helper=NAME"
+
       FLAG_MISTAKE = "flag isn't a node CrossLint reads outside a command: a plugin adds commands under its own name, " \
         "as in command NAME help=TEXT, and flags only to its commands, as in flag \"-n --name\" help=TEXT inside one; it adds no flag to crosslint check"
 
@@ -23,7 +37,7 @@ module CrossLint
         path = File.join(root, folder, FILE)
         return unless File.file?(path)
 
-        document = KDLDocument.load(path, folder.empty? ? FILE : "#{folder}/#{FILE}")
+        document = KDLDocument.load(path, folder.empty? ? FILE : "#{folder}/#{FILE}", typed: TYPED)
         document.nodes.each do |node|
           next if NODES.include?(node.name)
           raise document.mistake(FLAG_MISTAKE, node) if node.name == "flag"
@@ -31,18 +45,27 @@ module CrossLint
           raise document.mistake(Core::Spelling.unknown("node", node.name, NODES), node)
         end
         blockless, policies = document.nodes.select { |node| node.name == "policy" }.partition { |node| node.children.empty? }
+        all = nodes(document, "helper") { |node| helper(document, node) }
+        once(document, all)
+        carried = [] #: Array[Carried]
+        helpers = [] #: Array[Core::HelperDeclaration]
+        all.each { |helper| helper.is_a?(Carried) ? carried << helper : helpers << helper }
         Core::Manifest.new(file: document.file, artifacts: nodes(document, "artifact") { |node| artifact(document, node) },
           policies: policies.map { |node| policy(document, node) },
-          rules: nodes(document, "rule") { |node| rule(document, node) },
-          helpers: nodes(document, "helper") { |node| helper(document, node) },
+          rules: nodes(document, "rule") { |node| rule(document, node, carried) },
+          helpers:,
           step_policies: blockless.map { |node| Core::StepPolicy.new(name: named(document, node, "policy NAME { ... }"), line: node.line) },
           settings: named_nodes(document, "setting") { |name, line| Core::SettingDeclaration.new(name:, line:) },
           commands: nodes(document, "command") { |node| command(document, node) },
           steps: named_nodes(document, "step") { |name, line| Core::StepDeclaration.new(name:, line:) },
-          **artifacts(document))
+          **artifacts(document, carried))
       end
 
       private
+
+      # A helper on the Ruby CrossLint carries: its file runs in CrossLint,
+      # as the Ruby of the rules and the artifacts that name it.
+      class Carried < Data.define(:name, :file, :line); end
 
       def nodes(document, name, &read) = document.nodes.select { |node| node.name == name }.map(&read)
 
@@ -141,37 +164,37 @@ module CrossLint
           severity: severity && document.choice(node, "severity", severity, SEVERITIES), line: node.line)
       end
 
-      def rule(document, node)
-        name = document.string(node, "rule NAME ruby=FILE or rule NAME helper=HELPER")
-        document.properties(node, %w[ruby helper])
-        no_children(document, node)
-        ruby, helper = %w[ruby helper].map { |property| document.string_property(node, property) }
-        if ruby && helper
-          raise document.mistake("rule #{name.dump} has both ruby= and helper=; a rule is in the plugin's Ruby or run by its helper", node)
-        end
-        raise document.mistake("rule #{name.dump} has neither ruby=, the file its code is in, nor helper=, the helper that runs it", node) unless ruby || helper
+      def rule(document, node, carried)
+        name = document.string(node, "rule NAME helper=HELPER")
+        raise document.mistake(format(GONE, "rule #{name.dump}"), node) if node.properties.key?("ruby")
 
-        Core::RuleDeclaration.new(name:, ruby:, helper:, line: node.line)
+        document.properties(node, %w[helper])
+        no_children(document, node)
+        helper = document.string_property(node, "helper")
+        raise document.mistake("rule #{name.dump} has no helper=, the helper that runs it", node) unless helper
+
+        ruby = carried.find { |each| each.name == helper }&.file
+        ruby ? Core::RuleDeclaration.new(name:, ruby:, line: node.line) : Core::RuleDeclaration.new(name:, helper:, line: node.line)
       end
 
-      # The artifacts line, if there is one: the file of the plugin's Ruby
-      # that declares artifacts, or the helper that does.
-      def artifacts(document)
+      # The artifacts line, if there is one: the helper that declares
+      # the artifacts, which may be a file of Ruby CrossLint runs.
+      def artifacts(document, carried)
         first, again = document.nodes.select { |node| node.name == "artifacts" }
         return {} unless first
         raise document.mistake("artifacts is declared twice; the first is on line #{first.line}", again) if again
+        raise document.mistake(format(GONE, "artifacts"), first) if first.properties.key?("ruby")
 
-        document.arguments(first, "artifacts ruby=FILE or artifacts helper=HELPER", 0)
-        document.properties(first, %w[ruby helper])
+        document.arguments(first, "artifacts helper=HELPER", 0)
+        document.properties(first, %w[helper])
         no_children(document, first)
-        ruby, helper = %w[ruby helper].map { |property| document.string_property(first, property) }
-        if ruby && helper
-          raise document.mistake("artifacts has both ruby= and helper=; artifacts are declared in the plugin's Ruby or by its helper", first)
-        end
-        return {artifacts_helper: Core::ArtifactsHelper.new(helper:, line: first.line)} if helper
-        raise document.mistake("artifacts has neither ruby=, the file that declares them, nor helper=, the helper that declares them", first) unless ruby
+        helper = document.string_property(first, "helper")
+        raise document.mistake("artifacts has no helper=, the helper that declares them", first) unless helper
 
-        {artifacts_ruby: Core::ArtifactsRuby.new(ruby:, line: first.line)}
+        ruby = carried.find { |each| each.name == helper }&.file
+        return {artifacts_ruby: Core::ArtifactsRuby.new(ruby:, line: first.line)} if ruby
+
+        {artifacts_helper: Core::ArtifactsHelper.new(helper:, line: first.line)}
       end
 
       def command(document, node)
@@ -198,16 +221,58 @@ module CrossLint
         Core::CommandFlag.new(short:, long:, value:, help:, line: node.line)
       end
 
+      # A helper: a command and a file. The command is a program on the
+      # PATH, written command=PROGRAM, or a program and the words after it,
+      # written as a command node in the helper's block, or a runtime
+      # CrossLint carries, written command=(crosslint)"ruby".
       def helper(document, node)
-        name = document.string(node, "helper NAME command=COMMAND file=FILE")
+        name = document.string(node, HELPER)
         document.properties(node, %w[command file])
-        no_children(document, node)
-        command = document.string_property(node, "command")
+        document.children(node, %w[command])
         file = document.string_property(node, "file")
-        raise document.mistake("helper #{name.dump} has no command=, the program it runs on", node) unless command
         raise document.mistake("helper #{name.dump} has no file=, the program's file in the plugin", node) unless file
 
-        Core::HelperDeclaration.new(name:, command:, file:, line: node.line)
+        given = node.properties["command"]
+        block = document.optional_child(node, "command")
+        raise document.mistake("helper #{name.dump} has both command= and a command node; write one", node) if given && block
+        return carried(document, node, name, given, file) if given.is_a?(KDLDocument::Typed)
+
+        words = block ? command_words(document, block) : [given].compact
+        program, *arguments = words.map { |word| word.is_a?(String) ? word : raise(document.mistake("command= takes a string, not #{word.inspect}", node)) }
+        raise document.mistake("helper #{name.dump} has no command=, the program it runs on", node) unless program
+
+        Core::HelperDeclaration.new(name:, command: program, arguments:, file:, line: node.line)
+      end
+
+      def carried(document, node, name, given, file)
+        unless CARRIED.include?(given.value)
+          raise document.mistake("command=(crosslint) names a runtime CrossLint carries, and it carries #{CARRIED.map(&:dump).join(" and ")}, " \
+            "not #{given.value.inspect}", node)
+        end
+
+        Carried.new(name:, file:, line: node.line)
+      end
+
+      # The words of a helper's command node: the program, then its
+      # arguments, each a string.
+      def command_words(document, node)
+        no_more(document, node)
+        words = node.arguments
+        raise document.mistake("command has no words; write it as command PROGRAM ARGUMENT ...", node) if words.empty?
+        raise document.mistake("command takes strings, as in command \"bundle\" \"exec\" \"ruby\"", node) unless words.all?(String)
+
+        words
+      end
+
+      # Checks that no two helpers have one name, as a rule or the
+      # artifacts line names a helper by it.
+      def once(document, helpers)
+        helpers.each_with_index do |helper, index|
+          first = helpers.take(index).find { |other| other.name == helper.name }
+          next unless first
+
+          raise Core::Mistake.new("helper #{helper.name.dump} is declared twice; the first is on line #{first.line}", file: document.file, line: helper.line)
+        end
       end
 
       def no_more(document, node)

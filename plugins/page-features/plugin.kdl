@@ -5,9 +5,11 @@ setting "feature"
 
 // The page components, each with its feature file as the piece
 // "feature", declared from the settings.
-artifacts ruby="artifacts.rb"
+helper "artifacts" command=(crosslint)"ruby" file="artifacts.rb"
+artifacts helper="artifacts"
 
-rule "feature-exists" ruby="rules/feature_exists.rb"
+helper "feature-exists" command=(crosslint)"ruby" file="rules/feature_exists.rb"
+rule "feature-exists" helper="feature-exists"
 
 policy "feature-exists" {
   applies-to "page"

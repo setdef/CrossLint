@@ -21,7 +21,39 @@ module CrossLint
       # CrossLint read.
       FLAG_MISTAKE: String
 
+      # The type annotations a manifest allows, by node and property: a
+      # helper's command=(crosslint).
+      TYPED: Hash[String, Hash[String, Array[String]]]
+
+      # The runtimes a helper's command=(crosslint) may name.
+      CARRIED: Array[String]
+
+      # How a helper is written.
+      HELPER: String
+
+      # What a mistake says about ruby=, with `%s` for the line it is on.
+      GONE: String
+
       private
+
+      # A helper on the Ruby CrossLint carries, which the rules and the
+      # artifacts that name it read as their Ruby.
+      class Carried < Data
+        # The helper's name.
+        attr_reader name: String
+
+        # Its file, relative to the plugin's folder.
+        attr_reader file: String
+
+        # The line it is declared on.
+        attr_reader line: Integer
+
+        # A helper with these fields.
+        def self.new: (name: String, file: String, line: Integer) -> instance
+
+        # A helper with these fields.
+        def initialize: (name: String, file: String, line: Integer) -> void
+      end
 
       # Each node at the top of `document` called `name`, read by `read`.
       def nodes: [T] (KDLDocument document, String name) { (KDLDocument::Node node) -> T } -> Array[T]
@@ -55,13 +87,14 @@ module CrossLint
       # Reads a policy's `rule` node.
       def policy_rule: (KDLDocument document, KDLDocument::Node node) -> Core::PolicyRule
 
-      # Reads a `rule` node, which declares a rule written in Ruby.
-      def rule: (KDLDocument document, KDLDocument::Node node) -> Core::RuleDeclaration
+      # Reads a `rule` node, which names the helper that runs the rule;
+      # a rule whose helper is one of `carried` is that helper's Ruby.
+      def rule: (KDLDocument document, KDLDocument::Node node, Array[Carried] carried) -> Core::RuleDeclaration
 
       # Reads the `artifacts` node, if there is one, which names the file
       # whose Ruby declares more artifacts, or the helper that does: as the
       # manifest's field for it.
-      def artifacts: (KDLDocument document) -> ({artifacts_ruby: Core::ArtifactsRuby} | {artifacts_helper: Core::ArtifactsHelper} | {})
+      def artifacts: (KDLDocument document, Array[Carried] carried) -> ({artifacts_ruby: Core::ArtifactsRuby} | {artifacts_helper: Core::ArtifactsHelper} | {})
 
       # Reads a `command` node, and the `flag` nodes in its block.
       def command: (KDLDocument document, KDLDocument::Node node) -> Core::CommandDeclaration
@@ -70,8 +103,21 @@ module CrossLint
       # spec's syntax.
       def command_flag: (KDLDocument document, KDLDocument::Node node) -> Core::CommandFlag
 
-      # Reads a `helper` node.
-      def helper: (KDLDocument document, KDLDocument::Node node) -> Core::HelperDeclaration
+      # Reads a `helper` node: a helper run as a program, or one on the
+      # Ruby CrossLint carries.
+      def helper: (KDLDocument document, KDLDocument::Node node) -> (Core::HelperDeclaration | Carried)
+
+      # The helper `name`, with `file`, on the runtime CrossLint carries that
+      # `given` names. Raises Core::Mistake for one CrossLint doesn't carry.
+      def carried: (KDLDocument document, KDLDocument::Node node, String name, KDLDocument::Typed given, String file) -> Carried
+
+      # The words of a helper's `command` node: its program, then its
+      # arguments.
+      def command_words: (KDLDocument document, KDLDocument::Node node) -> Array[untyped]
+
+      # Checks that no two of `helpers` have one name. Raises Core::Mistake,
+      # naming the line of the second.
+      def once: (KDLDocument document, Array[Core::HelperDeclaration | Carried] helpers) -> void
 
       # Checks that the node has no properties and no children.
       def no_more: (KDLDocument document, KDLDocument::Node node) -> void

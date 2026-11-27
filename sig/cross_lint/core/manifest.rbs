@@ -166,7 +166,7 @@ module CrossLint
       # The helper's name, which a Ruby rule calls it by.
       attr_reader name: String
 
-      # The command the helper runs on, such as "node".
+      # The program the helper runs on, such as "node", found on the PATH.
       attr_reader command: String
 
       # The helper's file, relative to the plugin's folder.
@@ -175,11 +175,15 @@ module CrossLint
       # The line the declaration is on.
       attr_reader line: Integer
 
-      # A helper with these fields.
-      def self.new: (name: String, command: String, file: String, line: Integer) -> instance
+      # The words the program takes before the helper's file, such as
+      # `["exec", "ruby"]` for `bundle exec ruby`.
+      attr_reader arguments: Array[String]
 
-      # A helper with these fields.
-      def initialize: (name: String, command: String, file: String, line: Integer) -> void
+      # A helper with these fields, and no arguments unless given.
+      def self.new: (name: String, command: String, file: String, line: Integer, ?arguments: Array[String]) -> instance
+
+      # A helper with these fields, and no arguments unless given.
+      def initialize: (name: String, command: String, file: String, line: Integer, ?arguments: Array[String]) -> void
 
       # The mistake to stop at when `plugin`'s helper has no command on the
       # PATH: it names the plugin's manifest, the line, the plugin, and the

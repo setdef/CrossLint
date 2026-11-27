@@ -34,7 +34,7 @@ module CrossLint
       def start(root, plugins)
         commands = plugins.flat_map do |plugin|
           plugin.manifest.helpers.map do |helper|
-            [[plugin.name, helper.name], command(plugin, helper)] #: [[String, String], [String, String]]
+            [[plugin.name, helper.name], command(plugin, helper)] #: [[String, String], Array[String]]
           end
         end
         Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit, tree: @tree_class,
@@ -65,7 +65,7 @@ module CrossLint
         file = File.expand_path(helper.file, plugin.folder)
         raise Core::Mistake.new("no file #{helper.file.dump} in the plugin's folder", file: plugin.manifest.file, line: helper.line) unless File.file?(file)
 
-        [program, file]
+        [program, *helper.arguments, file]
       end
 
       class Running

@@ -321,7 +321,7 @@ end
 task "build:check:plugins", [:app] do |_, arguments|
   app = File.expand_path(arguments.fetch(:app))
   rule = ->(name, body) { %(class #{name} < CrossLint::Rule\n  def check(artifact)\n    #{body}\n  end\nend\n) }
-  plugin = ->(rule_name, extra = "") { %(artifact "doc" {\n  primary "{path}.md"\n}\nrule "#{rule_name}" ruby="rule.rb"\n#{extra}policy "p" {\n  applies-to "doc"\n  rule "#{rule_name}"\n}\n) }
+  plugin = ->(rule_name, extra = "") { %(artifact "doc" {\n  primary "{path}.md"\n}\nhelper "rule" command=(crosslint)"ruby" file="rule.rb"\nrule "#{rule_name}" helper="rule"\n#{extra}policy "p" {\n  applies-to "doc"\n  rule "#{rule_name}"\n}\n) }
   files = {
     ".config/crosslint/config.kdl" => %w[asks gems inline].map { |name| %(plugin ".config/crosslint/#{name}"\n) }.join,
     ".config/crosslint/asks/plugin.kdl" => plugin.call("asks", %(helper "answers" command="sh" file="answers.sh"\n)),
@@ -369,7 +369,7 @@ task "build:check:environment", [:app] do |_, arguments|
   app = File.expand_path(arguments.fetch(:app))
   files = {
     ".config/crosslint/config.kdl" => %(plugin ".config/crosslint/dumps"\n),
-    ".config/crosslint/dumps/plugin.kdl" => %(artifact "doc" {\n  primary "{path}.md"\n}\nrule "dumps" ruby="rule.rb"\n) +
+    ".config/crosslint/dumps/plugin.kdl" => %(artifact "doc" {\n  primary "{path}.md"\n}\nhelper "dumps" command=(crosslint)"ruby" file="rule.rb"\nrule "dumps" helper="dumps"\n) +
       %(helper "dumper" command="sh" file="dumper.sh"\npolicy "p" {\n  applies-to "doc"\n  rule "dumps"\n}\n),
     ".config/crosslint/dumps/rule.rb" => %(class Dumps < CrossLint::Rule\n  def check(artifact)\n    helper("dumper").call("hi")\n    []\n  end\nend\n),
     ".config/crosslint/dumps/dumper.sh" => %(env > helper-env.txt\nread -r line\necho '{}'\n),

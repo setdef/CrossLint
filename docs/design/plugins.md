@@ -18,7 +18,7 @@ How CrossLint loads and runs plugins, and why each is done the way it is. The de
 
 ## Ruby rules
 
-- A rule written in Ruby runs on the Ruby CrossLint carries, so a project needs no Ruby.
+- **A helper on `command=(crosslint)"ruby"` runs inside CrossLint's process,** on the Ruby CrossLint carries, so a project needs no Ruby, and its rules keep what CrossLint guarantees about files (exact names, ignored files left out, links out of the project refused), a trace for each fault, and a time limit for each artifact. `(crosslint)` marks the runtime in the same notation as any other command, so a plugin author writes every helper one way, but CrossLint starts no program for it.
 - **A gem CrossLint wasn't built with can't be loaded,** and `bundler/inline` is refused: it would install gems into CrossLint's install folder at run time, which may not be writable and is shared by every project.
 - **One plugin's fault never stops the others.** A rule that raises, runs too long on one artifact, or recurses until Ruby raises `SystemStackError` is a fault in its plugin; the other plugins still run, and the check exits with 2.
 - **Files a rule requires load into one Ruby,** so two plugins whose files define the same top-level constant collide. A rule keeps its constants inside its class.

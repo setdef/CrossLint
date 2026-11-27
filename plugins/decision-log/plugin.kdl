@@ -6,11 +6,15 @@ setting "index"
 
 // The index, and every Markdown file, each with the folder of records as
 // a piece, declared from the settings.
-artifacts ruby="artifacts.rb"
+helper "artifacts" command=(crosslint)"ruby" file="artifacts.rb"
+artifacts helper="artifacts"
 
-rule "index-lists-records" ruby="rules/index_lists_records.rb"
-rule "numbers-unique" ruby="rules/numbers_unique.rb"
-rule "citations-resolve" ruby="rules/citations_resolve.rb"
+helper "index-lists-records" command=(crosslint)"ruby" file="rules/index_lists_records.rb"
+rule "index-lists-records" helper="index-lists-records"
+helper "numbers-unique" command=(crosslint)"ruby" file="rules/numbers_unique.rb"
+rule "numbers-unique" helper="numbers-unique"
+helper "citations-resolve" command=(crosslint)"ruby" file="rules/citations_resolve.rb"
+rule "citations-resolve" helper="citations-resolve"
 
 policy "index-lists-records" {
   applies-to "index"

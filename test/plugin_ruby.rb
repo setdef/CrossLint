@@ -21,7 +21,7 @@ module LoadedPlugins
   Dir.glob("*/plugin.kdl", base: FOLDER).sort.each do |manifest|
     folder = File.join(FOLDER, File.dirname(manifest))
     namespace = Module.new
-    File.read(File.join(FOLDER, manifest)).scan(/\bruby="([^"]+)"/).flatten.uniq.each do |file|
+    File.read(File.join(FOLDER, manifest)).scan(/\bcommand=\(crosslint\)"ruby" file="([^"]+)"/).flatten.uniq.each do |file|
       path = File.expand_path(file, folder)
       before = namespace.constants
       Kernel.load(path, namespace)
