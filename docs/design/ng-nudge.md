@@ -9,7 +9,7 @@ What CrossLint must keep from [ng-nudge](https://github.com/OverTheTopMarketing/
 - **The conditions.** A stub and an interface are optional: a missing one is reported only when the other exists. A component is checked against its stub and its interface by member name, one way: extra members in the stub or the interface aren't reported, and types aren't compared.
 - **Every setting keeps its meaning,** including `withComment` in all five of its forms, since ng-nudge treats it as a ceiling on severity rather than a severity.
 - **Patterns and expressions mean what they meant, or the move refuses them.** Globs in `rc.json` are node-glob 11 patterns, and `withComment.matching` is a JavaScript regular expression. Each is converted only into a form with the same matches; one that can't be reproduced exactly is refused, never approximated, because an approximation changes what a project's checks find without saying so. JavaScript is asked, through Node, whether an expression is valid and what it matches, rather than reasoning about it in Ruby.
-- **The facts in the report.** Which artifacts have errors and which only warnings, each violation's message, which debt entries are stale, what an update wrote, and how many artifacts were checked. The layout is free to change.
+- **The facts in the report.** Which artifacts have errors and which only warnings, each violation's message, which debt entries are paid off, what an update wrote, and how many artifacts were checked. The layout is free to change.
 - **Debt silent by default.** ng-nudge reports debt entries only when `has-debt` has `withComment` (`lib/policy/has-debt.policy.js:12-17`); the converted configuration reports them only when `rc.json` did.
 
 ## Known limits

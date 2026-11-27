@@ -55,7 +55,7 @@ module CrossLint
             message = (finding.severity == :warning) ? "warning: #{finding.message}" : finding.message
             message = "#{COLORS.fetch(finding.severity)}#{message}#{RESET}" if @color
             @out.puts "#{where(finding.path, finding.line, finding.artifact)}#{message} (#{finding.plugin}/#{finding.policy})"
-          when Core::Stale
+          when Core::PaidOffEntry
             @out.puts "#{finding.artifact}: #{finding.message} (#{finding.plugin}/#{finding.policy})"
           else
             @out.puts "#{where(finding.path, finding.line, finding.name)}#{finding.role} passes"

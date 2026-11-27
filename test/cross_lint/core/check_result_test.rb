@@ -26,19 +26,19 @@ class CheckResultTest < Minitest::Test
     assert_equal "checked 0 b and 0 c artifacts: no violations", summary([["b", 0], ["c", 0]]).line
   end
 
-  def test_says_how_many_entries_are_stale_and_what_each_step_says
-    assert_equal "checked 2 a artifacts: 1 error, 1 stale entry, 2 accepted as debt",
-      summary([["a", 2]], errors: 1).with(stale: 1, steps: ["2 accepted as debt"]).line
-    assert_equal "checked 2 a artifacts: 2 stale entries", summary([["a", 2]]).with(stale: 2).line
-    assert_equal [0, []], summary([]).then { |found| [found.stale, found.steps] }
+  def test_says_how_many_entries_are_paid_off_and_what_each_step_says
+    assert_equal "checked 2 a artifacts: 1 error, 1 entry paid off, 2 accepted as debt",
+      summary([["a", 2]], errors: 1).with(paid_off: 1, steps: ["2 accepted as debt"]).line
+    assert_equal "checked 2 a artifacts: 2 entries paid off", summary([["a", 2]]).with(paid_off: 2).line
+    assert_equal [0, []], summary([]).then { |found| [found.paid_off, found.steps] }
   end
 
-  def test_lists_the_stale_entries_among_the_findings
-    stale = Stale.new(plugin: "t", policy: "p", artifact: "a", file: "d.tsv", line: 2, message: "is stale")
+  def test_lists_the_paid_off_entries_among_the_findings
+    paid_off = PaidOffEntry.new(plugin: "t", policy: "p", artifact: "a", file: "d.tsv", line: 2, message: "is paid off")
     violation = Violation.new(plugin: "t", policy: "p", artifact: "a", role: "r", message: "m", severity: :error, detail: nil)
-    result = CheckResult.new(notices: [], findings: [violation, stale], summary: summary([]), verbosity: :normal, failed: true, faults: [])
+    result = CheckResult.new(notices: [], findings: [violation, paid_off], summary: summary([]), verbosity: :normal, failed: true, faults: [])
 
-    assert_equal [[violation], [stale], []], [result.violations, result.stale, result.wrote]
+    assert_equal [[violation], [paid_off], []], [result.violations, result.paid_off, result.wrote]
   end
 
   def test_says_no_errors_when_warnings_are_hidden

@@ -152,20 +152,20 @@ module CrossLint
         left = violations.reject { |violation| excused.include?(violation) }
         added = steps.flat_map(&:violations).reject { |violation| disabled?(project, violation) }
         shown = (left + added).select { |violation| !hidden || violation.severity == :error }
-        stale = steps.flat_map(&:stale)
+        paid_off = steps.flat_map(&:paid_off)
         notices = notices(project, kinds)
         fails = ->(violation) { violation.severity == :error || warnings == :error }
         wrote = steps.flat_map(&:wrote)
         # A command is not a judgment of the check: it did what it was asked.
-        failed = command.nil? && (shown.any?(&fails) || !stale.empty? || (warnings == :error && !notices.empty?))
+        failed = command.nil? && (shown.any?(&fails) || !paid_off.empty? || (warnings == :error && !notices.empty?))
         findings = (verbosity == :quiet) ? shown.select(&fails) : shown
         findings += passed(kinds, checked, left) if all && verbosity == :normal
         # Every notice is a warning, so --quiet reports one only when it
         # fails the check. A step's warnings never fail it.
         shows_notices = !hidden && (verbosity == :normal || (verbosity == :quiet && warnings == :error))
         notices = notices.select { shows_notices } + steps.flat_map(&:notices).select { !hidden && verbosity == :normal }
-        summary = summary(kinds, checked, shown, hidden, faults.size).with(stale: stale.size, steps: steps.flat_map(&:summary))
-        CheckResult.new(notices:, findings: sort((findings + stale).reject { verbosity == :silent }), summary:, verbosity:, failed:,
+        summary = summary(kinds, checked, shown, hidden, faults.size).with(paid_off: paid_off.size, steps: steps.flat_map(&:summary))
+        CheckResult.new(notices:, findings: sort((findings + paid_off).reject { verbosity == :silent }), summary:, verbosity:, failed:,
           faults:, wrote: wrote.reject { verbosity == :silent })
       end
 
@@ -218,7 +218,7 @@ module CrossLint
         findings.sort_by do |finding|
           case finding
           when Violation then [finding.path, finding.line || 0, finding.artifact, finding.plugin, finding.policy, finding.message, finding.severity]
-          when Stale then [finding.artifact, 0, finding.artifact, finding.plugin, finding.policy, finding.message]
+          when PaidOffEntry then [finding.artifact, 0, finding.artifact, finding.plugin, finding.policy, finding.message]
           else [finding.path, finding.line || 0, finding.name, finding.plugin, "", finding.role]
           end
         end

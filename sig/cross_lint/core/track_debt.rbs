@@ -2,17 +2,18 @@ module CrossLint
   module Core
     # The debt plugin's step, `track-debt`, built into CrossLint: it reads
     # the debt file through `debt_files`, excuses each violation an entry
-    # matches, reports each entry no violation matches as stale, and,
+    # matches, reports each entry no violation matches as paid off, and,
     # when it is told update, rewrites the file to list the current
     # violations and reports the state it left. With `report-entries`, it
     # reports each entry as a violation of `has-debt`.
     #
     # An entry is checked only when its plugin is listed and didn't stop
     # at a fault, and its policy isn't disabled; one that isn't is never
-    # stale or excusing, and an update keeps it. An entry matches a
-    # violation by plugin and policy, artifact (as its key, or its key, a
-    # dot, and its role), and detail; one ng-nudge wrote, with a policy's
-    # name alone and no detail, matches every detail on its artifact.
+    # reported as paid off or used to excuse a violation, and an update
+    # keeps it. An entry matches a violation by plugin and policy, artifact
+    # (as its key, or its key, a dot, and its role), and detail; one
+    # ng-nudge wrote, with a policy's name alone and no detail, matches
+    # every detail on its artifact.
     class TrackDebt
       include _Step
 

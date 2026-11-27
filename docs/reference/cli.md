@@ -46,7 +46,7 @@ crosslint init --from-ng-nudge
 | Code | Meaning |
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
-| `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
+| `1` | A check failed: there is a violation that fails it, or a paid-off entry in the debt file. |
 | `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
@@ -57,7 +57,7 @@ crosslint init --from-ng-nudge
 
 Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the file, with the line for an artifact found inside it; the artifact's name, when it isn't the file's path; the message; and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
 
-A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report stale entries, which fail the check: an entry that no violation matches any more fails it until crosslint debt update removes it.
+A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report paid-off entries: an entry no violation matches any more records a debt already paid, and fails the check until crosslint debt update removes it.
 
 ### Flags
 - **`--warnings <mode>`** — Show warnings, hide them, or let them fail the check
@@ -73,7 +73,7 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
 | Code | Meaning |
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
-| `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
+| `1` | A check failed: there is a violation that fails it, or a paid-off entry in the debt file. |
 | `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
@@ -114,7 +114,7 @@ With --from-ng-nudge, reads .config/ng-nudge/rc.json instead, and writes a confi
 | Code | Meaning |
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
-| `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
+| `1` | A check failed: there is a violation that fails it, or a paid-off entry in the debt file. |
 | `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
@@ -150,7 +150,7 @@ Writes one line to standard error for each shared plugin, saying what changed or
 | Code | Meaning |
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
-| `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
+| `1` | A check failed: there is a violation that fails it, or a paid-off entry in the debt file. |
 | `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 
@@ -187,7 +187,7 @@ With a command, explains it, as crosslint COMMAND --help does. Without one, list
 | Code | Meaning |
 | ---- | ------- |
 | `0` | Every check passed, or the command did what it was asked. |
-| `1` | A check failed: there is a violation that fails it, or a stale entry in the debt file. |
+| `1` | A check failed: there is a violation that fails it, or a paid-off entry in the debt file. |
 | `2` | CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault. |
 | `130` | You interrupted CrossLint with Ctrl-C. |
 

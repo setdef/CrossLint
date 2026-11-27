@@ -453,7 +453,7 @@ class CheckTest < Minitest::Test
     attr_reader :inputs
 
     def initialize(answer = nil, **result)
-      @answer = answer || ->(_) { CrossLint::Core::StepResult.new(excused: [], violations: [], stale: [], notices: [], wrote: [], summary: []).with(**result) }
+      @answer = answer || ->(_) { CrossLint::Core::StepResult.new(excused: [], violations: [], paid_off: [], notices: [], wrote: [], summary: []).with(**result) }
       @inputs = []
     end
 
@@ -474,7 +474,7 @@ class CheckTest < Minitest::Test
     Plugin.new(name:, folder: "#{ROOT}/#{name}", manifest:, listing: ListedPlugin.new(name:, ref: nil, settings: [], line: 1))
   end
 
-  def stale(artifact) = Stale.new(plugin: "tests", policy: "has-test", artifact:, file: "debt.tsv", line: 2, message: "is stale")
+  def paid_off(artifact) = PaidOffEntry.new(plugin: "tests", policy: "has-test", artifact:, file: "debt.tsv", line: 2, message: "is paid off")
 
   def debt_violation(severity = :error)
     Violation.new(plugin: "debt", policy: "has-debt", artifact: "debt.tsv", role: "debt-file", message: "line 2", severity:, detail: "2")
@@ -491,7 +491,7 @@ class CheckTest < Minitest::Test
   end
 
   def test_leaves_out_what_a_step_excuses_and_reports_what_it_adds
-    excuse = ->(input) { StepResult.new(excused: input.violations.take(1), violations: [debt_violation(:warning)], stale: [], notices: [], wrote: [], summary: ["1 accepted as debt"]) }
+    excuse = ->(input) { StepResult.new(excused: input.violations.take(1), violations: [debt_violation(:warning)], paid_off: [], notices: [], wrote: [], summary: ["1 accepted as debt"]) }
     result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/b.rb", "test/b_test.rb", "lib/c.rb"], steps: {"track-debt" => ScriptedStep.new(excuse)})
 
     assert_equal [["debt.tsv", "line 2"], ["lib/c.rb", "no test file at test/c_test.rb"]], result.findings.map { |each| [each.artifact, each.message] }
@@ -509,20 +509,20 @@ class CheckTest < Minitest::Test
     assert_equal [[], false], [result.findings, result.failed]
   end
 
-  def test_fails_at_a_stale_entry_and_reports_it_among_the_findings_even_when_quiet
-    step = ScriptedStep.new(stale: [stale("lib/b.rb")])
+  def test_fails_at_a_paid_off_entry_and_reports_it_among_the_findings_even_when_quiet
+    step = ScriptedStep.new(paid_off: [paid_off("lib/b.rb")])
     result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/c.rb"], verbosity: :quiet, steps: {"track-debt" => step})
 
     assert_equal ["lib/a.rb", "lib/b.rb", "lib/c.rb"], result.findings.map(&:artifact)
-    assert_equal [true, 1], [result.failed, result.summary.stale]
+    assert_equal [true, 1], [result.failed, result.summary.paid_off]
     assert_empty check(project(stepped), files: [], verbosity: :silent, steps: {"track-debt" => step}).findings
   end
 
-  def test_orders_stale_entries_by_artifact_then_plugin_then_policy_then_message
-    entry = ->(artifact, plugin, policy, message) { Stale.new(plugin:, policy:, artifact:, file: "debt.tsv", line: 2, message:) }
+  def test_orders_paid_off_entries_by_artifact_then_plugin_then_policy_then_message
+    entry = ->(artifact, plugin, policy, message) { PaidOffEntry.new(plugin:, policy:, artifact:, file: "debt.tsv", line: 2, message:) }
     ordered = [entry.call("a", "p1", "x", "m1"), entry.call("a", "p1", "x", "m2"), entry.call("a", "p1", "y", "m1"),
       entry.call("a", "p2", "x", "m1"), entry.call("b", "p1", "x", "m1")]
-    step = ScriptedStep.new(stale: ordered.reverse)
+    step = ScriptedStep.new(paid_off: ordered.reverse)
 
     assert_equal ordered, check(project(stepped), files: [], steps: {"track-debt" => step}).findings
   end
@@ -537,7 +537,7 @@ class CheckTest < Minitest::Test
   end
 
   def test_passes_a_command_that_wrote_and_says_what_it_wrote_unless_silent
-    step = ScriptedStep.new(wrote: ["wrote debt.tsv"], violations: [debt_violation], stale: [stale("lib/a.rb")])
+    step = ScriptedStep.new(wrote: ["wrote debt.tsv"], violations: [debt_violation], paid_off: [paid_off("lib/a.rb")])
     result = check(project(stepped), files: [], command: ["debt", "update"], steps: {"track-debt" => step})
 
     assert_equal [false, ["wrote debt.tsv"]], [result.failed, result.wrote]
@@ -545,7 +545,7 @@ class CheckTest < Minitest::Test
   end
 
   def test_passes_a_command_whatever_the_check_found_and_fails_the_same_check_without_it
-    step = ScriptedStep.new(stale: [stale("lib/a.rb")])
+    step = ScriptedStep.new(paid_off: [paid_off("lib/a.rb")])
     errors = ->(**options) { check(project(tests_plugin, stepped), files: ["lib/a.rb"], steps: {"track-debt" => step}, **options) }
 
     assert_equal [true, false], [errors.call.failed, errors.call(command: ["debt", "update"]).failed]
@@ -580,8 +580,8 @@ class CheckTest < Minitest::Test
     assert_equal [["debt"], [["tests"]], ["tests"]], [step.inputs.map { |input| input.plugin.name }, step.inputs.map(&:faulted), result.faults.map(&:plugin)]
   end
 
-  def test_fails_at_a_stale_entry_alone
-    step = ScriptedStep.new(stale: [stale("lib/a.rb")], summary: ["0 accepted as debt"])
+  def test_fails_at_a_paid_off_entry_alone
+    step = ScriptedStep.new(paid_off: [paid_off("lib/a.rb")], summary: ["0 accepted as debt"])
     result = check(project(stepped, stepped("other")), files: [], steps: {"track-debt" => step})
 
     assert_equal [true, ["0 accepted as debt", "0 accepted as debt"]], [result.failed, result.summary.steps]

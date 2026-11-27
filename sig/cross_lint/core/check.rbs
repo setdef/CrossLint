@@ -27,7 +27,7 @@ module CrossLint
       # isn't there, each before any rule runs. With `command`, a plugin's
       # name and the name of one of its commands, the plugin's steps get
       # the command's name, and the check doesn't fail for a violation or
-      # a stale entry, since a command is not a judgment of the check.
+      # a paid-off entry, since a command is not a judgment of the check.
       # Ends every helper before it returns. At the normal verbosity,
       # calls `started` with the counts of the artifacts it will check
       # once it has found them, before any rule runs or any helper starts.
@@ -82,7 +82,7 @@ module CrossLint
                        Hash[String, String | true] flags) -> Array[StepResult]
 
       # The result: violations the steps didn't excuse and those they add,
-      # stale entries, notices, and passing artifacts, filtered by
+      # paid-off entries, notices, and passing artifacts, filtered by
       # `warnings` and `verbosity`, the summary, `faults`, and what the
       # steps wrote. A nil `warnings` is `:all`.
       def report: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
@@ -116,7 +116,7 @@ module CrossLint
                     Array[Violation] shown, bool hidden, Integer faults) -> Summary
 
       # `findings` in the order the report gives them.
-      def sort: (Array[Violation | Stale | Artifact] findings) -> Array[Violation | Stale | Artifact]
+      def sort: (Array[Violation | PaidOffEntry | Artifact] findings) -> Array[Violation | PaidOffEntry | Artifact]
     end
   end
 end

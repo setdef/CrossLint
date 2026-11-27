@@ -2,10 +2,10 @@
 
 module CrossLint
   module Core
-    class Stale < Data.define(:plugin, :policy, :artifact, :file, :line, :message); end
+    class PaidOffEntry < Data.define(:plugin, :policy, :artifact, :file, :line, :message); end
 
     class StepInput < Data.define(:project, :plugin, :violations, :faulted, :command, :flags); end
 
-    class StepResult < Data.define(:excused, :violations, :stale, :notices, :wrote, :summary); end
+    class StepResult < Data.define(:excused, :violations, :paid_off, :notices, :wrote, :summary); end
   end
 end

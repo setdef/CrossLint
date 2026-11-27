@@ -420,13 +420,13 @@ module CrossLint
         assert_nil reported.fetch(:summary)
       end
 
-      def test_reports_each_stale_entry_apart_from_the_violations
-        stale = Core::Stale.new(plugin: "tests", policy: "has-test", artifact: "lib/b.rb", file: "debt.tsv", line: 2, message: "is stale")
+      def test_reports_each_paid_off_entry_apart_from_the_violations
+        paid_off = Core::PaidOffEntry.new(plugin: "tests", policy: "has-test", artifact: "lib/b.rb", file: "debt.tsv", line: 2, message: "is paid off")
         port = report_port
-        port.write(result([violation("lib/a.rb", "no test"), stale]))
+        port.write(result([violation("lib/a.rb", "no test"), paid_off]))
 
-        assert_equal [[["lib/a.rb", "no test", "tests", "has-test", :error]], [["lib/b.rb", "is stale", "tests", "has-test"]]],
-          [reported.fetch(:findings), reported.fetch(:stale)]
+        assert_equal [[["lib/a.rb", "no test", "tests", "has-test", :error]], [["lib/b.rb", "is paid off", "tests", "has-test"]]],
+          [reported.fetch(:findings), reported.fetch(:paid_off)]
       end
 
       def test_reports_each_file_a_step_wrote_unless_silent

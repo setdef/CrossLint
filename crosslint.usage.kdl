@@ -26,7 +26,7 @@ example "crosslint check" header="Check the project" help="Runs every plugin the
 example "crosslint init --from-ng-nudge" header="Move a project from ng-nudge"
 
 exit_code 0 "Every check passed, or the command did what it was asked."
-exit_code 1 "A check failed: there is a violation that fails it, or a stale entry in the debt file."
+exit_code 1 "A check failed: there is a violation that fails it, or a paid-off entry in the debt file."
 exit_code 2 "CrossLint couldn't run: the command line, the configuration, or a plugin has a mistake, or a plugin's helper couldn't start, or a plugin stopped at a fault."
 exit_code 130 "You interrupted CrossLint with Ctrl-C."
 
@@ -44,7 +44,7 @@ cmd "check" effect="read" help="Check the project, and exit with 1 if a check fa
   long_help #"""
 Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the file, with the line for an artifact found inside it; the artifact's name, when it isn't the file's path; the message; and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
 
-A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report stale entries, which fail the check: an entry that no violation matches any more fails it until crosslint debt update removes it.
+A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report paid-off entries: an entry no violation matches any more records a debt already paid, and fails the check until crosslint debt update removes it.
 """#
   flag "--warnings <mode>" help="Show warnings, hide them, or let them fail the check" {
     choices "all" "none" "error"

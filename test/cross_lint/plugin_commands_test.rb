@@ -10,7 +10,7 @@ class PluginCommandsTest < Minitest::Test
   FILE = ".config/crosslint/config.kdl"
 
   def setup
-    @debt = plugin("debt", "update" => "Rewrite the debt file", "prune" => "Drop stale entries")
+    @debt = plugin("debt", "update" => "Rewrite the debt file", "prune" => "Drop paid-off entries")
     @plain = plugin("signatures")
     @commands = CrossLint::PluginCommands.new(shipped_spec)
   end

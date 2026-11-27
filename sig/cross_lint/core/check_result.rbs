@@ -30,8 +30,8 @@ module CrossLint
     # # => "checked 9 ruby-file and 1 adr artifacts: 1 warning"
     # summary.with(errors: 0).line # => "checked 9 ruby-file artifacts: no violations"
     # summary.with(faults: 1).line # => "checked 9 ruby-file artifacts: 1 fault, 3 errors"
-    # summary.with(errors: 0, stale: 1, steps: ["2 accepted as debt"]).line
-    # # => "checked 9 ruby-file artifacts: 1 stale entry, 2 accepted as debt"
+    # summary.with(errors: 0, paid_off: 1, steps: ["2 accepted as debt"]).line
+    # # => "checked 9 ruby-file artifacts: 1 entry paid off, 2 accepted as debt"
     # ```
     class Summary < Data
       # Each kind of artifact a policy applies to, by its name, or by
@@ -51,21 +51,21 @@ module CrossLint
       # False when --warnings=none hides warnings.
       attr_reader warnings_shown: bool
 
-      # How many stale entries the steps report.
-      attr_reader stale: Integer
+      # How many paid-off entries the steps report.
+      attr_reader paid_off: Integer
 
       # What each step says of itself, such as "2 accepted as debt".
       attr_reader steps: Array[String]
 
-      # A summary with these fields, and no stale entries or steps unless
+      # A summary with these fields, and no paid-off entries or steps unless
       # given.
       def self.new: (kinds: Array[[String, Integer]], faults: Integer, errors: Integer, warnings: Integer, warnings_shown: bool,
-                     ?stale: Integer, ?steps: Array[String]) -> instance
+                     ?paid_off: Integer, ?steps: Array[String]) -> instance
 
-      # A summary with these fields, and no stale entries or steps unless
+      # A summary with these fields, and no paid-off entries or steps unless
       # given.
       def initialize: (kinds: Array[[String, Integer]], faults: Integer, errors: Integer, warnings: Integer, warnings_shown: bool,
-                       ?stale: Integer, ?steps: Array[String]) -> void
+                       ?paid_off: Integer, ?steps: Array[String]) -> void
 
       # How many artifacts the check checked, of every kind.
       def artifacts: () -> Integer
@@ -80,7 +80,7 @@ module CrossLint
 
       private
 
-      # The faults, errors, warnings, and stale entries, as words, and what
+      # The faults, errors, warnings, and paid-off entries, as words, and what
       # the steps say: "1 fault, 3 errors, 1 warning, 2 accepted as debt",
       # or "no violations", or "no errors" when warnings are hidden.
       def found: () -> String
@@ -92,10 +92,10 @@ module CrossLint
       # The warnings about plugins to report.
       attr_reader notices: Array[Notice]
 
-      # The violations to report, the stale entries, and under --all each
+      # The violations to report, the paid-off entries, and under --all each
       # artifact checked that has no violation a step didn't excuse,
       # sorted by the artifact's path, then plugin, policy, and message.
-      attr_reader findings: Array[Violation | Stale | Artifact]
+      attr_reader findings: Array[Violation | PaidOffEntry | Artifact]
 
       # The summary, whatever the verbosity.
       attr_reader summary: Summary
@@ -105,7 +105,7 @@ module CrossLint
       attr_reader verbosity: (:normal | :quiet | :silent)
 
       # Whether the check failed: an error, a warning under
-      # --warnings=error, or a stale entry, in a check that wrote nothing.
+      # --warnings=error, or a paid-off entry, in a check that wrote nothing.
       attr_reader failed: bool
 
       # The fault each plugin that stopped stopped at, whatever the
@@ -120,19 +120,19 @@ module CrossLint
 
       # A result with these fields, and nothing written unless `wrote`
       # says.
-      def self.new: (notices: Array[Notice], findings: Array[Violation | Stale | Artifact], summary: Summary,
+      def self.new: (notices: Array[Notice], findings: Array[Violation | PaidOffEntry | Artifact], summary: Summary,
                      verbosity: (:normal | :quiet | :silent), failed: bool, faults: Array[Fault], ?wrote: Array[String]) -> instance
 
       # A result with these fields, and nothing written unless `wrote`
       # says.
-      def initialize: (notices: Array[Notice], findings: Array[Violation | Stale | Artifact], summary: Summary,
+      def initialize: (notices: Array[Notice], findings: Array[Violation | PaidOffEntry | Artifact], summary: Summary,
                        verbosity: (:normal | :quiet | :silent), failed: bool, faults: Array[Fault], ?wrote: Array[String]) -> void
 
       # The findings that are violations.
       def violations: () -> Array[Violation]
 
-      # The findings that are stale entries.
-      def stale: () -> Array[Stale]
+      # The findings that are paid-off entries.
+      def paid_off: () -> Array[PaidOffEntry]
     end
   end
 end

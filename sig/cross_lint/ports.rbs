@@ -137,7 +137,7 @@ module CrossLint
     # Adapters::TextReport writes the line only to a terminal.
     def start: (Array[[String, Integer]] kinds) -> void
 
-    # Reports `result`: its findings, stale entries among them, and
+    # Reports `result`: its findings, paid-off entries among them, and
     # notices as they are, in their order, each line a step wrote, its
     # summary unless its verbosity is `:quiet` or `:silent`, and its
     # faults whatever the verbosity. Under `:silent`, writes nothing but

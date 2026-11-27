@@ -8,4 +8,4 @@ The words of debt tracking, with the meaning each has in the debt plugin. The wo
 | **debt file** | `.config/crosslint/debt.tsv`, which lists a project's debt, one entry per line, and is committed with the project. | baseline file |
 | **entry** | One line of the debt file: the plugin and policy, the artifact, the detail where its rule gives one, and the comment. A violation that matches an entry doesn't fail the check. | record, row |
 | **comment** | An entry's reason, which people write, such as `PDF export is being rewritten`. An update never changes it. | note |
-| **stale entry** | An entry no violation matches any more, because the violation was fixed. CrossLint fails the check while it is there, until `crosslint debt update` removes it, so the debt file only ever shrinks as the work gets done. | |
+| **paid-off entry** | An entry no violation matches any more, because the violation was fixed and its debt paid off. CrossLint fails the check while it is in the file, until `crosslint debt update` removes it, so the debt file only ever shrinks as the work gets done. | stale entry |

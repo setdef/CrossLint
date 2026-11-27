@@ -6,8 +6,8 @@ module CrossLint
   module Core
     class Notice < Data.define(:file, :line, :message); end
 
-    class Summary < Data.define(:kinds, :faults, :errors, :warnings, :warnings_shown, :stale, :steps)
-      def initialize(stale: 0, steps: [], **counts) = super
+    class Summary < Data.define(:kinds, :faults, :errors, :warnings, :warnings_shown, :paid_off, :steps)
+      def initialize(paid_off: 0, steps: [], **counts) = super
 
       # A kind with no artifact is left out when another has some, so a
       # plugin with many kinds that a project may lack reads short.
@@ -26,7 +26,7 @@ module CrossLint
       def found
         counts = {"fault" => faults, "error" => errors, "warning" => warnings}.reject { |_, count| count.zero? }
           .map { |word, count| "#{count} #{word}#{"s" unless count == 1}" }
-        counts << "#{stale} stale #{(stale == 1) ? "entry" : "entries"}" unless stale.zero?
+        counts << "#{paid_off} #{(paid_off == 1) ? "entry" : "entries"} paid off" unless paid_off.zero?
         counts.concat(steps)
         return counts.join(", ") unless counts.empty?
 
@@ -45,10 +45,10 @@ module CrossLint
         end
       end
 
-      def stale
+      def paid_off
         findings.filter_map do |finding|
           case finding
-          when Stale then finding
+          when PaidOffEntry then finding
           end
         end
       end

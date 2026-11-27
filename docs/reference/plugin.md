@@ -274,7 +274,7 @@ command "update" help="Rewrite the debt file to list the current violations" {
 
 | Line | Meaning |
 | --- | --- |
-| `step NAME` | A step built into CrossLint, for CrossLint to run after every rule of every plugin has run. The step sees every violation, whatever `--warnings` or `--quiet` hides, and can excuse some, add others, and report stale entries. CrossLint has one step, `track-debt`. |
+| `step NAME` | A step built into CrossLint, for CrossLint to run after every rule of every plugin has run. The step sees every violation, whatever `--warnings` or `--quiet` hides, and can excuse some, add others, and report paid-off entries. CrossLint has one step, `track-debt`. |
 | `policy NAME` with no block | A policy no rule runs, whose violations the plugin's step reports, such as `has-debt`. The configuration disables it or changes its severity like any other policy. |
 | `setting NAME` | A setting the plugin takes in its block in the configuration. A setting the plugin doesn't declare stops CrossLint with exit status 2. |
 | `command NAME help=TEXT` | A command the project runs as `crosslint PLUGIN NAME`, with `TEXT` as its one line in `--help`. It runs the check, then tells the plugin's step the command's name, and the step does the command's work; a plugin with a command and no step is a mistake. `NAME` is lowercase letters, digits, and `-`, and can't be `help`. It exits with 0 when it did what it was asked, and with 2 when CrossLint can't run it. |

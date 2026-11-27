@@ -24,21 +24,21 @@ class TrackDebtTest < Minitest::Test
     result = step([violation("lib/a.rb"), violation("lib/b.rb")], [entry("tests/has-test", "lib/a.rb", "later")])
 
     assert_equal [[violation("lib/a.rb")], [], [], [], ["1 accepted as debt"]],
-      [result.excused, result.stale, result.notices, result.violations, result.summary]
+      [result.excused, result.paid_off, result.notices, result.violations, result.summary]
   end
 
-  def test_reports_an_entry_no_violation_matches_as_stale
+  def test_reports_an_entry_no_violation_matches_as_paid_off
     result = step([], [entry("tests/has-test", "lib/b.rb"), entry("tests/has-test", "lib/a.rb")])
 
-    assert_equal Stale.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", file: FILE, line: 3,
-      message: "no violation is left for the debt entry at #{FILE}:3; crosslint debt update removes it"), result.stale.last
+    assert_equal PaidOffEntry.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", file: FILE, line: 3,
+      message: "the debt entry at #{FILE}:3 is paid off, since no violation matches it; crosslint debt update removes it"), result.paid_off.last
     assert_equal [[], []], [result.excused, result.summary]
   end
 
   def test_reads_no_debt_file_as_no_entries
     result = step([violation("lib/a.rb")], nil)
 
-    assert_equal [[], []], [result.excused, result.stale]
+    assert_equal [[], []], [result.excused, result.paid_off]
   end
 
   def test_matches_by_plugin_policy_artifact_and_role
@@ -48,14 +48,14 @@ class TrackDebtTest < Minitest::Test
     result = step(violations, entries, plugins: %w[tests other])
 
     assert_equal [violation("lib/a.rb"), violation("lib/d.rb")], result.excused
-    assert_equal ["lib/b.rb", "lib/c.rb", "lib/e.rb.component"], result.stale.map(&:artifact)
+    assert_equal ["lib/b.rb", "lib/c.rb", "lib/e.rb.component"], result.paid_off.map(&:artifact)
   end
 
   # ng-nudge matched by rule and base path alone (lib/debt.js:30-35).
   def test_keeps_a_component_entry_from_excusing_a_service_with_the_same_key
     result = step([violation("app/card", role: "service")], [entry("tests/has-test", "app/card.component")])
 
-    assert_equal [[], ["app/card.component"]], [result.excused, result.stale.map(&:artifact)]
+    assert_equal [[], ["app/card.component"]], [result.excused, result.paid_off.map(&:artifact)]
   end
 
   # ng-nudge's debt file names an Angular artifact by its base path, which
@@ -66,13 +66,13 @@ class TrackDebtTest < Minitest::Test
     entries = [entry("tests/has-test", "app/a"), entry("tests/has-test", "app/b.component"), entry("tests/has-test", "app/c.service")]
     result = step(violations, entries)
 
-    assert_equal [violations.first(2), ["app/c.service"]], [result.excused, result.stale.map(&:artifact)]
+    assert_equal [violations.first(2), ["app/c.service"]], [result.excused, result.paid_off.map(&:artifact)]
   end
 
   def test_matches_no_entry_by_the_key_of_an_artifact_without_one
     result = step([violation("lib/a.rb")], [entry("tests/has-test", ".ruby-file"), entry("tests/has-test", "")])
 
-    assert_equal [[], [".ruby-file", ""]], [result.excused, result.stale.map(&:artifact)]
+    assert_equal [[], [".ruby-file", ""]], [result.excused, result.paid_off.map(&:artifact)]
   end
 
   # ng-nudge's base path drops the role (lib/artifact/artifact.js:34).
@@ -93,14 +93,14 @@ class TrackDebtTest < Minitest::Test
       entry("tests/has-test", "lib/a.rb", line: 4)])
 
     assert_equal [[violations.first], []], [result.excused, result.notices]
-    assert_equal [3, 4], result.stale.map(&:line).sort
+    assert_equal [3, 4], result.paid_off.map(&:line).sort
   end
 
   def test_reads_a_policy_name_alone_as_the_policy_of_the_one_listed_plugin_with_it
     result = step([violation("lib/a.rb")], [entry("has-test", "lib/a.rb"), entry("has-signature", "lib/b.rb", line: 3)])
 
     assert_equal [[violation("lib/a.rb")], [["tests", "has-signature", 3]]],
-      [result.excused, result.stale.map { |stale| [stale.plugin, stale.policy, stale.line] }]
+      [result.excused, result.paid_off.map { |paid_off| [paid_off.plugin, paid_off.policy, paid_off.line] }]
   end
 
   def test_stops_at_a_policy_name_alone_two_listed_plugins_have
@@ -114,16 +114,16 @@ class TrackDebtTest < Minitest::Test
     end
   end
 
-  # ng-nudge's disabled rule returned no violations, so its entries were
-  # stale and deleted with their comments (lib/rule/rule.js:39-42,
-  # lib/debt.js:45-49).
+  # ng-nudge's disabled rule returned no violations, so its entries
+  # looked paid off and were deleted with their comments
+  # (lib/rule/rule.js:39-42, lib/debt.js:45-49).
   def test_leaves_alone_an_entry_for_a_disabled_policy_an_unlisted_plugin_or_a_plugin_that_stopped
     entries = [entry("tests/has-signature", "lib/a.rb", "off for now"), entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
       entry("spec-exists", "app/card", "angular later", line: 4), entry("other/has-test", "lib/a.rb", "stopped", line: 5)]
     options = {plugins: %w[tests other], disabled: ["tests/has-signature"], faulted: ["other"]}
     result = step([], entries, **options)
 
-    assert_equal [[], [], []], [result.excused, result.stale, result.notices]
+    assert_equal [[], [], []], [result.excused, result.paid_off, result.notices]
     update = step([], entries, update: true, **options)
 
     assert_equal ["wrote #{FILE}: 0 entries added, 0 removed"], update.wrote
@@ -131,7 +131,7 @@ class TrackDebtTest < Minitest::Test
   end
 
   # An entry for a disabled policy, or for a plugin the configuration
-  # doesn't list, is neither stale nor reported.
+  # doesn't list, is neither paid off nor reported.
   def test_reports_no_entry_for_a_disabled_policy_an_unlisted_plugin_or_a_plugin_that_stopped_and_reports_the_others
     entries = [entry("tests/has-signature", "lib/a.rb", "off for now"), entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
       entry("spec-exists", "app/card", "angular later", line: 4), entry("other/has-test", "lib/a.rb", "stopped", line: 5),
@@ -188,7 +188,7 @@ class TrackDebtTest < Minitest::Test
     assert_equal ["wrote #{FILE}: 0 entries added, 0 removed, 2 rewritten"], result.wrote
   end
 
-  def test_updates_by_keeping_matching_entries_in_place_dropping_stale_ones_and_adding_new_ones_in_order
+  def test_updates_by_keeping_matching_entries_in_place_dropping_paid_off_ones_and_adding_new_ones_in_order
     violations = [violation("lib/z.rb"), violation("lib/b.rb", severity: :warning), violation("lib/a.rb", policy: "has-signature"),
       violation("lib/b.rb"), violation("lib/m.rb", detail: "x")]
     entries = [entry("tests/has-test", "lib/b.rb", "why"), entry("tests/has-test", "lib/gone.rb", "fixed", line: 3),
@@ -216,14 +216,14 @@ class TrackDebtTest < Minitest::Test
       "would add tests/has-signature on lib/a.rb", "would add tests/has-test on lib/m.rb (x)", "would add tests/has-test on lib/z.rb",
       "would write #{FILE}: 3 entries added, 2 removed"], dry.wrote
     assert_equal ["wrote #{FILE}: 3 entries added, 2 removed"], real.wrote
-    assert_equal [dry.excused, dry.stale], [[violation("lib/b.rb", severity: :warning)], [stale_at(3), stale_at(4)]]
+    assert_equal [dry.excused, dry.paid_off], [[violation("lib/b.rb", severity: :warning)], [paid_off_at(3), paid_off_at(4)]]
   end
 
   def test_a_dry_run_matches_an_entry_written_with_backslashes_as_one_written_with_slashes_and_lists_it_as_replaced
     dry = step([violation("lib/a/b.rb")], [entry("tests/has-test", "lib\\a\\b.rb", "kept")], update: true, dry_run: true)
 
     assert_equal [violation("lib/a/b.rb")], dry.excused
-    assert_equal [], dry.stale
+    assert_equal [], dry.paid_off
     assert_equal ["would replace tests/has-test on lib/a/b.rb, line 2", "would add tests/has-test on lib/a/b.rb",
       "would write #{FILE}: 0 entries added, 0 removed, 1 rewritten"], dry.wrote
     assert_equal ["lib\\a\\b.rb"], written.map(&:artifact)
@@ -289,13 +289,13 @@ class TrackDebtTest < Minitest::Test
   end
 
   # ng-nudge reported the state before the update, so a run that just
-  # removed a stale entry still said to run --update-debt
+  # removed a paid-off entry still said to run --update-debt
   # (lib/verification-task.js:25-39).
   def test_reports_the_state_the_update_left
     result = step([violation("lib/a.rb")], [entry("tests/has-test", "lib/gone.rb")], update: true)
 
     assert_equal [[violation("lib/a.rb")], [], ["1 accepted as debt"], ["wrote #{FILE}: 1 entry added, 1 removed"]],
-      [result.excused, result.stale, result.summary, result.wrote]
+      [result.excused, result.paid_off, result.summary, result.wrote]
   end
 
   def test_writes_a_file_that_doesnt_exist
@@ -434,7 +434,7 @@ class TrackDebtTest < Minitest::Test
     entries = [entry("gone/has-test", "lib/a.rb"), entry("tests/has-test", "lib/a.rb")]
     result = step([], entries, disabled: ["tests/has-signature"], extra: [PolicySetting.new(name: "tests/has-test", enabled: nil, severity: :warning, line: 7)])
 
-    assert_equal [3], result.stale.map(&:line)
+    assert_equal [3], result.paid_off.map(&:line)
   end
 
   def test_writes_one_entry_for_violations_with_one_identity
@@ -471,10 +471,10 @@ class TrackDebtTest < Minitest::Test
     Violation.new(plugin:, policy:, artifact:, role:, message: "no test", severity:, detail:, key:)
   end
 
-  def stale_at(line)
+  def paid_off_at(line)
     gone = {3 => "lib/gone.rb", 4 => "lib/old.rb"}.fetch(line)
-    Stale.new(plugin: "tests", policy: "has-test", artifact: gone, file: FILE, line:,
-      message: "no violation is left for the debt entry at #{FILE}:#{line}; crosslint debt update removes it")
+    PaidOffEntry.new(plugin: "tests", policy: "has-test", artifact: gone, file: FILE, line:,
+      message: "the debt entry at #{FILE}:#{line} is paid off, since no violation matches it; crosslint debt update removes it")
   end
 
   def debt_violation(message, severity, line)

@@ -111,7 +111,7 @@ $ echo $?
 
 Commit `.config/crosslint/config.kdl`, the plugin, and the debt file.
 
-Now the check passes while no violation is new. Add a Ruby file under `lib/` with no test, and it fails again. Write the test for `currency.rb`, and it fails too: its entry has become a **stale entry**, and `crosslint debt update` removes it, so the debt file only ever shrinks as the work gets done.
+Now the check passes while no violation is new. Add a Ruby file under `lib/` with no test, and it fails again. Write the test for `currency.rb`, and it fails too: its entry has become a **paid-off entry**, because fixing the violation paid off its debt. The check fails until `crosslint debt update` removes the entry, so the debt file only ever shrinks as the work gets done.
 
 ## Check your work
 

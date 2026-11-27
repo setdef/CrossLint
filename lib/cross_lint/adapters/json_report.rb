@@ -22,11 +22,11 @@ module CrossLint
              "artifact" => violation.artifact, "role" => violation.role, "severity" => violation.severity, "detail" => violation.detail,
              "line" => violation.line}
           end,
-          "stale" => result.stale.map do |stale|
-            {"file" => stale.file, "line" => stale.line, "plugin" => stale.plugin, "policy" => stale.policy, "artifact" => stale.artifact,
-             "message" => stale.message}
+          "paid_off" => result.paid_off.map do |paid_off|
+            {"file" => paid_off.file, "line" => paid_off.line, "plugin" => paid_off.plugin, "policy" => paid_off.policy, "artifact" => paid_off.artifact,
+             "message" => paid_off.message}
           end,
-          "summary" => {"artifacts" => summary.artifacts, "errors" => summary.errors, "warnings" => summary.warnings, "stale" => summary.stale}
+          "summary" => {"artifacts" => summary.artifacts, "errors" => summary.errors, "warnings" => summary.warnings, "paid_off" => summary.paid_off}
         }, ascii_only: true)
       end
     end

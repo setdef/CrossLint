@@ -110,7 +110,7 @@ module CrossLint
 
       def state(project, input, settings, debt, identities, wrote)
         excused = [] #: Array[Identity]
-        stale = [] #: Array[Stale]
+        paid_off = [] #: Array[PaidOffEntry]
         notices = [] #: Array[Notice]
         debt.entries.each do |entry|
           rule = resolve(project, input, debt, entry)
@@ -120,14 +120,14 @@ module CrossLint
           excused.concat(matched)
           line = entry.line #: Integer
           if matched.empty?
-            stale << Stale.new(plugin: rule.first, policy: rule.last, artifact: entry.artifact, file: debt.file, line:,
-              message: "no violation is left for the debt entry at #{debt.file}:#{entry.line}; crosslint debt update removes it")
+            paid_off << PaidOffEntry.new(plugin: rule.first, policy: rule.last, artifact: entry.artifact, file: debt.file, line:,
+              message: "the debt entry at #{debt.file}:#{entry.line} is paid off, since no violation matches it; crosslint debt update removes it")
           end
           warning = coarse(entry, rule, matched)
           notices << Notice.new(file: debt.file, line:, message: warning) if warning
         end
         accepted = input.violations.select { |violation| excused.include?(Identity.of(violation)) }
-        StepResult.new(excused: accepted, violations: report_entries(project, input, settings, debt), stale:, notices:, wrote:,
+        StepResult.new(excused: accepted, violations: report_entries(project, input, settings, debt), paid_off:, notices:, wrote:,
           summary: accepted.empty? ? [] : ["#{accepted.size} accepted as debt"])
       end
 

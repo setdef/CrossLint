@@ -80,9 +80,9 @@ class AppTest < Minitest::Test
     write(@base, "b.txt", "")
     after = App.new.check(@base)
 
-    assert_equal [["lib/b.md", Core::Stale], [".config/crosslint/debt.tsv", Core::Violation]].sort,
+    assert_equal [["lib/b.md", Core::PaidOffEntry], [".config/crosslint/debt.tsv", Core::Violation]].sort,
       after.findings.map { |finding| [finding.artifact, finding.class] }.sort
-    assert_equal ["checked 2 a artifacts: 1 error, 1 stale entry, 1 accepted as debt", true], [after.summary.line, after.failed]
+    assert_equal ["checked 2 a artifacts: 1 error, 1 entry paid off, 1 accepted as debt", true], [after.summary.line, after.failed]
   end
 
   def test_checks_a_project_it_has_loaded_as_a_plugins_command_when_it_is_told_to

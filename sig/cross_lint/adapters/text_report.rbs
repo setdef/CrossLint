@@ -17,7 +17,7 @@ module CrossLint
     #     lib/app/b.rb: app/b: no test file at test/app/b_test.rb (tests/has-test)
     #     config/routes.rb:2: get /cart: no action in app/controllers/carts_controller.rb (routes/has-action)
     #
-    # A stale entry's line is its artifact, its message, and its plugin
+    # A paid-off entry's line is its artifact, its message, and its plugin
     # and policy, as a violation's is. A line for each file a step wrote,
     # such as "wrote .config/crosslint/debt.tsv: 2 entries added, 0
     # removed", goes after the faults and before the summary.

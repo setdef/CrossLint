@@ -2,7 +2,7 @@ module CrossLint
   module Core
     # A step a plugin runs after every rule of every plugin has run, which
     # sees every violation, whatever --warnings or --quiet hides, and can
-    # excuse some, add others, and report stale entries. A manifest names
+    # excuse some, add others, and report paid-off entries. A manifest names
     # one as `step NAME`; Core::TrackDebt is one.
     interface _Step
       # The names of the policies whose violations the step adds, each of
@@ -21,7 +21,7 @@ module CrossLint
     # An entry no current violation matches, which fails the check until
     # someone removes it: the plugin and policy it is for, its artifact,
     # and where it is.
-    class Stale < Data
+    class PaidOffEntry < Data
       # The name of the plugin whose policy the entry is for.
       attr_reader plugin: String
 
@@ -40,10 +40,10 @@ module CrossLint
       # What to do about it, such as "crosslint debt update removes it".
       attr_reader message: String
 
-      # A stale entry with these fields.
+      # A paid-off entry with these fields.
       def self.new: (plugin: String, policy: String, artifact: String, file: String, line: Integer, message: String) -> instance
 
-      # A stale entry with these fields.
+      # A paid-off entry with these fields.
       def initialize: (plugin: String, policy: String, artifact: String, file: String, line: Integer, message: String) -> void
     end
 
@@ -83,7 +83,7 @@ module CrossLint
     end
 
     # What a step did: the violations it excuses, those it adds, the
-    # stale entries it reports, its warnings, what it wrote, and what the
+    # paid-off entries it reports, its warnings, what it wrote, and what the
     # summary says of it.
     class StepResult < Data
       # The violations it excuses, which then don't fail the check.
@@ -92,8 +92,8 @@ module CrossLint
       # The violations it adds, of its plugin's policies.
       attr_reader violations: Array[Violation]
 
-      # The stale entries it reports.
-      attr_reader stale: Array[Stale]
+      # The paid-off entries it reports.
+      attr_reader paid_off: Array[PaidOffEntry]
 
       # Its warnings, which never fail the check.
       attr_reader notices: Array[Notice]
@@ -106,11 +106,11 @@ module CrossLint
       attr_reader summary: Array[String]
 
       # A step's result with these fields.
-      def self.new: (excused: Array[Violation], violations: Array[Violation], stale: Array[Stale], notices: Array[Notice],
+      def self.new: (excused: Array[Violation], violations: Array[Violation], paid_off: Array[PaidOffEntry], notices: Array[Notice],
                      wrote: Array[String], summary: Array[String]) -> instance
 
       # A step's result with these fields.
-      def initialize: (excused: Array[Violation], violations: Array[Violation], stale: Array[Stale], notices: Array[Notice],
+      def initialize: (excused: Array[Violation], violations: Array[Violation], paid_off: Array[PaidOffEntry], notices: Array[Notice],
                        wrote: Array[String], summary: Array[String]) -> void
     end
   end

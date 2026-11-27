@@ -45,7 +45,7 @@ ng-nudge's checks for Angular projects: a spec for every component, directive, p
 
 ### `debt`
 
-Debt tracking: violations listed in the debt file don't fail the check, and an entry no violation matches does. Its words, such as entry and stale entry, are in [its glossary](../../plugins/debt/glossary.md).
+Debt tracking: violations listed in the debt file don't fail the check, and an entry no violation matches does, because its debt is paid off. Its words, such as entry and paid-off entry, are in [its glossary](../../plugins/debt/glossary.md).
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
@@ -54,13 +54,13 @@ Debt tracking: violations listed in the debt file don't fail the check, and an e
 
 The debt file is tab-separated, in ng-nudge's format, so a file moved from ng-nudge reads unchanged: a header row `Rule`, `Artifact`, `Comment`, and an optional fourth column `Detail`, then one entry per line. `Rule` is `PLUGIN/POLICY`, or a bare policy name, which stands for the policy of that name when exactly one listed plugin has one. `Artifact` is the artifact's name, which is its primary path unless its declaration has a [`name`](plugin.md#artifact), or its [key](plugin-glossary.md#declaring), such as ng-nudge's base path `app/card/card`, alone or as `NAME.ROLE`. A field holding a tab, a newline, or `"` is wrapped in `"`, with each `"` doubled. Paths are written with `/` on every system, a path read with `\` is read as `/`, and the file keeps the line endings it had. An entry with no rule or no artifact stops CrossLint with exit status 2, naming the file and the line.
 
-An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is: it is neither stale nor reported, and `crosslint debt update` keeps it with its comment.
+An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is: it is neither reported as paid off nor reported as debt, and `crosslint debt update` keeps it with its comment.
 
 The debt plugin adds one command:
 
 | Command | What it does |
 | --- | --- |
-| `crosslint debt update` | Runs the check, then rewrites the debt file to list exactly the current violations: keeps each entry that still matches, with its comment, drops stale entries, and adds one entry with an empty comment for each new violation, warnings included. Then reports the state the update left, and exits with 0. It takes the global flags, such as `-C`, and `-n`/`--dry-run`, which lists each entry it would add, remove, or replace, and the summary, writes nothing, and exits with 0. |
+| `crosslint debt update` | Runs the check, then rewrites the debt file to list exactly the current violations: keeps each entry that still matches, with its comment, drops paid-off entries, and adds one entry with an empty comment for each new violation, warnings included. Then reports the state the update left, and exits with 0. It takes the global flags, such as `-C`, and `-n`/`--dry-run`, which lists each entry it would add, remove, or replace, and the summary, writes nothing, and exits with 0. |
 
 ## `policy`
 
@@ -68,7 +68,7 @@ The debt plugin adds one command:
 
 | Property | Meaning |
 | --- | --- |
-| `enabled=#false` | Don't run the policy. Its entries in the debt file are kept, and are neither stale nor reported. |
+| `enabled=#false` | Don't run the policy. Its entries in the debt file are kept, and are neither reported as paid off nor reported as debt. |
 | `severity="error"` or `severity="warning"` | Report the policy's violations at this severity, in place of what its plugin declares. |
 
 A policy that no listed plugin has stops CrossLint with exit status 2.

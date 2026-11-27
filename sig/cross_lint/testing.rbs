@@ -295,13 +295,13 @@ module CrossLint
 
       # What the port wrote: each violation as its path, message, plugin,
       # policy, and severity; each notice as its file, line, and message;
-      # each fault as its plugin, rule, artifact, and message; each stale
-      # entry, one whose message is "is stale", as its artifact, message,
+      # each fault as its plugin, rule, artifact, and message; each paid-off
+      # entry, one whose message is "is paid off", as its artifact, message,
       # plugin, and policy; each line a step wrote; and the summary line
       # without "crosslint: ", or nil for none.
       def reported: () -> {findings: Array[[String, String, String, String, Core::severity]],
                            notices: Array[[String, Integer, String]], faults: Array[[String, String, String?, String]],
-                           stale: Array[[String, String, String, String]], wrote: Array[String], summary: String?}
+                           paid_off: Array[[String, String, String, String]], wrote: Array[String], summary: String?}
     end
 
     # The tests every adapter of the report port passes.
@@ -324,8 +324,8 @@ module CrossLint
       # write writes nothing under --silent for a result with no faults.
       def test_reports_nothing_when_silent: () -> void
 
-      # write reports each stale entry, and none of them as a violation.
-      def test_reports_each_stale_entry_apart_from_the_violations: () -> void
+      # write reports each paid-off entry, and none of them as a violation.
+      def test_reports_each_paid_off_entry_apart_from_the_violations: () -> void
 
       # write reports each line a step wrote, except under --silent.
       def test_reports_each_file_a_step_wrote_unless_silent: () -> void
@@ -341,7 +341,7 @@ module CrossLint
       # A result with these findings, notices, verbosity, faults, and lines
       # written, and a summary of two ruby-file artifacts with no
       # violations.
-      def result: (Array[Core::Violation | Core::Stale | Core::Artifact] findings, ?notices: Array[Core::Notice],
+      def result: (Array[Core::Violation | Core::PaidOffEntry | Core::Artifact] findings, ?notices: Array[Core::Notice],
                    ?verbosity: (:normal | :quiet | :silent), ?faults: Array[Core::Fault], ?wrote: Array[String]) -> Core::CheckResult
     end
     # What a test of a debt-files adapter defines.

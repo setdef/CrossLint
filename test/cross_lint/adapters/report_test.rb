@@ -52,8 +52,8 @@ class TextReportTest < Minitest::Test
       message, plugin, policy = rest.match(/\A(.*) \(([^\/]+)\/(.+)\)\z/).captures
       [path, message, plugin, policy, warning ? :warning : :error]
     end
-    stale, findings = findings.partition { |_, message| message == "is stale" }
-    {findings:, notices:, faults:, stale: stale.map { |finding| finding.take(4) }, wrote:, summary: summary_line}
+    paid_off, findings = findings.partition { |_, message| message == "is paid off" }
+    {findings:, notices:, faults:, paid_off: paid_off.map { |finding| finding.take(4) }, wrote:, summary: summary_line}
   end
 
   def test_writes_each_fault_after_the_findings_and_says_how_to_see_its_trace
@@ -216,8 +216,8 @@ class JSONReportTest < Minitest::Test
     findings = object.fetch("findings").map do |finding|
       [finding.fetch("path"), finding.fetch("message"), finding.fetch("plugin"), finding.fetch("policy"), finding.fetch("severity").to_sym]
     end
-    stale = object.fetch("stale", []).map { |each| [each.fetch("artifact"), each.fetch("message"), each.fetch("plugin"), each.fetch("policy")] }
-    {findings:, notices:, faults:, stale:, wrote:, summary: summary_line}
+    paid_off = object.fetch("paid_off", []).map { |each| [each.fetch("artifact"), each.fetch("message"), each.fetch("plugin"), each.fetch("policy")] }
+    {findings:, notices:, faults:, paid_off:, wrote:, summary: summary_line}
   end
 
   def test_writes_one_object_with_its_keys_in_order
@@ -226,7 +226,7 @@ class JSONReportTest < Minitest::Test
     assert_equal <<~JSON.delete("\n") + "\n", @out.string
       {"findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null},
       {"path":"lib/b.rb","message":"x","plugin":"tests","policy":"has-test","artifact":"lib/b.rb","role":"ruby-file","severity":"warning","detail":"y","line":null}],
-      "stale":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}
+      "paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}
     JSON
     assert_equal "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning\n", @err.string
   end
@@ -239,18 +239,18 @@ class JSONReportTest < Minitest::Test
     assert_equal [["lib/app/a.rb", "app/a", nil]], JSON.parse(@out.string).fetch("findings").map { [it.fetch("path"), it.fetch("artifact"), it.fetch("line")] }
   end
 
-  def test_writes_each_stale_entry_with_its_keys_in_order
-    stale = Stale.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", file: "debt.tsv", line: 2, message: "is stale")
-    report_port.write(result_of([stale]))
+  def test_writes_each_paid_off_entry_with_its_keys_in_order
+    paid_off = PaidOffEntry.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", file: "debt.tsv", line: 2, message: "is paid off")
+    report_port.write(result_of([paid_off]))
 
-    assert_equal %({"findings":[],"stale":[{"file":"debt.tsv","line":2,"plugin":"tests","policy":"has-test","artifact":"lib/a.rb",) +
-      %("message":"is stale"}],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}\n), @out.string
+    assert_equal %({"findings":[],"paid_off":[{"file":"debt.tsv","line":2,"plugin":"tests","policy":"has-test","artifact":"lib/a.rb",) +
+      %("message":"is paid off"}],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}\n), @out.string
   end
 
   def test_writes_the_object_with_no_summary_line_when_quiet
     report_port.write(result_of([], verbosity: :quiet))
 
-    assert_equal [%({"findings":[],"stale":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}\n), ""], [@out.string, @err.string]
+    assert_equal [%({"findings":[],"paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}\n), ""], [@out.string, @err.string]
   end
 
   def test_leaves_passing_artifacts_out
@@ -296,8 +296,8 @@ class MemoryReportTest < Minitest::Test
     notices = results.flat_map(&:notices).map { |notice| [notice.file, notice.line, notice.message] }
     faults = @port.results.flat_map(&:faults).map { |fault| [fault.plugin, fault.rule, fault.artifact, fault.message] }
     summary = results.find { |result| result.verbosity == :normal }&.summary&.line
-    stale = results.flat_map(&:stale).map { |each| [each.artifact, each.message, each.plugin, each.policy] }
-    {findings:, notices:, faults:, stale:, wrote: results.flat_map(&:wrote), summary:}
+    paid_off = results.flat_map(&:paid_off).map { |each| [each.artifact, each.message, each.plugin, each.policy] }
+    {findings:, notices:, faults:, paid_off:, wrote: results.flat_map(&:wrote), summary:}
   end
 
   def test_holds_every_result_written_in_order
