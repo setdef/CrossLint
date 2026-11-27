@@ -22,6 +22,11 @@ CrossLint is one program for projects in any language. It carries what it needs 
 
 [Fledge](https://github.com/setdef/Fledge) keeps a signature file under `sig/` for each Ruby file under `lib/`, such as `sig/fledge/archive.rbs` for `lib/fledge/archive.rb`. A local plugin in Fledge's repository can say so in a few lines of [KDL](https://kdl.dev/):
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/signatures/plugin.kdl
 artifact "ruby-file" {
@@ -34,28 +39,47 @@ policy "has-signature" {
   rule "piece-exists" piece="signature"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 The artifact covers every Ruby file under `lib/`, each with the path of the signature file that belongs beside it. The policy applies CrossLint's `piece-exists` rule to every one of them. Fledge's configuration lists the plugin:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/config.kdl
 plugin ".config/crosslint/signatures"
 ```
+<!-- SPDX-SnippetEnd -->
 
 Running `crosslint check` in the project checks every Ruby file under `lib/`. Each one has its signature file, so the check passes, and `crosslint` exits with 0:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 crosslint: checked 112 ruby-file artifacts: no violations
 ```
+<!-- SPDX-SnippetEnd -->
 
 Add `lib/fledge/doctor.rb` without writing `sig/fledge/doctor.rbs`, and the check fails, with exit status 1:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 lib/fledge/doctor.rb: no signature file at sig/fledge/doctor.rbs (signatures/has-signature)
 crosslint: checked 113 ruby-file artifacts: 1 error
 ```
+<!-- SPDX-SnippetEnd -->
 
 Each finding is one line on standard output, with the file, the message, and the plugin and policy it comes from, so `grep` and an editor's problem matcher both read it. `crosslint check --json` prints the same findings as JSON. A script should read that, because [a minor release may change the line format](#versions).
 
@@ -90,9 +114,15 @@ Download the archive for your computer from [the releases page](https://github.c
 
 To check that this repository's release workflow built a file, run `gh attestation verify` from the [GitHub CLI](https://cli.github.com/manual/gh_attestation_verify) on the archive or on `SHA256SUMS`. It looks up the file's build provenance attestation and fails when none is signed by a workflow of `setdef/CrossLint`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ gh attestation verify crosslint-VERSION-PLATFORM.tar.gz --repo setdef/CrossLint
 ```
+<!-- SPDX-SnippetEnd -->
 
 To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugin, also delete the cache folder CrossLint fetched it into: `$XDG_CACHE_HOME/crosslint`, or `~/.cache/crosslint` when `XDG_CACHE_HOME` isn't set to an absolute path, or `%LOCALAPPDATA%\crosslint\cache` on Windows.
 
@@ -149,7 +179,7 @@ Open an issue at [github.com/setdef/CrossLint/issues](https://github.com/setdef/
 
 ## License
 
-CrossLint is released under the [MIT License](LICENSE). It places no conditions on the projects you check with it.
+CrossLint is released under the [MIT License](LICENSE). It places no conditions on the projects you check with it. The examples in the documentation are under [MIT-0](LICENSES/MIT-0.txt), so you may copy them without a notice.
 
 ## How this was made
 

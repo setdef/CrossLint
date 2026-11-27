@@ -4,6 +4,11 @@ A project's configuration is `.config/crosslint/config.kdl` in its root, in [KDL
 
 An Angular project that tracks debt and keeps one local plugin might have:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 plugin "angular" {
   src-dir "src"
@@ -18,6 +23,7 @@ policy "signatures/has-test" enabled=#false
 
 warnings "all"
 ```
+<!-- SPDX-SnippetEnd -->
 
 CrossLint finds the configuration by looking in the current folder and then in each folder above it, or from `-C`'s folder. A project with no configuration, or one that lists no plugin, stops CrossLint with exit status 2, since no check would run. Any node or property this page doesn't list stops CrossLint the same way, with the nearest valid spelling where one is close.
 

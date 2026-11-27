@@ -6,12 +6,18 @@ A shared plugin for CrossLint that keeps a decision log, such as a folder of arc
 
 List it in `.config/crosslint/config.kdl` from its folder of the CrossLint repository:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/decision-log" {
   folder "doc/adr"
   index "doc/adr/README.md"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 `TAG` is a tag of CrossLint that has this folder. Both settings are optional:
 

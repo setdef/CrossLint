@@ -9,10 +9,16 @@ If you get stuck, [open an issue](https://github.com/setdef/CrossLint/issues) wi
 - **A project in a Git repository,** with Ruby files under `lib/` and tests under `test/`. The examples use a Ruby project called `invoices`, whose test for `lib/invoices/total.rb` is `test/invoices/total_test.rb`; where your project keeps its files elsewhere, change the paths to match.
 - **CrossLint on your `PATH`,** from [the README's installation steps](../README.md#installation). Check that the shell finds it:
 
+  <!--
+  SPDX-SnippetBegin
+  SPDX-License-Identifier: MIT-0
+  SPDX-SnippetCopyrightText: 2026 setdef
+  -->
   ```console
   $ crosslint --version
   crosslint 0.2.0
   ```
+  <!-- SPDX-SnippetEnd -->
 
 You don't need Ruby installed; CrossLint carries the Ruby it runs on.
 
@@ -20,10 +26,16 @@ You don't need Ruby installed; CrossLint carries the Ruby it runs on.
 
 From the project's root, ask CrossLint for a configuration:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint init
 crosslint: wrote .config/crosslint/config.kdl, with the recommended plugins: debt
 ```
+<!-- SPDX-SnippetEnd -->
 
 `.config/crosslint/config.kdl` is the project's configuration. It lists the **plugins** CrossLint runs, and no plugin runs until it's listed there. So far it lists one, `debt`, which we'll use at the end.
 
@@ -31,6 +43,11 @@ crosslint: wrote .config/crosslint/config.kdl, with the recommended plugins: deb
 
 A project's rule goes in a **local plugin**: a folder in your repository with a `plugin.kdl`. Create `.config/crosslint/tests/plugin.kdl`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 artifact "ruby-file" {
   primary "lib/{path}.rb"
@@ -42,6 +59,7 @@ policy "has-test" {
   rule "piece-exists" piece="test"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 This declares all three kinds of thing CrossLint works with:
 
@@ -51,15 +69,26 @@ This declares all three kinds of thing CrossLint works with:
 
 The rule is built into CrossLint, so the plugin needs no code. Now list the plugin in `.config/crosslint/config.kdl`, below `debt`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 plugin "debt"
 plugin ".config/crosslint/tests"
 ```
+<!-- SPDX-SnippetEnd -->
 
 ## Run the check
 
 Before you run it, which files do you expect it to report? Then run:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 lib/invoices/currency.rb: no test file at test/invoices/currency_test.rb (tests/has-test)
@@ -67,13 +96,20 @@ lib/invoices/pdf.rb: no test file at test/invoices/pdf_test.rb (tests/has-test)
 lib/invoices/tax.rb: no test file at test/invoices/tax_test.rb (tests/has-test)
 crosslint: checked 9 ruby-file artifacts: 3 errors
 ```
+<!-- SPDX-SnippetEnd -->
 
 Each **violation** is one line on standard output: the file, what's wrong, and the plugin and policy it comes from. The last line is CrossLint's summary, on standard error. What did the shell get?
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ echo $?
 1
 ```
+<!-- SPDX-SnippetEnd -->
 
 `crosslint check` exits with 1 when a violation fails the check, so CI fails the way it does for a failing test.
 
@@ -83,31 +119,49 @@ If instead you see `crosslint: .config/crosslint/tests/plugin.kdl:2: unknown nod
 
 Write the missing test for `tax.rb`, at the path the violation gives, and check again:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 lib/invoices/currency.rb: no test file at test/invoices/currency_test.rb (tests/has-test)
 lib/invoices/pdf.rb: no test file at test/invoices/pdf_test.rb (tests/has-test)
 crosslint: checked 9 ruby-file artifacts: 2 errors
 ```
+<!-- SPDX-SnippetEnd -->
 
 ## Accept the rest as debt
 
 The other two will take longer. Rather than leave the check failing until they're done, record them as **debt** with the debt plugin's command:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint debt update
 crosslint: wrote .config/crosslint/debt.tsv: 2 entries added, 0 removed
 crosslint: checked 9 ruby-file artifacts: 2 accepted as debt
 ```
+<!-- SPDX-SnippetEnd -->
 
 Open `.config/crosslint/debt.tsv`. Each line after the header is an **entry**: the plugin and policy, the artifact, and an empty comment at the end. Write in each comment why the violation is still there, such as `PDF export is being rewritten`, so whoever reads the file later knows. Then check again:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 crosslint: checked 9 ruby-file artifacts: 2 accepted as debt
 $ echo $?
 0
 ```
+<!-- SPDX-SnippetEnd -->
 
 Commit `.config/crosslint/config.kdl`, the plugin, and the debt file.
 

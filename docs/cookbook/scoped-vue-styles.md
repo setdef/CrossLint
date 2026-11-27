@@ -8,6 +8,11 @@ It needs CrossLint and a configuration, as [Getting started](../getting-started.
 
 Each `.vue` file under `src/` is a component, and its unscoped `<style>` block is a **piece** of it that shouldn't exist. Create `.config/crosslint/vue/plugin.kdl`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/vue/plugin.kdl
 artifact "vue-component" {
@@ -20,6 +25,7 @@ policy "scoped-styles" {
   rule "piece-absent" piece="unscoped-style" severity="warning"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 - The piece `unscoped-style` is in the component's file, so its path is the same as the primary's. With `regex=`, the piece is a part of that file, and it exists when the file has a match.
 - The regex matches a `<style` tag in which no `scoped` comes before its `>`, since `(?![^>]*\bscoped)` is a lookahead over the tag's attributes. So `<style>` and `<style lang="scss">` match, and `<style scoped>` and `<style lang="scss" scoped>` don't.
@@ -29,15 +35,26 @@ The regex is a KDL raw string, `#"..."#`, so its quotes and backslashes reach Cr
 
 Then list the plugin in `.config/crosslint/config.kdl`, beside the plugins already there:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/config.kdl
 plugin ".config/crosslint/vue"
 ```
+<!-- SPDX-SnippetEnd -->
 
 ## Run the check
 
 Take an app with three components, one of whose styles isn't scoped:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```vue
 <!-- src/components/CartButton.vue -->
 <template>
@@ -48,7 +65,13 @@ Take an app with three components, one of whose styles isn't scoped:
 .cart-button { font-weight: bold; }
 </style>
 ```
+<!-- SPDX-SnippetEnd -->
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```vue
 <!-- src/components/CartBadge.vue -->
 <template>
@@ -59,7 +82,13 @@ Take an app with three components, one of whose styles isn't scoped:
 .badge { border-radius: 50%; }
 </style>
 ```
+<!-- SPDX-SnippetEnd -->
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```vue
 <!-- src/components/ProductCard.vue -->
 <template>
@@ -70,15 +99,22 @@ Take an app with three components, one of whose styles isn't scoped:
 .card { padding: 1rem; }
 </style>
 ```
+<!-- SPDX-SnippetEnd -->
 
 Run the check from the project's root:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 src/components/CartBadge.vue: warning: unscoped-style at src/components/CartBadge.vue:6 (vue/scoped-styles)
 src/components/ProductCard.vue: warning: unscoped-style at src/components/ProductCard.vue:6 (vue/scoped-styles)
 crosslint: checked 3 vue-component artifacts: 2 warnings
 ```
+<!-- SPDX-SnippetEnd -->
 
 Each warning has the line of the component's first unscoped `<style>`. CrossLint exits with 0, since a warning fails the check only under `--warnings=error`, as [the command reference](../reference/cli.md) says.
 
@@ -86,6 +122,11 @@ Each warning has the line of the component's first unscoped `<style>`. CrossLint
 
 `ProductCard.vue` uses `<style module>`, a CSS module, whose class names Vue makes unique to the component, so its rules apply to no other component either. Add `module` beside `scoped` in the regex's lookahead:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/vue/plugin.kdl
 artifact "vue-component" {
@@ -98,14 +139,21 @@ policy "scoped-styles" {
   rule "piece-absent" piece="unscoped-style" severity="warning"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 Only `CartBadge.vue` is left:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 src/components/CartBadge.vue: warning: unscoped-style at src/components/CartBadge.vue:6 (vue/scoped-styles)
 crosslint: checked 3 vue-component artifacts: 1 warning
 ```
+<!-- SPDX-SnippetEnd -->
 
 > [!NOTE]
 > **A component can have global styles on purpose,** such as `App.vue` with a reset for the whole app. Accept such a warning as debt with the [debt plugin](../reference/configuration.md#debt), or narrow `primary` to the folders whose components should be scoped, such as `src/components/{path}.vue`.

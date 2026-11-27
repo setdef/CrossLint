@@ -6,9 +6,15 @@ A shared plugin for CrossLint that checks that every `AGENTS.md` in a project ha
 
 List it in `.config/crosslint/config.kdl` from its folder of the CrossLint repository:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/agents-md"
 ```
+<!-- SPDX-SnippetEnd -->
 
 `TAG` is a tag of CrossLint that has this folder. The plugin takes no settings.
 

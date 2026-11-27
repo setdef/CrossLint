@@ -8,6 +8,11 @@ It needs CrossLint and a configuration, as [Getting started](../getting-started.
 
 Each route is a line of `config/routes.rb`, so the **artifact** is a match in that file rather than the file. Create `.config/crosslint/routes/plugin.kdl`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/routes/plugin.kdl
 artifact "route" {
@@ -22,6 +27,7 @@ policy "has-action" {
   rule "piece-exists" piece="action"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 - With `regex=` on `primary`, each match in `config/routes.rb` is a route, and each named capture, such as `(?<controller>\w+)`, is a placeholder the rest of the declaration can use.
 - With `name "{verb} {route}"`, each route's name is like `get /cart`. CrossLint calls the route by this name in violations and debt entries, since every route has the same file.
@@ -32,15 +38,26 @@ The regex is a KDL raw string, `#"..."#`, so its quotes and backslashes reach Cr
 
 Then list the plugin in `.config/crosslint/config.kdl`, beside the plugins already there:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/config.kdl
 plugin ".config/crosslint/routes"
 ```
+<!-- SPDX-SnippetEnd -->
 
 ## Run the check
 
 Take an app with three routes, two controllers, and one action missing:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```rb
 # config/routes.rb
 Rails.application.routes.draw do
@@ -49,7 +66,13 @@ Rails.application.routes.draw do
   delete "/cart/items/:id", to: "cart_items#destroy"
 end
 ```
+<!-- SPDX-SnippetEnd -->
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```rb
 # app/controllers/carts_controller.rb
 class CartsController < ApplicationController
@@ -58,7 +81,13 @@ class CartsController < ApplicationController
   end
 end
 ```
+<!-- SPDX-SnippetEnd -->
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```rb
 # app/controllers/cart_items_controller.rb
 class CartItemsController < ApplicationController
@@ -68,14 +97,21 @@ class CartItemsController < ApplicationController
   end
 end
 ```
+<!-- SPDX-SnippetEnd -->
 
 Run the check from the project's root:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 config/routes.rb:5: delete /cart/items/:id: no action in app/controllers/cart_items_controller.rb (routes/has-action)
 crosslint: checked 3 route artifacts: 1 error
 ```
+<!-- SPDX-SnippetEnd -->
 
 The line starts with where the route is, `config/routes.rb:5`, then its name. CrossLint exits with 1. Add a `def destroy` to `CartItemsController` and the check passes.
 
@@ -88,6 +124,11 @@ CrossLint's message for a controller file that doesn't exist differs from its me
 
 The declaration already has the piece `request-spec`, so a second policy can warn about a controller with no spec at `spec/requests/`. Add the policy `has-request-spec` to `plugin.kdl`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 // .config/crosslint/routes/plugin.kdl
 artifact "route" {
@@ -107,9 +148,15 @@ policy "has-request-spec" {
   rule "piece-exists" piece="request-spec" severity="warning"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 With no `spec/` folder in the app, every route gets a warning, beside the error from `has-action`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```console
 $ crosslint check
 config/routes.rb:3: get /cart: warning: no request-spec file at spec/requests/carts_spec.rb (routes/has-request-spec)
@@ -118,5 +165,6 @@ config/routes.rb:5: delete /cart/items/:id: no action in app/controllers/cart_it
 config/routes.rb:5: delete /cart/items/:id: warning: no request-spec file at spec/requests/cart_items_spec.rb (routes/has-request-spec)
 crosslint: checked 3 route artifacts: 1 error, 3 warnings
 ```
+<!-- SPDX-SnippetEnd -->
 
 A warning fails the check only under `--warnings=error`, as [the command reference](../reference/cli.md) says.

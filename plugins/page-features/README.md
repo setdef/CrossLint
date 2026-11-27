@@ -6,12 +6,18 @@ A shared plugin for CrossLint that checks that every page component of an app ha
 
 List it in `.config/crosslint/config.kdl` from its folder of the CrossLint repository, with the path patterns of the project's pages and their feature files:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/page-features" {
   page "web/src/screens/{path}Screen.tsx"
   feature "specs/screens/{path}Screen.feature"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 `TAG` is a tag of CrossLint that has this folder.
 

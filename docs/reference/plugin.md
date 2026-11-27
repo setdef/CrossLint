@@ -4,6 +4,11 @@ A plugin is a folder with a `plugin.kdl` at its root, which declares the plugin'
 
 Every example on this page comes from one plugin, kept in a Ruby project at `.config/crosslint/signatures/`, that checks each Ruby file under `lib/` for a signature file under `sig/` and a test under `test/`:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 artifact "ruby-file" {
   primary "lib/{path}.rb"
@@ -21,6 +26,7 @@ policy "has-test" {
   rule "piece-exists" piece="test" severity="warning"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 A plugin's name is its folder's name, here `signatures`. CrossLint names each violation by the plugin and the policy that found it: `signatures/has-signature`.
 
@@ -45,6 +51,11 @@ A path pattern is a path with placeholders in braces. In `primary`, `{path}` mat
 
 A piece with `regex=` is a part of a file rather than the whole file, such as a method in a class or a `<style>` block in a component. Here each Ruby file's signature has to declare a class or a module:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 artifact "ruby-file" {
   primary "lib/{path}.rb"
@@ -58,6 +69,7 @@ policy "declares-a-class" {
   rule "piece-exists" piece="declaration"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 Write a regex as a KDL raw string, `#"..."#`, so that its backslashes and quotes reach CrossLint as written. The piece exists when its file has at least one match. A file that isn't there, or a path that is a folder, has no match, and the violation's message says which of the two CrossLint found:
 
@@ -70,6 +82,11 @@ The same holds for `when piece-exists`, for a rule in CrossLint's Ruby, and for 
 
 A regex on `primary` finds artifacts inside files. Each match in a file the primary pattern matches is one artifact, on the line where the match starts, and a file with no match has none. Each named capture, such as `(?<method>...)`, is a placeholder that the name, the path of each piece, and each piece's regex can use. Here each method in a Ruby file needs a test named after it:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 artifact "method" {
   primary "lib/{path}.rb" regex=#"^ *def (?<method>[a-z_]\w*)(?=[ (]|$)"#
@@ -82,12 +99,19 @@ policy "has-test" {
   rule "piece-exists" piece="test"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 CrossLint reports a violation of such an artifact with its line, then its name:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```text
 lib/fledge/archive.rb:13: fledge/archive#extract: no test in test/fledge/archive_test.rb (signatures/has-test)
 ```
+<!-- SPDX-SnippetEnd -->
 
 - A capture can't be named `path` or `name`, the placeholders of a path pattern.
 - A capture that the name, a piece's path, or a piece's regex uses, and that matched nothing in a match, is a fault, since a piece's path or regex without it would find what the author never meant.
@@ -170,6 +194,11 @@ A rule that needs code is run by a helper: a command and a file in the plugin's 
 | `command=PROGRAM` | A program on the project's `PATH`, such as `node`, with the project's versions and packages. The file speaks the line protocol in [Rules a program runs](#rules-a-program-runs). |
 | `command "PROGRAM" "WORD" ...`, in the helper's block | The same, for a program that takes words before the file, such as `command "bundle" "exec" "ruby"` for a project's Ruby with its gems. |
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 helper "names" command=(crosslint)"ruby" file="rules/signature_names_class.rb"
 helper "angular" command="node" file="lib/helper.js"
@@ -177,6 +206,7 @@ helper "routes" file="routes.rb" {
   command "bundle" "exec" "ruby"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 `(crosslint)` is a KDL type annotation, the only one a manifest reads. No program on a `PATH` can be mistaken for it, and `command="ruby"`, with no annotation, is the project's Ruby. Each helper's name is unique within the plugin.
 
@@ -184,6 +214,11 @@ helper "routes" file="routes.rb" {
 
 A helper on `command=(crosslint)"ruby"` is a file of Ruby that CrossLint runs itself, on the Ruby it carries, for each rule whose line gives the helper's name. The file defines one class for each such rule, named after the rule in camel case and inheriting from `CrossLint::Rule`, with a `check` method that takes the artifact and returns the rule's violations. `violation(artifact, message)` makes one:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```ruby
 # .config/crosslint/signatures/rules/signature_names_class.rb
 class SignatureNamesClass < CrossLint::Rule
@@ -198,7 +233,13 @@ class SignatureNamesClass < CrossLint::Rule
   end
 end
 ```
+<!-- SPDX-SnippetEnd -->
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 helper "names" command=(crosslint)"ruby" file="rules/signature_names_class.rb"
 rule "signature-names-class" helper="names"
@@ -209,6 +250,7 @@ policy "signature-matches" {
   rule "signature-names-class"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 The artifact a rule gets has these methods:
 
@@ -239,17 +281,29 @@ A rule in CrossLint's Ruby can call a helper that a program runs, with `helper("
 
 A helper whose command is a program speaks a line protocol: each request and each answer is one line of JSON. For each artifact the policy applies it to, CrossLint sends the helper one request and turns its answer into the rule's violations:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```json
 {"rule": "stub-matches-component", "artifact": {"path": "src/app/card/card.component.ts", "role": "component", "match": {"path": "app/card/card"},
   "key": "app/card/card", "pieces": {"stub": {"path": "src/app/card/card.component.stub.ts", "exists": true}}}}
 ```
+<!-- SPDX-SnippetEnd -->
 
 The helper answers `{"violations": [{"message": TEXT, "detail": TEXT}, ...]}`, with no `detail` for a violation the rule gives none, or `{"error": MESSAGE}`. CrossLint stops the plugin with a fault at an error, at an answer of any other shape, and at a helper that fails, as it does at anything a rule in CrossLint's Ruby raises. The helper reads files itself, so CrossLint's `project_files` and `read` don't reach it. A rule a helper runs takes no arguments, and its violations are errors, unless a `severity=` on its policy's `rule` line or in the configuration says otherwise. The helper must be one the plugin declares.
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 helper "angular" command="node" file="lib/helper.js"
 rule "stub-matches-component" helper="angular"
 ```
+<!-- SPDX-SnippetEnd -->
 
 CrossLint starts such a helper at its first request, as its command and then its file, in the project's root, with the environment CrossLint was started with. When the check ends, CrossLint closes the input of every helper at once, gives each 2 seconds to exit, and then ends it with everything it started; on Ctrl-C, it ends them without waiting. A helper CrossLint can't put in its process group or job object is ended at once, and is a fault. The helper's standard error appears under `--debug`. A helper that exits, answers with a line that isn't JSON, or doesn't answer within 60 seconds is a fault, and the message includes what it wrote to standard error.
 
@@ -259,6 +313,11 @@ A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, a
 
 A plugin can also declare a step, the settings it takes, and commands under the plugin's name. The debt plugin's `plugin.kdl`, which ships inside CrossLint, declares all four kinds of line:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 step "track-debt"
 
@@ -271,6 +330,7 @@ command "update" help="Rewrite the debt file to list the current violations" {
   flag "-n --dry-run" help="List the entries update would add and remove, and write nothing"
 }
 ```
+<!-- SPDX-SnippetEnd -->
 
 | Line | Meaning |
 | --- | --- |
@@ -288,15 +348,26 @@ A mistyped command, or a command of a plugin the configuration doesn't list, sto
 
 A plugin whose artifacts depend on its settings, such as a folder the project chooses, declares them with `artifacts helper=HELPER`, in place of or beside its `artifact` lines, so its settings change where it finds each role's files. A plugin that keeps Ruby files in a folder its project chooses could have:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```kdl
 setting "lib-dir"
 
 helper "artifacts" command=(crosslint)"ruby" file="artifacts.rb"
 artifacts helper="artifacts"
 ```
+<!-- SPDX-SnippetEnd -->
 
 When the helper is on `command=(crosslint)"ruby"`, its file defines a class `Artifacts` inheriting from `CrossLint::Artifacts`, whose `declare` method takes the plugin's settings and returns an array of artifacts:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```ruby
 # .config/crosslint/signatures/artifacts.rb
 class Artifacts < CrossLint::Artifacts
@@ -309,6 +380,7 @@ class Artifacts < CrossLint::Artifacts
   end
 end
 ```
+<!-- SPDX-SnippetEnd -->
 
 | Method | Meaning |
 | --- | --- |
@@ -322,8 +394,14 @@ Anything else `declare` raises stops CrossLint with exit status 2, naming the pl
 
 When the helper is a program, CrossLint starts it once, before any rule runs, sends it the plugin's settings, and stops it when it answers:
 
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
 ```json
 {"settings": [{"name": "lib-dir", "arguments": ["src"], "properties": {}, "children": [], "line": 3}]}
 ```
+<!-- SPDX-SnippetEnd -->
 
 The helper answers with the roles, each with the fields of `artifact` in the table for artifacts declared in CrossLint's Ruby, the role as `name`, and only `name` and `primary` needed: `{"artifacts": [{"name": "ruby-file", "primary": "src/{path}.rb", "pieces": {"signature": "sig/{path}.rbs"}}]}`. For a setting it can't use, it answers `{"mistake": {"message": TEXT, "line": LINE}}`, with the setting's line, and CrossLint stops with exit status 2 at that line of the configuration. CrossLint also stops with exit status 2 at an error, at an answer of any other shape, and at an artifact that isn't one, naming the plugin and the manifest's `artifacts` line. A manifest has one `artifacts` line.
