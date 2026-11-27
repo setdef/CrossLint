@@ -95,6 +95,19 @@ class RubyRuleTest < Minitest::Test
     assert_equal ["raised Errno::ENOENT: No such file or directory - docs/a.md"], result.faults.map(&:message)
   end
 
+  def test_reads_no_file_outside_the_project
+    asked = []
+    rule = CrossLint::Core::RubyRule.make(Class.new(CrossLint::Rule), ->(_name, input) { input }, [], ->(path) { (asked << path).last })
+    outside = ["../a.md", "/etc/hosts", "docs/../../a.md", "a/../..", ".."]
+    inside = ["a.md", "./a.md", "docs/../a.md", "docs//a.md", "docs/../docs/../a.md", "a/.."]
+
+    outcomes = outside.map { |path| assert_raises(Errno::ENOENT) { rule.read(path) }.message }
+
+    assert_equal outside.map { "No such file or directory - #{it}" }, outcomes
+    assert_equal inside, inside.map { rule.read(it) }
+    assert_equal inside, asked
+  end
+
   def test_makes_one_instance_of_a_rule_for_the_whole_check
     counting = <<~RUBY
       class NamesClass < CrossLint::Rule

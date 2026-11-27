@@ -108,8 +108,9 @@ module CrossLint
     # The text of the file at `path`, relative to the project's root with
     # `/` between folders, its bytes as UTF-8, as `Artifact#read` gives
     # an artifact's. Raises Errno::ENOENT when no file is at `path` by its
-    # exact name. A file Git ignores can be read, though it isn't among
-    # `project_files`.
+    # exact name, and for a path that is absolute or that `..` takes out
+    # of the project, whatever is there. A file Git ignores can be read,
+    # though it isn't among `project_files`.
     def read: (String path) -> String
 
     # A violation of `artifact`, an Artifact `check` was given, with
@@ -129,5 +130,9 @@ module CrossLint
 
     # What reads a file of the project, set before initialize.
     @crosslint_read: ^(String path) -> String
+
+    # Whether `path`, followed through . and .., stays in the project's
+    # root, which an absolute path doesn't.
+    def crosslint_inside?: (String path) -> bool
   end
 end

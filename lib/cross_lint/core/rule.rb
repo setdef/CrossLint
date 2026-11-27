@@ -54,7 +54,11 @@ module CrossLint
 
     def project_files = @crosslint_files
 
-    def read(path) = @crosslint_read.call(path)
+    def read(path)
+      raise Errno::ENOENT, path unless crosslint_inside?(path)
+
+      @crosslint_read.call(path)
+    end
 
     def violation(artifact, message, detail: nil)
       raise Core::PluginError, "made a violation of #{artifact.inspect}, which is no artifact it was given" unless artifact.instance_of?(Artifact)
@@ -62,6 +66,20 @@ module CrossLint
       raise Core::PluginError, "made a violation whose detail is #{detail.inspect}, which is no string" unless detail.nil? || detail.instance_of?(String)
 
       Core::RuleResult.new(path: artifact.path, role: artifact.role, message:, detail:)
+    end
+
+    private
+
+    # Whether `path`, followed through . and .., stays in the project's
+    # root, which an absolute path doesn't.
+    def crosslint_inside?(path)
+      return false if path.start_with?("/")
+
+      depth = 0
+      path.split("/").all? do |part|
+        depth += {"" => 0, "." => 0, ".." => -1}.fetch(part, 1)
+        depth >= 0
+      end
     end
   end
 end
