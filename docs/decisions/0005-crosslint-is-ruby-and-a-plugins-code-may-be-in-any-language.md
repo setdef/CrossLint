@@ -1,7 +1,7 @@
 ---
 status: proposed
 date: 2026-11-27
-deciders: setdef's maintainer chose one CrossLint, in Ruby, whose plugins may carry helpers, in #4, then chose that a plugin's code may be in any language, on the project's runtime, and that the Angular plugin be ng-nudge's classes in JavaScript with ts-morph; the agent acting as CrossLint's architect chose how a helper runs rules and declares artifacts, and that a plugin's Ruby on the Ruby CrossLint carries is a helper like any other, which runs in CrossLint's process
+deciders: setdef's maintainer chose one CrossLint, in Ruby, whose plugins may carry helpers, in #4, then chose that a plugin's code may be in any language, on the project's runtime, that the Angular plugin be ng-nudge's classes in JavaScript with ts-morph, that every helper be a command and a file, that the Ruby CrossLint carries be the command `(crosslint)"ruby"`, a type annotation that no command on a `PATH` can clash with, and that a command of several words be written as arguments; the agent acting as CrossLint's architect chose how a helper runs rules and declares artifacts, and that a helper on the Ruby CrossLint carries runs in CrossLint's process
 ---
 
 # CrossLint is one program, in Ruby, and a plugin's code may be in any language
