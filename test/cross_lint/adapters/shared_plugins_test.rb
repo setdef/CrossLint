@@ -333,6 +333,7 @@ class GitSharedPluginsTest < Minitest::Test
 
     assert_equal ["ls-remote", repository_url, "refs/tags/v1.0.0", "refs/heads/v1.0.0"], commands.first
     assert(repository.all? { |argv| argv[0] == "--git-dir" && argv[2] == "--work-tree" && argv[4, SETTINGS.size] == SETTINGS })
+    assert_equal [File.join(File.dirname(repository.first.fetch(1)), "files", "signatures")], repository.map { |argv| argv.fetch(3) }.uniq
     assert_equal [["init", "-q"], ["fetch", "-q", "--depth", "1", "--no-tags", repository_url, "refs/tags/v1.0.0"],
       ["checkout", "-q", "--detach", "FETCH_HEAD"]], repository.map { |argv| argv.drop(4 + SETTINGS.size) }
   end
@@ -462,7 +463,7 @@ class GitSharedPluginsTest < Minitest::Test
   def test_stops_when_it_cant_save_the_copy
     error = denying_renames { assert_raises(Core::FetchError) { port.fetch(repository_url, "v1.0.0") } }
 
-    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(@base, "cache", "plugins"))}: /, error.message)
+    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(@base, "cache", "plugins"))}: Permission denied/, error.message)
     assert_empty Dir.children(File.join(@base, "cache", "plugins"))
   end
 
@@ -470,7 +471,7 @@ class GitSharedPluginsTest < Minitest::Test
     blocked = write(@base, "blocked", "a file")
     error = assert_raises(Core::FetchError) { port(cache: blocked).fetch(repository_url, "v1.0.0") }
 
-    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(blocked, "plugins"))}: /, error.message)
+    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(blocked, "plugins"))}: \S.*#{Regexp.escape(blocked)}/, error.message)
   end
 
   def test_ends_git_and_everything_it_started_at_the_time_limit
@@ -702,6 +703,64 @@ class GitSharedPluginsTest < Minitest::Test
     assert_nil nothing.cached("https://example.com/OWNER/signatures", "v1.0.0")
     assert_nil port.cached("https://example.com/OWNER/a b", "v1.0.0")
     assert_empty said
+  end
+
+  def test_keeps_its_cache_where_this_system_keeps_one_unless_it_is_told_otherwise
+    env = {"XDG_CACHE_HOME" => File.expand_path("/xdg/cache"), "LOCALAPPDATA" => File.expand_path("/local")}
+    url = "https://example.com/OWNER/signatures"
+    caches = [true, false].map do |windows|
+      as_windows(windows) { File.dirname(Adapters::GitSharedPlugins.new(err: @err, env:).folder(url, "v1.0.0"), 2) }
+    end
+
+    assert_equal [File.join(File.expand_path("/local"), "crosslint", "cache", "plugins"), File.join(File.expand_path("/xdg/cache"), "crosslint", "plugins")], caches
+  end
+
+  def test_gives_git_the_environment_a_launcher_saved_before_it_changed_it
+    saved = fake("saved.rb", "puts \"abc\\trefs/tags/\#{ENV.fetch(\"CROSSLINT_SAVED\")}-\#{ENV.fetch(\"BUNDLER_ORIG_CROSSLINT_SAVED\", \"none\")}\"\n")
+    ENV["CROSSLINT_SAVED"] = "after"
+
+    assert_equal ["before-none"], port(git: saved, env: {"BUNDLER_ORIG_CROSSLINT_SAVED" => "before"}).tags(repository_url)
+  ensure
+    ENV.delete("CROSSLINT_SAVED")
+  end
+
+  def test_gives_no_folder_for_a_url_the_port_doesnt_accept
+    fetched = port.fetch(repository_url, "v1.0.0")
+    https_only = Adapters::GitSharedPlugins.new(err: @err, cache: File.join(@base, "cache"))
+
+    assert_equal [fetched, nil], [port.cached(repository_url, "v1.0.0"), https_only.cached(repository_url, "v1.0.0")]
+  end
+
+  def test_gives_no_folder_for_a_ref_that_git_would_read_as_more_than_a_tag
+    FileUtils.mkdir_p(File.join(entry_for(repository_url, "a:b"), "signatures"))
+    FileUtils.mkdir_p(File.join(entry_for(repository_url, "-x"), "signatures"))
+
+    assert_equal [nil, nil], [port.cached(repository_url, "a:b"), port.cached(repository_url, "-x")]
+  end
+
+  def test_lists_each_tag_as_what_follows_the_first_tab_of_its_line
+    listing = fake("lists.rb", "print \"abc\\trefs/tags/v1.0.0\\nabc\\trefs/tags/with space\\n\"\n")
+
+    assert_equal ["v1.0.0", "with space"], port(git: listing).tags(repository_url)
+  end
+
+  def test_takes_the_ref_as_a_tag_only_when_ls_remote_lists_exactly_that_tag_and_as_a_branch_only_when_it_lists_exactly_that_branch
+    cases = {
+      "abc\trefs/tags/v1x0x0\n" => Core::FetchError.no_tag("v1.0.0"),
+      "abc\trefs/tags/v1.0.0-rc\n" => Core::FetchError.no_tag("v1.0.0"),
+      "abc\tx/refs/tags/v1.0.0\n" => Core::FetchError.no_tag("v1.0.0"),
+      "abc\trefs/heads/v1.0.0\n" => Core::FetchError.branch("v1.0.0"),
+      "abc\trefs/heads/v1x0x0\n" => Core::FetchError.no_tag("v1.0.0"),
+      "abc\trefs/heads/v1.0.0-rc\n" => Core::FetchError.no_tag("v1.0.0"),
+      "abc\tx/refs/heads/v1.0.0\n" => Core::FetchError.no_tag("v1.0.0")
+    }
+    script = "print File.read(File.join(__dir__, \"listing\"))\nexit(ARGV.include?(\"ls-remote\") ? 0 : 1)\n"
+    messages = cases.keys.map do |listing|
+      write(File.join(@base, "fakes"), "listing", listing)
+      assert_raises(Core::FetchError) { port(git: fake("lists.rb", script)).fetch(repository_url, "v1.0.0") }.message
+    end
+
+    assert_equal cases.values.map(&:message), messages
   end
 
   def test_unsets_each_git_variable_and_no_other

@@ -149,7 +149,7 @@ module CrossLint
       # fetch; neither stops this one.
       def prune
         oldest = @clock.now - STALE
-        Dir.glob(".fetching-*", base: plugins).each do |name|
+        Dir.glob(".fetching-*", base: plugins) do |name|
           folder = File.join(plugins, name)
           FileUtils.rm_rf(folder) if File.mtime(folder) <= oldest
         rescue SystemCallError
