@@ -1,6 +1,9 @@
 # Changelog
 
-This file lists what changes for the people who use CrossLint. It follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). While the major version is 0, a minor release may break what a release before it did, and each such change here is marked **Breaking**.
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
@@ -51,5 +54,5 @@ This file lists what changes for the people who use CrossLint. It follows [Keep 
 - Release archives of CrossLint for macOS on Apple silicon, Linux on x86-64, and Windows on x86-64, each with everything it needs, and a `SHA256SUMS` file.
 
 [Unreleased]: https://github.com/setdef/CrossLint/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/setdef/CrossLint/compare/v0.1.0...v0.2.0
+[0.2.0]: https://github.com/setdef/CrossLint/releases/tag/v0.2.0
 [0.1.0]: https://github.com/setdef/CrossLint/releases/tag/v0.1.0
