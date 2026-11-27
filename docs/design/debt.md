@@ -1,30 +1,25 @@
 # Debt
 
-What the debt plugin must guarantee, and the traps known so far. The file's settings are in [the configuration reference](../reference/configuration.md#debt); how to meet each requirement is the implementer's choice.
+How the debt plugin keeps a project's debt, and why each is done the way it is. The debt file's format and settings are in [the configuration reference](../reference/configuration.md#debt).
 
 ## The file
 
-- **ng-nudge's format, read and written byte for byte.** Tab-separated, with a header row `Rule`, `Artifact`, `Comment`, and `Detail` as an optional fourth column, which ng-nudge ignores. A field with a tab, a newline, a carriage return, or `"` is wrapped in `"` with each `"` doubled, as d3-dsv writes it; the file ends with a newline. A row CrossLint keeps is written back exactly as it was read, quoting included, so a diff after an update shows only real changes.
-- **Read CRLF line endings, and write what the file had.** A debt file committed on Windows can have them.
-- **Keys use `/` on every system.** A key read with `\` is read as `/`, and every key is written with `/`, so one debt file matches on macOS, Linux, and Windows.
-- **Replace the file whole.** Write to a temporary file beside it and rename it into place, so an interrupted update leaves the previous file. Create the folder when it doesn't exist.
-- **An empty file keeps its header.**
-- **A row with no rule or no artifact** stops CrossLint with exit status 2, naming the file and the line.
+- **The format is ng-nudge's, read and written byte for byte,** so a debt file moved from ng-nudge reads unchanged, and a row CrossLint keeps is written back exactly as it was read, quoting included. A diff after an update then shows only real changes, which is what a reviewer reads the debt file for.
+- **Keys use `/` on every system,** and line endings stay as the file had them, so one debt file, committed from any computer, matches on macOS, Linux, and Windows.
+- **The file is replaced whole,** through a temporary file with a name of its own beside it, renamed into place, so an interrupted update leaves the previous file.
 
 ## Matching
 
-- **A violation's identity is its plugin and policy, its artifact with the artifact's role, and its detail,** such as a member's name. An entry matches one violation with the same identity. The `Artifact` column holds the artifact's primary path or its key, such as the base path ng-nudge writes for an Angular artifact (`app/card/card`), each alone or as `<name>.<role>`; CrossLint reads all four, and writes the primary path, or `<path>.<role>` when two roles share it. The `Rule` column holds `PLUGIN/POLICY`, or a bare name, as ng-nudge writes it, which stands for the policy of that name when exactly one listed plugin has one.
-- **An entry with no detail matches only a violation with no detail.** Except: an entry written by ng-nudge, for a policy whose violations carry a detail, matches every violation of that policy on its artifact, with a warning naming the entry, until `crosslint debt update` rewrites it as one entry per violation, each with its detail. Moving from ng-nudge then adds no failures, and the coarse matching ends after one update.
-- **An entry two artifacts match** excuses both, with a warning naming both, and `crosslint debt update` rewrites it as one entry per artifact, keyed `<base>.<role>`.
-- **An entry for a disabled policy, or for a plugin the configuration doesn't list, is not checked:** neither stale nor reported, and `crosslint debt update` keeps it with its comment.
-- **Excusing, stale detection, and `crosslint debt update` see every violation,** whatever `--warnings` or `--quiet` hides.
+- **A violation's identity is its plugin and policy, its artifact with the artifact's role, and its detail,** such as a missing member's name. An entry matches one violation with the same identity, so fixing one of an artifact's problems shows as one stale entry, not as the artifact's whole entry.
+- **An entry may name its artifact by path or by key.** The key is a second name an artifact declaration gives, such as ng-nudge's base path for an Angular artifact, so entries ng-nudge wrote match without being rewritten.
+- **ng-nudge's coarse entries still match, once.** ng-nudge wrote one entry per rule and artifact, with no detail, so such an entry matches every violation of its policy on its artifact, with a warning, until the next update rewrites it as one entry per violation. Moving from ng-nudge then adds no failures, and the coarse matching ends after one update.
+- **An entry for a disabled policy, or for a plugin the configuration doesn't list, is left alone:** neither stale nor reported, and kept by an update with its comment. ng-nudge treated such entries as paid off and deleted them with their comments, so turning a rule off for a week lost the reasons written down for it.
+- **Matching sees every violation,** whatever `--warnings` or `--quiet` hides, so a hidden warning can't look like a fixed one.
 
 ## Updating
 
-- `crosslint debt update` keeps each entry that still matches, with its comment, in its place; drops stale entries; adds one entry per new violation, warnings included, with an empty comment, never a duplicate; and never records the debt plugin's `has-debt` violations.
-- New entries are written in an order that doesn't depend on the order the filesystem lists files in.
-- After an update, report the state the update left, and exit with 0.
-- `crosslint debt update --dry-run` lists each entry the update would add, remove, or replace, each replaced entry followed by the entry it becomes, in the order it would write them, then the summary, and writes nothing: no debt file, no folder. It exits with 0.
+- **An update changes only what changed:** an entry that still matches keeps its place and its comment, so the comments people wrote survive every update.
+- **A dry run lists exactly what an update would write,** so it can be read before it is trusted.
 
 ## Defects not to copy
 
