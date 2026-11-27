@@ -25,4 +25,12 @@ A link resolves as GitHub resolves it in a repository's Markdown:
 
 The plugin reads inline links and images, reference definitions such as `[guide]: docs/guide.md`, and `href` and `src` in HTML tags. It skips links with a scheme, such as `https:` or `mailto:`, links that start with `//`, and empty ones. It skips what GitHub doesn't render as a link: fenced code blocks, code spans, HTML comments, front matter, and brackets escaped with a backslash. An indented code block is read as text, so a link in one is checked.
 
+The text of a link, or of an image's alt text, may hold brackets, as in `[the [draft] guide](docs/guide.md)`. A link with `?plain=1`, which shows a file's source on GitHub, has no anchor checked, since its anchor is a line there.
+
+What it doesn't read:
+
+- A heading inside a block quote or a list item. A link to its anchor is reported as having no heading, though GitHub renders one.
+- An HTML attribute whose value has no quotes, as in `<a href=docs/guide.md>`. The link isn't checked.
+- A character reference in a destination. `&amp;` is read as the five characters it is written with, not as `&`, so a destination that holds one resolves to a file named with them, or to none.
+
 Files Git ignores are never checked, and neither is any file not named `.md`.
