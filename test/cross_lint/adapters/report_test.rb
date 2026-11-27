@@ -132,6 +132,16 @@ class TextReportTest < Minitest::Test
     assert_equal "lib/app/a.rb: app/a: no test (tests/has-test)\nlib/app/b.rb: app/b: ruby-file passes\n", @out.string
   end
 
+  def test_writes_the_line_of_an_artifact_a_regex_found
+    route = Violation.new(plugin: "routes", policy: "has-action", artifact: "get /cart", path: "config/routes.rb", line: 2, role: "route",
+      message: "no action in app/controllers/carts_controller.rb", severity: :error, detail: nil)
+    passing = Artifact.new(plugin: "routes", role: "route", path: "config/routes.rb", name: "get /", line: 4, match: {}, pieces: [])
+    report_port.write(result_of([route, passing]))
+
+    assert_equal "config/routes.rb:2: get /cart: no action in app/controllers/carts_controller.rb (routes/has-action)\n" \
+                 "config/routes.rb:4: get /: route passes\n", @out.string
+  end
+
   def test_colors_only_the_message_by_its_severity
     CrossLint::Adapters::TextReport.new(out: @out, err: @err, color: true)
       .write(result_of([violation_of("lib/a.rb", "no test"), violation_of("lib/b.rb", "no sig", :warning)]))
@@ -214,8 +224,8 @@ class JSONReportTest < Minitest::Test
     report_port.write(result_of([violation_of("lib/a.rb", "no test"), violation_of("lib/b.rb", "x", :warning, detail: "y")]))
 
     assert_equal <<~JSON.delete("\n") + "\n", @out.string
-      {"findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null},
-      {"path":"lib/b.rb","message":"x","plugin":"tests","policy":"has-test","artifact":"lib/b.rb","role":"ruby-file","severity":"warning","detail":"y"}],
+      {"findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null},
+      {"path":"lib/b.rb","message":"x","plugin":"tests","policy":"has-test","artifact":"lib/b.rb","role":"ruby-file","severity":"warning","detail":"y","line":null}],
       "stale":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"stale":0}}
     JSON
     assert_equal "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning\n", @err.string
@@ -226,7 +236,7 @@ class JSONReportTest < Minitest::Test
       severity: :error, detail: nil)
     report_port.write(result_of([named]))
 
-    assert_equal [["lib/app/a.rb", "app/a"]], JSON.parse(@out.string).fetch("findings").map { [it.fetch("path"), it.fetch("artifact")] }
+    assert_equal [["lib/app/a.rb", "app/a", nil]], JSON.parse(@out.string).fetch("findings").map { [it.fetch("path"), it.fetch("artifact"), it.fetch("line")] }
   end
 
   def test_writes_each_stale_entry_with_its_keys_in_order

@@ -30,8 +30,8 @@ A plugin's name is its folder's name, here `signatures`. CrossLint names each vi
 
 | Child | Meaning |
 | --- | --- |
-| `primary PATTERN` | The path pattern that finds each artifact's primary piece, relative to the project's root. Required, once. |
-| `name PATTERN` | The artifact's name, from the placeholders of `primary`, such as `name "{path}"`. CrossLint calls the artifact by its name in every violation and debt entry, and writes it after the primary piece's path in a report. Optional, once; without it, an artifact's name is its primary piece's path. Two artifacts of one role with one name are a fault, since a debt entry for one would match the other too. |
+| `primary PATTERN` | The path pattern that finds each artifact's primary piece, relative to the project's root. With `regex=REGEX`, each match of [the regex](#regexes) in such a file is an artifact, such as each route in `config/routes.rb`. Required, once. |
+| `name PATTERN` | The artifact's name, from the placeholders of `primary` and the captures of its regex, such as `name "{path}"`. CrossLint calls the artifact by its name in every violation and debt entry, and writes it after the primary piece's path in a report. Optional, once; without it, an artifact's name is its primary piece's path. Two artifacts of one role with one name are a fault, since a debt entry for one would match the other too. |
 | `piece NAME PATTERN` | A piece called `NAME`, at the path `PATTERN` gives for each primary piece. With `regex=REGEX`, the piece is a part of that file: it exists when [the regex](#regexes) has a match there. Any number, each name once. |
 
 A path pattern is a path with placeholders in braces. In `primary`, `{path}` matches a file name and the folders before it, if any, and `{name}` matches one segment of a path, with no `/`. In a piece's pattern, each placeholder stands for what it matched in `primary`. For `lib/fledge/archive.rb`, the pattern `lib/{path}.rb` matches with `{path}` as `fledge/archive`, so the piece `sig/{path}.rbs` is `sig/fledge/archive.rbs`; for `lib/fledge.rb`, `{path}` is `fledge`.
@@ -39,7 +39,7 @@ A path pattern is a path with placeholders in braces. In `primary`, `{path}` mat
 - A pattern uses `/` on every system, and matches case-sensitively.
 - Files that Git ignores, and anything under `.git/`, never match.
 - A file that two artifacts' `primary` patterns both match is the primary piece of each, and both are checked.
-- An artifact whose `primary` pattern matches no file is reported once as a warning, since a pattern that finds nothing usually has a typo.
+- An artifact whose `primary` pattern matches no file, or whose regex matches nothing in any file it matches, is reported once as a warning, since a pattern that finds nothing usually has a typo.
 
 ### Regexes
 
@@ -68,7 +68,35 @@ Write a regex as a KDL raw string, `#"..."#`, so that its backslashes and quotes
 
 The same holds for `when piece-exists`, for a rule in CrossLint's Ruby, and for a helper: the piece exists only when its file has a match.
 
-A placeholder in a regex stands for what it matched in `primary`, as literal text: in `def {name}\b`, a `{name}` that matched `show.all` matches `show.all` and never `showXall`. `\{` is a brace, and `{2}` and `{2,3}` stay counts. A placeholder the primary pattern doesn't have stops CrossLint with exit status 2.
+A regex on `primary` finds artifacts inside files. Each match in a file the primary pattern matches is one artifact, on the line where the match starts, and a file with no match has none. Each named capture, such as `(?<method>...)`, is a placeholder that the name, the path of each piece, and each piece's regex can use. Here each method in a Ruby file needs a test named after it:
+
+```kdl
+artifact "method" {
+  primary "lib/{path}.rb" regex=#"^ *def (?<method>[a-z_]\w*)(?=[ (]|$)"#
+  name "{path}#{method}"
+  piece "test" "test/{path}_test.rb" regex=#"def test_{method}\b"#
+}
+
+policy "has-test" {
+  applies-to "method"
+  rule "piece-exists" piece="test"
+}
+```
+
+CrossLint reports a violation of such an artifact with its line, then its name:
+
+```text
+lib/fledge/archive.rb:13: fledge/archive#extract: no test in test/fledge/archive_test.rb (signatures/has-test)
+```
+
+- A capture can't be named `path` or `name`, the placeholders of a path pattern.
+- A capture that the name, a piece's path, or a piece's regex uses, and that matched nothing in a match, is a fault, since a piece's path or regex without it would find what the author never meant.
+- Two matches with one name are a fault, as two artifacts of a role with one name always are. Without `name`, every artifact in a file has the file's path as its name, so a primary regex usually needs a `name`.
+- A capture comes from the project's text, so a piece path in which it would put a `.` or `..` segment, or an empty one, is never a file of the project: the piece doesn't exist.
+- What a capture didn't take part in isn't in `match`, in a rule in CrossLint's Ruby or in a helper's request.
+- An artifact declared in CrossLint's Ruby or by a helper can't have a regex.
+
+A placeholder in a regex stands for what it matched in `primary`, or what the primary's regex captured, as literal text: in `def {method}\b`, a `{method}` that captured `show.all` matches `show.all` and never `showXall`. `\{` is a brace, and `{2}` and `{2,3}` stay counts. A placeholder that is neither stops CrossLint with exit status 2.
 
 #### The dialect
 
@@ -188,7 +216,7 @@ The artifact a rule gets has these methods:
 | --- | --- |
 | `path` | The primary piece's path, relative to the project's root. |
 | `role` | The artifact's name, such as `ruby-file`. |
-| `match` | What each placeholder matched, by name: `artifact.match["path"]`. |
+| `match` | What each placeholder matched, and each capture of the primary's regex, by name: `artifact.match["path"]`. |
 | `read` | The primary piece's contents. |
 | `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`. For a piece with a regex, `exist?` says whether its file has a match, and `read` gives the whole file. |
 

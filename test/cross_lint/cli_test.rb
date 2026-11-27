@@ -219,7 +219,7 @@ class CLITest < Minitest::Test
     out, err, status = check("check", "--json", app: app)
 
     assert_equal [{"path" => "lib/b.rb", "message" => "no test file at test/b_test.rb", "plugin" => "tests", "policy" => "has-test",
-                   "artifact" => "lib/b.rb", "role" => "ruby-file", "severity" => "error", "detail" => nil}], JSON.parse(out).fetch("findings")
+                   "artifact" => "lib/b.rb", "role" => "ruby-file", "severity" => "error", "detail" => nil, "line" => nil}], JSON.parse(out).fetch("findings")
     assert_equal ["crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], [err, status]
   end
 

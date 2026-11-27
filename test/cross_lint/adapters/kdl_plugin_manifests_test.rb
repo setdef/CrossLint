@@ -82,11 +82,12 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_every_example_in_the_plugin_reference
-    first, regexes, helpers, ruby_rule, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
+    first, regexes, methods, helpers, ruby_rule, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
 
     assert_equal [["ruby-file", ["signature", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.pieces.map(&:name)] }
     assert_equal [["has-signature", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
     assert_equal [nil, '^\s*(?:class|module) '], regexes.artifacts.first.pieces.map { it.regex&.source }
+    assert_equal [["method"], "{path}\#{method}"], [methods.artifacts.first.regex.captures, methods.artifacts.first.name_pattern.source]
     assert_equal [["signature-names-class", "rules/signature_names_class.rb", 2]],
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
     assert_equal Condition::PieceExists.new(piece: "signature", line: 6), ruby_rule.policies.first.condition
@@ -158,7 +159,7 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 1, %(artifact "a" has no primary), %(artifact "a" { piece "b" "c"; })
     assert_refuses 3, "artifact has primary twice; the first is on line 2", %(artifact "a" {\n  primary "x"\n  primary "y"\n}\n)
     assert_refuses 2, "primary has 2 arguments; write it as primary PATTERN", %(artifact "a" {\n  primary "x" "y"\n}\n)
-    assert_refuses 2, %(unknown property "glob"; primary takes none), %(artifact "a" {\n  primary "x" glob=#true\n}\n)
+    assert_refuses 2, %(unknown property "glob"; expected "regex"), %(artifact "a" {\n  primary "x" glob=#true\n}\n)
     assert_refuses 2, %(unknown node "x"; primary takes no children), %(artifact "a" {\n  primary "x" { x; }\n}\n)
     assert_refuses 3, "piece has 1 argument; write it as piece NAME PATTERN", %(artifact "a" {\n  primary "x"\n  piece "b"\n}\n)
     assert_refuses 3, %(unknown property "optional"; expected "regex"),
@@ -184,6 +185,31 @@ class KDLPluginManifestsTest < Minitest::Test
     artifact = read(%(artifact "a" {\n  primary "src/{path}.vue"\n  piece "style" "src/{path}.vue" regex=#"<style {path}"#\n  piece "b" "x"\n}\n)).artifacts.first
 
     assert_equal ["<style {path}", nil], artifact.pieces.map { it.regex&.source }
+  end
+
+  def test_reads_the_regex_of_a_primary_whose_captures_the_name_and_the_pieces_may_use
+    artifact = read(<<~'KDL').artifacts.first
+      artifact "route" {
+        primary "config/routes.rb" regex=#"get "(?<route>[^"]+)", to: "(?<controller>\w+)#(?<action>\w+)""#
+        name "get {route}"
+        piece "action" "app/controllers/{controller}_controller.rb" regex=#"def {action}\b"#
+      }
+    KDL
+
+    assert_equal [%w[route controller action], "get {route}", "app/controllers/{controller}_controller.rb", 'def {action}\b'],
+      [artifact.regex.captures, artifact.name_pattern.source, artifact.pieces.first.pattern.source, artifact.pieces.first.regex.source]
+  end
+
+  def test_refuses_a_primarys_regex_whose_capture_has_a_placeholders_name_or_that_the_others_use_wrong
+    assert_refuses 2, "regex captures (?<path>...), which has the name of a placeholder; name it otherwise",
+      %(artifact "a" {\n  primary "x" regex="(?<path>y)"\n}\n)
+    assert_refuses 3, %(name "{name}" uses {name}, which neither the primary pattern "x" has nor its regex captures),
+      %(artifact "a" {\n  primary "x" regex="(?<route>y)"\n  name "{name}"\n}\n)
+    assert_refuses 3, %(path pattern "{routes}" has unknown placeholder "{routes}", did you mean "{route}"?),
+      %(artifact "a" {\n  primary "x" regex="(?<route>y)"\n  name "{routes}"\n}\n)
+    assert_refuses 3, %(regex "{routes}" has unknown placeholder "{routes}", did you mean "{route}"?),
+      %(artifact "a" {\n  primary "x" regex="(?<route>y)"\n  piece "b" "x" regex="{routes}"\n}\n)
+    assert_refuses 2, %(regex "(?<route>y){route}" has unknown placeholder "{route}"; write \\{ for a brace), %(artifact "a" {\n  primary "x" regex="(?<route>y){route}"\n}\n)
   end
 
   def test_refuses_a_pieces_regex_that_is_not_one

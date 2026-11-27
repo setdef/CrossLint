@@ -54,8 +54,8 @@ module CrossLint
       # The primary file's path, relative to the project's root, with `/`.
       attr_reader path: String
 
-      # What each placeholder of the primary pattern matched in `path`, by
-      # name.
+      # What each placeholder of the primary pattern matched in `path`, and
+      # each capture of its regex that took part in the match, by name.
       attr_reader match: Hash[String, String]
 
       # The pieces, in the order the declaration has them.
@@ -70,14 +70,26 @@ module CrossLint
       # primary path.
       attr_reader name: String
 
-      # An artifact with these fields, no key unless given, and named by
-      # its primary path unless given a name.
+      # The line of the primary file where its declaration's regex
+      # matched, from 1, or nil for an artifact that is a whole file.
+      attr_reader line: Integer?
+
+      # An artifact with these fields, no key or line unless given, and
+      # named by its primary path unless given a name.
       def self.new: (plugin: String, role: String, path: String, match: Hash[String, String],
-                     pieces: Array[Piece], ?key: String?, ?name: String) -> instance
+                     pieces: Array[Piece], ?key: String?, ?name: String, ?line: Integer?) -> instance
 
       # An artifact with these fields, as for `new`.
       def initialize: (plugin: String, role: String, path: String, match: Hash[String, String],
-                       pieces: Array[Piece], ?key: String?, ?name: String) -> void
+                       pieces: Array[Piece], ?key: String?, ?name: String, ?line: Integer?) -> void
+
+      # Where the artifact is: its path, and its line, if it has one.
+      #
+      # ```ruby
+      # CrossLint::Core::Artifact.new(plugin: "routes", role: "route", path: "config/routes.rb", match: {}, pieces: [], line: 2).location
+      # # => "config/routes.rb:2"
+      # ```
+      def location: () -> String
 
       # The piece called `name`. Raises KeyError when the declaration
       # has none of that name, which LoadProject rules out for every
@@ -119,14 +131,17 @@ module CrossLint
       # The artifact's primary file, relative to the project's root.
       attr_reader path: String
 
-      # A violation with these fields, no key unless given, and `artifact`
-      # as its path unless given one.
+      # The artifact's line, or nil.
+      attr_reader line: Integer?
+
+      # A violation with these fields, no key or line unless given, and
+      # `artifact` as its path unless given one.
       def self.new: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
-                     detail: String?, ?key: String?, ?path: String) -> instance
+                     detail: String?, ?key: String?, ?path: String, ?line: Integer?) -> instance
 
       # A violation with these fields, as for `new`.
       def initialize: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
-                       detail: String?, ?key: String?, ?path: String) -> void
+                       detail: String?, ?key: String?, ?path: String, ?line: Integer?) -> void
     end
   
     # What a Ruby rule reports, made with CrossLint::Rule#violation: the

@@ -68,16 +68,24 @@ module CrossLint
       # Reads an `artifact` node.
       def artifact: (KDLDocument document, KDLDocument::Node node) -> Core::ArtifactDeclaration
 
+      # The regex= of a `primary` node, which may use the placeholders of
+      # `primary`, and whose captures can't have their names.
+      def primary_regex: (KDLDocument document, KDLDocument::Node node, Core::PathPattern primary) -> Core::Regex?
+
+      # Reads a `piece` node of the artifact `declared`.
+      def piece: (KDLDocument document, KDLDocument::Node node, Core::ArtifactDeclaration declared) -> Core::PieceDeclaration
+
       # The pattern of a `name` node, which may use only the placeholders
-      # of `primary`.
-      def name_pattern: (KDLDocument document, KDLDocument::Node node, Core::PathPattern primary) -> Core::PathPattern
+      # of `declared`'s primary pattern and the captures of its regex.
+      def name_pattern: (KDLDocument document, KDLDocument::Node node, Core::ArtifactDeclaration declared) -> Core::PathPattern
 
       # The regex= of `node`, which may use the placeholders in `known`, or
       # nil when it has none.
       def regex: (KDLDocument document, KDLDocument::Node node, Array[String] known) -> Core::Regex?
 
-      # The path pattern `source`, written on `node`.
-      def pattern: (KDLDocument document, KDLDocument::Node node, String source) -> Core::PathPattern
+      # The path pattern `source`, written on `node`, which may use
+      # `captures` as placeholders.
+      def pattern: (KDLDocument document, KDLDocument::Node node, String source, ?Array[String] captures) -> Core::PathPattern
 
       # Reads a `policy` node.
       def policy: (KDLDocument document, KDLDocument::Node node) -> Core::Policy

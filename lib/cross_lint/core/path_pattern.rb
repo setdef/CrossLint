@@ -4,7 +4,7 @@ require_relative "fault"
 
 module CrossLint
   module Core
-    class PathPattern < Data.define(:source)
+    class PathPattern < Data.define(:source, :captures)
       PLACEHOLDERS = %w[path name].freeze
 
       PLACEHOLDER = /\{([^{}]*)\}/
@@ -13,13 +13,13 @@ module CrossLint
 
       class Invalid < ArgumentError; end
 
-      def self.problem(source)
+      def self.problem(source, known = PLACEHOLDERS)
         return "path pattern #{source.dump} is empty" if source.empty?
         return "path pattern #{source.dump} has \\; write / between folders on every system" if source.include?("\\")
 
-        unknown = source.scan(PLACEHOLDER).flatten.find { |placeholder| !PLACEHOLDERS.include?(placeholder) }
+        unknown = source.scan(PLACEHOLDER).flatten.find { |placeholder| !known.include?(placeholder) }
         if unknown
-          return "path pattern #{source.dump} has #{Spelling.unknown("placeholder", "{#{unknown}}", PLACEHOLDERS.map { |known| "{#{known}}" })}"
+          return "path pattern #{source.dump} has #{Spelling.unknown("placeholder", "{#{unknown}}", known.map { |each| "{#{each}}" })}"
         end
 
         brace = source.gsub(PLACEHOLDER, "")[/[{}]/]
@@ -37,8 +37,8 @@ module CrossLint
         new(source:)
       end
 
-      def initialize(source:)
-        problem = PathPattern.problem(source)
+      def initialize(source:, captures: [])
+        problem = PathPattern.problem(source, PLACEHOLDERS + captures)
         raise Invalid, problem if problem
 
         super

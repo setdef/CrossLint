@@ -365,11 +365,10 @@ module CrossLint
       def check_artifact(artifact, file)
         once(artifact.pieces, "piece", file)
         artifact.pieces.each do |piece|
-          extra = piece.pattern.placeholders - artifact.primary.placeholders
+          extra = piece.pattern.placeholders - artifact.placeholders
           next if extra.empty?
 
-          raise Mistake.new("piece #{piece.name.dump} uses {#{extra.first}}, which the primary pattern " \
-            "#{artifact.primary.source.dump} doesn't have", file:, line: piece.line)
+          raise Mistake.new("piece #{piece.name.dump} #{artifact.lacking(extra.first)}", file:, line: piece.line)
         end
       end
 

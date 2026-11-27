@@ -19,7 +19,8 @@ module CrossLint
       def initialize: (project_files: _ProjectFiles, root: String, files: Array[String]) -> void
 
       # The artifacts of each of `plugin`'s declarations, by the
-      # declaration's name, each in the order of the files. Raises Stopped
+      # declaration's name, in the order of the files and then of the
+      # matches of a primary's regex in each. Raises Stopped
       # when two artifacts of one declaration have one name, and when a
       # regex runs past its time limit or meets a file that isn't UTF-8.
       def artifacts: (Plugin plugin) -> Hash[String, Array[Artifact]]
@@ -40,6 +41,16 @@ module CrossLint
 
       # The artifacts `declaration` finds.
       def find: (Plugin plugin, ArtifactDeclaration declaration) -> Array[Artifact]
+
+      # What each artifact in the primary file at `path` matched, with the
+      # line its declaration's regex matched on; for a declaration with no
+      # regex, `match` alone, with no line. Raises Stopped at a used
+      # capture that matched nothing.
+      def primary_matches: (Plugin plugin, ArtifactDeclaration declaration, String path, Hash[String, String] match) -> Array[[Hash[String, String], Integer?]]
+
+      # Whether `path` stays in the project: no segment is empty, `.`, or
+      # `..`.
+      def inside?: (String path) -> bool
 
       # The piece `piece` declares, for the primary file whose placeholders
       # matched `match`.

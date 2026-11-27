@@ -25,7 +25,7 @@ module CrossLint
 
         found.map { |violation| result(artifact, violation) }
       rescue PluginError => error
-        raise RubyRule::Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.path)
+        raise RubyRule::Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.location)
       end
 
       def self.described(artifact)

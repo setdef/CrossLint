@@ -8,16 +8,18 @@ module CrossLint
       def exist? = exists
     end
 
-    class Artifact < Data.define(:plugin, :role, :path, :match, :pieces, :key, :name)
-      def initialize(path:, key: nil, name: path, **fields) = super
+    class Artifact < Data.define(:plugin, :role, :path, :match, :pieces, :key, :name, :line)
+      def initialize(path:, key: nil, name: path, line: nil, **fields) = super
+
+      def location = line ? "#{path}:#{line}" : path
 
       def piece(name)
         pieces.find { |piece| piece.name == name } || raise(KeyError, "artifact #{role.dump} has no piece #{name.dump}")
       end
     end
 
-    class Violation < Data.define(:plugin, :policy, :artifact, :role, :message, :severity, :detail, :key, :path)
-      def initialize(artifact:, key: nil, path: artifact, **fields) = super
+    class Violation < Data.define(:plugin, :policy, :artifact, :role, :message, :severity, :detail, :key, :path, :line)
+      def initialize(artifact:, key: nil, path: artifact, line: nil, **fields) = super
     end
 
     class RuleResult < Data.define(:path, :role, :message, :detail); end

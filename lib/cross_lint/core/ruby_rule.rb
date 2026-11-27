@@ -87,9 +87,9 @@ module CrossLint
         end
       rescue Overran
         error = PluginError.new("didn't finish within #{@time_limit} seconds, so CrossLint stopped it")
-        raise Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.path)
+        raise Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.location)
       rescue *FAULTS => error
-        raise Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.path)
+        raise Stopped, Fault.of(error, plugin: @plugin, rule: @name, artifact: artifact.location)
       end
     end
   end

@@ -34,20 +34,43 @@ module CrossLint
         found.group_by(&:name).each do |name, same|
           next if same.one?
 
-          raise Stopped, fault(plugin, declaration, "has two artifacts named #{name}, #{same.first.path} and #{same.fetch(1).path}")
+          hint = "; a name PATTERN tells them apart" unless declaration.name_pattern
+          raise Stopped, fault(plugin, declaration, "has two artifacts named #{name}, #{same.first.location} and #{same.fetch(1).location}#{hint}")
         end
         found
       end
 
       def find(plugin, declaration)
-        @files.filter_map do |path|
+        @files.flat_map do |path|
           match = declaration.primary.match(path)
-          next unless match
-          next if !declaration.dotfiles && match.values.any? { |value| value.split("/").any? { |segment| segment.start_with?(".") } }
+          next [] unless match
+          next [] if !declaration.dotfiles && match.values.any? { |value| value.split("/").any? { |segment| segment.start_with?(".") } }
 
-          pieces = declaration.pieces.map { |piece| piece(plugin, declaration, piece, match) }
-          Artifact.new(plugin: plugin.name, role: declaration.name, path:, match:, pieces:, key: declaration.key&.expand(match),
-            name: declaration.name_pattern&.expand(match) || path)
+          primary_matches(plugin, declaration, path, match).map do |values, line|
+            pieces = declaration.pieces.map { |piece| piece(plugin, declaration, piece, values) }
+            Artifact.new(plugin: plugin.name, role: declaration.name, path:, match: values, pieces:, key: declaration.key&.expand(values),
+              name: declaration.name_pattern&.expand(values) || path, line:)
+          end
+        end
+      end
+
+      # What each artifact in the primary file at `path` matched, with the
+      # line where its regex matched: one artifact with no line, for a
+      # primary with no regex.
+      def primary_matches(plugin, declaration, path, match)
+        regex = declaration.regex
+        return [[match, nil]] unless regex
+
+        text = text(path)
+        return [] unless text
+
+        search(plugin, declaration, "its primary", path, regex) { regex.matches(text, match) }.map do |captures, line|
+          # An empty value would make a piece's path or regex match what
+          # the author never meant, such as `def \b`.
+          empty = declaration.used_captures.find { |name| captures[name].to_s.empty? }
+          raise Stopped, fault(plugin, declaration, "captured nothing for {#{empty}} at #{path}:#{line}") if empty
+
+          [match.merge(captures.compact), line] #: [Hash[String, String], Integer?]
         end
       end
 
@@ -56,7 +79,7 @@ module CrossLint
       # doesn't, and says so.
       def piece(plugin, declaration, piece, match)
         path = piece.pattern.expand(match)
-        exists = @project_files.exist?(@root, path)
+        exists = inside?(path) && @project_files.exist?(@root, path)
         regex = piece.regex
         return Piece.new(name: piece.name, path:, exists:) unless regex
 
@@ -66,6 +89,9 @@ module CrossLint
         line = search(plugin, declaration, "piece #{piece.name.dump}", path, regex) { regex.first_line(text, match) }
         Piece.new(name: piece.name, path:, exists: !line.nil?, line:, readable: true)
       end
+
+      # A capture's value comes from a file's text, so it can hold `..`.
+      def inside?(path) = path.split("/", -1).none? { |segment| segment.empty? || %w[. ..].include?(segment) }
 
       def text(path)
         @texts.fetch(path) do

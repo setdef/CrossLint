@@ -7,13 +7,15 @@ module CrossLint
     # as it is, in UTF-8, and the bytes of text that isn't valid UTF-8 are
     # written unchanged.
     #
-    # A violation's line is its path, its artifact's name when that
-    # differs from the path, its message, and its plugin and policy, with
+    # A violation's line is its path, with the line a primary's regex
+    # found its artifact on, its artifact's name when that differs from
+    # the path, its message, and its plugin and policy, with
     # "warning: " before the message of a warning:
     #
     #     lib/a.rb: no test file at test/a_test.rb (tests/has-test)
     #     lib/a.rb: warning: no signature file at sig/a.rbs (tests/has-signature)
     #     lib/app/b.rb: app/b: no test file at test/app/b_test.rb (tests/has-test)
+    #     config/routes.rb:2: get /cart: no action in app/controllers/carts_controller.rb (routes/has-action)
     #
     # A stale entry's line is its artifact, its message, and its plugin
     # and policy, as a violation's is. A line for each file a step wrote,
@@ -65,8 +67,9 @@ module CrossLint
       def write_findings: (Core::CheckResult result) -> void
 
       # Where a finding is, as its line starts: the artifact's primary
-      # path, then its name when that differs.
-      def where: (String path, String name) -> String
+      # path, with the line a regex found it on, if any, then its name
+      # when that differs from the path.
+      def where: (String path, Integer? line, String name) -> String
 
       # Writes `line` to standard error, after PREFIX.
       def say: (String line) -> void

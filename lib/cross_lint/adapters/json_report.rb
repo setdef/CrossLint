@@ -19,7 +19,8 @@ module CrossLint
         @out.puts JSON.generate({
           "findings" => result.violations.map do |violation|
             {"path" => violation.path, "message" => violation.message, "plugin" => violation.plugin, "policy" => violation.policy,
-             "artifact" => violation.artifact, "role" => violation.role, "severity" => violation.severity, "detail" => violation.detail}
+             "artifact" => violation.artifact, "role" => violation.role, "severity" => violation.severity, "detail" => violation.detail,
+             "line" => violation.line}
           end,
           "stale" => result.stale.map do |stale|
             {"file" => stale.file, "line" => stale.line, "plugin" => stale.plugin, "policy" => stale.policy, "artifact" => stale.artifact,

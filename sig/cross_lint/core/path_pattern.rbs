@@ -23,15 +23,20 @@ module CrossLint
       # The pattern as written.
       attr_reader source: String
 
+      # The names of its artifact's primary regex's captures, which it
+      # may use as placeholders beside PLACEHOLDERS, in a piece's pattern
+      # or a name.
+      attr_reader captures: Array[String]
+
       # What makes `source` no pattern, or nil when it is one: it is empty,
-      # has a `\`, has a placeholder that isn't one of PLACEHOLDERS, or has
-      # a brace that pairs with nothing.
+      # has a `\`, has a placeholder that isn't one of `known`,
+      # PLACEHOLDERS unless given, or has a brace that pairs with nothing.
       #
       # ```ruby
       # CrossLint::Core::PathPattern.problem("lib/{path}.rb") # => nil
       # CrossLint::Core::PathPattern.problem("lib/{path.rb") # => "path pattern \"lib/{path.rb\" has a { that pairs with nothing"
       # ```
-      def self.problem: (String source) -> String?
+      def self.problem: (String source, ?Array[String] known) -> String?
 
       # The pattern `source`, as an artifact named `artifact` declares it
       # in a plugin's Ruby, which may pass anything. Raises PluginError,
@@ -40,12 +45,12 @@ module CrossLint
       # CrossLint::Artifacts can't replace it by defining a method.
       def self.declared: (String artifact, untyped source) -> instance
 
-      # The pattern `source`. Raises Invalid with its problem when it has
-      # one.
-      def self.new: (source: String) -> instance
+      # The pattern `source`, which may also use `captures` as
+      # placeholders. Raises Invalid with its problem when it has one.
+      def self.new: (source: String, ?captures: Array[String]) -> instance
 
       # The pattern `source`, as for `new`.
-      def initialize: (source: String) -> void
+      def initialize: (source: String, ?captures: Array[String]) -> void
 
       # The names of the placeholders in the pattern, each once, in the
       # order they first appear.

@@ -8,8 +8,26 @@ module CrossLint
       def initialize(regex: nil, **declared) = super
     end
 
-    class ArtifactDeclaration < Data.define(:name, :primary, :pieces, :line, :key, :optional, :dotfiles, :name_pattern)
-      def initialize(key: nil, optional: false, dotfiles: true, name_pattern: nil, **fields) = super
+    class ArtifactDeclaration < Data.define(:name, :primary, :pieces, :line, :key, :optional, :dotfiles, :name_pattern, :regex)
+      def initialize(key: nil, optional: false, dotfiles: true, name_pattern: nil, regex: nil, **fields) = super
+
+      def placeholders = primary.placeholders + captures
+
+      def captures = regex&.captures.to_a
+
+      # Why a piece's pattern, a regex, or the name can't use `placeholder`.
+      def lacking(placeholder)
+        return "uses {#{placeholder}}, which the primary pattern #{primary.source.dump} doesn't have" unless regex
+
+        "uses {#{placeholder}}, which neither the primary pattern #{primary.source.dump} has nor its regex captures"
+      end
+
+      # The captures of the primary's regex that the name, a piece's path,
+      # or a piece's regex uses.
+      def used_captures
+        used = ([name_pattern] + pieces.map(&:pattern)).compact.flat_map(&:placeholders) + pieces.filter_map(&:regex).flat_map(&:placeholders)
+        captures & used
+      end
 
       def piece(name) = pieces.find { |piece| piece.name == name }
     end

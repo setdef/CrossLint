@@ -127,7 +127,8 @@ module CrossLint
             checker = BuiltInRule.named(rule.name) || rules.fetch([plugin.name, rule.name])
             checker.results(artifact, rule.arguments, read).map do |result|
               Violation.new(plugin: plugin.name, policy: policy.name, artifact: artifact.name, path: result.path, role: result.role,
-                message: result.message, severity: override || rule.severity || checker.severity, detail: result.detail, key: artifact.key)
+                message: result.message, severity: override || rule.severity || checker.severity, detail: result.detail, key: artifact.key,
+                line: artifact.line)
             end
           end
         end
@@ -191,8 +192,8 @@ module CrossLint
         end
 
         empty.reject(&:optional).map do |declaration|
-          Notice.new(file: plugin.manifest.file, line: declaration.line,
-            message: "no file matches #{declaration.primary.source.dump}, the primary of artifact #{declaration.name.dump}")
+          found = declaration.regex ? "no file that #{declaration.primary.source.dump} matches has a match of its regex" : "no file matches #{declaration.primary.source.dump}"
+          Notice.new(file: plugin.manifest.file, line: declaration.line, message: "#{found}, the primary of artifact #{declaration.name.dump}")
         end
       end
 
@@ -216,9 +217,9 @@ module CrossLint
       def sort(findings)
         findings.sort_by do |finding|
           case finding
-          when Violation then [finding.path, finding.artifact, finding.plugin, finding.policy, finding.message, finding.severity]
-          when Stale then [finding.artifact, finding.artifact, finding.plugin, finding.policy, finding.message]
-          else [finding.path, finding.name, finding.plugin, "", finding.role]
+          when Violation then [finding.path, finding.line || 0, finding.artifact, finding.plugin, finding.policy, finding.message, finding.severity]
+          when Stale then [finding.artifact, 0, finding.artifact, finding.plugin, finding.policy, finding.message]
+          else [finding.path, finding.line || 0, finding.name, finding.plugin, "", finding.role]
           end
         end
       end

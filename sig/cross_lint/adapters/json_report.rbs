@@ -7,13 +7,15 @@ module CrossLint
     # only the faults; passing artifacts aren't in the object.
     #
     #     {"findings":[{"path":"lib/a.rb","message":"no test file at test/a_test.rb","plugin":"tests",
-    #       "policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null}],
+    #       "policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null}],
     #      "stale":[],"summary":{"artifacts":9,"errors":1,"warnings":0,"stale":0}}
     #
     # A violation's `path` is its artifact's primary file, and its
     # `artifact` is the artifact's name, which a debt file's entry for it
     # has: the same path, unless the artifact's declaration names it
-    # otherwise. A stale entry has its `file` and `line`, its `plugin`,
+    # otherwise. Its `line` is the line a primary's regex found the
+    # artifact on, and null for an artifact that is a whole file. A stale
+    # entry has its `file` and `line`, its `plugin`,
     # `policy`, and `artifact`, and a `message`. The keys are in those
     # orders, and every character that isn't ASCII is escaped.
     class JSONReport < TextReport

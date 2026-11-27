@@ -106,6 +106,65 @@ class CheckTest < Minitest::Test
       check(project(plugin), files: [], contents: {"a.txt" => "caf\xE9".b.force_encoding(Encoding::UTF_8)}).faults.map(&:line)
   end
 
+  ROUTE = %((?<verb>get|post) "(?<route>[^"]+)", to: "(?<controller>[^#"]+)#(?<action>\\w+)"(?<options>, as: \\w+)?)
+
+  ROUTES = %(get "/cart", to: "carts#show"\r\npost "/cart", to: "carts#create", as: cart\r\n\r\nget "/", to: "home#index"\r\n)
+
+  def routes_plugin(source = ROUTE, name: "{verb} {route}", time_limit: Regex::TIME_LIMIT)
+    action = PieceDeclaration.new(name: "action", pattern: PathPattern.new(source: "app/controllers/{controller}_controller.rb", captures: %w[controller]),
+      line: 4, regex: Regex.new(source: 'def {action}\b'))
+    spec = PieceDeclaration.new(name: "request-spec", pattern: PathPattern.new(source: "spec/requests/{controller}_spec.rb", captures: %w[controller]), line: 5)
+    route = ArtifactDeclaration.new(name: "route", primary: PathPattern.new(source: "config/routes.rb"), pieces: [action, spec], line: 1,
+      regex: Regex.new(source:, time_limit:), name_pattern: name && PathPattern.new(source: name, captures: %w[verb route]))
+    plugin("routes", artifacts: [route], policies: [policy("has-action", rules: [rule(piece: "action")], applies_to: "route"),
+      policy("has-spec", rules: [rule(piece: "request-spec", severity: :warning)], applies_to: "route")])
+  end
+
+  def test_finds_an_artifact_for_each_match_of_a_primarys_regex_named_by_its_captures_on_the_line_it_starts
+    contents = {"config/routes.rb" => ROUTES, "app/controllers/carts_controller.rb" => "class CartsController\n  def show\n  end\nend\n",
+                "spec/requests/carts_spec.rb" => ""}
+    result = check(project(routes_plugin), files: [], contents:, all: true)
+
+    assert_equal [["config/routes.rb", 1, "get /cart", "route passes"],
+      ["config/routes.rb", 2, "post /cart", "no action in app/controllers/carts_controller.rb"],
+      ["config/routes.rb", 4, "get /", "no action in app/controllers/home_controller.rb, which isn't a file"],
+      ["config/routes.rb", 4, "get /", "no request-spec file at spec/requests/home_spec.rb"]],
+      result.findings.map { it.is_a?(Violation) ? [it.path, it.line, it.artifact, it.message] : [it.path, it.line, it.name, "route passes"] }
+    assert_equal [{"verb" => "get", "route" => "/cart", "controller" => "carts", "action" => "show"}],
+      result.findings.grep(Artifact).map(&:match)
+  end
+
+  def test_stops_a_plugin_at_a_capture_it_uses_that_matched_nothing_or_at_two_matches_of_one_name
+    empty = routes_plugin(ROUTE.sub("[^#\"]+", "[^#\"]*"))
+
+    assert_equal ["fault in plugin routes: artifact route captured nothing for {controller} at config/routes.rb:2"],
+      check(project(empty), files: [], contents: {"config/routes.rb" => %(get "/", to: "home#a"\nget "/cart", to: "#show"\n)}).faults.map(&:line)
+    assert_equal ["fault in plugin routes: artifact route has two artifacts named config/routes.rb, config/routes.rb:1 and config/routes.rb:2; " \
+                  "a name PATTERN tells them apart"],
+      check(project(routes_plugin(name: nil)), files: [], contents: {"config/routes.rb" => ROUTES}).faults.map(&:line)
+  end
+
+  def test_finds_no_piece_out_of_the_project_whatever_a_capture_holds
+    contents = {"config/routes.rb" => %(get "/", to: "../../../etc/passwd#x"\n)}
+
+    assert_equal ["no action in app/controllers/../../../etc/passwd_controller.rb, which isn't a file"],
+      check(project(routes_plugin), files: [], contents:).findings.select { it.policy == "has-action" }.map(&:message)
+  end
+
+  def test_stops_a_plugin_at_a_fault_when_a_primarys_regex_runs_past_its_time_limit
+    slow = routes_plugin('^(a+)+\1$', time_limit: 0.01)
+
+    assert_equal ["fault in plugin routes: artifact route ran past the 0.01-second time limit searching config/routes.rb with the regex of its primary"],
+      check(project(slow), files: [], contents: {"config/routes.rb" => ("a" * 32) + "c"}).faults.map(&:line)
+  end
+
+  def test_says_when_no_file_has_a_match_of_a_primarys_regex_and_finds_none_in_a_file_it_cant_read
+    notice = %(no file that "config/routes.rb" matches has a match of its regex, the primary of artifact "route")
+
+    assert_equal [notice], check(project(routes_plugin), files: [], contents: {"config/routes.rb" => "resources :carts\n"}).notices.map(&:message)
+    assert_equal [notice], check(project(routes_plugin), files: ["config/routes.rb"]).notices.map(&:message)
+  end
+
   def test_passes_when_every_piece_exists
     result = check(project(tests_plugin), files: ["lib/a.rb", "lib/a/b.rb", "test/a_test.rb", "test/a/b_test.rb", "README.md"])
 

@@ -86,25 +86,37 @@ module CrossLint
         document.children(node, %w[primary name piece])
         primary = document.required_child(node, "primary")
         primary_pattern = pattern(document, primary, document.string(primary, "primary PATTERN"))
-        no_more(document, primary)
-        name_pattern = document.optional_child(node, "name")&.then { |child| name_pattern(document, child, primary_pattern) }
-        pieces = node.children.select { |child| child.name == "piece" }.map do |child|
-          words = document.strings(child, "piece NAME PATTERN", 2)
-          document.properties(child, ["regex"])
-          no_children(document, child)
-          Core::PieceDeclaration.new(name: words.first, pattern: pattern(document, child, words.last), line: child.line,
-            regex: regex(document, child, primary_pattern.placeholders))
-        end
-        Core::ArtifactDeclaration.new(name:, primary: primary_pattern, pieces:, line: node.line, name_pattern:)
+        document.properties(primary, ["regex"])
+        no_children(document, primary)
+        declared = Core::ArtifactDeclaration.new(name:, primary: primary_pattern, pieces: [], line: node.line,
+          regex: primary_regex(document, primary, primary_pattern))
+        name_pattern = document.optional_child(node, "name")&.then { |child| name_pattern(document, child, declared) }
+        declared.with(name_pattern:, pieces: node.children.select { |child| child.name == "piece" }.map { |child| piece(document, child, declared) })
       end
 
-      def name_pattern(document, node, primary)
-        named = pattern(document, node, document.string(node, "name PATTERN"))
+      def primary_regex(document, node, primary)
+        regex = regex(document, node, primary.placeholders)
+        taken = regex&.captures.to_a & Core::PathPattern::PLACEHOLDERS
+        raise document.mistake("regex captures (?<#{taken.first}>...), which has the name of a placeholder; name it otherwise", node) if taken.any?
+
+        regex
+      end
+
+      def piece(document, node, declared)
+        words = document.strings(node, "piece NAME PATTERN", 2)
+        document.properties(node, ["regex"])
+        no_children(document, node)
+        Core::PieceDeclaration.new(name: words.first, pattern: pattern(document, node, words.last, declared.captures), line: node.line,
+          regex: regex(document, node, declared.placeholders))
+      end
+
+      def name_pattern(document, node, declared)
+        named = pattern(document, node, document.string(node, "name PATTERN"), declared.captures)
         no_more(document, node)
-        extra = named.placeholders - primary.placeholders
+        extra = named.placeholders - declared.placeholders
         return named if extra.empty?
 
-        raise document.mistake("name #{named.source.dump} uses {#{extra.first}}, which the primary pattern #{primary.source.dump} doesn't have", node)
+        raise document.mistake("name #{named.source.dump} #{declared.lacking(extra.first)}", node)
       end
 
       # The regex= of `node`, which may use the placeholders in `known`,
@@ -119,11 +131,11 @@ module CrossLint
         Core::Regex.new(source:)
       end
 
-      def pattern(document, node, source)
-        problem = Core::PathPattern.problem(source)
+      def pattern(document, node, source, captures = [])
+        problem = Core::PathPattern.problem(source, Core::PathPattern::PLACEHOLDERS + captures)
         raise document.mistake(problem, node) if problem
 
-        Core::PathPattern.new(source:)
+        Core::PathPattern.new(source:, captures:)
       end
 
       def policy(document, node)
