@@ -1,3 +1,5 @@
 // CrossLint's own configuration: the plugin that checks each file under
-// lib/ has its signature under sig/.
+// lib/ has its signature under sig/, and the shared plugins of plugins/
+// that fit this repository, from their folders.
 plugin ".config/crosslint/signatures"
+plugin "./plugins/markdown-links"

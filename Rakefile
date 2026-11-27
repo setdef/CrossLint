@@ -98,7 +98,7 @@ task :reuse do
   sh "reuse", "lint"
 end
 
-desc "Check that every file under lib/ has its signature under sig/, with CrossLint itself (.config/crosslint/config.kdl)"
+desc "Check CrossLint with CrossLint itself (.config/crosslint/config.kdl): each file under lib/ has its signature under sig/, and each relative Markdown link resolves"
 task :crosslint do
   ruby "exe/crosslint", "check"
 end
