@@ -617,11 +617,11 @@ class CLITest < Minitest::Test
     end
   end
 
-  def test_update_stays_within_the_major_version_and_moves_to_the_highest_with_latest
+  def test_update_stays_within_the_compatible_versions_and_moves_to_the_highest_with_latest
     tags = %w[v1.0.0 v1.2.0 v2.0.0]
     app, configuration = update_app(one: tags)
 
-    assert_equal ["", "crosslint: #{ONE}: moved from v1.0.0 to v1.2.0; newer major versions: v2.0.0; crosslint update --latest moves to v2.0.0\n" \
+    assert_equal ["", "crosslint: #{ONE}: moved from v1.0.0 to v1.2.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0\n" \
       "crosslint: #{TWO}: is at its newest tag, v3.0.0\n", 0], update("update", app:)
     assert_equal "v1.2.0", configuration.read("#{WORK}/app").plugins.first.ref
 

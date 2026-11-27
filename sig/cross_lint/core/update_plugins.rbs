@@ -13,9 +13,9 @@ module CrossLint
       # the tags of that version.
       attr_reader newest: String?
 
-      # The highest tag of each newer major version that isn't compatible
-      # with the plugin's ref, the lowest first. Empty when the update
-      # moves to the highest version, whatever its major version.
+      # The highest tag of each group of newer versions that aren't
+      # compatible with the plugin's ref, the lowest first. Empty when the
+      # update moves to the highest version, whatever its major version.
       attr_reader newer: Array[String]
 
       # An update with these fields, `newer` empty when left out.
@@ -64,8 +64,8 @@ module CrossLint
       def changes: () -> Array[Update]
 
       # One line for each update: the plugin and its URL, and what
-      # moved, would move, or stays, and the newer major versions that
-      # `crosslint update --latest` would move to.
+      # moved, would move, or stays, and the newer incompatible versions,
+      # with the one `crosslint update --latest` would move to.
       def lines: () -> Array[String]
 
       private
@@ -73,8 +73,8 @@ module CrossLint
       # What the update did to its plugin, or why it did nothing.
       def what: (Update update) -> String
 
-      # What the update says of the newer major versions it left, or an
-      # empty string when there are none.
+      # What the update says of the newer incompatible versions it left,
+      # or an empty string when there are none.
       def newer: (Update update) -> String
     end
 
@@ -84,10 +84,10 @@ module CrossLint
     # in the configuration, and never to a lower version than its ref's.
     # With `latest`, the newest tag is the highest version whatever its
     # major version; without it, the lines name the newer versions that
-    # aren't compatible. A plugin whose ref is no
-    # version tag, a prerelease tag or a commit SHA among them, or whose
-    # repository has no such tag, stays as it is. Local and built-in
-    # plugins are left alone. It raises Mistake, naming the file and the
+    # aren't compatible. A plugin whose ref is no version tag, a
+    # prerelease tag or a commit SHA among them, or whose repository has
+    # no such tag, stays as it is. Local and built-in plugins are left
+    # alone. It raises Mistake, naming the file and the
     # line, when a shared plugin has no ref or its tags can't be listed,
     # and changes nothing then.
     class UpdatePlugins

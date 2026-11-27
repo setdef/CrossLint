@@ -34,11 +34,11 @@ module CrossLint
         end
       end
 
-      # Newer major versions are named whether or not the plugin moved.
+      # Newer incompatible versions are named whether or not the plugin moved.
       def newer(update)
         return "" if update.newer.empty?
 
-        "; newer major versions: #{update.newer.join(", ")}; crosslint update --latest moves to #{update.newer.last}"
+        "; newer incompatible versions: #{update.newer.join(", ")}; crosslint update --latest moves to #{update.newer.last}"
       end
     end
 
