@@ -41,13 +41,6 @@ class SharedPluginTest < Minitest::Test
     assert_equal [false], ["#{"a" * 40}\n"].map { |ref| SharedPlugin.sha?(ref) }
   end
 
-  def test_knows_a_plain_version_tag_from_every_other_ref
-    versions = %w[v1.2.3 1.2.3 v0.0.0 v10.20.30]
-    others = ["v1.2.3-rc.1", "1.2", "v1", "v1.2.3.4", "v1.2.3+b", "latest", "a" * 40, "v1.2.3\n", " 1.2.3", "V1.2.3"]
-
-    assert_equal [[true] * versions.size, [false] * others.size], [versions, others].map { |refs| refs.map { |ref| SharedPlugin.version?(ref) } }
-  end
-
   def test_knows_a_url_with_a_user_name_or_password_by_what_comes_before_the_first_slash_after_the_scheme
     with = %w[https://u:p@example.com/o/r https://u@example.com/o/r https://:p@example.com/o/r https://u:p@example.com ssh://git@example.com/o/r x://u@h HTTPS://u:p@h https://@h/o]
     without = %w[https://example.com/o/r https://example.com/o/a@b https://example.com/?a=b@c https://example.com#a@b https://example.com:8080/o/r file:///tmp/a@b]
@@ -105,80 +98,6 @@ class SharedPluginTest < Minitest::Test
     assert_equal %w[markdown-links x repo], [listing.call("plugins/markdown-links").plugin_name, listing.call("x").plugin_name, bare.plugin_name]
     assert_equal [nil, "https://example.com/o/repo.git"], [bare.path, bare.shown]
     assert_equal "https://example.com/o/repo.git (plugins/x)", listing.call("plugins/x").shown
-  end
-
-  def test_picks_the_tag_with_the_highest_version_by_number_not_by_text
-    assert_equal "v1.10.0", SharedPlugin.newest_tag(%w[v1.2.0 v1.10.0 v1.9.9 v0.99.99])
-    assert_equal "2.0.0", SharedPlugin.newest_tag(%w[v1.10.0 2.0.0 v1.99.99])
-    assert_equal "v1.2.10", SharedPlugin.newest_tag(%w[v1.2.9 v1.2.10 v1.1.99])
-    assert_equal "v10.0.0", SharedPlugin.newest_tag(%w[v9.9.9 v10.0.0])
-  end
-
-  def test_leaves_out_a_tag_that_isnt_three_integers
-    tags = %w[v3.0.0-rc.1 3.0.0-rc.1 v3.0 v3 3.0.0.1 v3.0.0+build vv3.0.0 V3.0.0 latest stable v3.0.0-1 v1.0.x]
-
-    assert_nil SharedPlugin.newest_tag(tags)
-    assert_equal "v1.0.0", SharedPlugin.newest_tag(tags + ["v1.0.0"])
-    assert_nil SharedPlugin.newest_tag([])
-  end
-
-  def test_leaves_out_a_tag_with_text_around_a_version
-    assert_equal "v1.0.0", SharedPlugin.newest_tag(["v1.0.0", "x9.9.9", "9.9.9\n", "release-9.9.9", " 9.9.9", "9.9.9 "])
-  end
-
-  def test_picks_the_tag_the_project_has_among_the_tags_of_the_highest_version
-    tags = %w[1.2.0 v1.2.0 v1.1.0]
-
-    assert_equal ["v1.2.0", "1.2.0"], [SharedPlugin.newest_tag(tags, keep: "v1.2.0"), SharedPlugin.newest_tag(tags, keep: "1.2.0")]
-    assert_equal "1.2.0", SharedPlugin.newest_tag(tags.reverse)
-    assert_equal "1.2.0", SharedPlugin.newest_tag(tags, keep: nil)
-  end
-
-  def test_moves_to_the_tag_with_the_form_of_the_ref_it_replaces_when_two_tags_tie
-    tags = %w[1.2.0 v1.2.0 v1.1.0 1.1.0]
-
-    assert_equal ["v1.2.0", "1.2.0", "1.2.0"], [SharedPlugin.newest_tag(tags, keep: "v1.1.0"), SharedPlugin.newest_tag(tags, keep: "1.1.0"),
-      SharedPlugin.newest_tag(%w[1.2.0 v1.2.0], keep: "release-1.1.0")]
-    assert_equal "v1.2.0", SharedPlugin.newest_tag(%w[v1.2.0], keep: "1.1.0")
-  end
-
-  # v1.2.0 and v1.02.0 are one version in two spellings of the same form.
-  def test_keeps_the_tag_the_project_has_or_else_the_first_by_name_among_tags_of_one_version_and_form
-    tags = %w[v1.2.0 v1.02.0]
-
-    assert_equal ["v1.2.0", "v1.2.0", "v1.02.0", "v1.02.0", "v1.02.0"], [SharedPlugin.newest_tag(tags, keep: "v1.2.0"), SharedPlugin.newest_tag(tags.reverse, keep: "v1.2.0"),
-      SharedPlugin.newest_tag(tags, keep: "v1.1.0"), SharedPlugin.newest_tag(tags.reverse, keep: "v1.1.0"), SharedPlugin.newest_tag(tags.reverse)]
-  end
-
-  def test_never_moves_to_a_lower_version_than_the_one_the_project_has
-    assert_equal ["v2.0.0", "2.1.0", "v1.10.0", "v1.2.0"], [SharedPlugin.newest_tag(%w[v1.9.0 v1.10.0], keep: "v2.0.0"), SharedPlugin.newest_tag(%w[v1.9.0], keep: "2.1.0"),
-      SharedPlugin.newest_tag(%w[v1.9.0 v1.10.0], keep: "v1.1.0"), SharedPlugin.newest_tag(%w[v1.2.0], keep: "v1.2.0")]
-    assert_equal "v1.0.0", SharedPlugin.newest_tag(%w[v1.0.0], keep: "release-9.9.9")
-    assert_nil SharedPlugin.newest_tag(%w[latest], keep: "v9.0.0")
-  end
-
-  # The caret rule of Cargo and npm: the leftmost number that isn't zero
-  # stays, and the ones before it are all zeros.
-  def test_keeps_the_tags_that_share_the_leftmost_number_that_isnt_zero_with_the_ref
-    tags = %w[v1.0.0 v1.9.0 1.10.0 v2.0.0 v0.9.0 v0.3.1 v0.3.9 v0.4.0 v0.0.3 v0.0.4 v1.0.0-rc.1 latest]
-
-    assert_equal %w[v1.0.0 v1.9.0 1.10.0], SharedPlugin.compatible(tags, "v1.4.0")
-    assert_equal %w[v0.3.1 v0.3.9], SharedPlugin.compatible(tags, "0.3.0")
-    assert_equal %w[v0.0.3], SharedPlugin.compatible(tags, "v0.0.3")
-  end
-
-  def test_names_the_highest_tag_of_each_newer_incompatible_version_lowest_first
-    tags = %w[v1.4.0 v1.5.0 v2.0.0 v2.3.1 v2.3.0 3.0.0 v3.0.0 v0.9.0 v3.1.0-rc.1]
-
-    assert_equal %w[v2.3.1 v3.0.0], SharedPlugin.newer_incompatible(tags, "v1.4.0")
-    assert_equal %w[v1.5.0 v2.3.1 v3.0.0], SharedPlugin.newer_incompatible(tags, "v0.9.0")
-    assert_empty SharedPlugin.newer_incompatible(tags, "v3.0.0")
-    assert_equal %w[v0.0.5 v0.3.2 v0.4.0], SharedPlugin.newer_incompatible(%w[v0.3.0 v0.3.2 v0.4.0 v0.0.5 v0.0.2], "v0.0.4")
-  end
-
-  def test_names_the_tag_in_the_form_of_the_ref_when_two_tags_tie
-    assert_equal %w[2.0.0], SharedPlugin.newer_incompatible(%w[v2.0.0 2.0.0], "1.0.0")
-    assert_equal %w[v2.0.0], SharedPlugin.newer_incompatible(%w[v2.0.0 2.0.0], "v1.0.0")
   end
 
   def test_says_what_is_wrong_with_a_ref

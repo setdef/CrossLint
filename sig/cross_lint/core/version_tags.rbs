@@ -1,0 +1,44 @@
+module CrossLint
+  module Core
+    # The version tags of one repository, and which of them a plugin
+    # moves to.
+    #
+    # ```ruby
+    # tags = CrossLint::Core::VersionTags.parse(%w[v1.2.0 v1.10.0 v2.0.0-rc.1 v2.0.0 latest])
+    # tags.newest.text # => "v2.0.0"
+    # tags.compatible_with(CrossLint::Core::VersionTag.parse("v1.0.0")).newest.text # => "v1.10.0"
+    # ```
+    class VersionTags < Data
+      # The version tags, in the order the repository listed them.
+      attr_reader tags: Array[VersionTag]
+
+      # The tags with these fields.
+      def self.new: (tags: Array[VersionTag]) -> instance
+
+      # The tags with these fields.
+      def initialize: (tags: Array[VersionTag]) -> void
+
+      # The version tags among `texts`, such as a repository's tag names.
+      # A name that is no version tag, such as "latest" or "v1.0.0-rc.1",
+      # is left out.
+      def self.parse: (Array[String] texts) -> VersionTags
+
+      # The tags that are compatible with `version`.
+      def compatible_with: (VersionTag version) -> VersionTags
+
+      # The tag with the highest version, or nil when there is none. Of
+      # the tags that have that version, such as v1.2.0 and 1.2.0, `keep`
+      # when it is one, else the first by name that has a "v" only when
+      # `keep` has one, else the first by name. A `keep` of a higher
+      # version than any tag is the answer, so that no update moves a
+      # project to a lower version, unless there are no tags.
+      def newest: (?keep: VersionTag?) -> VersionTag?
+
+      # The tag with the highest version of each set of mutually
+      # compatible versions above `version`, the lowest first. Of tags
+      # tied for a version, the one `newest` picks with `version` as its
+      # `keep`.
+      def newer_incompatible: (VersionTag version) -> Array[VersionTag]
+    end
+  end
+end

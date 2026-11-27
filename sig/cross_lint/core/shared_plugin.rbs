@@ -1,13 +1,11 @@
 module CrossLint
   module Core
-    # What a shared plugin's URL and ref must look like, and which tag is
-    # newest.
+    # What a shared plugin's URL and ref must look like.
     #
     # ```ruby
     # CrossLint::Core::SharedPlugin.plugin_name("https://github.com/OWNER/signatures.git") # => "signatures"
     # CrossLint::Core::SharedPlugin.ref?("v1.2.0") # => true
     # CrossLint::Core::SharedPlugin.ref?("main:other") # => false
-    # CrossLint::Core::SharedPlugin.newest_tag(%w[v1.2.0 v1.10.0 v2.0.0-rc.1 latest]) # => "v1.10.0"
     # ```
     module SharedPlugin
       # A plugin's name: letters, digits, and . _ -.
@@ -19,10 +17,6 @@ module CrossLint
       # A tag name, such as "v1.2.0": no character Git reads as part of a
       # refspec.
       TAG: Regexp
-
-      # A tag that is a version: three integers, with an optional "v"
-      # before them and nothing after.
-      VERSION: Regexp
 
       # The name of the plugin at `url`: the last path segment of the URL without
       # a ".git" after it, or nil when that has a character a name
@@ -41,10 +35,6 @@ module CrossLint
       # Whether `ref` is a full commit SHA.
       def self.sha?: (String ref) -> bool
 
-      # Whether `ref` is a plain version tag, vX.Y.Z or X.Y.Z with
-      # integers, and no prerelease or build part.
-      def self.version?: (String ref) -> bool
-
       # Whether the URL `url` has a user name or password, as in
       # https://user:token@host/path.
       def self.credentials?: (String url) -> bool
@@ -52,29 +42,6 @@ module CrossLint
       # Raises Mistake.credentials, for the first plugin `configuration`
       # lists whose name is a URL with a user name or password.
       def self.refuse_credentials: (Configuration configuration) -> void
-
-      # The tags among `tags` that are compatible with the version tag
-      # `ref`, by the caret rule of Cargo and npm: the same X from X.Y.Z
-      # on, the same 0.Y at 0.Y.Z, and only 0.0.Z itself at 0.0.Z.
-      def self.compatible: (Array[String] tags, String ref) -> Array[String]
-
-      # The tag with the highest version of each set of mutually
-      # compatible versions above the version tag `ref`'s own, the lowest
-      # first. Of tags tied for a version, the one `newest_tag` picks.
-      def self.newer_incompatible: (Array[String] tags, String ref) -> Array[String]
-
-      # The leading part of the version, as its numbers, that stays the
-      # same across compatible versions.
-      def self.compatibility: (Array[Integer] version) -> Array[Integer]
-
-      # The three numbers of the version tag `tag`.
-      def self.numbers: (String tag) -> Array[Integer]
-
-      # The tag among `tags` with the highest version, or nil when none is
-      # a version. Of the tags that have that version, such as v1.2.0 and
-      # 1.2.0, `keep` when it is one, else the first by name that has a
-      # "v" only when `keep` has one, else the first by name.
-      def self.newest_tag: (Array[String] tags, ?keep: String?) -> String?
     end
   end
 end

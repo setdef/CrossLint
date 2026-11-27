@@ -201,6 +201,14 @@ class UpdatePluginsTest < Minitest::Test
     assert_nil configuration.set
   end
 
+  def test_leaves_a_plugin_whose_repository_has_no_version_tag_where_it_is_with_latest
+    configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[latest])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, latest: true)
+
+    assert_equal ["#{ONE}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at v1.0.0"], result.lines
+    assert_nil configuration.set
+  end
+
   def test_says_what_each_plugin_did
     update = ->(ref, newest) { Core::Update.new(listing: listing(ONE, ref), newest:) }
     result = Core::UpdateResult.new(updates: [update.call("v1.0.0", "v1.1.0"), update.call("v1.1.0", "v1.1.0"), update.call("v1.0.0", nil), update.call("main", nil), update.call(nil, "v1.0.0")],

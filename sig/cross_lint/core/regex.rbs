@@ -67,13 +67,13 @@ module CrossLint
       def self.tokens: (String source) -> Array[String]
 
       # Why `token` is refused, or nil.
-      def self.refusal: (String token, Array[String] known) -> String?
+      private def self.refusal: (String token, Array[String] known) -> String?
 
       # Why a placeholder that isn't one of `known` is refused.
-      def self.unknown: (String placeholder, Array[String] known) -> String
+      private def self.unknown: (String placeholder, Array[String] known) -> String
 
       # Why `token`, the escape of a letter, is refused, or nil.
-      def self.escape: (String token) -> String?
+      private def self.escape: (String token) -> String?
 
       # The regex `source`, whose searches may each run `time_limit`
       # seconds. Raises Invalid with its problem when it has one, any

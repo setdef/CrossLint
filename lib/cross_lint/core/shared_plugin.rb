@@ -12,8 +12,6 @@ module CrossLint
       # characters a tag name usually has pass. A full SHA passes too.
       TAG = %r{\A[A-Za-z0-9][A-Za-z0-9._/+-]*\z}
 
-      VERSION = /\Av?(\d+)\.(\d+)\.(\d+)\z/
-
       # split drops the empty parts a trailing slash leaves.
       def self.plugin_name(url)
         last = url.split("/").last.to_s.delete_suffix(".git")
@@ -46,8 +44,6 @@ module CrossLint
 
       def self.sha?(ref) = ref.match?(SHA)
 
-      def self.version?(ref) = ref.match?(VERSION)
-
       # Everything between the scheme and the first /, ?, or # is the
       # authority, and a user name or password comes before an @ in it.
       def self.credentials?(url) = url.match?(%r{\A[a-z][a-z0-9+.-]*://[^/?#]*@}i)
@@ -60,59 +56,6 @@ module CrossLint
         configuration.plugins.each do |listing|
           raise Mistake.credentials(configuration.file, listing.line) if credentials?(listing.name)
         end
-      end
-
-      # The tags among `tags` that are compatible with the version tag
-      # `ref`, by the caret rule of Cargo and npm, which Semantic
-      # Versioning's 0.y.z rule leads to: the same X from X.Y.Z on, the
-      # same 0.Y at 0.Y.Z, and only 0.0.Z itself at 0.0.Z.
-      def self.compatible(tags, ref)
-        line = compatibility(numbers(ref))
-        tags.select { |tag| version?(tag) && compatibility(numbers(tag)) == line }
-      end
-
-      # The tag with the highest version of each set of mutually
-      # compatible versions above the version tag `ref`'s own, the lowest
-      # first. Of tags tied for a version, the one `newest_tag` picks.
-      def self.newer_incompatible(tags, ref)
-        from = numbers(ref)
-        versions = tags.select { |tag| version?(tag) }
-        above = versions.select { |tag| (numbers(tag) <=> from) == 1 && compatibility(numbers(tag)) != compatibility(from) }
-        above.group_by { |tag| compatibility(numbers(tag)) }.values.filter_map { |group| newest_tag(group, keep: ref) }.sort_by { |tag| numbers(tag) }
-      end
-
-      # The leading part of `version` that stays the same across
-      # compatible versions.
-      def self.compatibility(version)
-        if version.first.positive?
-          version.first(1)
-        elsif version[1].positive?
-          version.first(2)
-        else
-          version
-        end
-      end
-
-      def self.numbers(tag) = VERSION.match(tag).to_a.drop(1).map(&:to_i)
-
-      private_class_method :compatibility, :numbers
-
-      # `keep` stands in for the other tags of its version, so that v1.2.0
-      # and 1.2.0 on one commit don't send a project from one to the other.
-      # When `keep` is not one of the tied tags, the tie goes to the tag
-      # that has a "v" only when `keep` has one.
-      # A `keep` of a higher version than any tag stays, so that no update
-      # moves a project to a lower version.
-      def self.newest_tag(tags, keep: nil)
-        versions = tags.filter_map { |tag| (found = VERSION.match(tag)) && [tag, found.captures.map(&:to_i)] } #: Array[[String, Array[Integer]]]
-        highest = versions.map(&:last).max
-        kept = VERSION.match(keep)
-        return keep if kept && (kept.captures.map(&:to_i) <=> highest) == 1
-
-        tied = versions.select { |_, version| version == highest }.map(&:first).sort
-        return keep if tied.include?(keep)
-
-        tied.find { |tag| tag.start_with?("v") == keep.to_s.start_with?("v") } || tied.first
       end
     end
   end

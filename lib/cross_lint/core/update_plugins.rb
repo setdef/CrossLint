@@ -11,7 +11,7 @@ module CrossLint
 
       def untagged? = newest.nil? && !pinned?
 
-      def pinned? = !SharedPlugin.version?(listing.ref.to_s)
+      def pinned? = VersionTag.parse(listing.ref.to_s).nil?
     end
 
     class UpdateResult < Data.define(:updates, :dry_run)
@@ -76,15 +76,17 @@ module CrossLint
         ref = listing.ref || raise(Mistake.new("shared plugin #{listing.shown.dump} needs ref=, a tag or a full commit SHA", file:, line: listing.line))
         # No request for a ref that is no version: a prerelease or a
         # commit is somewhere a person put it.
-        return Update.new(listing:, newest: nil) unless SharedPlugin.version?(ref)
+        current = VersionTag.parse(ref)
+        return Update.new(listing:, newest: nil) unless current
 
         listed = tags[listing.name] ||= @shared_plugins.tags(listing.name)
-        return Update.new(listing:, newest: SharedPlugin.newest_tag(listed, keep: ref)) if latest
+        versions = VersionTags.parse(listed)
+        return Update.new(listing:, newest: versions.newest(keep: current)&.text) if latest
 
         # A repository with a version tag but none compatible with the
         # ref leaves the plugin where it is.
-        newest = SharedPlugin.newest_tag(SharedPlugin.compatible(listed, ref), keep: ref) || (ref if SharedPlugin.newest_tag(listed))
-        Update.new(listing:, newest:, newer: SharedPlugin.newer_incompatible(listed, ref))
+        newest = versions.compatible_with(current).newest(keep: current) || (current if versions.newest)
+        Update.new(listing:, newest: newest&.text, newer: versions.newer_incompatible(current).map(&:text))
       rescue FetchError => error
         raise Mistake.new("couldn't list the tags of shared plugin #{listing.name}: " + error.message, file:, line: listing.line)
       end
