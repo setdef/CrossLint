@@ -52,7 +52,44 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
   }
   flag "-a --all" help="List every artifact checked, passing ones included; --json leaves passing ones out"
   flag "--json" help="Print the findings and the summary as one JSON object in place of lines" {
-    long_help "Prints the findings and the summary as one JSON object in place of lines, with every character that isn't ASCII escaped."
+    long_help #"""
+Prints one JSON object on one line of standard output in place of lines, with every character that isn't ASCII escaped. The summary line, the notices, and the faults go to standard error, as without --json.
+
+The object has these keys, in this order:
+
+- "findings": an array with one object for each violation, with these keys, in this order. "path" is the artifact's primary file. "message", "plugin", and "policy" are strings. "artifact" is the artifact's name, which is its path unless its declaration names it otherwise. "role" is the artifact's kind. "severity" is "error" or "warning". "detail" is a string, or null when the rule gives none. "line" is the number of the line the artifact was found on, or null for an artifact that is a whole file. Every value but "detail" and "line" is a string.
+- "paid_off": an array with one object for each paid-off entry. "file" is the debt file, and "line" is the entry's line in it, a number. "plugin", "policy", "artifact", and "message" are strings.
+- "summary": an object of four numbers: "artifacts", the artifacts checked, passing ones included; "errors"; "warnings"; and "paid_off".
+
+A passing artifact is never in "findings", with or without --all. With --quiet, CrossLint leaves each warning that doesn't fail the check out of "findings", and "summary" still counts it. With --warnings=none, CrossLint leaves the warnings out of both. With --silent, CrossLint prints no object, so read the exit status.
+
+A minor release may add keys, so a script should ignore keys it doesn't know.
+
+For a project with one Ruby file and no test for it, the output is this, here with line breaks added:
+
+    {
+      "findings": [
+        {
+          "path": "lib/a.rb",
+          "message": "no test file at test/a_test.rb",
+          "plugin": "signatures",
+          "policy": "has-test",
+          "artifact": "lib/a.rb",
+          "role": "ruby-file",
+          "severity": "error",
+          "detail": null,
+          "line": null
+        }
+      ],
+      "paid_off": [],
+      "summary": {
+        "artifacts": 1,
+        "errors": 1,
+        "warnings": 0,
+        "paid_off": 0
+      }
+    }
+"""#
   }
   example "crosslint check"
   example "crosslint check --warnings=error" header="Fail the check on warnings too"
