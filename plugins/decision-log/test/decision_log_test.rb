@@ -55,6 +55,13 @@ class DecisionLogTest < Minitest::Test
         "0004-deleted.md"]], findings(check({"docs/decisions/README.md" => index}))
   end
 
+  def test_takes_a_link_whose_text_has_brackets
+    index = "- [0001 [accepted]](0001-use-ruby.md)\n- [0002][kdl](0002-use-kdl.md)\n"
+
+    assert_equal [["docs/decisions/README.md", "index-lists-records", "0003-use-git.md is a record in docs/decisions, and the index has no link to it",
+      "0003-use-git.md"]], findings(check({"docs/decisions/README.md" => index}))
+  end
+
   def test_reports_records_that_share_a_number
     %w[0002-also-kdl.md 3-git-again.md 0003-git-thrice.md].each { write(@root, "docs/decisions/#{it}", "") }
     index = Dir.children(File.join(@root, "docs/decisions")).map { "[x](#{it})" }.join("\n")
