@@ -617,6 +617,22 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_update_stays_within_the_major_version_and_moves_to_the_highest_with_latest
+    tags = %w[v1.0.0 v1.2.0 v2.0.0]
+    app, configuration = update_app(one: tags)
+
+    assert_equal ["", "crosslint: #{ONE}: moved from v1.0.0 to v1.2.0; newer major versions: v2.0.0; crosslint update --latest moves to v2.0.0\n" \
+      "crosslint: #{TWO}: is at its newest tag, v3.0.0\n", 0], update("update", app:)
+    assert_equal "v1.2.0", configuration.read("#{WORK}/app").plugins.first.ref
+
+    app, configuration = update_app(one: tags)
+
+    assert_equal ["", "crosslint: #{ONE}: would move from v1.0.0 to v2.0.0\ncrosslint: #{TWO}: is at its newest tag, v3.0.0\n", 0], update("update", "--latest", "-n", app:)
+    assert_equal "v1.0.0", configuration.read("#{WORK}/app").plugins.first.ref
+    assert_equal 0, update("update", "--latest", app:)[2]
+    assert_equal "v2.0.0", configuration.read("#{WORK}/app").plugins.first.ref
+  end
+
   def test_update_says_what_it_did_unless_silent
     assert_equal 2, update("update", "--quiet", app: update_app.first)[1].lines.size
     assert_equal ["", "", 0], update("update", "--silent", app: update_app.first)
@@ -873,13 +889,13 @@ class CLITest < Minitest::Test
   # An app, and the configuration it holds, for the project at WORK/app,
   # which lists the shared plugins ONE at v1.0.0 and TWO at v3.0.0,
   # whose repositories have tags to move ONE to v1.2.0.
-  def update_app(missing: false)
+  def update_app(missing: false, one: %w[v1.0.0 v1.2.0])
     core = CrossLint::Core
     plugins = [core::ListedPlugin.new(name: ONE, ref: "v1.0.0", settings: [], line: 1), core::ListedPlugin.new(name: TWO, ref: "v3.0.0", settings: [], line: 2)]
     configuration = CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => core::Configuration.new(file: ".config/crosslint/config.kdl", plugins:,
       policies: [], warnings: nil, verbosity: nil)})
     tags = ->(names) { CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: names.to_h { |name| [name, "/cache/#{name}"] }, branches: [], commits: {}) }
-    repositories = {ONE => tags.call(%w[v1.0.0 v1.2.0])}
+    repositories = {ONE => tags.call(one)}
     repositories[TWO] = tags.call(%w[v3.0.0]) unless missing
     shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new(repositories, err: StringIO.new)
     [CrossLint::App.new(configuration:, shared_plugins:), configuration]

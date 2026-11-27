@@ -157,6 +157,30 @@ class SharedPluginTest < Minitest::Test
     assert_nil SharedPlugin.newest_tag(%w[latest], keep: "v9.0.0")
   end
 
+  # The caret rule of Cargo and npm: the leftmost number that isn't zero
+  # stays, and the ones before it are all zeros.
+  def test_keeps_the_tags_that_share_the_leftmost_number_that_isnt_zero_with_the_ref
+    tags = %w[v1.0.0 v1.9.0 1.10.0 v2.0.0 v0.9.0 v0.3.1 v0.3.9 v0.4.0 v0.0.3 v0.0.4 v1.0.0-rc.1 latest]
+
+    assert_equal %w[v1.0.0 v1.9.0 1.10.0], SharedPlugin.compatible(tags, "v1.4.0")
+    assert_equal %w[v0.3.1 v0.3.9], SharedPlugin.compatible(tags, "0.3.0")
+    assert_equal %w[v0.0.3], SharedPlugin.compatible(tags, "v0.0.3")
+  end
+
+  def test_names_the_highest_tag_of_each_newer_incompatible_version_lowest_first
+    tags = %w[v1.4.0 v1.5.0 v2.0.0 v2.3.1 v2.3.0 3.0.0 v3.0.0 v0.9.0 v3.1.0-rc.1]
+
+    assert_equal %w[v2.3.1 v3.0.0], SharedPlugin.newer_incompatible(tags, "v1.4.0")
+    assert_equal %w[v1.5.0 v2.3.1 v3.0.0], SharedPlugin.newer_incompatible(tags, "v0.9.0")
+    assert_empty SharedPlugin.newer_incompatible(tags, "v3.0.0")
+    assert_equal %w[v0.0.5 v0.3.2 v0.4.0], SharedPlugin.newer_incompatible(%w[v0.3.0 v0.3.2 v0.4.0 v0.0.5 v0.0.2], "v0.0.4")
+  end
+
+  def test_names_the_tag_in_the_form_of_the_ref_when_two_tags_tie
+    assert_equal %w[2.0.0], SharedPlugin.newer_incompatible(%w[v2.0.0 2.0.0], "1.0.0")
+    assert_equal %w[v2.0.0], SharedPlugin.newer_incompatible(%w[v2.0.0 2.0.0], "v1.0.0")
+  end
+
   def test_says_what_is_wrong_with_a_ref
     assert_equal "ext::x doesn't start with https:// or file://", CrossLint::Core::FetchError.scheme("ext::x", ["https://", "file://"]).message
     errors = [CrossLint::Core::FetchError.bad_ref("a:b"), CrossLint::Core::FetchError.branch("main"), CrossLint::Core::FetchError.no_tag("v9"),

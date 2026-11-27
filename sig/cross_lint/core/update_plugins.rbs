@@ -1,21 +1,28 @@
 module CrossLint
   module Core
     # What `crosslint update` found for one shared plugin: the plugin as
-    # listed, and the tag it would move to.
+    # listed, the tag it would move to, and the newer tags it would not.
     class Update < Data
       # The shared plugin as the configuration lists it.
       attr_reader listing: ListedPlugin
 
-      # The tag with the highest version among the repository's tags, such
-      # as "v1.4.0", or nil when no tag is a version. The tag the plugin is
-      # at already, when it is one of the tags of that version.
+      # The tag with the highest version among the repository's tags that
+      # are compatible with the plugin's ref, or among all of them when
+      # the update looks for the latest, such as "v1.4.0". Nil when no tag
+      # is a version. The tag the plugin is at already, when it is one of
+      # the tags of that version.
       attr_reader newest: String?
 
-      # An update with these fields.
-      def self.new: (listing: ListedPlugin, newest: String?) -> instance
+      # The highest tag of each newer major version that isn't compatible
+      # with the plugin's ref, the lowest first. Empty when the update
+      # moves to the highest version, whatever its major version.
+      attr_reader newer: Array[String]
 
-      # An update with these fields.
-      def initialize: (listing: ListedPlugin, newest: String?) -> void
+      # An update with these fields, `newer` empty when left out.
+      def self.new: (listing: ListedPlugin, newest: String?, ?newer: Array[String]) -> instance
+
+      # An update with these fields, `newer` empty when left out.
+      def initialize: (listing: ListedPlugin, newest: String?, ?newer: Array[String]) -> void
 
       # Whether the plugin is at its newest tag already.
       def current?: () -> bool
@@ -57,14 +64,27 @@ module CrossLint
       def changes: () -> Array[Update]
 
       # One line for each update: the plugin and its URL, and what
-      # moved, would move, or stays.
+      # moved, would move, or stays, and the newer major versions that
+      # `crosslint update --latest` would move to.
       def lines: () -> Array[String]
+
+      private
+
+      # What the update did to its plugin, or why it did nothing.
+      def what: (Update update) -> String
+
+      # What the update says of the newer major versions it left, or an
+      # empty string when there are none.
+      def newer: (Update update) -> String
     end
 
     # Moves each shared plugin the configuration lists, whose ref is a
     # version tag, to the newest tag of its repository that is a version,
-    # vX.Y.Z or X.Y.Z, by rewriting its ref in the configuration, and
-    # never to a lower version than its ref's. A plugin whose ref is no
+    # vX.Y.Z or X.Y.Z, and compatible with its ref, by rewriting its ref
+    # in the configuration, and never to a lower version than its ref's.
+    # With `latest`, the newest tag is the highest version whatever its
+    # major version; without it, the lines name the newer versions that
+    # aren't compatible. A plugin whose ref is no
     # version tag, a prerelease tag or a commit SHA among them, or whose
     # repository has no such tag, stays as it is. Local and built-in
     # plugins are left alone. It raises Mistake, naming the file and the
@@ -77,7 +97,7 @@ module CrossLint
 
       # Updates the project whose root is `start` or the nearest folder
       # above it with a configuration. With `dry_run`, changes nothing.
-      def call: (String start, ?dry_run: bool) -> UpdateResult
+      def call: (String start, ?dry_run: bool, ?latest: bool) -> UpdateResult
 
       private
 
@@ -91,7 +111,7 @@ module CrossLint
 
       # The update of the shared plugin `listing`, listed in `file`.
       # `tags` holds the tags listed so far, by URL.
-      def update: (ListedPlugin listing, String file, Hash[String, Array[String]] tags) -> Update
+      def update: (ListedPlugin listing, String file, Hash[String, Array[String]] tags, bool latest) -> Update
     end
   end
 end

@@ -218,7 +218,7 @@ module CrossLint
     # request, which tells the person that CrossLint is reaching the network.
     def update(line)
       app = @app || App.new(err: @err)
-      result = app.update(line.value("project") || Dir.pwd, dry_run: line.flags.key?("dry-run"))
+      result = app.update(line.value("project") || Dir.pwd, dry_run: line.flags.key?("dry-run"), latest: line.flags.key?("latest"))
       result.lines.each { |text| @err.puts(PREFIX + text) } unless line.flags.key?("silent")
       0
     end

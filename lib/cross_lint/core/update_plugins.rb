@@ -2,7 +2,11 @@
 
 module CrossLint
   module Core
-    class Update < Data.define(:listing, :newest)
+    class Update < Data.define(:listing, :newest, :newer)
+      def initialize(listing:, newest:, newer: [])
+        super
+      end
+
       def current? = newest == listing.ref
 
       def untagged? = newest.nil? && !pinned?
@@ -13,19 +17,28 @@ module CrossLint
     class UpdateResult < Data.define(:updates, :dry_run)
       def changes = updates.reject { |update| update.pinned? || update.current? || update.untagged? }
 
-      def lines
-        updates.map do |update|
-          listing = update.listing
-          if update.pinned?
-            "#{listing.shown}: is at #{listing.ref}, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone"
-          elsif update.untagged?
-            "#{listing.shown}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at #{listing.ref}"
-          elsif update.current?
-            "#{listing.shown}: is at its newest tag, #{listing.ref}"
-          else
-            "#{listing.shown}: #{dry_run ? "would move" : "moved"} from #{listing.ref} to #{update.newest}"
-          end
+      def lines = updates.map { |update| what(update) + newer(update) }
+
+      private
+
+      def what(update)
+        listing = update.listing
+        if update.pinned?
+          "#{listing.shown}: is at #{listing.ref}, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone"
+        elsif update.untagged?
+          "#{listing.shown}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at #{listing.ref}"
+        elsif update.current?
+          "#{listing.shown}: is at its newest #{"compatible " if update.newer.any?}tag, #{listing.ref}"
+        else
+          "#{listing.shown}: #{dry_run ? "would move" : "moved"} from #{listing.ref} to #{update.newest}"
         end
+      end
+
+      # Newer major versions are named whether or not the plugin moved.
+      def newer(update)
+        return "" if update.newer.empty?
+
+        "; newer major versions: #{update.newer.join(", ")}; crosslint update --latest moves to #{update.newer.last}"
       end
     end
 
@@ -35,14 +48,14 @@ module CrossLint
         @shared_plugins = shared_plugins
       end
 
-      def call(start, dry_run: false)
+      def call(start, dry_run: false, latest: false)
         root = @configuration.find_root(start) || raise(Mistake.no_configuration(@configuration.file, start))
         configuration = @configuration.read(root)
         SharedPlugin.refuse_credentials(configuration)
         shared = configuration.plugins.select { |listing| listing.shared?(@shared_plugins) }
         # Plugins listed from folders of one repository share its tags.
         tags = {} #: Hash[String, Array[String]]
-        result = UpdateResult.new(updates: shared.map { |listing| update(listing, configuration.file, tags) }, dry_run:)
+        result = UpdateResult.new(updates: shared.map { |listing| update(listing, configuration.file, tags, latest) }, dry_run:)
         changes = result.changes
         @configuration.set_refs(root, refs(changes)) unless dry_run || changes.empty?
         result
@@ -59,13 +72,19 @@ module CrossLint
         end
       end
 
-      def update(listing, file, tags)
+      def update(listing, file, tags, latest)
         ref = listing.ref || raise(Mistake.new("shared plugin #{listing.shown.dump} needs ref=, a tag or a full commit SHA", file:, line: listing.line))
         # No request for a ref that is no version: a prerelease or a
         # commit is somewhere a person put it.
         return Update.new(listing:, newest: nil) unless SharedPlugin.version?(ref)
 
-        Update.new(listing:, newest: SharedPlugin.newest_tag(tags[listing.name] ||= @shared_plugins.tags(listing.name), keep: ref))
+        listed = tags[listing.name] ||= @shared_plugins.tags(listing.name)
+        return Update.new(listing:, newest: SharedPlugin.newest_tag(listed, keep: ref)) if latest
+
+        # A repository with a version tag but none compatible with the
+        # ref leaves the plugin where it is.
+        newest = SharedPlugin.newest_tag(SharedPlugin.compatible(listed, ref), keep: ref) || (ref if SharedPlugin.newest_tag(listed))
+        Update.new(listing:, newest:, newer: SharedPlugin.newer_incompatible(listed, ref))
       rescue FetchError => error
         raise Mistake.new("couldn't list the tags of shared plugin #{listing.name}: " + error.message, file:, line: listing.line)
       end

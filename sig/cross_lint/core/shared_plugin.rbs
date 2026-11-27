@@ -53,6 +53,23 @@ module CrossLint
       # lists whose name is a URL with a user name or password.
       def self.refuse_credentials: (Configuration configuration) -> void
 
+      # The tags among `tags` that are compatible with the version tag
+      # `ref`, by the caret rule of Cargo and npm: the same X from X.Y.Z
+      # on, the same 0.Y at 0.Y.Z, and only 0.0.Z itself at 0.0.Z.
+      def self.compatible: (Array[String] tags, String ref) -> Array[String]
+
+      # The tag with the highest version of each set of mutually
+      # compatible versions above the version tag `ref`'s own, the lowest
+      # first. Of tags tied for a version, the one `newest_tag` picks.
+      def self.newer_incompatible: (Array[String] tags, String ref) -> Array[String]
+
+      # The leading part of the version, as its numbers, that stays the
+      # same across compatible versions.
+      def self.compatibility: (Array[Integer] version) -> Array[Integer]
+
+      # The three numbers of the version tag `tag`.
+      def self.numbers: (String tag) -> Array[Integer]
+
       # The tag among `tags` with the highest version, or nil when none is
       # a version. Of the tags that have that version, such as v1.2.0 and
       # 1.2.0, `keep` when it is one, else the first by name that has a

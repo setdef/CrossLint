@@ -159,6 +159,48 @@ class UpdatePluginsTest < Minitest::Test
     assert_equal "no #{FILE} in #{File.expand_path("/elsewhere/lib")} or any folder above it; run crosslint init in the project's root to write one", mistake.message
   end
 
+  def test_moves_within_the_major_version_and_names_the_newer_major_versions_on_the_line
+    configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "2.0.0", 2)], ONE => %w[v1.4.0 v1.5.2 v2.0.0 v2.1.0 v3.0.0], TWO => %w[2.0.0 v3.0.0])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+
+    assert_equal ["v1.5.2", "2.0.0"], configuration.read(APP).plugins.map(&:ref)
+    assert_equal ["#{ONE}: moved from v1.4.0 to v1.5.2; newer major versions: v2.1.0, v3.0.0; crosslint update --latest moves to v3.0.0",
+      "#{TWO}: is at its newest compatible tag, 2.0.0; newer major versions: v3.0.0; crosslint update --latest moves to v3.0.0"], result.lines
+  end
+
+  def test_names_the_newer_major_versions_with_dry_run_too
+    configuration, shared = project([listing(ONE, "v1.4.0")], ONE => %w[v1.4.0 v1.5.0 v2.0.0])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, dry_run: true)
+
+    assert_equal ["#{ONE}: would move from v1.4.0 to v1.5.0; newer major versions: v2.0.0; crosslint update --latest moves to v2.0.0"], result.lines
+    assert_nil configuration.set
+  end
+
+  def test_stays_when_every_compatible_tag_is_lower_and_a_newer_major_version_exists
+    configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "v0.0.3", 2)], ONE => %w[v1.2.0 v2.0.0], TWO => %w[v0.0.3 v0.0.4])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+
+    assert_nil configuration.set
+    assert_equal ["#{ONE}: is at its newest compatible tag, v1.4.0; newer major versions: v2.0.0; crosslint update --latest moves to v2.0.0",
+      "#{TWO}: is at its newest compatible tag, v0.0.3; newer major versions: v0.0.4; crosslint update --latest moves to v0.0.4"], result.lines
+  end
+
+  def test_moves_to_the_highest_version_whatever_its_major_version_with_latest
+    configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "v0.0.3", 2)], ONE => %w[v1.4.0 v1.5.0 v2.0.0 v3.0.0], TWO => %w[v0.0.4])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, latest: true)
+
+    assert_equal ["v3.0.0", "v0.0.4"], configuration.read(APP).plugins.map(&:ref)
+    assert_equal ["#{ONE}: moved from v1.4.0 to v3.0.0", "#{TWO}: moved from v0.0.3 to v0.0.4"], result.lines
+  end
+
+  def test_combines_latest_with_dry_run_and_leaves_pinned_refs_alone
+    configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "v1.0.0-rc.1", 2)], ONE => %w[v1.4.0 v2.0.0])
+    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, latest: true, dry_run: true)
+
+    assert_equal ["#{ONE}: would move from v1.4.0 to v2.0.0", "#{TWO}: is at v1.0.0-rc.1, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone"], result.lines
+    assert_nil configuration.set
+  end
+
   def test_says_what_each_plugin_did
     update = ->(ref, newest) { Core::Update.new(listing: listing(ONE, ref), newest:) }
     result = Core::UpdateResult.new(updates: [update.call("v1.0.0", "v1.1.0"), update.call("v1.1.0", "v1.1.0"), update.call("v1.0.0", nil), update.call("main", nil), update.call(nil, "v1.0.0")],

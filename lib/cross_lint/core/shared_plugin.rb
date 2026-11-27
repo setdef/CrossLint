@@ -62,6 +62,41 @@ module CrossLint
         end
       end
 
+      # The tags among `tags` that are compatible with the version tag
+      # `ref`, by the caret rule of Cargo and npm, which Semantic
+      # Versioning's 0.y.z rule leads to: the same X from X.Y.Z on, the
+      # same 0.Y at 0.Y.Z, and only 0.0.Z itself at 0.0.Z.
+      def self.compatible(tags, ref)
+        line = compatibility(numbers(ref))
+        tags.select { |tag| version?(tag) && compatibility(numbers(tag)) == line }
+      end
+
+      # The tag with the highest version of each set of mutually
+      # compatible versions above the version tag `ref`'s own, the lowest
+      # first. Of tags tied for a version, the one `newest_tag` picks.
+      def self.newer_incompatible(tags, ref)
+        from = numbers(ref)
+        versions = tags.select { |tag| version?(tag) }
+        above = versions.select { |tag| (numbers(tag) <=> from) == 1 && compatibility(numbers(tag)) != compatibility(from) }
+        above.group_by { |tag| compatibility(numbers(tag)) }.values.filter_map { |group| newest_tag(group, keep: ref) }.sort_by { |tag| numbers(tag) }
+      end
+
+      # The leading part of `version` that stays the same across
+      # compatible versions.
+      def self.compatibility(version)
+        if version.first.positive?
+          version.first(1)
+        elsif version[1].positive?
+          version.first(2)
+        else
+          version
+        end
+      end
+
+      def self.numbers(tag) = VERSION.match(tag).to_a.drop(1).map(&:to_i)
+
+      private_class_method :compatibility, :numbers
+
       # `keep` stands in for the other tags of its version, so that v1.2.0
       # and 1.2.0 on one commit don't send a project from one to the other.
       # When `keep` is not one of the tied tags, the tie goes to the tag

@@ -132,13 +132,18 @@ crosslint init --from-ng-nudge --dry-run
 
 ## `crosslint update`
 
-- **Usage:** `crosslint update [-n --dry-run]`
+- **Usage:** `crosslint update [-n --dry-run] [--latest]`
 - **Effect:** modifies state
 
-Moves each shared plugin the configuration lists, a Git repository with a ref, to the highest version among the repository's tags written vX.Y.Z or X.Y.Z, and rewrites only that ref's text in .config/crosslint/config.kdl. A plugin whose ref isn't a plain vX.Y.Z or X.Y.Z tag, such as a prerelease tag or a commit SHA, stays where it is, and so does one with no such tag. A plugin never moves to a lower version. When a repository has both vX.Y.Z and X.Y.Z, a ref keeps the form it was written in, and a plugin listed with path= keeps its path. Writes one line to standard error for each shared plugin, saying what changed or why nothing did. Local and built-in plugins are left as they are.
+Moves each shared plugin the configuration lists, a Git repository with a ref, to the highest version among the repository's tags written vX.Y.Z or X.Y.Z that is compatible with its ref, and rewrites only that ref's text in .config/crosslint/config.kdl. Compatible versions follow the rule Cargo and npm use for Semantic Versioning: from X.Y.Z on, the same X; from 0.Y.Z on, the same 0.Y; and at 0.0.Z only Z itself, so such a plugin doesn't move.
+
+A plugin whose ref isn't a plain vX.Y.Z or X.Y.Z tag, such as a prerelease tag or a commit SHA, stays where it is, and so does one with no such tag. A plugin never moves to a lower version. When a repository has both vX.Y.Z and X.Y.Z, a ref keeps the form it was written in, and a plugin listed with path= keeps its path. Local and built-in plugins are left as they are.
+
+Writes one line to standard error for each shared plugin, saying what changed or why nothing did. When the repository has newer versions that aren't compatible, the plugin's line gives the highest tag of each, the lowest first, and the tag that crosslint update --latest moves to, whether or not the plugin moved and with --dry-run too.
 
 ### Flags
 - **`-n --dry-run`** — List the changes, and make none
+- **`--latest`** — Moves each shared plugin whose ref is a plain version tag to the highest version among its repository's tags, even when that version isn't compatible with the ref and may break the project. It leaves a plugin whose ref isn't a plain version tag, or whose repository has no version tag, where it is, as it does without --latest. Combines with --dry-run.
 
 ### Exit Status
 
@@ -155,10 +160,16 @@ Moves each shared plugin the configuration lists, a Git repository with a ref, t
 crosslint update
 ```
 
-**See which plugins have a newer tag**
+**See which plugins have a newer compatible tag**
 
 ```
 crosslint update --dry-run
+```
+
+**Move to the highest version, even across major versions**
+
+```
+crosslint update --latest
 ```
 
 ## `crosslint help`

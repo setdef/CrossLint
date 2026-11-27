@@ -64,10 +64,11 @@ module CrossLint
     def built_in_commands: () -> Hash[String, Array[String]]
 
     # The result of moving each shared plugin in that project's
-    # configuration to the newest tag of its repository
-    # (Core::UpdatePlugins), or of listing what it would move, with
-    # `dry_run`.
-    def update: (String start, ?dry_run: bool) -> Core::UpdateResult
+    # configuration to the newest tag of its repository that is
+    # compatible with its ref (Core::UpdatePlugins), or of listing what
+    # it would move, with `dry_run`; with `latest`, to the highest
+    # version whatever its major version.
+    def update: (String start, ?dry_run: bool, ?latest: bool) -> Core::UpdateResult
 
     # The result of writing the configuration with the recommended
     # plugins in the folder `start` (Core::InitConfiguration), or of
