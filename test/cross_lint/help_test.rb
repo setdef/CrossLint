@@ -103,8 +103,8 @@ class HelpTest < Minitest::Test
         help  Explain a command
 
       Plugin commands:
-        debt update               Rewrite the debt file
-        debt prune-stale-entries  Drop each entry no violation matches
+        debt update                 Rewrite the debt file
+        debt drop-paid-off-entries  Drop each entry no violation matches
         signatures isn't fetched yet
 
       Flags:
@@ -114,8 +114,8 @@ class HelpTest < Minitest::Test
   def test_lists_the_commands_of_plugins_alone_when_there_is_no_note
     assert_includes CrossLint::Help.new(fixture_spec, plugins: plugins).render, <<~HELP
       Plugin commands:
-        debt update               Rewrite the debt file
-        debt prune-stale-entries  Drop each entry no violation matches
+        debt update                 Rewrite the debt file
+        debt drop-paid-off-entries  Drop each entry no violation matches
 
       Flags:
     HELP
@@ -140,8 +140,8 @@ class HelpTest < Minitest::Test
       Usage: tool debt COMMAND [FLAGS]
 
       Commands:
-        update               Rewrite the debt file
-        prune-stale-entries  Drop each entry no violation matches
+        update                 Rewrite the debt file
+        drop-paid-off-entries  Drop each entry no violation matches
 
       Global flags:
         -v, --verbose  Say more
@@ -332,7 +332,7 @@ class HelpTest < Minitest::Test
   def plugins(commands: nil, notes: [])
     core = CrossLint::Core
     update = core::CommandDeclaration.new(name: "update", help: "Rewrite the debt file", line: 1)
-    prune = core::CommandDeclaration.new(name: "prune-stale-entries", help: "Drop each entry no violation matches", line: 2)
+    prune = core::CommandDeclaration.new(name: "drop-paid-off-entries", help: "Drop each entry no violation matches", line: 2)
     CrossLint::Help::Plugins.new(commands: commands || [["debt", update], ["debt", prune]], notes:)
   end
 end

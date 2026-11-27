@@ -99,12 +99,12 @@ CrossLint's versions follow [Semantic Versioning](https://semver.org/). Before 1
 - The commands and flags, and the exit statuses: [the command reference](docs/reference/cli.md).
 - `config.kdl`: [the configuration reference](docs/reference/configuration.md).
 - `plugin.kdl`: [the plugin reference](docs/reference/plugin.md).
-- The helper protocol, where each request and each answer is one line of JSON: [Rules a program runs](docs/reference/plugin.md#rules-a-program-runs).
+- The helper protocol, where each request and each answer is one line of JSON: [Rules a program runs](docs/reference/plugin.md#rules-a-program-runs) and [Artifacts a program declares](docs/reference/plugin.md#artifacts-a-program-declares).
 - The library that a `(crosslint)"ruby"` helper uses: [Rules in CrossLint's Ruby](docs/reference/plugin.md#rules-in-crosslints-ruby).
 - The output of `crosslint check --json`: [the command reference](docs/reference/cli.md#crosslint-check).
 - The format of the debt file: [the debt plugin's settings](docs/reference/configuration.md#debt).
 
-A minor or patch release may change the line format of findings and any other text CrossLint prints for people, on standard output and standard error, and the layout of the cache folder. A script reads `--json`, and nothing reads the cache.
+A minor or patch release may change the line format of findings and any other text CrossLint prints for people, on standard output and standard error, and the layout of the cache folder. Read `--json` from a script, and leave the cache folder to CrossLint.
 
 CrossLint 1.0.0 carries Ruby 4.1.0-preview1, and a `(crosslint)"ruby"` helper runs on it. The release that moves CrossLint to Ruby 4.1.0 is a minor release.
 
