@@ -63,4 +63,22 @@ class ArtifactsTest < Minitest::Test
 
     assert_equal [".config/crosslint/config.kdl", 7, "src-dir takes a folder"], [mistake.file, mistake.line, mistake.message]
   end
+
+  # A plugin's author can't know which private names the base class uses.
+  def test_declares_artifacts_when_the_subclass_defines_a_private_method_of_any_name_the_base_class_might_use
+    names = %i[pattern problem declared source new match key files companions]
+    subclass = Class.new(CrossLint::Artifacts) do
+      names.each { |name| define_method(name) { |*| raise "the subclass's #{name} was called" } }
+      private(*names)
+    end
+    declarer = subclass.allocate
+    declarer.instance_variable_set(:@crosslint_line, 4)
+
+    declared = declarer.artifact("doc", files: "{path}.md", companions: {"note" => "{path}.txt"}, key: "{path}")
+
+    assert_equal [PathPattern.new(source: "{path}.md"), PathPattern.new(source: "{path}.txt"), PathPattern.new(source: "{path}")],
+      [declared.files, declared.companions.first.pattern, declared.key]
+    assert_equal "declared artifact \"doc\" with the pattern 3, which is no string",
+      assert_raises(PluginError) { declarer.artifact("doc", files: 3) }.message
+  end
 end

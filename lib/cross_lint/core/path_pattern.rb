@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "fault"
+
 module CrossLint
   module Core
     class PathPattern < Data.define(:source)
@@ -22,6 +24,17 @@ module CrossLint
 
         brace = source.gsub(PLACEHOLDER, "")[/[{}]/]
         "path pattern #{source.dump} has a #{brace} that pairs with nothing" if brace
+      end
+
+      # Lives here, not in CrossLint::Artifacts, so no name a plugin's
+      # subclass defines can replace it.
+      def self.declared(artifact, source)
+        raise PluginError, "declared artifact #{artifact.dump} with the pattern #{source.inspect}, which is no string" unless source.is_a?(String)
+
+        problem = problem(source)
+        raise PluginError, "declared artifact #{artifact.dump} with a #{problem}" if problem
+
+        new(source:)
       end
 
       def initialize(source:)

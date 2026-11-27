@@ -33,6 +33,13 @@ module CrossLint
       # ```
       def self.problem: (String source) -> String?
 
+      # The pattern `source`, as an artifact named `artifact` declares it
+      # in a plugin's Ruby, which may pass anything. Raises PluginError,
+      # naming the artifact, unless `source` is a string that is a
+      # pattern. A class method, so a plugin's subclass of
+      # CrossLint::Artifacts can't replace it by defining a method.
+      def self.declared: (String artifact, untyped source) -> instance
+
       # The pattern `source`. Raises Invalid with its problem when it has
       # one.
       def self.new: (source: String) -> instance

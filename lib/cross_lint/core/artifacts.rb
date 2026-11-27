@@ -26,23 +26,12 @@ module CrossLint
           raise Core::PluginError, "declared artifact #{name.dump} with a companion named #{companion.inspect}, which is no string"
         end
 
-        Core::CompanionDeclaration.new(name: companion, pattern: pattern(name, pattern), line: @crosslint_line)
+        Core::CompanionDeclaration.new(name: companion, pattern: Core::PathPattern.declared(name, pattern), line: @crosslint_line)
       end
-      Core::ArtifactDeclaration.new(name:, files: pattern(name, files), companions: declared, line: @crosslint_line,
-        key: key && pattern(name, key), optional:, dotfiles:)
+      Core::ArtifactDeclaration.new(name:, files: Core::PathPattern.declared(name, files), companions: declared, line: @crosslint_line,
+        key: key && Core::PathPattern.declared(name, key), optional:, dotfiles:)
     end
 
     def mistake(message, setting) = Core::Mistake.new(message, file: @crosslint_configuration, line: setting.line)
-
-    private
-
-    def pattern(name, source)
-      raise Core::PluginError, "declared artifact #{name.dump} with the pattern #{source.inspect}, which is no string" unless source.is_a?(String)
-
-      problem = Core::PathPattern.problem(source)
-      raise Core::PluginError, "declared artifact #{name.dump} with a #{problem}" if problem
-
-      Core::PathPattern.new(source:)
-    end
   end
 end
