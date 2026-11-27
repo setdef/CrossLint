@@ -1,0 +1,28 @@
+// The decision-log plugin: an index of decision records links to exactly
+// the records in its folder, no two records have one number, and no
+// Markdown file cites a record by a number no record has.
+setting "folder"
+setting "index"
+
+// The index, and every Markdown file, each with the folder of records as
+// a companion, declared from the settings.
+artifacts ruby="artifacts.rb"
+
+rule "index-lists-records" ruby="rules/index_lists_records.rb"
+rule "numbers-unique" ruby="rules/numbers_unique.rb"
+rule "citations-resolve" ruby="rules/citations_resolve.rb"
+
+policy "index-lists-records" {
+  applies-to "index"
+  rule "index-lists-records"
+}
+
+policy "numbers-unique" {
+  applies-to "index"
+  rule "numbers-unique"
+}
+
+policy "citations-resolve" {
+  applies-to "document"
+  rule "citations-resolve"
+}
