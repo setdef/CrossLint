@@ -285,6 +285,14 @@ module CrossLint
         assert_equal ["No such file or directory - lib/App.rb", "No such file or directory - lib/other.rb"], missing
       end
 
+      def test_cannot_read_a_file_that_links_to_a_path_outside_the_project
+        port = project_files_port(listed: ["lib/app.rb", "link.txt"], linked_out: ["link.txt"])
+        refused = assert_raises(Errno::ENOENT) { port.read(project_root, "link.txt") }
+
+        assert_equal "No such file or directory - link.txt", refused.message
+        assert_equal "lib/app.rb\n", port.read(project_root, "lib/app.rb")
+      end
+
       def test_stops_at_a_root_outside_a_git_working_tree
         root = outside_root
         mistake = assert_raises(Core::Mistake) { project_files_port(listed: []).files(root) }

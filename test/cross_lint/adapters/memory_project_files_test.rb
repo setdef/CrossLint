@@ -7,8 +7,8 @@ class MemoryProjectFilesTest < Minitest::Test
 
   include CrossLint::Testing::ProjectFilesContract
 
-  def project_files_port(listed:, ignored: [])
-    contents = (listed + ignored).to_h { |path| [path, "#{path}\n"] }
+  def project_files_port(listed:, ignored: [], linked_out: [])
+    contents = (listed + ignored - linked_out).to_h { |path| [path, "#{path}\n"] }
     CrossLint::Adapters::MemoryProjectFiles.new({project_root => listed}, ignored: {project_root => ignored}, contents: {project_root => contents})
   end
 

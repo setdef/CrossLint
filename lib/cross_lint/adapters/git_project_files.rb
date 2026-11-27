@@ -45,7 +45,10 @@ module CrossLint
       def read(root, path)
         raise Errno::ENOENT, path unless exist?(root, path)
 
-        File.binread(File.join(root, path)).force_encoding(Encoding::UTF_8)
+        full = File.join(root, path)
+        raise Errno::ENOENT, path unless inside?(File.realpath(root), File.realpath(full))
+
+        File.binread(full).force_encoding(Encoding::UTF_8)
       end
 
       def self.outside(root)
@@ -55,6 +58,8 @@ module CrossLint
       private
 
       def environment = GitEnvironment.cleared
+
+      def inside?(root, real) = real.start_with?(File.join(root, ""))
 
       # A folder Git refuses for another reason, such as safe.directory, is
       # a working tree, so Git's own message says why.

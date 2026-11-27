@@ -74,7 +74,9 @@ module CrossLint
 
     # The bytes of the file at `path`, relative to `root` with `/` between
     # folders, as a UTF-8 string, line endings as they are. Raises
-    # Errno::ENOENT when no file exists at `path` by its exact name.
+    # Errno::ENOENT when no file exists at `path` by its exact name, and
+    # when the file is, or is in a folder that is, a symbolic link to a
+    # path outside `root`.
     def read: (String root, String path) -> String
   end
 

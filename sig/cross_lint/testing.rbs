@@ -192,8 +192,10 @@ module CrossLint
       # A port for the project at project_root, whose files are `listed`,
       # which Git lists, some tracked and some not, and `ignored`, which
       # exist but Git ignores. Each is a path relative to the root, with `/`,
-      # and each file holds its path and a newline.
-      def project_files_port: (listed: Array[String], ?ignored: Array[String]) -> _ProjectFiles
+      # and each file holds its path and a newline, except that those in
+      # `linked_out`, each also in `listed`, are symbolic links to a file
+      # outside the project.
+      def project_files_port: (listed: Array[String], ?ignored: Array[String], ?linked_out: Array[String]) -> _ProjectFiles
 
       # The absolute path of the project's root.
       def project_root: () -> String
@@ -214,6 +216,10 @@ module CrossLint
       # read returns a file's text, ignored files included, and raises
       # Errno::ENOENT for a name that differs in case or isn't there.
       def test_reads_a_file_by_its_exact_name: () -> void
+
+      # read raises Errno::ENOENT for a file that is a symbolic link to a
+      # path outside the project.
+      def test_cannot_read_a_file_that_links_to_a_path_outside_the_project: () -> void
 
       # files raises a mistake for a root outside a Git working tree.
       def test_stops_at_a_root_outside_a_git_working_tree: () -> void

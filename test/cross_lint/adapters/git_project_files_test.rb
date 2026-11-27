@@ -20,9 +20,10 @@ class GitProjectFilesTest < Minitest::Test
 
   # Half the listed files are tracked and half untracked; the ignored
   # ones are in .git/info/exclude, which Git doesn't list.
-  def project_files_port(listed:, ignored: [])
+  def project_files_port(listed:, ignored: [], linked_out: [])
     git("init", "-q")
-    (listed + ignored).each { |path| write(project_root, path, "#{path}\n") }
+    (listed + ignored - linked_out).each { |path| write(project_root, path, "#{path}\n") }
+    linked_out.each { |path| link(write(@base, "elsewhere/#{path}", "secret\n"), File.join(project_root, path)) }
     write(project_root, ".git/info/exclude", ignored.map { |path| "/#{path}\n" }.join)
     tracked = listed.each_slice(2).map(&:first)
     git("add", "--", *tracked) unless tracked.empty?
@@ -30,6 +31,11 @@ class GitProjectFilesTest < Minitest::Test
   end
 
   def project_root = File.join(@base, "app")
+
+  def link(target, from)
+    FileUtils.mkdir_p(File.dirname(from))
+    File.symlink(target, from)
+  end
 
   # A .git file that points nowhere stops Git looking in the folders
   # above, which may be a repository, as a checkout of CrossLint is.
@@ -195,6 +201,39 @@ class GitProjectFilesTest < Minitest::Test
     write(project_root, "a.txt", "one\r\ntwo\n")
 
     assert_equal "one\r\ntwo\n", port.read(project_root, "a.txt")
+  end
+
+  def test_reads_a_file_that_links_to_a_path_inside_the_project
+    port = project_files_port(listed: ["a.txt"])
+    link(File.join(project_root, "a.txt"), File.join(project_root, "inside.txt"))
+    write(project_root, "real/b.txt", "b\n")
+    link(File.join(project_root, "real"), File.join(project_root, "alias"))
+
+    assert_equal ["a.txt\n", "b\n"], [port.read(project_root, "inside.txt"), port.read(project_root, "alias/b.txt")]
+  end
+
+  def test_reads_a_file_when_the_root_is_given_through_a_link
+    port = project_files_port(listed: ["a.txt"])
+    shortcut = File.join(@base, "shortcut")
+    link(project_root, shortcut)
+
+    assert_equal "a.txt\n", port.read(shortcut, "a.txt")
+  end
+
+  def test_cannot_read_a_file_through_a_link_to_a_folder_whose_name_starts_with_the_projects
+    port = project_files_port(listed: ["a.txt"])
+    write(@base, "app-other/x.txt", "x\n")
+    link(File.join(@base, "app-other"), File.join(project_root, "sibling"))
+
+    assert_equal "No such file or directory - sibling/x.txt", assert_raises(Errno::ENOENT) { port.read(project_root, "sibling/x.txt") }.message
+  end
+
+  def test_cannot_read_a_file_in_a_folder_that_links_outside_the_project
+    port = project_files_port(listed: ["a.txt"])
+    write(@base, "elsewhere/y.txt", "y\n")
+    link(File.join(@base, "elsewhere"), File.join(project_root, "out"))
+
+    assert_equal "No such file or directory - out/y.txt", assert_raises(Errno::ENOENT) { port.read(project_root, "out/y.txt") }.message
   end
 
   def test_finds_nothing_under_a_file

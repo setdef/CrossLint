@@ -27,6 +27,9 @@ module CrossLint
       # run has none.
       def environment: () -> Hash[String, String?]
 
+      # Whether the real path `real` is inside the real path `root`.
+      def inside?: (String root, String real) -> bool
+
       # Git's own message when it refused a folder that is a working tree.
       def refusal: (untyped env, String root, String error) -> String
 
