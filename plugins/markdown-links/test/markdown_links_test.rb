@@ -58,9 +58,10 @@ class MarkdownLinksTest < Minitest::Test
         <e f.md>
       <a href="g.md">G</a> <img alt='x' src='h.png'>
       [^note]: not-a-link.md
+      [text with [brackets]](i.md) [one][two](j.md)
     MARKDOWN
 
-    assert_equal %w[a.svg b.svg c/ d.md e\ f.md g.md h.png], findings(check("index.md" => text)).map(&:last).sort
+    assert_equal %w[a.svg b.svg c/ d.md e\ f.md g.md h.png i.md j.md], findings(check("index.md" => text)).map(&:last).sort
   end
 
   def test_skips_links_with_a_scheme_or_a_host_and_empty_ones
