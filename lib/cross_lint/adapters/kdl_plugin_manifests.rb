@@ -39,7 +39,7 @@ module CrossLint
           settings: named_nodes(document, "setting") { |name, line| Core::SettingDeclaration.new(name:, line:) },
           commands: nodes(document, "command") { |node| command(document, node) },
           steps: named_nodes(document, "step") { |name, line| Core::StepDeclaration.new(name:, line:) },
-          artifacts_ruby: artifacts_ruby(document))
+          **artifacts(document))
       end
 
       private
@@ -142,27 +142,36 @@ module CrossLint
       end
 
       def rule(document, node)
-        name = document.string(node, "rule NAME ruby=FILE")
-        document.properties(node, ["ruby"])
+        name = document.string(node, "rule NAME ruby=FILE or rule NAME helper=HELPER")
+        document.properties(node, %w[ruby helper])
         no_children(document, node)
-        ruby = document.string_property(node, "ruby")
-        raise document.mistake("rule #{name.dump} has no ruby=, the file its code is in", node) unless ruby
+        ruby, helper = %w[ruby helper].map { |property| document.string_property(node, property) }
+        if ruby && helper
+          raise document.mistake("rule #{name.dump} has both ruby= and helper=; a rule is in the plugin's Ruby or run by its helper", node)
+        end
+        raise document.mistake("rule #{name.dump} has neither ruby=, the file its code is in, nor helper=, the helper that runs it", node) unless ruby || helper
 
-        Core::RuleDeclaration.new(name:, ruby:, line: node.line)
+        Core::RuleDeclaration.new(name:, ruby:, helper:, line: node.line)
       end
 
-      def artifacts_ruby(document)
+      # The artifacts line, if there is one: the file of the plugin's Ruby
+      # that declares artifacts, or the helper that does.
+      def artifacts(document)
         first, again = document.nodes.select { |node| node.name == "artifacts" }
-        return unless first
+        return {} unless first
         raise document.mistake("artifacts is declared twice; the first is on line #{first.line}", again) if again
 
-        document.arguments(first, "artifacts ruby=FILE", 0)
-        document.properties(first, ["ruby"])
+        document.arguments(first, "artifacts ruby=FILE or artifacts helper=HELPER", 0)
+        document.properties(first, %w[ruby helper])
         no_children(document, first)
-        ruby = document.string_property(first, "ruby")
-        raise document.mistake("artifacts has no ruby=, the file that declares them", first) unless ruby
+        ruby, helper = %w[ruby helper].map { |property| document.string_property(first, property) }
+        if ruby && helper
+          raise document.mistake("artifacts has both ruby= and helper=; artifacts are declared in the plugin's Ruby or by its helper", first)
+        end
+        return {artifacts_helper: Core::ArtifactsHelper.new(helper:, line: first.line)} if helper
+        raise document.mistake("artifacts has neither ruby=, the file that declares them, nor helper=, the helper that declares them", first) unless ruby
 
-        Core::ArtifactsRuby.new(ruby:, line: first.line)
+        {artifacts_ruby: Core::ArtifactsRuby.new(ruby:, line: first.line)}
       end
 
       def command(document, node)

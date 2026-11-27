@@ -268,7 +268,7 @@ class LoadProjectTest < Minitest::Test
     configuration = Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], policies: [], warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
       manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}), plugin_ruby: MemoryPluginRuby.new,
-      shared_plugins: shared_plugins({}))
+      shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new)
 
     assert_equal %(unknown step "track-debt"; this CrossLint has none), assert_raises(Mistake) { use_case.call(APP) }.message
   end
@@ -557,6 +557,65 @@ class LoadProjectTest < Minitest::Test
     assert_mistake file, 4, %(no file "artifacts.rb" in the plugin's folder), manifest: declaring_manifest
   end
 
+  def test_adds_the_artifacts_a_plugins_helper_declares_from_its_settings_and_stops_the_helper
+    given = []
+    answer = lambda do |input|
+      given << input
+      {"artifacts" => [{"name" => "ruby-file", "files" => "lib/{path}.rb", "companions" => {"test" => "test/{path}_test.rb"}, "key" => "{path}",
+                        "optional" => true, "dotfiles" => false}, {"name" => "plain", "files" => "{path}.md"}]}
+    end
+    port = HelperPort.new({"tests/roles" => answer}, commands: ["node"])
+    manifest = helped_manifest.with(settings: [SettingDeclaration.new(name: "lib", line: 2)])
+    settings = [Setting.new(name: "lib", arguments: ["lib"], properties: {"x" => 1}, children: [setting("y", line: 4)], line: 3)]
+    project = load_project(plugins: [listing("./rules/tests", settings:)], manifest:, helpers: port)
+    declared = project.plugins.first.manifest.artifacts
+
+    assert_equal [{"settings" => [{"name" => "lib", "arguments" => ["lib"], "properties" => {"x" => 1}, "line" => 3,
+                                   "children" => [{"name" => "y", "arguments" => [], "properties" => {}, "children" => [], "line" => 4}]}]}], given
+    assert_equal [["ruby-file", "lib/{path}.rb", [["test", "test/{path}_test.rb", 4]], "{path}", true, false, 4], ["plain", "{path}.md", [], nil, false, true, 4]],
+      declared.map { |each| [each.name, each.files.source, each.companions.map { [it.name, it.pattern.source, it.line] }, each.key&.source, each.optional, each.dotfiles, each.line] }
+    assert_equal [[APP, true]], port.started.map { |running| [running.root, running.stopped] }
+  end
+
+  def test_stops_at_the_mistake_a_plugins_helper_makes_of_a_setting
+    answer = ->(_) { {"mistake" => {"message" => "lib takes a folder", "line" => 3}} }
+    manifest = helped_manifest.with(settings: [SettingDeclaration.new(name: "lib", line: 2)])
+
+    assert_mistake CONFIG, 3, "lib takes a folder", plugins: [listing("./rules/tests", settings: [setting("lib", line: 3)])], manifest:,
+      helpers: HelperPort.new({"tests/roles" => answer}, commands: ["node"])
+  end
+
+  def test_stops_at_what_a_plugins_helper_answers_that_declares_no_artifacts_naming_the_plugin_and_the_artifacts_line
+    {
+      ->(_) { {"error" => "broken"} } => %(fault in plugin tests: helper "roles" failed: broken),
+      ->(_) { raise PluginError, "called helper roles, which exited with status 1 before it answered" } =>
+        "fault in plugin tests: called helper roles, which exited with status 1 before it answered",
+      ->(_) { [] } => %(fault in plugin tests: helper "roles" answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}}),
+      ->(_) { {"artifacts" => {}} } => %(fault in plugin tests: helper "roles" answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}}),
+      ->(_) { {"mistake" => {"message" => 3, "line" => 3}} } =>
+        %(fault in plugin tests: helper "roles" answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}}),
+      ->(_) { {"mistake" => {"message" => "m", "line" => "3"}} } =>
+        %(fault in plugin tests: helper "roles" answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}}),
+      ->(_) { {"mistake" => "m"} } => %(fault in plugin tests: helper "roles" answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}}),
+      ->(_) { {"artifacts" => [3]} } => %(fault in plugin tests: helper "roles" declared an artifact that isn't {"name": NAME, "files": PATTERN, ...}),
+      ->(_) { {"artifacts" => [{"name" => "a", "files" => "{x}.rb"}]} } =>
+        %(fault in plugin tests: helper "roles" declared artifact "a" with a path pattern "{x}.rb" has unknown placeholder "{x}"; expected "{path}" or "{name}"),
+      ->(_) { {"artifacts" => [{"name" => "a", "files" => "a.rb", "colour" => "x"}]} } =>
+        %(fault in plugin tests: helper "roles" declared an artifact that isn't {"name": NAME, "files": PATTERN, ...})
+    }.each do |answer, message|
+      assert_mistake "rules/tests/plugin.kdl", 4, message, manifest: helped_manifest, helpers: HelperPort.new({"tests/roles" => answer}, commands: ["node"])
+    end
+  end
+
+  def test_stops_at_a_helper_the_manifest_doesnt_declare_that_its_artifacts_or_a_rule_names
+    assert_mistake "rules/tests/plugin.kdl", 4, %(artifacts are declared by helper "roles", which plugin tests doesn't declare),
+      manifest: helped_manifest.with(helpers: [])
+    rules = [RuleDeclaration.new(name: "names-class", helper: "reader", line: 2)]
+
+    assert_mistake "rules/tests/plugin.kdl", 2, %(rule "names-class" is run by helper "reader", which plugin tests doesn't declare),
+      manifest: tests_manifest(policies: [policy(rules: [policy_rule("names-class")])], rules:)
+  end
+
   def test_finds_artifacts_in_the_plugins_namespace_alone_and_lets_them_set_up_in_initialize
     ruby = declaring(<<~RUBY)
       def initialize
@@ -794,7 +853,7 @@ class LoadProjectTest < Minitest::Test
   def test_has_no_built_in_plugins_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("debt")], policies: [], warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), manifests: MemoryPluginManifests.new,
-      plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({}))
+      plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new)
     mistake = assert_raises(Mistake) { use_case.call(APP) }
 
     assert_equal %(unknown built-in plugin "debt"; this CrossLint has none), mistake.message
@@ -814,7 +873,7 @@ class LoadProjectTest < Minitest::Test
   def test_raises_the_mistakes_the_ports_raise
     configuration = MemoryConfiguration.new({APP => Mistake.new("broken", file: CONFIG, line: 2)})
     mistake = assert_raises(Mistake) do
-      LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({})).call(APP)
+      LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new).call(APP)
     end
 
     assert_equal "#{CONFIG}:2", mistake.location
@@ -826,6 +885,7 @@ class LoadProjectTest < Minitest::Test
   MemoryPluginManifests = CrossLint::Adapters::MemoryPluginManifests
   MemoryPluginRuby = CrossLint::Adapters::MemoryPluginRuby
   MemorySharedPlugins = CrossLint::Adapters::MemorySharedPlugins
+  MemoryHelpers = CrossLint::Adapters::MemoryHelpers
 
   # A step that records the settings it is given to read, and raises
   # `mistake` when it reads them.
@@ -849,11 +909,12 @@ class LoadProjectTest < Minitest::Test
   end
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
-    shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false)
+    shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false, helpers: MemoryHelpers.new)
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, **{reserved:, reserved_flags:}.compact)
+      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, helpers:,
+      **{reserved:, reserved_flags:}.compact)
     listed ? use_case.listed(start) : use_case.call(start)
   end
 
@@ -873,6 +934,17 @@ class LoadProjectTest < Minitest::Test
       found.class_eval(body) if body
       namespace.const_set(:Artifacts, found)
     end}
+  end
+
+  # A plugin whose helper "roles" declares its artifacts.
+  def helped_manifest = tests_manifest(artifacts: [], policies: [policy(applies_to: nil)],
+    helpers: [HelperDeclaration.new(name: "roles", command: "node", file: "roles.mjs", line: 3)]).with(artifacts_helper: ArtifactsHelper.new(helper: "roles", line: 4))
+
+  # The in-memory helpers port, which keeps each set of helpers it starts.
+  class HelperPort < MemoryHelpers
+    def started = @started ||= []
+
+    def start(root, plugins) = super.tap { |running| started << running }
   end
 
   def declaring_manifest(policies: [policy(applies_to: nil)]) = tests_manifest(artifacts: [], policies:).with(artifacts_ruby: ArtifactsRuby.new(ruby: "artifacts.rb", line: 4))

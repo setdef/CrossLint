@@ -21,7 +21,11 @@ module CrossLint
       def companions = ((condition&.companion_conditions || []).map(&:companion) + rules.filter_map { |rule| rule.arguments["companion"] }).uniq
     end
 
-    class RuleDeclaration < Data.define(:name, :ruby, :line); end
+    # A rule a plugin declares: in its Ruby, with ruby=, or run by its
+    # helper, with helper=.
+    class RuleDeclaration < Data.define(:name, :ruby, :helper, :line)
+      def initialize(ruby: nil, helper: nil, **declared) = super
+    end
 
     class HelperDeclaration < Data.define(:name, :command, :file, :line)
       def missing_command(plugin)
@@ -53,8 +57,11 @@ module CrossLint
 
     class ArtifactsRuby < Data.define(:ruby, :line); end
 
-    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers, :step_policies, :settings, :commands, :steps, :artifacts_ruby)
-      def initialize(step_policies: [], settings: [], commands: [], steps: [], artifacts_ruby: nil, **declared) = super
+    class ArtifactsHelper < Data.define(:helper, :line); end
+
+    class Manifest < Data.define(:file, :artifacts, :policies, :rules, :helpers, :step_policies, :settings, :commands, :steps, :artifacts_ruby,
+      :artifacts_helper)
+      def initialize(step_policies: [], settings: [], commands: [], steps: [], artifacts_ruby: nil, artifacts_helper: nil, **declared) = super
     end
   end
 end

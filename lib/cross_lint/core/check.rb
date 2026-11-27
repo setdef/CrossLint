@@ -3,6 +3,7 @@
 require_relative "artifact"
 require_relative "check_result"
 require_relative "ruby_rule"
+require_relative "helper_rule"
 require_relative "step"
 
 module CrossLint
@@ -70,14 +71,21 @@ module CrossLint
       # Each plugin's files run in a namespace of the plugin's own, and a
       # plugin stops at its first fault.
       def load_rules(policies, helpers, files, read)
-        loaded = {} #: Hash[[String, String], RubyRule]
+        loaded = {} #: Hash[[String, String], RubyRule | HelperRule]
         faults = [] #: Array[Fault]
         policies.group_by(&:first).each do |plugin, owned|
           namespace = Module.new
           declarations = plugin.manifest.rules.to_h { |rule| [rule.name, rule] }
           names = owned.flat_map { |_, policy| policy.rules.map(&:name) }.uniq.reject { |name| BuiltInRule.named(name) }
           call = ->(name, input) { call_helper(helpers, plugin, name, input) }
-          names.each { |name| loaded[[plugin.name, name]] = RubyRule.load(@plugin_ruby, plugin, declarations.fetch(name), namespace, call, files, read) }
+          names.each do |name|
+            declaration = declarations.fetch(name)
+            loaded[[plugin.name, name]] = if declaration.helper
+              HelperRule.new(plugin:, name:, helper: declaration.helper, call:)
+            else
+              RubyRule.load(@plugin_ruby, plugin, declaration, namespace, call, files, read)
+            end
+          end
         rescue RubyRule::Stopped => error
           faults << error.fault
         end

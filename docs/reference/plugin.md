@@ -67,7 +67,7 @@ A condition that these can't state goes in a Ruby rule, which can return no viol
 
 ## Rules
 
-A rule is either built into CrossLint or written in Ruby in the plugin.
+A rule is built into CrossLint, written in Ruby in the plugin, or run by the plugin's helper.
 
 ### Built-in rules
 
@@ -140,6 +140,22 @@ CrossLint starts a helper at the first call, as `COMMAND FILE` in the project's 
 
 A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, and a message naming the plugin and the command it needs.
 
+### Rules a helper runs
+
+`rule NAME helper=HELPER` declares a rule that the plugin's helper `HELPER` runs, with no Ruby, and a policy then runs it as `rule "NAME"`, as it runs a rule in Ruby. For each artifact the policy applies it to, CrossLint sends the helper one request and turns its answer into the rule's violations:
+
+```json
+{"rule": "stub-matches-component", "artifact": {"path": "src/app/card/card.component.ts", "role": "component", "match": {"path": "app/card/card"},
+  "key": "app/card/card", "companions": {"stub": {"path": "src/app/card/card.component.stub.ts", "exists": true}}}}
+```
+
+The helper answers `{"violations": [{"message": TEXT, "detail": TEXT}, ...]}`, with no `detail` for a violation the rule gives none, or `{"error": MESSAGE}`. CrossLint stops the plugin with a fault at an error, at an answer of any other shape, and at a helper that fails, as it does at anything a rule in Ruby raises. The helper reads files itself, so CrossLint's `project_files` and `read` don't reach it. A rule a helper runs takes no arguments, and its violations are errors, unless a `severity=` on its policy's `rule` line or in the configuration says otherwise. The helper must be one the plugin declares.
+
+```kdl
+helper "angular" command="node" file="lib/helper.js"
+rule "stub-matches-component" helper="angular"
+```
+
 ## Steps, settings, and commands
 
 A plugin can also declare a step, the settings it takes, and commands under the plugin's name. The debt plugin's `plugin.kdl`, which ships inside CrossLint, declares all four kinds of line:
@@ -171,7 +187,7 @@ A mistyped command, or a command of a plugin the configuration doesn't list, sto
 
 ## Artifacts declared in Ruby
 
-A plugin whose artifacts depend on its settings, such as a folder the project chooses, declares them in Ruby with `artifacts ruby=FILE`, in place of or beside its `artifact` lines. The Angular plugin does this, so `src-dir` and `role` change where it finds each role's files. A plugin that keeps Ruby files in a folder its project chooses could have:
+A plugin whose artifacts depend on its settings, such as a folder the project chooses, declares them in Ruby with `artifacts ruby=FILE`, in place of or beside its `artifact` lines, so its settings change where it finds each role's files. A plugin that keeps Ruby files in a folder its project chooses could have:
 
 ```kdl
 setting "lib-dir"
@@ -201,3 +217,13 @@ end
 | `mistake(MESSAGE, SETTING)` | A mistake in the configuration at that setting's line, for `declare` to raise. It stops CrossLint with exit status 2, as any mistake does. |
 
 Anything else `declare` raises stops CrossLint with exit status 2, naming the plugin, since no check can run without its artifacts.
+
+## Artifacts a helper declares
+
+A plugin's helper can declare the artifacts in place of its Ruby, with `artifacts helper=HELPER`. CrossLint starts the helper once, before any rule runs, sends it the plugin's settings, and stops it when it answers:
+
+```json
+{"settings": [{"name": "lib-dir", "arguments": ["src"], "properties": {}, "children": [], "line": 3}]}
+```
+
+The helper answers with the artifacts, each with the fields of `artifact` in the table for artifacts declared in Ruby, and only `name` and `files` needed: `{"artifacts": [{"name": "ruby-file", "files": "src/{path}.rb", "companions": {"signature": "sig/{path}.rbs"}}]}`. For a setting it can't use, it answers `{"mistake": {"message": TEXT, "line": LINE}}`, with the setting's line, and CrossLint stops with exit status 2 at that line of the configuration. CrossLint also stops with exit status 2 at an error, at an answer of any other shape, and at an artifact that isn't one, naming the plugin and the manifest's `artifacts` line. A manifest declares its artifacts in Ruby or by a helper, not both.

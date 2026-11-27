@@ -8,6 +8,14 @@ module CrossLint
     class LoadProject
       DECLARER = :Artifacts
 
+      # What a helper that declares artifacts answers when its answer is
+      # neither, and when an artifact in it isn't one.
+      ANSWER = %(answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}})
+      ARTIFACT = %(declared an artifact that isn't {"name": NAME, "files": PATTERN, ...})
+
+      # The fields an artifact a helper declares can have.
+      FIELDS = %w[name files companions key optional dotfiles].freeze
+
       # What a command of a plugin is called: lowercase letters, digits, and -.
       COMMAND = /\A[a-z0-9-]+\z/
 
@@ -16,10 +24,11 @@ module CrossLint
       # so adding the command breaks no plugin.
       RESERVED = %w[version completion config plugin plugins list cache doctor explain fix self].freeze
 
-      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, built_in: {}, steps: {}, reserved: [], reserved_flags: [])
+      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, helpers:, built_in: {}, steps: {}, reserved: [], reserved_flags: [])
         @configuration = configuration
         @manifests = manifests
         @plugin_ruby = plugin_ruby
+        @helpers = helpers
         @shared_plugins = shared_plugins
         @built_in = built_in
         @steps = steps
@@ -64,7 +73,7 @@ module CrossLint
         # policy can apply to another plugin's.
         plugins = plugins.map do |plugin|
           check_setting_names(plugin, configuration.file)
-          declare(plugin, configuration.file)
+          declare(root, plugin, configuration.file)
         end
         plugins.each do |plugin|
           check_manifest(plugin, plugins)
@@ -72,6 +81,12 @@ module CrossLint
         end
         check_policy_settings(configuration, plugins)
         Project.new(root:, configuration:, plugins:)
+      end
+
+      # A setting as the helper that declares a plugin's artifacts is sent it.
+      def self.described(setting)
+        {"name" => setting.name, "arguments" => setting.arguments, "properties" => setting.properties,
+         "children" => setting.children.map { |child| described(child) }, "line" => setting.line}
       end
 
       private
@@ -152,9 +167,62 @@ module CrossLint
       # added to its manifest's. Whatever that Ruby raises but a mistake
       # stops CrossLint the same way, since no check can run without the
       # plugin's artifacts.
-      def declare(plugin, file)
+      def declare(root, plugin, file)
         ruby = plugin.manifest.artifacts_ruby
-        ruby ? declare_in_ruby(plugin, ruby, file) : plugin
+        helper = plugin.manifest.artifacts_helper
+        return declare_in_ruby(plugin, ruby, file) if ruby
+        return declare_by_helper(root, plugin, helper, file) if helper
+
+        plugin
+      end
+
+      # The plugin with the artifacts its helper declares from its settings
+      # added to its manifest's, the helper started for this alone and
+      # stopped after it answers.
+      def declare_by_helper(root, plugin, declaration, file)
+        manifest = plugin.manifest
+        name = declaration.helper
+        unless manifest.helpers.any? { |helper| helper.name == name }
+          raise Mistake.new("artifacts are declared by helper #{name.dump}, which plugin #{plugin.name} doesn't declare", file: manifest.file, line: declaration.line)
+        end
+
+        running = @helpers.start(root, [plugin])
+        answer = begin
+          running.call(plugin, name, {"settings" => plugin.listing.settings.map { |setting| LoadProject.described(setting) }})
+        ensure
+          running.stop
+        end
+        plugin.with(manifest: manifest.with(artifacts: manifest.artifacts + declared(answer, name, file, declaration.line)))
+      rescue PluginError => error
+        raise Mistake.new("fault in plugin #{plugin.name}: #{error.message}", file: plugin.manifest.file, line: declaration.line)
+      end
+
+      # The artifacts a helper's answer declares, or the mistake it found
+      # in a setting, raised.
+      def declared(answer, name, file, line)
+        raise PluginError, "helper #{name.dump} failed: #{answer.fetch("error")}" if answer.is_a?(Hash) && answer["error"].is_a?(String)
+
+        mistake = answer["mistake"] if answer.is_a?(Hash)
+        if mistake.is_a?(Hash) && mistake["message"].is_a?(String) && mistake["line"].is_a?(Integer)
+          raise Mistake.new(mistake.fetch("message"), file:, line: mistake.fetch("line"))
+        end
+
+        found = answer["artifacts"] if answer.is_a?(Hash)
+        raise PluginError, "helper #{name.dump} #{ANSWER}" unless found.is_a?(Array)
+
+        declarer = Artifacts.allocate
+        declarer.instance_variable_set(:@crosslint_line, line)
+        found.map do |artifact|
+          raise PluginError, "helper #{name.dump} #{ARTIFACT}" unless artifact.is_a?(Hash) && (artifact.keys - FIELDS).empty?
+
+          none = {} #: Hash[String, untyped]
+          begin
+            declarer.artifact(artifact["name"], files: artifact["files"], companions: artifact.fetch("companions", none), key: artifact["key"],
+              optional: artifact.fetch("optional", false), dotfiles: artifact.fetch("dotfiles", true))
+          rescue PluginError => error
+            raise PluginError, "helper #{name.dump} #{error.message}"
+          end
+        end
       end
 
       def declare_in_ruby(plugin, ruby, file)
@@ -187,9 +255,13 @@ module CrossLint
         manifest.artifacts.each { |artifact| check_artifact(artifact, manifest.file) }
         once(manifest.rules, "rule", manifest.file)
         manifest.rules.each do |rule|
-          next unless BuiltInRule.named(rule.name)
+          if BuiltInRule.named(rule.name)
+            raise Mistake.new("rule #{rule.name.dump} has the name of a built-in rule; name it something else",
+              file: manifest.file, line: rule.line)
+          end
+          next if rule.helper.nil? || manifest.helpers.any? { |helper| helper.name == rule.helper }
 
-          raise Mistake.new("rule #{rule.name.dump} has the name of a built-in rule; name it something else",
+          raise Mistake.new("rule #{rule.name.dump} is run by helper #{rule.helper.dump}, which plugin #{plugin.name} doesn't declare",
             file: manifest.file, line: rule.line)
         end
         once(manifest.helpers, "helper", manifest.file)

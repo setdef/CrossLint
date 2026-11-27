@@ -9,6 +9,21 @@ module CrossLint
       # The name of the class a plugin's artifacts file defines.
       DECLARER: Symbol
 
+      # What a helper that declares artifacts answers when its answer
+      # declares none and names no mistake.
+      ANSWER: String
+
+      # What a helper that declares artifacts answers when an artifact in
+      # its answer isn't one.
+      ARTIFACT: String
+
+      # The fields an artifact a helper declares can have.
+      FIELDS: Array[String]
+
+      # A setting as the helper that declares a plugin's artifacts is sent
+      # it: its name, arguments, properties, children, and line.
+      def self.described: (Setting setting) -> Hash[String, untyped]
+
       # What the name of a plugin's command is made of.
       COMMAND: Regexp
 
@@ -19,14 +34,15 @@ module CrossLint
 
       # A use case that reads through `configuration` and `manifests`, runs
       # the Ruby that declares a plugin's artifacts through `plugin_ruby`,
-      # and fetches shared plugins through `shared_plugins`. `built_in` has
+      # starts the helper that declares them through `helpers`, and fetches
+      # shared plugins through `shared_plugins`. `built_in` has
       # the folder of each built-in plugin, by name, and `steps` each step
       # CrossLint has, by name. `reserved` has the name of each command of
       # CrossLint, which no plugin that adds commands can be named, and
       # `reserved_flags` each way CrossLint's global flags are written,
       # which no flag of a plugin's command can be.
       def initialize: (configuration: _Configuration, manifests: _PluginManifests, plugin_ruby: _PluginRuby, shared_plugins: _SharedPlugins,
-                       ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
+                       helpers: _Helpers, ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
                        ?reserved_flags: Array[String]) -> void
 
       # The project whose root is `start` or the nearest folder above it
@@ -82,10 +98,23 @@ module CrossLint
       # empty segment, such as "x" for "./a/../x/".
       def clean: (String name) -> String
 
-      # `plugin`, with the artifacts its Ruby declares from its settings
-      # added to its manifest's when it has `artifacts ruby=`. `file` is
+      # `plugin`, with the artifacts its Ruby or its helper declares from
+      # its settings added to its manifest's when it has `artifacts ruby=`
+      # or `artifacts helper=`. `root` is the project's root, and `file`
       # the configuration's.
-      def declare: (Plugin plugin, String file) -> Plugin
+      def declare: (String root, Plugin plugin, String file) -> Plugin
+
+      # `plugin` with the artifacts its helper `declaration` names declares,
+      # the helper started in `root` for this alone and stopped after it
+      # answers. Raises Mistake at the mistake the helper names in a
+      # setting of the configuration at `file`, and at anything else that
+      # goes wrong, naming the manifest's artifacts line.
+      def declare_by_helper: (String root, Plugin plugin, ArtifactsHelper declaration, String file) -> Plugin
+
+      # The artifacts the answer of helper `name` declares, each on `line`.
+      # Raises Mistake, in the configuration at `file`, at the mistake it
+      # names, and PluginError at an answer that is neither.
+      def declared: (untyped answer, String name, String file, Integer line) -> Array[ArtifactDeclaration]
 
       # `plugin` with the artifacts `ruby` declares. Raises Mistake at
       # whatever the Ruby raises.

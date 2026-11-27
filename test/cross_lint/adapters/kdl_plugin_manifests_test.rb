@@ -80,7 +80,7 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_every_example_in_the_plugin_reference
-    first, ruby_rule, helper, steps = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
+    first, ruby_rule, helper, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
 
     assert_equal [["ruby-file", ["signature", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.companions.map(&:name)] }
     assert_equal [["has-signature", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
@@ -88,6 +88,8 @@ class KDLPluginManifestsTest < Minitest::Test
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
     assert_equal Condition::CompanionExists.new(companion: "signature", line: 5), ruby_rule.policies.first.condition
     assert_equal [HelperDeclaration.new(name: "members", command: "node", file: "helpers/members.mjs", line: 1)], helper.helpers
+    assert_equal [[RuleDeclaration.new(name: "stub-matches-component", helper: "angular", line: 2)], ["angular"]], [helped.rules, helped.helpers.map(&:name)]
+    assert_equal [ArtifactsRuby.new(ruby: "artifacts.rb", line: 3)], [artifacts.artifacts_ruby]
     assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update"]],
       [steps.steps, steps.step_policies, steps.settings, steps.commands].map { |list| list.map(&:name) }
     flag = CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "List the entries update would add and remove, and write nothing", line: 9)
@@ -170,11 +172,20 @@ class KDLPluginManifestsTest < Minitest::Test
       [read(%(setting "x"\n)).artifacts_ruby, read(%(setting "x"\nartifacts ruby="roles.rb"\n)).artifacts_ruby]
   end
 
+  def test_reads_the_helper_that_declares_artifacts
+    helped = read(%(helper "roles" command="node" file="roles.mjs"\nartifacts helper="roles"\n))
+
+    assert_equal [nil, ArtifactsHelper.new(helper: "roles", line: 2), nil],
+      [read(%(setting "x"\n)).artifacts_helper, helped.artifacts_helper, helped.artifacts_ruby]
+  end
+
   def test_refuses_artifacts_written_wrong
     assert_refuses 2, "artifacts is declared twice; the first is on line 1", %(artifacts ruby="a.rb"\nartifacts ruby="b.rb"\n)
-    assert_refuses 1, "artifacts has no ruby=, the file that declares them", %(artifacts\n)
-    assert_refuses 1, "artifacts has 1 argument; write it as artifacts ruby=FILE", %(artifacts "a.rb"\n)
-    assert_refuses 1, %(unknown property "rb"; expected "ruby"), %(artifacts rb="a.rb"\n)
+    assert_refuses 1, "artifacts has neither ruby=, the file that declares them, nor helper=, the helper that declares them", %(artifacts\n)
+    assert_refuses 1, "artifacts has both ruby= and helper=; artifacts are declared in the plugin's Ruby or by its helper", %(artifacts ruby="a.rb" helper="h"\n)
+    assert_refuses 1, "artifacts has 1 argument; write it as artifacts ruby=FILE or artifacts helper=HELPER", %(artifacts "a.rb"\n)
+    assert_refuses 1, %(unknown property "rb"; expected "ruby" or "helper"), %(artifacts rb="a.rb"\n)
+    assert_refuses 1, "helper= takes a string, not 1", %(artifacts helper=1\n)
     assert_refuses 2, %(unknown node "x"; artifacts takes no children), %(artifacts ruby="a.rb" {\n  x\n}\n)
   end
 
@@ -236,8 +247,14 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 1, "policy has 0 arguments; write it as policy NAME { ... }", %(policy { applies-to "a"; })
   end
 
+  def test_reads_a_rule_its_helper_runs
+    assert_equal [RuleDeclaration.new(name: "r", helper: "h", line: 1)], read(%(rule "r" helper="h"\n)).rules
+  end
+
   def test_refuses_a_ruby_rule_written_wrong
-    assert_refuses 1, %(rule "r" has no ruby=, the file its code is in), %(rule "r")
+    assert_refuses 1, %(rule "r" has neither ruby=, the file its code is in, nor helper=, the helper that runs it), %(rule "r")
+    assert_refuses 1, %(rule "r" has both ruby= and helper=; a rule is in the plugin's Ruby or run by its helper), %(rule "r" ruby="r.rb" helper="h")
+    assert_refuses 1, "helper= takes a string, not 1", %(rule "r" helper=1)
     assert_refuses 1, %(unknown property "rubby", did you mean "ruby"?), %(rule "r" rubby="r.rb")
     assert_refuses 1, %(unknown node "x"; rule takes no children), %(rule "r" ruby="r.rb" { x; })
     assert_refuses 1, "ruby= takes a string, not 1", %(rule "r" ruby=1)
@@ -299,7 +316,7 @@ class KDLPluginManifestsTest < Minitest::Test
     {
       %(artifact) => "artifact has 0 arguments; write it as artifact NAME { ... }",
       %(policy) => "policy has 0 arguments; write it as policy NAME { ... }",
-      %(rule) => "rule has 0 arguments; write it as rule NAME ruby=FILE",
+      %(rule) => "rule has 0 arguments; write it as rule NAME ruby=FILE or rule NAME helper=HELPER",
       %(helper) => "helper has 0 arguments; write it as helper NAME command=COMMAND file=FILE",
       %(artifact "a" { files; }) => "files has 0 arguments; write it as files PATTERN",
       %(artifact "a" { files "x"; companion; }) => "companion has 0 arguments; write it as companion NAME PATTERN",

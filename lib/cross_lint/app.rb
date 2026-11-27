@@ -75,7 +75,7 @@ module CrossLint
     private
 
     def loader
-      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, plugin_ruby: @plugin_ruby, shared_plugins: @shared_plugins,
+      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, plugin_ruby: @plugin_ruby, shared_plugins: @shared_plugins, helpers: @helpers,
         built_in: @built_in, steps: @steps, reserved: @reserved, reserved_flags: @reserved_flags)
     end
 

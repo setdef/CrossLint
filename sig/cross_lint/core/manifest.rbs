@@ -142,17 +142,22 @@ module CrossLint
       # The rule's name, which a policy runs it by.
       attr_reader name: String
 
-      # The rule's file, relative to the plugin's folder.
-      attr_reader ruby: String
+      # The rule's file, relative to the plugin's folder, for a rule in the
+      # plugin's Ruby, declared as `rule NAME ruby=FILE`; or nil.
+      attr_reader ruby: String?
+
+      # The name of the plugin's helper that runs the rule, for a rule
+      # declared as `rule NAME helper=HELPER`; or nil.
+      attr_reader helper: String?
 
       # The line the declaration is on.
       attr_reader line: Integer
 
-      # A rule with these fields.
-      def self.new: (name: String, ruby: String, line: Integer) -> instance
+      # A rule with these fields, one of `ruby` and `helper` given.
+      def self.new: (name: String, ?ruby: String?, ?helper: String?, line: Integer) -> instance
 
-      # A rule with these fields.
-      def initialize: (name: String, ruby: String, line: Integer) -> void
+      # A rule with these fields, one of `ruby` and `helper` given.
+      def initialize: (name: String, ?ruby: String?, ?helper: String?, line: Integer) -> void
     end
 
     # A helper a plugin declares: a program in another language that its
@@ -335,19 +340,23 @@ module CrossLint
       # settings, or nil.
       attr_reader artifacts_ruby: ArtifactsRuby?
 
-      # A manifest with these fields, and none of the last five unless
+      # The helper that declares more artifacts from the plugin's
+      # settings, or nil.
+      attr_reader artifacts_helper: ArtifactsHelper?
+
+      # A manifest with these fields, and none of the last six unless
       # given.
       def self.new: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
                      rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration], ?step_policies: Array[StepPolicy],
                      ?settings: Array[SettingDeclaration], ?commands: Array[CommandDeclaration], ?steps: Array[StepDeclaration],
-                     ?artifacts_ruby: ArtifactsRuby?) -> instance
+                     ?artifacts_ruby: ArtifactsRuby?, ?artifacts_helper: ArtifactsHelper?) -> instance
 
-      # A manifest with these fields, and none of the last five unless
+      # A manifest with these fields, and none of the last six unless
       # given.
       def initialize: (file: String, artifacts: Array[ArtifactDeclaration], policies: Array[Policy],
                        rules: Array[RuleDeclaration], helpers: Array[HelperDeclaration], ?step_policies: Array[StepPolicy],
                        ?settings: Array[SettingDeclaration], ?commands: Array[CommandDeclaration], ?steps: Array[StepDeclaration],
-                       ?artifacts_ruby: ArtifactsRuby?) -> void
+                       ?artifacts_ruby: ArtifactsRuby?, ?artifacts_helper: ArtifactsHelper?) -> void
     end
 
     # The file of a plugin's Ruby that declares artifacts from its
@@ -364,6 +373,22 @@ module CrossLint
 
       # A declaration with these fields.
       def initialize: (ruby: String, line: Integer) -> void
+    end
+
+    # The helper of a plugin that declares artifacts from its settings,
+    # declared as `artifacts helper=HELPER`.
+    class ArtifactsHelper < Data
+      # The helper's name, one the plugin declares.
+      attr_reader helper: String
+
+      # The line it is declared on.
+      attr_reader line: Integer
+
+      # A declaration with these fields.
+      def self.new: (helper: String, line: Integer) -> instance
+
+      # A declaration with these fields.
+      def initialize: (helper: String, line: Integer) -> void
     end
   end
 end

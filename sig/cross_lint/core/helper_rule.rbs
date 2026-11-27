@@ -1,0 +1,47 @@
+module CrossLint
+  module Core
+    # A rule a plugin's helper runs, declared as `rule NAME helper=HELPER`.
+    # For each artifact a policy applies it to, the helper is sent
+    # `{"rule": NAME, "artifact": ARTIFACT}` (HelperRule.described) and
+    # answers `{"violations": [{"message": TEXT, "detail": TEXT}, ...]}`,
+    # with no detail where the rule gives none, or `{"error": MESSAGE}`.
+    class HelperRule
+      # A rule `name` of `plugin` that helper `helper` runs, asked through
+      # `call`, which sends a helper of the plugin's, by name, a request.
+      def initialize: (plugin: Plugin, name: String, helper: String, call: ^(String name, untyped input) -> untyped) -> void
+
+      # The severity of the rule's violations unless its policy line or
+      # the configuration gives one: `:error`.
+      def severity: () -> severity
+
+      # What the helper reports on `artifact`; a rule a helper runs takes
+      # no `arguments`, and the helper reads files itself, so `read` goes
+      # unused. Raises RubyRule::Stopped when the helper fails, answers with
+      # an error, or answers what isn't violations.
+      def results: (Artifact artifact, Hash[String, untyped] arguments, ^(String path) -> String read) -> Array[RuleResult]
+
+      # `artifact` as the helper is sent it: its path, role, match, key, and
+      # each companion's path and whether it exists, by name.
+      #
+      # ```ruby
+      # companion = CrossLint::Core::Companion.new(name: "test", path: "test/a_test.rb", exists: false)
+      # artifact = CrossLint::Core::Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, companions: [companion])
+      # CrossLint::Core::HelperRule.described(artifact)
+      # # => {"path" => "lib/a.rb", "role" => "ruby-file", "match" => {"path" => "a"}, "key" => nil, "companions" => {"test" => {"path" => "test/a_test.rb", "exists" => false}}}
+      # ```
+      def self.described: (Artifact artifact) -> Hash[String, untyped]
+
+      private
+
+      @plugin: Plugin
+      @name: String
+      @helper: String
+      @call: ^(String name, untyped input) -> untyped
+
+      # The result `violation`, one violation of the helper's answer, gives
+      # on `artifact`. Raises PluginError unless it has a message, and a
+      # detail or none.
+      def result: (Artifact artifact, untyped violation) -> RuleResult
+    end
+  end
+end

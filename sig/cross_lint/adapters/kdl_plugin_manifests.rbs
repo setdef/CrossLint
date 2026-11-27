@@ -59,8 +59,9 @@ module CrossLint
       def rule: (KDLDocument document, KDLDocument::Node node) -> Core::RuleDeclaration
 
       # Reads the `artifacts` node, if there is one, which names the file
-      # whose Ruby declares more artifacts.
-      def artifacts_ruby: (KDLDocument document) -> Core::ArtifactsRuby?
+      # whose Ruby declares more artifacts, or the helper that does: as the
+      # manifest's field for it.
+      def artifacts: (KDLDocument document) -> ({artifacts_ruby: Core::ArtifactsRuby} | {artifacts_helper: Core::ArtifactsHelper} | {})
 
       # Reads a `command` node, and the `flag` nodes in its block.
       def command: (KDLDocument document, KDLDocument::Node node) -> Core::CommandDeclaration
