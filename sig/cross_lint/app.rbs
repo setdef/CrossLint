@@ -2,13 +2,20 @@ module CrossLint
   # The composition root: builds the adapters, and hands them to a use
   # case.
   class App
-    # The folder of CrossLint's built-in plugins, one folder each.
+    # The folder of CrossLint's built-in plugins, one folder each, beside
+    # the shared plugins this repository keeps.
     PLUGINS: String
+
+    # The name of each built-in plugin, a folder of PLUGINS:
+    # `["angular", "debt"]`. A project lists any other folder there as a
+    # shared plugin, by URL and `path=`.
+    BUILT_IN: Array[String]
 
     # An app that reads the configuration through `configuration`, the
     # manifests through `manifests`, the project's files through
     # `project_files`, plugins' Ruby through `plugin_ruby`, and runs
     # helpers through `helpers`, with the built-in plugins in `plugins`,
+    # each a folder named in `built_in` that holds a manifest,
     # and whose step track-debt reads and writes debt files through
     # `debt_files`. With no `helpers`, it runs them as processes, writing
     # what they write to standard error to `err` with `debug`. It reads
@@ -22,7 +29,7 @@ module CrossLint
     # which no flag of a plugin's command can be written as; with none
     # given, they are those of the shipped usage spec.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
-                     ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String,
+                     ?plugin_ruby: _PluginRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String, ?built_in: Array[String],
                      ?debt_files: _DebtFiles, ?ng_nudge: _NgNudge, ?javascript: _JavaScript, ?reserved: Array[String]?, ?reserved_flags: Array[String]?, ?err: CLI::_Output, ?debug: bool) -> void
 
     # How each global flag of `spec`, with --help and --version, is
@@ -110,7 +117,7 @@ module CrossLint
 
     @steps: Hash[String, Core::_Step]
 
-    # The folder of each built-in plugin in `folder`, by name.
-    def built_in_plugins: (String folder) -> Hash[String, String]
+    # The folder of each built-in plugin in `folder` among `names`, by name.
+    def built_in_plugins: (String folder, Array[String] names) -> Hash[String, String]
   end
 end

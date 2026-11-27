@@ -7,9 +7,13 @@ module CrossLint
   class App
     PLUGINS = File.expand_path("../../../plugins", __FILE__)
 
+    # The other folders of PLUGINS are shared plugins, which a project lists
+    # by URL and path=, so a folder there is built in only by name.
+    BUILT_IN = %w[angular debt].freeze
+
     def initialize(configuration: Adapters::KDLConfiguration.new, manifests: Adapters::KDLPluginManifests.new,
       project_files: Adapters::GitProjectFiles.new, plugin_ruby: Adapters::FilePluginRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
-      debt_files: Adapters::TSVDebtFiles.new, ng_nudge: Adapters::FileNgNudge.new, javascript: Adapters::NodeJavaScript.new,
+      built_in: BUILT_IN, debt_files: Adapters::TSVDebtFiles.new, ng_nudge: Adapters::FileNgNudge.new, javascript: Adapters::NodeJavaScript.new,
       reserved: nil, reserved_flags: nil, err: $stderr, debug: false)
       @configuration = configuration
       @manifests = manifests
@@ -20,7 +24,7 @@ module CrossLint
       @debt_files = debt_files
       @ng_nudge = ng_nudge
       @javascript = javascript
-      @built_in = built_in_plugins(plugins)
+      @built_in = built_in_plugins(plugins, built_in)
       @reserved = reserved || UsageSpec.load.commands.map(&:name)
       @reserved_flags = reserved_flags || self.class.global_flag_names(UsageSpec.load)
       @steps = {"track-debt" => Core::TrackDebt.new(debt_files:)} #: Hash[String, Core::_Step]
@@ -75,11 +79,8 @@ module CrossLint
         built_in: @built_in, steps: @steps, reserved: @reserved, reserved_flags: @reserved_flags)
     end
 
-    def built_in_plugins(folder)
-      Dir.glob("*/#{@manifests.file}", base: folder).to_h do |path|
-        name = File.dirname(path)
-        [name, File.join(folder, name)]
-      end
+    def built_in_plugins(folder, names)
+      Dir.glob("*/#{@manifests.file}", base: folder).map { File.dirname(it) }.select { names.include?(it) }.to_h { [it, File.join(folder, it)] }
     end
   end
 end

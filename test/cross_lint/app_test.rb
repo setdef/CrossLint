@@ -46,10 +46,11 @@ class AppTest < Minitest::Test
     write(@base, "plugins/tool/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "go" help="Goes" {\n  flag "-q --quick" help="Quick"\n}\n))
     write(@base, "app/.config/crosslint/config.kdl", %(plugin "tool"\n))
     plugins = File.join(@base, "plugins")
+    built_in = ["tool"]
     message = /\Aplugin tool in .* gives command "go" the flag -q, which is a global flag of CrossLint; name the flag another way\z/
 
-    assert_match message, assert_raises(Mistake) { App.new(plugins:).load_project(File.join(@base, "app")) }.message
-    assert_equal ["tool"], App.new(plugins:, reserved_flags: ["-Q"]).load_project(File.join(@base, "app")).plugins.map(&:name)
+    assert_match message, assert_raises(Mistake) { App.new(plugins:, built_in:).load_project(File.join(@base, "app")) }.message
+    assert_equal ["tool"], App.new(plugins:, built_in:, reserved_flags: ["-Q"]).load_project(File.join(@base, "app")).plugins.map(&:name)
   end
 
   def test_finds_the_built_in_plugins_in_crosslints_plugins_folder
@@ -113,7 +114,7 @@ class AppTest < Minitest::Test
     write(@base, "plugins/debt/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "update" help="Updates"\ncommand "prune" help="Prunes"\n))
     write(@base, "plugins/other/plugin.kdl", MANIFEST)
 
-    assert_equal({"debt" => %w[update prune], "other" => []}, App.new(plugins: File.join(@base, "plugins")).built_in_commands)
+    assert_equal({"debt" => %w[update prune], "other" => []}, App.new(plugins: File.join(@base, "plugins"), built_in: %w[debt other]).built_in_commands)
     assert_equal({"debt" => ["update"], "angular" => []}, App.new.built_in_commands.slice("debt", "angular"))
   end
 
@@ -122,26 +123,34 @@ class AppTest < Minitest::Test
     write(@base, "plugins/tool/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "update" help="Updates"\n))
     write(@base, "app/.config/crosslint/config.kdl", %(plugin "check"\n))
     plugins = File.join(@base, "plugins")
+    built_in = %w[check tool]
 
-    assert_match(/\Aplugin check in .* adds commands, and check is reserved/, assert_raises(Mistake) { App.new(plugins:).load_project(File.join(@base, "app")) }.message)
-    assert_equal ["check"], App.new(plugins:, reserved: ["other"]).load_project(File.join(@base, "app")).plugins.map(&:name)
+    assert_match(/\Aplugin check in .* adds commands, and check is reserved/, assert_raises(Mistake) { App.new(plugins:, built_in:).load_project(File.join(@base, "app")) }.message)
+    assert_equal ["check"], App.new(plugins:, built_in:, reserved: ["other"]).load_project(File.join(@base, "app")).plugins.map(&:name)
     write(@base, "app/.config/crosslint/config.kdl", %(plugin "tool"\n))
 
-    assert_equal ["tool"], App.new(plugins:).load_project(File.join(@base, "app")).plugins.map(&:name)
-    assert_match(/\Aplugin tool in .* adds commands, and tool is reserved/, assert_raises(Mistake) { App.new(plugins:, reserved: ["tool"]).load_project(File.join(@base, "app")) }.message)
+    assert_equal ["tool"], App.new(plugins:, built_in:).load_project(File.join(@base, "app")).plugins.map(&:name)
+    assert_match(/\Aplugin tool in .* adds commands, and tool is reserved/, assert_raises(Mistake) { App.new(plugins:, built_in:, reserved: ["tool"]).load_project(File.join(@base, "app")) }.message)
   end
 
-  def test_takes_each_folder_with_a_manifest_as_a_built_in_plugin
+  # The other folders of CrossLint's plugins folder are shared plugins.
+  def test_takes_each_folder_with_a_manifest_that_it_names_as_a_built_in_plugin
     write(@base, "plugins/debt/plugin.kdl", MANIFEST)
     FileUtils.mkdir_p(File.join(@base, "plugins/other"))
+    write(@base, "plugins/shared/plugin.kdl", MANIFEST)
     write(@base, "app/.config/crosslint/config.kdl", %(plugin "debt"\n))
-    app = App.new(plugins: File.join(@base, "plugins"))
+    app = App.new(plugins: File.join(@base, "plugins"), built_in: %w[debt other])
 
     assert_equal [["debt", File.join(@base, "plugins/debt")]], app.load_project(File.join(@base, "app")).plugins.map { |plugin| [plugin.name, plugin.folder] }
     write(@base, "app/.config/crosslint/config.kdl", %(plugin "other"\n))
     mistake = assert_raises(Mistake) { app.load_project(File.join(@base, "app")) }
 
     assert_equal %(unknown built-in plugin "other"; expected "debt"), mistake.message
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin "shared"\n))
+    mistake = assert_raises(Mistake) { app.load_project(File.join(@base, "app")) }
+
+    assert_equal %(unknown built-in plugin "shared"; expected "debt"), mistake.message
+    assert_equal %w[angular debt], App::BUILT_IN
   end
 
   def test_checks_crosslint_itself_with_git
