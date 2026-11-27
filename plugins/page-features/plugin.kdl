@@ -3,7 +3,7 @@
 setting "page"
 setting "feature"
 
-// The page components, each with its feature file as the companion
+// The page components, each with its feature file as the piece
 // "feature", declared from the settings.
 artifacts ruby="artifacts.rb"
 

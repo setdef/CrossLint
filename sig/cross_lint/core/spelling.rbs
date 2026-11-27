@@ -4,10 +4,10 @@ module CrossLint
     # that refuses it.
     #
     # ```ruby
-    # CrossLint::Core::Spelling.unknown("node", "file", ["files", "companion"])
+    # CrossLint::Core::Spelling.unknown("node", "file", ["files", "piece"])
     # # => "unknown node \"file\", did you mean \"files\"?"
-    # CrossLint::Core::Spelling.unknown("node", "zzz", ["files", "companion"])
-    # # => "unknown node \"zzz\"; expected \"files\" or \"companion\""
+    # CrossLint::Core::Spelling.unknown("node", "zzz", ["files", "piece"])
+    # # => "unknown node \"zzz\"; expected \"files\" or \"piece\""
     # ```
     module Spelling
       # The word among `known` that `word` most likely misspells, or nil.

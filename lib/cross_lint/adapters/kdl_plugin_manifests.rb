@@ -10,7 +10,7 @@ module CrossLint
 
       NODES = %w[artifact artifacts policy rule helper setting command step].freeze
 
-      CONDITIONS = %w[companion-exists not all any].freeze
+      CONDITIONS = %w[piece-exists not all any].freeze
 
       SEVERITIES = %w[error warning].freeze
 
@@ -60,16 +60,16 @@ module CrossLint
       def artifact(document, node)
         name = document.string(node, "artifact NAME { ... }")
         document.properties(node, [])
-        document.children(node, %w[files companion])
-        files = document.required_child(node, "files")
-        files_pattern = pattern(document, files, document.string(files, "files PATTERN"))
-        no_more(document, files)
-        companions = node.children.select { |child| child.name == "companion" }.map do |child|
-          words = document.strings(child, "companion NAME PATTERN", 2)
+        document.children(node, %w[primary piece])
+        primary = document.required_child(node, "primary")
+        primary_pattern = pattern(document, primary, document.string(primary, "primary PATTERN"))
+        no_more(document, primary)
+        pieces = node.children.select { |child| child.name == "piece" }.map do |child|
+          words = document.strings(child, "piece NAME PATTERN", 2)
           no_more(document, child)
-          Core::CompanionDeclaration.new(name: words.first, pattern: pattern(document, child, words.last), line: child.line)
+          Core::PieceDeclaration.new(name: words.first, pattern: pattern(document, child, words.last), line: child.line)
         end
-        Core::ArtifactDeclaration.new(name:, files: files_pattern, companions:, line: node.line)
+        Core::ArtifactDeclaration.new(name:, primary: primary_pattern, pieces:, line: node.line)
       end
 
       def pattern(document, node, source)
@@ -99,7 +99,7 @@ module CrossLint
 
       def when_condition(document, node)
         kind, *rest = node.arguments
-        raise document.mistake("when has no condition; write it as when companion-exists COMPANION", node) unless kind
+        raise document.mistake("when has no condition; write it as when piece-exists PIECE", node) unless kind
 
         condition(document, KDLDocument::Node.new(name: kind.to_s, line: node.line, arguments: rest,
           properties: node.properties, children: node.children))
@@ -108,10 +108,10 @@ module CrossLint
       def condition(document, node)
         document.properties(node, [])
         case node.name
-        when "companion-exists"
-          companion = document.string(node, "companion-exists COMPANION")
+        when "piece-exists"
+          piece = document.string(node, "piece-exists PIECE")
           document.children(node, [])
-          Core::Condition::CompanionExists.new(companion:, line: node.line)
+          Core::Condition::PieceExists.new(piece:, line: node.line)
         when "not"
           inner = conditions(document, node, "not { CONDITION }")
           raise document.mistake("not has #{inner.size} conditions; write it as not { CONDITION }", node) unless inner.size == 1

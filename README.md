@@ -8,14 +8,14 @@ Check the rules that span files: every source file has its test, every component
 
 CrossLint checks how a project's files relate to each other. Linters such as [ESLint](https://eslint.org/) and [RuboCop](https://rubocop.org/) read one file at a time, so a rule like "every file in `lib/` has a signature file at the matching path under `sig/`" is one they can't check. CrossLint finds each group of files that belong together, checks that each has the files it should, and exits non-zero when one doesn't, so a project's CI fails on a missing test as it would on a failing one.
 
-Most rules of this kind are relations between paths, and you declare them as data, with no code: which files to find, and where each of their companion files belongs. A check that has to read inside files, such as comparing an Angular component's inputs with those of its test stub, comes in a plugin. CrossLint ships one for Angular. CrossLint also tracks debt: violations a project accepts for now, each with a comment, so the check passes today and fails on any new violation.
+Most rules of this kind are relations between paths, and you declare them as data, with no code: which files to find, and where each of their pieces belongs. A check that has to read inside files, such as comparing an Angular component's inputs with those of its test stub, comes in a plugin. CrossLint ships one for Angular. CrossLint also tracks debt: violations a project accepts for now, each with a comment, so the check passes today and fails on any new violation.
 
 CrossLint is one program for projects in any language. It carries what it needs to run, so a project installs no Ruby, Node, or other runtime to use it.
 
 ### What CrossLint replaces
 
 - **[ng-nudge](https://github.com/OverTheTopMarketing/ng-nudge).** ng-nudge checks Angular projects only, and builds its debt tracking and its Angular checks into one tool. CrossLint keeps what ng-nudge checks, as its Angular plugin and its debt plugin, and a project moves from ng-nudge to CrossLint with one command.
-- **A script in CI.** A shell script that loops over files and tests for each companion works until a second rule needs a second script. CrossLint declares each rule in one place, reports every violation with its file, and lets a project accept existing violations as debt instead of fixing them all before the check can go on.
+- **A script in CI.** A shell script that loops over files and tests for each piece works until a second rule needs a second script. CrossLint declares each rule in one place, reports every violation with its file, and lets a project accept existing violations as debt instead of fixing them all before the check can go on.
 - **A custom linter rule.** A rule written for ESLint or RuboCop can read the file it is checking, but can't see whether another file exists. CrossLint's rules see every file in the project.
 
 ## A first example
@@ -25,17 +25,17 @@ CrossLint is one program for projects in any language. It carries what it needs 
 ```kdl
 // .config/crosslint/signatures/plugin.kdl
 artifact "ruby-file" {
-  files "lib/{path}.rb"
-  companion "signature" "sig/{path}.rbs"
+  primary "lib/{path}.rb"
+  piece "signature" "sig/{path}.rbs"
 }
 
 policy "has-signature" {
   applies-to "ruby-file"
-  rule "companion-exists" companion="signature"
+  rule "piece-exists" piece="signature"
 }
 ```
 
-The artifact covers every Ruby file under `lib/`, each with the path of the signature file that belongs beside it. The policy applies CrossLint's `companion-exists` rule to every one of them. Fledge's configuration lists the plugin:
+The artifact covers every Ruby file under `lib/`, each with the path of the signature file that belongs beside it. The policy applies CrossLint's `piece-exists` rule to every one of them. Fledge's configuration lists the plugin:
 
 ```kdl
 // .config/crosslint/config.kdl

@@ -17,7 +17,7 @@ module CrossLint
   # class Artifacts < CrossLint::Artifacts
   #   def declare(settings)
   #     folder = settings.find { |setting| setting.name == "folder" }&.arguments&.first || "lib"
-  #     [artifact("ruby-file", files: "#{folder}/{path}.rb", companions: {"test" => "test/{path}_test.rb"})]
+  #     [artifact("ruby-file", primary: "#{folder}/{path}.rb", pieces: {"test" => "test/{path}_test.rb"})]
   #   end
   # end
   # ```
@@ -29,7 +29,7 @@ module CrossLint
     def declare: (Array[Core::Setting] settings) -> Array[Core::ArtifactDeclaration]
 
     # An artifact named `name`, found by the path pattern `files`, with a
-    # companion at each pattern of `companions` by its name, and a key
+    # piece at each pattern of `pieces` by its name, and a key
     # from the pattern `key`, the name a debt entry can give each artifact
     # by in place of its primary path. An `optional` artifact that
     # matches no file is reported only when no artifact of the plugin
@@ -37,10 +37,10 @@ module CrossLint
     # placeholder has a file or a folder named with a leading `.` is no
     # artifact, as in a glob that skips dotfiles. A plugin's Ruby calls
     # it with anything, so it takes anything, and raises
-    # Core::PluginError when a name isn't a string, `companions` isn't a
+    # Core::PluginError when a name isn't a string, `pieces` isn't a
     # hash, a pattern isn't one, or `optional` or `dotfiles` isn't true or
     # false.
-    def artifact: (untyped name, files: untyped, ?companions: untyped, ?key: untyped, ?optional: untyped, ?dotfiles: untyped) -> Core::ArtifactDeclaration
+    def artifact: (untyped name, primary: untyped, ?pieces: untyped, ?key: untyped, ?optional: untyped, ?dotfiles: untyped) -> Core::ArtifactDeclaration
 
     # The mistake to raise for `setting`, one of those `declare` is
     # given: it names the configuration and the setting's line.

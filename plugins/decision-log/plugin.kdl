@@ -5,7 +5,7 @@ setting "folder"
 setting "index"
 
 // The index, and every Markdown file, each with the folder of records as
-// a companion, declared from the settings.
+// a piece, declared from the settings.
 artifacts ruby="artifacts.rb"
 
 rule "index-lists-records" ruby="rules/index_lists_records.rb"

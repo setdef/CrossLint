@@ -1,36 +1,36 @@
 module CrossLint
   module Core
-    # A companion an artifact declares: its name, and the path pattern
+    # A piece an artifact declares: its name, and the path pattern
     # that gives its path for each primary file.
-    class CompanionDeclaration < Data
-      # The companion's name, unique within its artifact, such as "test".
+    class PieceDeclaration < Data
+      # The piece's name, unique within its artifact, such as "test".
       attr_reader name: String
 
-      # Where the companion is for each primary file.
+      # Where the piece is for each primary file.
       attr_reader pattern: PathPattern
 
       # The line the declaration is on.
       attr_reader line: Integer
 
-      # A companion with these fields.
+      # A piece with these fields.
       def self.new: (name: String, pattern: PathPattern, line: Integer) -> instance
 
-      # A companion with these fields.
+      # A piece with these fields.
       def initialize: (name: String, pattern: PathPattern, line: Integer) -> void
     end
 
     # A kind of artifact a plugin declares: the pattern that finds its
-    # primary files, and where each of its companions is.
+    # primary files, and where each of its pieces is.
     class ArtifactDeclaration < Data
       # The artifact's name, unique within its plugin, such as "ruby-file".
       attr_reader name: String
 
       # The pattern that finds the primary files, relative to the
       # project's root.
-      attr_reader files: PathPattern
+      attr_reader primary: PathPattern
 
-      # The artifact's companions, in the order they are declared.
-      attr_reader companions: Array[CompanionDeclaration]
+      # The artifact's pieces, in the order they are declared.
+      attr_reader pieces: Array[PieceDeclaration]
 
       # The line the declaration is on.
       attr_reader line: Integer
@@ -40,7 +40,7 @@ module CrossLint
       attr_reader key: PathPattern?
 
       # Whether a project may well have no file of the artifact, so that a
-      # files pattern that matches none is reported only when no artifact
+      # primary pattern that matches none is reported only when no artifact
       # of the plugin matches one.
       attr_reader optional: bool
 
@@ -51,16 +51,16 @@ module CrossLint
 
       # An artifact with these fields, with no key pattern, not optional,
       # and with dot-named files unless given.
-      def self.new: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer,
+      def self.new: (name: String, primary: PathPattern, pieces: Array[PieceDeclaration], line: Integer,
                      ?key: PathPattern?, ?optional: bool, ?dotfiles: bool) -> instance
 
       # An artifact with these fields, with no key pattern, not optional,
       # and with dot-named files unless given.
-      def initialize: (name: String, files: PathPattern, companions: Array[CompanionDeclaration], line: Integer,
+      def initialize: (name: String, primary: PathPattern, pieces: Array[PieceDeclaration], line: Integer,
                        ?key: PathPattern?, ?optional: bool, ?dotfiles: bool) -> void
 
-      # The companion called `name`, or nil.
-      def companion: (String name) -> CompanionDeclaration?
+      # The piece called `name`, or nil.
+      def piece: (String name) -> PieceDeclaration?
     end
 
     # The artifact a policy covers: one of its plugin's, by name, or
@@ -85,7 +85,7 @@ module CrossLint
       # The rule's name: a built-in rule's, or one the plugin declares.
       attr_reader name: String
 
-      # The rule's arguments, such as `{"companion" => "test"}`.
+      # The rule's arguments, such as `{"piece" => "test"}`.
       attr_reader arguments: Hash[String, untyped]
 
       # The severity of the rule's violations under this policy, or nil
@@ -110,7 +110,7 @@ module CrossLint
       attr_reader name: String
 
       # The artifact the policy covers, or nil when it has no applies-to,
-      # for each of its plugin's artifacts that has every companion it
+      # for each of its plugin's artifacts that has every piece it
       # names.
       attr_reader applies_to: AppliesTo?
 
@@ -132,9 +132,9 @@ module CrossLint
       def initialize: (name: String, applies_to: AppliesTo?, condition: condition?, rules: Array[PolicyRule],
                        line: Integer) -> void
 
-      # The names of the companions its condition and its rules name,
+      # The names of the pieces its condition and its rules name,
       # each once.
-      def companions: () -> Array[untyped]
+      def pieces: () -> Array[untyped]
     end
 
     # A rule written in Ruby that a plugin declares.

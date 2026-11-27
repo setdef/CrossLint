@@ -1,11 +1,11 @@
 // Every Ruby file under lib/ has its signature at the matching path under
 // sig/ (docs/design/architecture.md).
 artifact "ruby-file" {
-  files "lib/{path}.rb"
-  companion "signature" "sig/{path}.rbs"
+  primary "lib/{path}.rb"
+  piece "signature" "sig/{path}.rbs"
 }
 
 policy "has-signature" {
   applies-to "ruby-file"
-  rule "companion-exists" companion="signature"
+  rule "piece-exists" piece="signature"
 }

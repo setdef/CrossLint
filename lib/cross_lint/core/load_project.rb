@@ -11,10 +11,10 @@ module CrossLint
       # What a helper that declares artifacts answers when its answer is
       # neither, and when an artifact in it isn't one.
       ANSWER = %(answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}})
-      ARTIFACT = %(declared an artifact that isn't {"name": NAME, "files": PATTERN, ...})
+      ARTIFACT = %(declared an artifact that isn't {"name": NAME, "primary": PATTERN, ...})
 
       # The fields an artifact a helper declares can have.
-      FIELDS = %w[name files companions key optional dotfiles].freeze
+      FIELDS = %w[name primary pieces key optional dotfiles].freeze
 
       # What a command of a plugin is called: lowercase letters, digits, and -.
       COMMAND = /\A[a-z0-9-]+\z/
@@ -217,7 +217,7 @@ module CrossLint
 
           none = {} #: Hash[String, untyped]
           begin
-            declarer.artifact(artifact["name"], files: artifact["files"], companions: artifact.fetch("companions", none), key: artifact["key"],
+            declarer.artifact(artifact["name"], primary: artifact["primary"], pieces: artifact.fetch("pieces", none), key: artifact["key"],
               optional: artifact.fetch("optional", false), dotfiles: artifact.fetch("dotfiles", true))
           rescue PluginError => error
             raise PluginError, "helper #{name.dump} #{error.message}"
@@ -363,13 +363,13 @@ module CrossLint
       end
 
       def check_artifact(artifact, file)
-        once(artifact.companions, "companion", file)
-        artifact.companions.each do |companion|
-          extra = companion.pattern.placeholders - artifact.files.placeholders
+        once(artifact.pieces, "piece", file)
+        artifact.pieces.each do |piece|
+          extra = piece.pattern.placeholders - artifact.primary.placeholders
           next if extra.empty?
 
-          raise Mistake.new("companion #{companion.name.dump} uses {#{extra.first}}, which the files pattern " \
-            "#{artifact.files.source.dump} doesn't have", file:, line: companion.line)
+          raise Mistake.new("piece #{piece.name.dump} uses {#{extra.first}}, which the primary pattern " \
+            "#{artifact.primary.source.dump} doesn't have", file:, line: piece.line)
         end
       end
 
@@ -392,13 +392,13 @@ module CrossLint
           # leave a policy nothing to apply to.
           return unless plugin.targets(policy).empty? && !plugin.manifest.artifacts_ruby
 
-          named = policy.companions.map(&:dump)
-          having = named.empty? ? "declares no artifact" : "has no artifact with #{Spelling.list(named, "and")}, the companions it names"
+          named = policy.pieces.map(&:dump)
+          having = named.empty? ? "declares no artifact" : "has no artifact with #{Spelling.list(named, "and")}, the pieces it names"
           raise Mistake.new("policy #{policy.name.dump} has no applies-to, and plugin #{plugin.name} #{having}", file:, line: policy.line)
         end
 
         artifact = target(plugin, applies_to, plugins)
-        policy.condition&.companion_conditions&.each { |exists| companion(artifact, exists.companion, file, exists.line) }
+        policy.condition&.piece_conditions&.each { |exists| piece(artifact, exists.piece, file, exists.line) }
         policy.rules.each { |rule| check_rule(plugin, artifact, rule) }
       end
 
@@ -428,15 +428,15 @@ module CrossLint
         fail_at.call(Spelling.unknown("argument", unknown.first, built_in.arguments) + " for rule #{rule.name.dump}") unless unknown.empty?
         missing = built_in.arguments - rule.arguments.keys
         fail_at.call("rule #{rule.name.dump} needs #{missing.first}=NAME") unless missing.empty?
-        name = rule.arguments.fetch("companion")
-        fail_at.call("companion= takes the name of a companion, as a string") unless name.is_a?(String)
-        companion(artifact, name, plugin.manifest.file, rule.line) if artifact
+        name = rule.arguments.fetch("piece")
+        fail_at.call("piece= takes the name of a piece, as a string") unless name.is_a?(String)
+        piece(artifact, name, plugin.manifest.file, rule.line) if artifact
       end
 
-      def companion(artifact, name, file, line)
-        return if artifact.companion(name)
+      def piece(artifact, name, file, line)
+        return if artifact.piece(name)
 
-        raise Mistake.new(Spelling.unknown("companion", name, artifact.companions.map(&:name),
+        raise Mistake.new(Spelling.unknown("piece", name, artifact.pieces.map(&:name),
           none: "artifact #{artifact.name.dump} declares none"), file:, line:)
       end
 

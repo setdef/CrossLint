@@ -4,12 +4,12 @@
 artifacts ruby="artifacts.rb"
 
 policy "claude-md-exists" {
-  rule "companion-exists" companion="claude"
+  rule "piece-exists" piece="claude"
 }
 
 rule "claude-md-imports-agents-md" ruby="rules/claude_md_imports_agents_md.rb"
 
 policy "claude-md-imports-agents-md" {
-  when companion-exists "claude"
+  when piece-exists "claude"
   rule "claude-md-imports-agents-md"
 }

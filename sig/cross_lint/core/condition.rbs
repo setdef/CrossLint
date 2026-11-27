@@ -2,28 +2,28 @@ module CrossLint
   module Core
     # A policy's condition, after `when`: which of the artifacts it
     # applies to it checks.
-    type condition = Condition::CompanionExists | Condition::Not | Condition::All | Condition::Any
+    type condition = Condition::PieceExists | Condition::Not | Condition::All | Condition::Any
 
     # The conditions a policy's `when` can state.
     module Condition
-      # Holds when the artifact's companion of this name exists.
-      class CompanionExists < Data
-        # The companion's name.
-        attr_reader companion: String
+      # Holds when the artifact's piece of this name exists.
+      class PieceExists < Data
+        # The piece's name.
+        attr_reader piece: String
 
         # The line the condition is on.
         attr_reader line: Integer
 
-        # A condition on the companion `companion`, on `line`.
-        def self.new: (companion: String, line: Integer) -> instance
+        # A condition on the piece `piece`, on `line`.
+        def self.new: (piece: String, line: Integer) -> instance
 
-        # A condition on the companion `companion`, on `line`.
-        def initialize: (companion: String, line: Integer) -> void
+        # A condition on the piece `piece`, on `line`.
+        def initialize: (piece: String, line: Integer) -> void
 
-        # Itself, the one companion-exists condition it holds.
-        def companion_conditions: () -> Array[CompanionExists]
+        # Itself, the one piece-exists condition it holds.
+        def piece_conditions: () -> Array[PieceExists]
 
-        # Whether `artifact`'s companion of this name exists.
+        # Whether `artifact`'s piece of this name exists.
         def holds?: (Artifact artifact) -> bool
       end
 
@@ -41,8 +41,8 @@ module CrossLint
         # The opposite of `condition`, on `line`.
         def initialize: (condition: Core::condition, line: Integer) -> void
 
-        # The companion-exists conditions the condition inside holds.
-        def companion_conditions: () -> Array[CompanionExists]
+        # The piece-exists conditions the condition inside holds.
+        def piece_conditions: () -> Array[PieceExists]
 
         # Whether the condition inside doesn't hold for `artifact`.
         def holds?: (Artifact artifact) -> bool
@@ -62,8 +62,8 @@ module CrossLint
         # Every one of `conditions`, on `line`.
         def initialize: (conditions: Array[Core::condition], line: Integer) -> void
 
-        # The companion-exists conditions the conditions inside hold.
-        def companion_conditions: () -> Array[CompanionExists]
+        # The piece-exists conditions the conditions inside hold.
+        def piece_conditions: () -> Array[PieceExists]
 
         # Whether every condition inside holds for `artifact`.
         def holds?: (Artifact artifact) -> bool
@@ -83,8 +83,8 @@ module CrossLint
         # At least one of `conditions`, on `line`.
         def initialize: (conditions: Array[Core::condition], line: Integer) -> void
 
-        # The companion-exists conditions the conditions inside hold.
-        def companion_conditions: () -> Array[CompanionExists]
+        # The piece-exists conditions the conditions inside hold.
+        def piece_conditions: () -> Array[PieceExists]
 
         # Whether at least one condition inside holds for `artifact`.
         def holds?: (Artifact artifact) -> bool

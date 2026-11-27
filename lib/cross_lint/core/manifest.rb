@@ -4,12 +4,12 @@ require_relative "mistake"
 
 module CrossLint
   module Core
-    class CompanionDeclaration < Data.define(:name, :pattern, :line); end
+    class PieceDeclaration < Data.define(:name, :pattern, :line); end
 
-    class ArtifactDeclaration < Data.define(:name, :files, :companions, :line, :key, :optional, :dotfiles)
+    class ArtifactDeclaration < Data.define(:name, :primary, :pieces, :line, :key, :optional, :dotfiles)
       def initialize(key: nil, optional: false, dotfiles: true, **fields) = super
 
-      def companion(name) = companions.find { |companion| companion.name == name }
+      def piece(name) = pieces.find { |piece| piece.name == name }
     end
 
     class AppliesTo < Data.define(:artifact, :line); end
@@ -17,8 +17,8 @@ module CrossLint
     class PolicyRule < Data.define(:name, :arguments, :severity, :line); end
 
     class Policy < Data.define(:name, :applies_to, :condition, :rules, :line)
-      # Only a built-in rule takes arguments, and companion= is its only one.
-      def companions = ((condition&.companion_conditions || []).map(&:companion) + rules.filter_map { |rule| rule.arguments["companion"] }).uniq
+      # Only a built-in rule takes arguments, and piece= is its only one.
+      def pieces = ((condition&.piece_conditions || []).map(&:piece) + rules.filter_map { |rule| rule.arguments["piece"] }).uniq
     end
 
     # A rule a plugin declares: in its Ruby, with ruby=, or run by its

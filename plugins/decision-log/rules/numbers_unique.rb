@@ -6,7 +6,7 @@ require_relative "../records"
 # number at once, make every citation of that number ambiguous.
 class NumbersUnique < CrossLint::Rule
   def check(artifact)
-    folder = artifact.companion("folder").path
+    folder = artifact.piece("folder").path
     DecisionLogRecords.in(project_files, folder).group_by(&:last).sort.filter_map do |number, records|
       next if records.size == 1
 

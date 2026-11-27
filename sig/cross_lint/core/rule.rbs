@@ -16,7 +16,7 @@ module CrossLint
   # ```ruby
   # class TestNamesItsFile < CrossLint::Rule
   #   def check(artifact)
-  #     test = artifact.companion("test")
+  #     test = artifact.piece("test")
   #     return [] if !test.exist? || test.read.include?(artifact.path)
   #
   #     [violation(artifact, "#{test.path} doesn't name #{artifact.path}")]
@@ -28,21 +28,21 @@ module CrossLint
     # `bundler/inline.rb` raises Core::PluginError.
     REFUSED: String
 
-    # One of an artifact's companions, as a rule sees it.
-    class Companion
-      # The companion's name, as its artifact declares it, such as "test".
+    # One of an artifact's pieces, as a rule sees it.
+    class Piece
+      # The piece's name, as its artifact declares it, such as "test".
       attr_reader name: String
 
-      # The companion's path, relative to the project's root, with `/`.
+      # The piece's path, relative to the project's root, with `/`.
       attr_reader path: String
 
-      # A view of `companion` that reads files with `read`.
-      def initialize: (Core::Companion companion, ^(String path) -> String read) -> void
+      # A view of `piece` that reads files with `read`.
+      def initialize: (Core::Piece piece, ^(String path) -> String read) -> void
 
       # Whether a file or folder exists at `path`, by its exact name.
       def exist?: () -> bool
 
-      # The companion's text, its bytes as UTF-8. Raises Errno::ENOENT when
+      # The piece's text, its bytes as UTF-8. Raises Errno::ENOENT when
       # it doesn't exist.
       def read: () -> String
 
@@ -53,7 +53,7 @@ module CrossLint
       @read: ^(String path) -> String
     end
 
-    # The artifact a rule checks: its primary file and its companions.
+    # The artifact a rule checks: its primary file and its pieces.
     class Artifact
       # The artifact's role: its declaration's name, such as "ruby-file".
       attr_reader role: String
@@ -61,23 +61,23 @@ module CrossLint
       # The primary file's path, relative to the project's root, with `/`.
       attr_reader path: String
 
-      # The text each placeholder of the files pattern matched in `path`,
+      # The text each placeholder of the primary pattern matched in `path`,
       # by name, such as `{"path" => "fledge/archive"}`; frozen.
       attr_reader match: Hash[String, String]
 
       # A view of `artifact` that reads files with `read`.
       def initialize: (Core::Artifact artifact, ^(String path) -> String read) -> void
 
-      # The companion called `name`. Raises KeyError when the artifact's
+      # The piece called `name`. Raises KeyError when the artifact's
       # declaration has none of that name.
-      def companion: (String name) -> Companion
+      def piece: (String name) -> Piece
 
       # The primary file's text, its bytes as UTF-8.
       def read: () -> String
 
       private
 
-      @companions: Array[Companion]
+      @pieces: Array[Piece]
 
       @read: ^(String path) -> String
     end
@@ -102,7 +102,7 @@ module CrossLint
     # and its strings are frozen, and are the same for every artifact of
     # the check, so a rule can index them once, in `initialize` or at its
     # first artifact. For a rule that checks a path its artifact's text
-    # names, such as a link's target, which no companion can give.
+    # names, such as a link's target, which no piece can give.
     def project_files: () -> Array[String]
 
     # The text of the file at `path`, relative to the project's root with

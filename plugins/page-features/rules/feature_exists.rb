@@ -9,7 +9,7 @@ class FeatureExists < CrossLint::Rule
   def check(artifact)
     return [] if File.basename(artifact.match.fetch("path", "")).include?(".")
 
-    feature = artifact.companion("feature")
+    feature = artifact.piece("feature")
     return [] if feature.exist?
 
     [violation(artifact, "no feature file at #{feature.path}")]

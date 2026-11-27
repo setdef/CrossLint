@@ -44,14 +44,14 @@ export function declare(settings) {
   const within = (pattern) => (src === '' ? pattern : `${src}/${pattern}`);
   return [...roles].map(([name, given]) => {
     const stem = given.files.slice(0, -'.ts'.length);
-    const companions = Object.fromEntries(given.expects.map((piece) => [piece, within(`${stem}.spec.ts`)]));
+    const pieces = Object.fromEntries(given.expects.map((piece) => [piece, within(`${stem}.spec.ts`)]));
     if (name === 'component') {
-      for (const [piece, suffix] of Object.entries(COMPONENT)) companions[piece] = within(stem + suffix);
-      companions.tsconfig = tsconfig;
+      for (const [piece, suffix] of Object.entries(COMPONENT)) pieces[piece] = within(stem + suffix);
+      pieces.tsconfig = tsconfig;
     }
     // node-glob, which ng-nudge's patterns were, skips what starts with a dot.
     const key = given.files.endsWith(`.${name}.ts`) ? given.files.slice(0, -`.${name}.ts`.length) : given.files;
-    return { name, files: within(given.files), companions, key, optional: given.optional, dotfiles: false };
+    return { name, primary: within(given.files), pieces, key, optional: given.optional, dotfiles: false };
   });
 }
 
@@ -129,7 +129,7 @@ function expects(name, setting) {
 
   const [child] = children;
   if (children.length !== 1 || child.name !== 'expects' || Object.keys(child.properties).length > 0 || child.children.length > 0) {
-    throw new Mistake(`role ${dump(name)} takes one thing in its block, expects COMPANION ...`, children.find((each) => each.name !== 'expects') ?? children.at(-1));
+    throw new Mistake(`role ${dump(name)} takes one thing in its block, expects PIECE ...`, children.find((each) => each.name !== 'expects') ?? children.at(-1));
   }
 
   const unknown = child.arguments.find((piece) => !EXPECTED.includes(piece));

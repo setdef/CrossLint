@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # The page components, found by the path pattern of the setting page, each
-# with the feature file the setting feature gives as its companion. A
+# with the feature file the setting feature gives as its piece. A
 # placeholder of feature that page lacks would have no value for a page,
 # so it is a mistake here rather than a fault at the first page.
 class Artifacts < CrossLint::Artifacts
@@ -19,7 +19,7 @@ class Artifacts < CrossLint::Artifacts
     lacking = feature.scan(/\{[^{}]*\}/).uniq - page.scan(/\{[^{}]*\}/)
     raise mistake("feature has #{lacking.first}, which page #{page.dump} doesn't, so a page gives it no value", found["feature"] || found["page"]) if lacking.any?
 
-    [artifact("page", files: page, companions: {"feature" => feature})]
+    [artifact("page", primary: page, pieces: {"feature" => feature})]
   end
 
   private

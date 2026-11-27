@@ -16,21 +16,21 @@ artifacts helper="angular"
 
 // Each artifact whose role expects a spec has one.
 policy "spec-exists" {
-  rule "companion-exists" companion="spec"
+  rule "piece-exists" piece="spec"
 }
 
 // A stub and an interface are optional, but a component with either has
 // both.
 policy "stub-exists" {
   applies-to "component"
-  when companion-exists "interface"
-  rule "companion-exists" companion="stub"
+  when piece-exists "interface"
+  rule "piece-exists" piece="stub"
 }
 
 policy "interface-exists" {
   applies-to "component"
-  when companion-exists "stub"
-  rule "companion-exists" companion="interface"
+  when piece-exists "stub"
+  rule "piece-exists" piece="interface"
 }
 
 // A component's stub and its interface have each input and output the
@@ -40,18 +40,18 @@ rule "interface-matches-component" helper="angular"
 
 policy "stub-matches-component" {
   applies-to "component"
-  when companion-exists "stub"
+  when piece-exists "stub"
   rule "stub-matches-component"
 }
 
 policy "interface-matches-component" {
   applies-to "component"
-  when companion-exists "interface"
+  when piece-exists "interface"
   rule "interface-matches-component"
 }
 
 policy "prefer-css-over-scss" {
   applies-to "component"
-  when not { companion-exists "css"; }
-  rule "companion-absent" companion="scss" severity="warning"
+  when not { piece-exists "css"; }
+  rule "piece-absent" piece="scss" severity="warning"
 }

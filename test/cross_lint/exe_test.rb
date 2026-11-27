@@ -82,10 +82,10 @@ class ExeTest < Minitest::Test
   def test_stops_at_the_mistake_the_tutorial_shows
     plugin, configuration = doc_blocks("docs/getting-started.md", "kdl")
     Dir.mktmpdir("crosslint") do |project|
-      write(project, ".config/crosslint/tests/plugin.kdl", plugin.sub("files", "file"))
+      write(project, ".config/crosslint/tests/plugin.kdl", plugin.sub("primary", "primay"))
       write(project, ".config/crosslint/config.kdl", configuration.sub(%(plugin "debt"\n), ""))
 
-      assert_equal ["", %(crosslint: .config/crosslint/tests/plugin.kdl:2: unknown node "file", did you mean "files"?\n), 2],
+      assert_equal ["", %(crosslint: .config/crosslint/tests/plugin.kdl:2: unknown node "primay", did you mean "primary"?\n), 2],
         crosslint("check", "-C", project)
     end
   end

@@ -2,15 +2,15 @@
 
 module CrossLint
   module Core
-    class Companion < Data.define(:name, :path, :exists)
+    class Piece < Data.define(:name, :path, :exists)
       def exist? = exists
     end
 
-    class Artifact < Data.define(:plugin, :role, :path, :match, :companions, :key)
+    class Artifact < Data.define(:plugin, :role, :path, :match, :pieces, :key)
       def initialize(key: nil, **fields) = super
 
-      def companion(name)
-        companions.find { |companion| companion.name == name } || raise(KeyError, "artifact #{role.dump} has no companion #{name.dump}")
+      def piece(name)
+        pieces.find { |piece| piece.name == name } || raise(KeyError, "artifact #{role.dump} has no piece #{name.dump}")
       end
     end
 

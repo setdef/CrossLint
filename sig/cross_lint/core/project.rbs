@@ -23,7 +23,7 @@ module CrossLint
       # The artifacts `policy`, one of this plugin's, applies to, as plugin
       # and artifact names: the one its applies-to names, or without
       # applies-to, each of this plugin's artifacts that has every
-      # companion the policy's condition and rules name.
+      # piece the policy's condition and rules name.
       def targets: (Policy policy) -> Array[[String, String]]
     end
 

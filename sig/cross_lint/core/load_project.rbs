@@ -124,12 +124,12 @@ module CrossLint
       # agrees with itself and with the other plugins.
       def check_manifest: (Plugin plugin, Array[Plugin] plugins) -> void
 
-      # Checks that each of an artifact's companions has its name once
-      # and only placeholders its files pattern has.
+      # Checks that each of an artifact's pieces has its name once
+      # and only placeholders its primary pattern has.
       def check_artifact: (ArtifactDeclaration artifact, String file) -> void
 
       # Checks that no two of `declarations` have the same name.
-      def once: (Array[ArtifactDeclaration | CompanionDeclaration | RuleDeclaration | HelperDeclaration | Policy | StepPolicy |
+      def once: (Array[ArtifactDeclaration | PieceDeclaration | RuleDeclaration | HelperDeclaration | Policy | StepPolicy |
                        SettingDeclaration | CommandDeclaration | StepDeclaration] declarations,
                  String kind, String file) -> void
 
@@ -170,12 +170,12 @@ module CrossLint
       def target: (Plugin plugin, AppliesTo applies_to, Array[Plugin] plugins) -> ArtifactDeclaration
 
       # Checks that a policy's rule exists and has the arguments it takes,
-      # and, given `artifact`, that the artifact has the companion it
+      # and, given `artifact`, that the artifact has the piece it
       # names.
       def check_rule: (Plugin plugin, ArtifactDeclaration? artifact, PolicyRule rule) -> void
 
-      # Checks that `artifact` has a companion called `name`.
-      def companion: (ArtifactDeclaration artifact, String name, String file, Integer line) -> void
+      # Checks that `artifact` has a piece called `name`.
+      def piece: (ArtifactDeclaration artifact, String name, String file, Integer line) -> void
 
       # Checks that each policy the configuration changes is a listed
       # plugin's, and is changed once.

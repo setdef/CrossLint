@@ -33,21 +33,21 @@ A project's rule goes in a **local plugin**: a folder in your repository with a 
 
 ```kdl
 artifact "ruby-file" {
-  files "lib/{path}.rb"
-  companion "test" "test/{path}_test.rb"
+  primary "lib/{path}.rb"
+  piece "test" "test/{path}_test.rb"
 }
 
 policy "has-test" {
   applies-to "ruby-file"
-  rule "companion-exists" companion="test"
+  rule "piece-exists" piece="test"
 }
 ```
 
 This declares all three kinds of thing CrossLint works with:
 
-- Each **artifact** of the **role** `ruby-file` has a Ruby file under `lib/` as its primary **piece**, found by the **path pattern** `lib/{path}.rb`. For `lib/invoices/total.rb`, `{path}` matches `invoices/total`, so its `test` piece, which `plugin.kdl` declares with `companion`, is `test/invoices/total_test.rb`.
+- Each **artifact** of the **role** `ruby-file` has a Ruby file under `lib/` as its primary **piece**, found by the **path pattern** `lib/{path}.rb`. For `lib/invoices/total.rb`, `{path}` matches `invoices/total`, so its `test` piece, which `plugin.kdl` declares with `piece`, is `test/invoices/total_test.rb`.
 - The **policy** `has-test` says when to check: every `ruby-file`.
-- The **rule** `companion-exists` does the checking: it reports a `ruby-file` whose `test` doesn't exist.
+- The **rule** `piece-exists` does the checking: it reports a `ruby-file` whose `test` doesn't exist.
 
 The rule is built into CrossLint, so the plugin needs no code. Now list the plugin in `.config/crosslint/config.kdl`, below `debt`:
 
@@ -77,7 +77,7 @@ $ echo $?
 
 `crosslint check` exits with 1 when a violation fails the check, so CI fails the way it does for a failing test.
 
-If instead you see `crosslint: .config/crosslint/tests/plugin.kdl:2: unknown node "file", did you mean "files"?`, CrossLint stopped before checking anything, with exit status 2. CrossLint never skips a line it doesn't understand: a typo in a rule would otherwise leave a check that never runs. Fix the line the message gives, and run the check again.
+If instead you see `crosslint: .config/crosslint/tests/plugin.kdl:2: unknown node "primay", did you mean "primary"?`, CrossLint stopped before checking anything, with exit status 2. CrossLint never skips a line it doesn't understand: a typo in a rule would otherwise leave a check that never runs. Fix the line the message gives, and run the check again.
 
 ## Fix one violation
 

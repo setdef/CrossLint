@@ -41,7 +41,7 @@ ng-nudge's checks for Angular projects: a spec for every component, directive, p
 | --- | --- | --- |
 | `src-dir PATH` | The folder the plugin's artifacts are found in, relative to the project's root. A file or folder below it whose name starts with `.` is skipped, as ng-nudge skips them. | `src` |
 | `tsconfig PATH` | The `tsconfig.json` the helper reads, relative to the project's root, once a component has a stub or an interface. | `tsconfig.json` |
-| `role NAME files=PATTERN { expects COMPANION ... }` | Find a role's files by this [path pattern](plugin.md#artifact), which ends in `.ts`, relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. Each companion is at the primary file's path with `.ts` replaced, such as `.spec.ts`. `expects` takes only `spec`; without a block, the role expects a spec. | |
+| `role NAME files=PATTERN { expects PIECE ... }` | Find a role's files by this [path pattern](plugin.md#artifact), which ends in `.ts`, relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. Each piece is at the primary file's path with `.ts` replaced, such as `.spec.ts`. `expects` takes only `spec`; without a block, the role expects a spec. | |
 
 ### `debt`
 

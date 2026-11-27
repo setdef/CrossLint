@@ -110,7 +110,7 @@ class DecisionLogTest < Minitest::Test
   def test_warns_of_a_log_with_no_index
     result = check({}, settings: nil)
 
-    assert_equal [%(no file matches "docs/decisions/README.md", the files of artifact "index")], result.notices.map(&:message)
+    assert_equal [%(no file matches "docs/decisions/README.md", the primary of artifact "index")], result.notices.map(&:message)
   end
 
   def test_refuses_a_setting_that_isnt_one_path_inside_the_project
@@ -138,7 +138,7 @@ class DecisionLogTest < Minitest::Test
   def declared(settings)
     plugin = app({}, settings).load_project(@root).plugins.first
     artifacts = plugin.manifest.artifacts
-    [artifacts.map { it.files.source } - ["{path}.md"], [artifacts.first.name, artifacts.first.files.source, artifacts.first.companions.first.pattern.source]]
+    [artifacts.map { it.primary.source } - ["{path}.md"], [artifacts.first.name, artifacts.first.primary.source, artifacts.first.pieces.first.pattern.source]]
   end
 
   # The app, over a project whose configuration lists the plugin with

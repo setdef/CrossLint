@@ -427,17 +427,17 @@ class LoadProjectTest < Minitest::Test
     assert_mistake "rules/tests/plugin.kdl", 6, %(artifact "ruby-file" is declared twice; the first is on line 1), manifest:
   end
 
-  def test_stops_at_a_companion_declared_twice
-    manifest = tests_manifest(artifacts: [artifact(companions: [companion("test", line: 3), companion("test", line: 4)])])
+  def test_stops_at_a_piece_declared_twice
+    manifest = tests_manifest(artifacts: [artifact(pieces: [piece("test", line: 3), piece("test", line: 4)])])
 
-    assert_mistake "rules/tests/plugin.kdl", 4, %(companion "test" is declared twice; the first is on line 3), manifest:
+    assert_mistake "rules/tests/plugin.kdl", 4, %(piece "test" is declared twice; the first is on line 3), manifest:
   end
 
-  def test_stops_at_a_companion_with_a_placeholder_its_files_pattern_lacks
-    manifest = tests_manifest(artifacts: [artifact(companions: [companion("test", "test/{path}/{name}_test.rb", line: 3)])])
+  def test_stops_at_a_piece_with_a_placeholder_its_files_pattern_lacks
+    manifest = tests_manifest(artifacts: [artifact(pieces: [piece("test", "test/{path}/{name}_test.rb", line: 3)])])
 
     assert_mistake "rules/tests/plugin.kdl", 3,
-      %(companion "test" uses {name}, which the files pattern "lib/{path}.rb" doesn't have), manifest:
+      %(piece "test" uses {name}, which the primary pattern "lib/{path}.rb" doesn't have), manifest:
   end
 
   def test_stops_at_a_policy_declared_twice
@@ -458,9 +458,9 @@ class LoadProjectTest < Minitest::Test
   end
 
   def test_stops_at_a_ruby_rule_with_the_name_of_a_built_in_rule
-    rules = [RuleDeclaration.new(name: "companion-absent", ruby: "a.rb", line: 2)]
+    rules = [RuleDeclaration.new(name: "piece-absent", ruby: "a.rb", line: 2)]
 
-    assert_mistake "rules/tests/plugin.kdl", 2, %(rule "companion-absent" has the name of a built-in rule; name it something else),
+    assert_mistake "rules/tests/plugin.kdl", 2, %(rule "piece-absent" has the name of a built-in rule; name it something else),
       manifest: tests_manifest(rules:)
   end
 
@@ -472,28 +472,28 @@ class LoadProjectTest < Minitest::Test
     assert_equal ["tests", "other"], project.plugins.map(&:name)
   end
 
-  def test_reads_a_policy_with_no_applies_to_that_some_artifact_of_its_plugin_has_the_companions_for
-    exists = Condition::CompanionExists.new(companion: "test", line: 7)
+  def test_reads_a_policy_with_no_applies_to_that_some_artifact_of_its_plugin_has_the_pieces_for
+    exists = Condition::PieceExists.new(piece: "test", line: 7)
     project = load_project(manifest: tests_manifest(policies: [policy(applies_to: nil, condition: exists)]))
 
     assert_nil project.plugins.first.manifest.policies.first.applies_to
   end
 
-  def test_stops_at_a_policy_with_no_applies_to_that_no_artifact_of_its_plugin_has_the_companions_for
-    stub = Condition::CompanionExists.new(companion: "stub", line: 7)
-    assert_mistake "rules/tests/plugin.kdl", 5, %(policy "has-test" has no applies-to, and plugin tests has no artifact with "stub" and "test", the companions it names),
+  def test_stops_at_a_policy_with_no_applies_to_that_no_artifact_of_its_plugin_has_the_pieces_for
+    stub = Condition::PieceExists.new(piece: "stub", line: 7)
+    assert_mistake "rules/tests/plugin.kdl", 5, %(policy "has-test" has no applies-to, and plugin tests has no artifact with "stub" and "test", the pieces it names),
       manifest: tests_manifest(policies: [policy(applies_to: nil, condition: stub)])
     assert_mistake "rules/tests/plugin.kdl", 5, %(policy "has-test" has no applies-to, and plugin tests declares no artifact),
       manifest: tests_manifest(artifacts: [], policies: [policy(applies_to: nil, rules: [policy_rule("names-class")])], rules: [RuleDeclaration.new(name: "names-class", ruby: "a.rb", line: 2)])
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "companion-exist", did you mean "companion-exists"?),
-      manifest: tests_manifest(policies: [policy(applies_to: nil, rules: [policy_rule("companion-exist", arguments: {})])])
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "piece-exist", did you mean "piece-exists"?),
+      manifest: tests_manifest(policies: [policy(applies_to: nil, rules: [policy_rule("piece-exist", arguments: {})])])
   end
 
   def test_adds_the_artifacts_a_plugins_ruby_declares_from_its_settings
     given = []
     ruby = declaring do |settings|
       given << settings
-      [artifact("ruby-file", files: "#{settings.first.name}/{path}.rb", companions: {"test" => "test/{path}_test.rb"}, key: "{path}", optional: true)]
+      [artifact("ruby-file", primary: "#{settings.first.name}/{path}.rb", pieces: {"test" => "test/{path}_test.rb"}, key: "{path}", optional: true)]
     end
     manifest = declaring_manifest.with(settings: [SettingDeclaration.new(name: "lib", line: 2)])
     project = load_project(plugins: [listing("./rules/tests", settings: [setting("lib", line: 3)])], manifest:, ruby:)
@@ -501,12 +501,12 @@ class LoadProjectTest < Minitest::Test
 
     assert_equal [[setting("lib", line: 3)]], given
     assert_equal [["ruby-file", "lib/{path}.rb", [["test", "test/{path}_test.rb", 4]], "{path}", true, 4]],
-      declared.map { |each| [each.name, each.files.source, each.companions.map { [it.name, it.pattern.source, it.line] }, each.key.source, each.optional, each.line] }
+      declared.map { |each| [each.name, each.primary.source, each.pieces.map { [it.name, it.pattern.source, it.line] }, each.key.source, each.optional, each.line] }
   end
 
   def test_adds_the_artifacts_a_plugins_ruby_declares_to_those_its_manifest_declares
     manifest = declaring_manifest.with(artifacts: [artifact("source-file")])
-    project = load_project(manifest:, ruby: declaring { |_| [artifact("ruby-file", files: "lib/{path}.rb")] })
+    project = load_project(manifest:, ruby: declaring { |_| [artifact("ruby-file", primary: "lib/{path}.rb")] })
 
     assert_equal ["source-file", "ruby-file"], project.plugins.first.manifest.artifacts.map(&:name)
   end
@@ -520,9 +520,9 @@ class LoadProjectTest < Minitest::Test
   end
 
   def test_checks_a_policy_against_the_artifacts_a_plugins_ruby_declares
-    ruby = declaring { |_| [artifact("ruby-file", files: "lib/{path}.rb")] }
+    ruby = declaring { |_| [artifact("ruby-file", primary: "lib/{path}.rb")] }
 
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown companion "test"; artifact "ruby-file" declares none),
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown piece "test"; artifact "ruby-file" declares none),
       manifest: declaring_manifest(policies: [policy]), ruby:
   end
 
@@ -561,8 +561,8 @@ class LoadProjectTest < Minitest::Test
     given = []
     answer = lambda do |input|
       given << input
-      {"artifacts" => [{"name" => "ruby-file", "files" => "lib/{path}.rb", "companions" => {"test" => "test/{path}_test.rb"}, "key" => "{path}",
-                        "optional" => true, "dotfiles" => false}, {"name" => "plain", "files" => "{path}.md"}]}
+      {"artifacts" => [{"name" => "ruby-file", "primary" => "lib/{path}.rb", "pieces" => {"test" => "test/{path}_test.rb"}, "key" => "{path}",
+                        "optional" => true, "dotfiles" => false}, {"name" => "plain", "primary" => "{path}.md"}]}
     end
     port = HelperPort.new({"tests/roles" => answer}, commands: ["node"])
     manifest = helped_manifest.with(settings: [SettingDeclaration.new(name: "lib", line: 2)])
@@ -573,7 +573,7 @@ class LoadProjectTest < Minitest::Test
     assert_equal [{"settings" => [{"name" => "lib", "arguments" => ["lib"], "properties" => {"x" => 1}, "line" => 3,
                                    "children" => [{"name" => "y", "arguments" => [], "properties" => {}, "children" => [], "line" => 4}]}]}], given
     assert_equal [["ruby-file", "lib/{path}.rb", [["test", "test/{path}_test.rb", 4]], "{path}", true, false, 4], ["plain", "{path}.md", [], nil, false, true, 4]],
-      declared.map { |each| [each.name, each.files.source, each.companions.map { [it.name, it.pattern.source, it.line] }, each.key&.source, each.optional, each.dotfiles, each.line] }
+      declared.map { |each| [each.name, each.primary.source, each.pieces.map { [it.name, it.pattern.source, it.line] }, each.key&.source, each.optional, each.dotfiles, each.line] }
     assert_equal [[APP, true]], port.started.map { |running| [running.root, running.stopped] }
   end
 
@@ -597,11 +597,11 @@ class LoadProjectTest < Minitest::Test
       ->(_) { {"mistake" => {"message" => "m", "line" => "3"}} } =>
         %(fault in plugin tests: helper "roles" answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}}),
       ->(_) { {"mistake" => "m"} } => %(fault in plugin tests: helper "roles" answered neither {"artifacts": [...]} nor {"mistake": {"message": TEXT, "line": LINE}}),
-      ->(_) { {"artifacts" => [3]} } => %(fault in plugin tests: helper "roles" declared an artifact that isn't {"name": NAME, "files": PATTERN, ...}),
-      ->(_) { {"artifacts" => [{"name" => "a", "files" => "{x}.rb"}]} } =>
+      ->(_) { {"artifacts" => [3]} } => %(fault in plugin tests: helper "roles" declared an artifact that isn't {"name": NAME, "primary": PATTERN, ...}),
+      ->(_) { {"artifacts" => [{"name" => "a", "primary" => "{x}.rb"}]} } =>
         %(fault in plugin tests: helper "roles" declared artifact "a" with a path pattern "{x}.rb" has unknown placeholder "{x}"; expected "{path}" or "{name}"),
-      ->(_) { {"artifacts" => [{"name" => "a", "files" => "a.rb", "colour" => "x"}]} } =>
-        %(fault in plugin tests: helper "roles" declared an artifact that isn't {"name": NAME, "files": PATTERN, ...})
+      ->(_) { {"artifacts" => [{"name" => "a", "primary" => "a.rb", "colour" => "x"}]} } =>
+        %(fault in plugin tests: helper "roles" declared an artifact that isn't {"name": NAME, "primary": PATTERN, ...})
     }.each do |answer, message|
       assert_mistake "rules/tests/plugin.kdl", 4, message, manifest: helped_manifest, helpers: HelperPort.new({"tests/roles" => answer}, commands: ["node"])
     end
@@ -622,14 +622,14 @@ class LoadProjectTest < Minitest::Test
         @folder = "lib"
       end
 
-      def declare(_) = [artifact("ruby-file", files: @folder + "/{path}.rb", companions: {"test" => "t/{path}"})]
+      def declare(_) = [artifact("ruby-file", primary: @folder + "/{path}.rb", pieces: {"test" => "t/{path}"})]
     RUBY
     # A built-in plugin's Artifacts, which test/plugin_ruby.rb loaded at the top level, is put back.
     loaded = Object.__send__(:remove_const, :Artifacts) if Object.const_defined?(:Artifacts, false)
     Object.const_set(:Artifacts, Class.new(CrossLint::Artifacts))
     project = load_project(manifest: declaring_manifest, ruby:)
 
-    assert_equal ["lib/{path}.rb"], project.plugins.first.manifest.artifacts.map { it.files.source }
+    assert_equal ["lib/{path}.rb"], project.plugins.first.manifest.artifacts.map { it.primary.source }
     assert_mistake "rules/tests/plugin.kdl", 4, "fault in plugin tests: artifacts.rb defines no class Artifacts", manifest: declaring_manifest,
       ruby: {"#{APP}/rules/tests/artifacts.rb" => ->(_) {}}
   ensure
@@ -648,45 +648,45 @@ class LoadProjectTest < Minitest::Test
       manifest: tests_manifest(artifacts: [], policies: [policy])
   end
 
-  def test_stops_at_a_condition_on_a_companion_the_artifact_lacks
-    condition = Condition::All.new(conditions: [Condition::CompanionExists.new(companion: "test", line: 7),
-      Condition::Not.new(condition: Condition::Any.new(conditions: [Condition::CompanionExists.new(companion: "stub", line: 9)], line: 8),
+  def test_stops_at_a_condition_on_a_piece_the_artifact_lacks
+    condition = Condition::All.new(conditions: [Condition::PieceExists.new(piece: "test", line: 7),
+      Condition::Not.new(condition: Condition::Any.new(conditions: [Condition::PieceExists.new(piece: "stub", line: 9)], line: 8),
         line: 8)], line: 7)
-    project = load_project(manifests: {"#{APP}/rules/tests" => tests_manifest(policies: [policy(condition: Condition::CompanionExists.new(companion: "test", line: 7))])})
+    project = load_project(manifests: {"#{APP}/rules/tests" => tests_manifest(policies: [policy(condition: Condition::PieceExists.new(piece: "test", line: 7))])})
 
-    assert_equal "test", project.plugins.first.manifest.policies.first.condition.companion
-    assert_mistake "rules/tests/plugin.kdl", 9, %(unknown companion "stub"; expected "test"),
+    assert_equal "test", project.plugins.first.manifest.policies.first.condition.piece
+    assert_mistake "rules/tests/plugin.kdl", 9, %(unknown piece "stub"; expected "test"),
       manifest: tests_manifest(policies: [policy(condition:)])
   end
 
-  def test_runs_a_built_in_rule_with_a_companion_of_the_artifact
-    project = load_project(manifests: {"#{APP}/rules/tests" => tests_manifest(policies: [policy(rules: [policy_rule("companion-absent")])])})
+  def test_runs_a_built_in_rule_with_a_piece_of_the_artifact
+    project = load_project(manifests: {"#{APP}/rules/tests" => tests_manifest(policies: [policy(rules: [policy_rule("piece-absent")])])})
 
-    assert_equal ["companion-absent"], project.plugins.first.manifest.policies.first.rules.map(&:name)
+    assert_equal ["piece-absent"], project.plugins.first.manifest.policies.first.rules.map(&:name)
   end
 
   def test_stops_at_a_rule_that_is_neither_built_in_nor_declared
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "companion-exist", did you mean "companion-exists"?),
-      manifest: tests_manifest(policies: [policy(rules: [policy_rule("companion-exist")])])
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "zzz"; expected "companion-exists", "companion-absent", or "names-class"),
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "piece-exist", did you mean "piece-exists"?),
+      manifest: tests_manifest(policies: [policy(rules: [policy_rule("piece-exist")])])
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "zzz"; expected "piece-exists", "piece-absent", or "names-class"),
       manifest: tests_manifest(rules: [RuleDeclaration.new(name: "names-class", ruby: "a.rb", line: 2)],
         policies: [policy(rules: [policy_rule("zzz"), policy_rule("names-class")])])
   end
 
   def test_stops_at_a_built_in_rule_with_the_wrong_arguments
-    assert_mistake "rules/tests/plugin.kdl", 7, %(rule "companion-exists" needs companion=NAME),
+    assert_mistake "rules/tests/plugin.kdl", 7, %(rule "piece-exists" needs piece=NAME),
       manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {})])])
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown argument "companoin", did you mean "companion"? for rule "companion-exists"),
-      manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"companoin" => "test"})])])
-    assert_mistake "rules/tests/plugin.kdl", 7, "companion= takes the name of a companion, as a string",
-      manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"companion" => 3})])])
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown argument "peice", did you mean "piece"? for rule "piece-exists"),
+      manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"peice" => "test"})])])
+    assert_mistake "rules/tests/plugin.kdl", 7, "piece= takes the name of a piece, as a string",
+      manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"piece" => 3})])])
   end
 
-  def test_stops_at_a_built_in_rule_on_a_companion_the_artifact_lacks
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown companion "tset", did you mean "test"?),
-      manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"companion" => "tset"})])])
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown companion "test"; artifact "ruby-file" declares none),
-      manifest: tests_manifest(artifacts: [artifact(companions: [])])
+  def test_stops_at_a_built_in_rule_on_a_piece_the_artifact_lacks
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown piece "tset", did you mean "test"?),
+      manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"piece" => "tset"})])])
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown piece "test"; artifact "ruby-file" declares none),
+      manifest: tests_manifest(artifacts: [artifact(pieces: [])])
   end
 
   def test_runs_a_ruby_rule_its_plugin_declares_with_no_arguments
@@ -709,7 +709,7 @@ class LoadProjectTest < Minitest::Test
   def test_runs_no_ruby_rule_of_another_plugin
     other = tests_manifest(".config/other", rules: [RuleDeclaration.new(name: "names-class", ruby: "a.rb", line: 2)])
 
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "names-class"; expected "companion-exists" or "companion-absent"),
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "names-class"; expected "piece-exists" or "piece-absent"),
       plugins: [listing("./rules/tests"), listing(".config/other", line: 2)],
       manifests: {"#{APP}/rules/tests" => tests_manifest(policies: [policy(rules: [policy_rule("names-class")])]), "#{APP}/.config/other" => other}
   end
@@ -742,10 +742,10 @@ class LoadProjectTest < Minitest::Test
     rules = [RuleDeclaration.new(name: "one", ruby: "a.rb", line: 20), RuleDeclaration.new(name: "two", ruby: "b.rb", line: 21)]
     helpers = [HelperDeclaration.new(name: "one", command: "node", file: "a.mjs", line: 22),
       HelperDeclaration.new(name: "two", command: "node", file: "b.mjs", line: 23)]
-    condition = Condition::All.new(conditions: [Condition::CompanionExists.new(companion: "test", line: 7),
-      Condition::CompanionExists.new(companion: "sig", line: 7)], line: 7)
-    ruby_file = artifact(companions: [companion("test"), companion("sig", "sig/{path}.rbs")])
-    policies = [policy(condition:, rules: [policy_rule, policy_rule("companion-absent", arguments: {"companion" => "sig"}), policy_rule("one")]),
+    condition = Condition::All.new(conditions: [Condition::PieceExists.new(piece: "test", line: 7),
+      Condition::PieceExists.new(piece: "sig", line: 7)], line: 7)
+    ruby_file = artifact(pieces: [piece("test"), piece("sig", "sig/{path}.rbs")])
+    policies = [policy(condition:, rules: [policy_rule, policy_rule("piece-absent", arguments: {"piece" => "sig"}), policy_rule("one")]),
       Policy.new(name: "two", applies_to: AppliesTo.new(artifact: "source-file", line: 11), condition: nil, rules: [policy_rule("two")], line: 10)]
     manifest = tests_manifest(artifacts: [ruby_file, artifact("source-file")], policies:, rules:, helpers:)
     project = load_project(manifest:, policies: [policy_setting("tests/has-test"), policy_setting("tests/two", line: 4)])
@@ -755,18 +755,18 @@ class LoadProjectTest < Minitest::Test
   end
 
   def test_stops_at_the_later_of_two_mistakes_in_a_list
-    assert_mistake "rules/tests/plugin.kdl", 4, %(companion "stub" uses {name}, which the files pattern "lib/{path}.rb" doesn't have),
-      manifest: tests_manifest(artifacts: [artifact(companions: [companion("test"), companion("stub", "{name}.rb", line: 4)])])
-    assert_mistake "rules/tests/plugin.kdl", 3, %(rule "companion-exists" has the name of a built-in rule; name it something else),
-      manifest: tests_manifest(rules: [RuleDeclaration.new(name: "one", ruby: "a.rb", line: 2), RuleDeclaration.new(name: "companion-exists", ruby: "b.rb", line: 3)],
+    assert_mistake "rules/tests/plugin.kdl", 4, %(piece "stub" uses {name}, which the primary pattern "lib/{path}.rb" doesn't have),
+      manifest: tests_manifest(artifacts: [artifact(pieces: [piece("test"), piece("stub", "{name}.rb", line: 4)])])
+    assert_mistake "rules/tests/plugin.kdl", 3, %(rule "piece-exists" has the name of a built-in rule; name it something else),
+      manifest: tests_manifest(rules: [RuleDeclaration.new(name: "one", ruby: "a.rb", line: 2), RuleDeclaration.new(name: "piece-exists", ruby: "b.rb", line: 3)],
         policies: [policy(rules: [policy_rule("one")])])
-    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "zzz"; expected "companion-exists" or "companion-absent"),
+    assert_mistake "rules/tests/plugin.kdl", 7, %(unknown rule "zzz"; expected "piece-exists" or "piece-absent"),
       manifest: tests_manifest(policies: [policy(rules: [policy_rule, policy_rule("zzz")])])
     assert_mistake "rules/tests/plugin.kdl", 6, %(unknown artifact "zzz"; expected "ruby-file"),
       manifest: tests_manifest(policies: [policy, policy(applies_to: "zzz").with(name: "other")])
-    assert_mistake "rules/tests/plugin.kdl", 8, %(unknown companion "zzz"; expected "test"),
-      manifest: tests_manifest(policies: [policy(condition: Condition::Any.new(conditions: [Condition::CompanionExists.new(companion: "test", line: 7),
-        Condition::CompanionExists.new(companion: "zzz", line: 8)], line: 7))])
+    assert_mistake "rules/tests/plugin.kdl", 8, %(unknown piece "zzz"; expected "test"),
+      manifest: tests_manifest(policies: [policy(condition: Condition::Any.new(conditions: [Condition::PieceExists.new(piece: "test", line: 7),
+        Condition::PieceExists.new(piece: "zzz", line: 8)], line: 7))])
   end
 
   def test_lists_the_plugins_on_disk_without_checking_them_against_each_other_or_running_their_ruby
@@ -864,10 +864,10 @@ class LoadProjectTest < Minitest::Test
       manifest: tests_manifest(policies: [policy(applies_to: "tests/ruby/file")])
   end
 
-  def test_takes_any_string_as_a_companion_name
+  def test_takes_any_string_as_a_piece_name
     name = Class.new(String).new("test")
 
-    assert_equal 1, load_project(manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"companion" => name})])])).plugins.size
+    assert_equal 1, load_project(manifest: tests_manifest(policies: [policy(rules: [policy_rule(arguments: {"piece" => name})])])).plugins.size
   end
 
   def test_raises_the_mistakes_the_ports_raise
@@ -970,19 +970,19 @@ class LoadProjectTest < Minitest::Test
       commands: [CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 8)], steps: [StepDeclaration.new(name: step, line: 9)])
   end
 
-  def artifact(name = "ruby-file", companions: [companion("test", line: 3)], line: 1)
-    ArtifactDeclaration.new(name:, files: PathPattern.new(source: "lib/{path}.rb"), companions:, line:)
+  def artifact(name = "ruby-file", pieces: [piece("test", line: 3)], line: 1)
+    ArtifactDeclaration.new(name:, primary: PathPattern.new(source: "lib/{path}.rb"), pieces:, line:)
   end
 
-  def companion(name, pattern = "test/{path}_test.rb", line: 3)
-    CompanionDeclaration.new(name:, pattern: PathPattern.new(source: pattern), line:)
+  def piece(name, pattern = "test/{path}_test.rb", line: 3)
+    PieceDeclaration.new(name:, pattern: PathPattern.new(source: pattern), line:)
   end
 
   def policy(applies_to: "ruby-file", condition: nil, rules: [policy_rule], line: 5)
     Policy.new(name: "has-test", applies_to: applies_to && AppliesTo.new(artifact: applies_to, line: 6), condition:, rules:, line:)
   end
 
-  def policy_rule(name = "companion-exists", arguments: BuiltInRule.named(name) ? {"companion" => "test"} : {})
+  def policy_rule(name = "piece-exists", arguments: BuiltInRule.named(name) ? {"piece" => "test"} : {})
     PolicyRule.new(name:, arguments:, severity: nil, line: 7)
   end
 end

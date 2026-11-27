@@ -117,7 +117,7 @@ class TextReportTest < Minitest::Test
   end
 
   def test_writes_a_passing_artifact_with_its_role
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, companions: [])
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, pieces: [])
     report_port.write(result_of([artifact]))
 
     assert_equal "lib/a.rb: ruby-file passes\n", @out.string
@@ -132,7 +132,7 @@ class TextReportTest < Minitest::Test
   end
 
   def test_writes_a_path_and_other_text_from_the_project_as_they_are
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/é.rb", match: {}, companions: [])
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/é.rb", match: {}, pieces: [])
     report_port.write(result_of([violation_of("lib/café.rb", "no tést"), artifact], notices: [Notice.new(file: "ü.kdl", line: 1, message: "ö")]))
 
     assert_equal "lib/café.rb: no tést (tests/has-test)\nlib/é.rb: ruby-file passes\n", @out.string
@@ -227,7 +227,7 @@ class JSONReportTest < Minitest::Test
   end
 
   def test_leaves_passing_artifacts_out
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, companions: [])
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, pieces: [])
     report_port.write(result_of([artifact]))
 
     assert_equal [], JSON.parse(@out.string).fetch("findings")

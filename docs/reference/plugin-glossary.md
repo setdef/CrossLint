@@ -8,10 +8,10 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | --- | --- | --- |
 | **manifest** | A plugin's `plugin.kdl`, which declares its roles, policies, rules, helpers, settings, commands, and steps. CrossLint stops at any line it doesn't know. | plugin config, descriptor |
 | **artifact declaration** | What a manifest says about one role: the path pattern that finds each artifact's primary piece, and the path pattern of each of its other pieces. Written `artifact ROLE { ... }`, or made in the plugin's Ruby. | |
-| **path pattern** | A path with placeholders in braces, such as `lib/{path}.rb`, matched case-sensitively with `/` on every system. CrossLint finds primary pieces with the pattern in `files`; in another piece's pattern, each placeholder stands for what it matched there. | glob (a path pattern is not a glob) |
+| **path pattern** | A path with placeholders in braces, such as `lib/{path}.rb`, matched case-sensitively with `/` on every system. CrossLint finds primary pieces with the pattern in `primary`; in another piece's pattern, each placeholder stands for what it matched there. | glob (a path pattern is not a glob) |
 | **placeholder** | `{path}`, which matches a file name and the folders before it, or `{name}`, which matches one segment of a path. | variable, wildcard |
 | **condition** | What a policy's `when` says must hold before its rules run on an artifact: that a piece exists, or `not`, `all`, or `any` of other conditions. | filter, predicate |
-| **built-in rule** | A rule CrossLint has, which it runs wherever a policy's `rule` line gives its name, with no code: `companion-exists` and `companion-absent`. | core rule |
+| **built-in rule** | A rule CrossLint has, which it runs wherever a policy's `rule` line gives its name, with no code: `piece-exists` and `piece-absent`. | core rule |
 | **setting** | A value a plugin takes in its block in the project's configuration, such as the Angular plugin's `src-dir`, declared in the manifest with `setting NAME`. | option |
 
 ## Ruby and helpers
@@ -24,7 +24,7 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | **helper** | A program a plugin carries, in any language, that a Ruby rule calls with a line of JSON and that answers with one, such as the Angular plugin's, which reads TypeScript with the project's compiler. It runs on the project's runtime for that language. | adapter, sidecar |
 | **fault** | What stops a plugin: an exception its Ruby raises, a gem it requires that CrossLint wasn't built with, or a helper that fails. The plugin reports nothing else, and `crosslint check` exits with 2. | crash |
 | **mistake** | A line of a manifest or a configuration that CrossLint can't use, CrossLint stops at it with exit status 2, before it checks anything, and says which file and line. | invalid config |
-| **notice** | A warning CrossLint gives about a plugin rather than an artifact, such as an artifact declaration whose `files` pattern matches nothing. | |
+| **notice** | A warning CrossLint gives about a plugin rather than an artifact, such as an artifact declaration whose `primary` pattern matches nothing. | |
 
 ## Steps and commands
 

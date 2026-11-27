@@ -11,7 +11,7 @@ class CitationsResolve < CrossLint::Rule
   CITATION = /(?<![\p{L}\p{N}_-])((?i:former)\s+)?ADR[ -]?(\d+)(?![\p{L}\p{N}_])/
 
   def check(artifact)
-    folder = artifact.companion("folder").path
+    folder = artifact.piece("folder").path
     numbers = DecisionLogRecords.in(project_files, folder).values
     text = DecisionLogMarkdown.prose(artifact.read)
     cited = text.to_enum(:scan, CITATION).filter_map do

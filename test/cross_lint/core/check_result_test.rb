@@ -6,7 +6,7 @@ class CheckResultTest < Minitest::Test
   cover "CrossLint::Core::Summary*"
   cover "CrossLint::Core::CheckResult*"
   cover "CrossLint::Core::Artifact*"
-  cover "CrossLint::Core::Companion*"
+  cover "CrossLint::Core::Piece*"
   cover "CrossLint::Core::Spelling*"
 
   include CrossLint::Core
@@ -50,8 +50,8 @@ class CheckResultTest < Minitest::Test
   end
 
   def test_lists_the_violations_among_the_findings
-    companion = Companion.new(name: "test", path: "test/a_test.rb", exists: true)
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, companions: [companion])
+    piece = Piece.new(name: "test", path: "test/a_test.rb", exists: true)
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, pieces: [piece])
     violation = Violation.new(plugin: "tests", policy: "p", artifact: "lib/b.rb", role: "ruby-file", message: "m", severity: :error, detail: nil)
     result = CheckResult.new(notices: [], findings: [artifact, violation], summary: summary([]), verbosity: :normal, failed: true, faults: [])
 
@@ -63,12 +63,12 @@ class CheckResultTest < Minitest::Test
       [summary([["a", 1]], faults: 1).line, summary([["a", 1]], faults: 2, errors: 1, warnings_shown: false).line]
   end
 
-  def test_finds_an_artifacts_companion_by_name
-    companion = Companion.new(name: "test", path: "test/a_test.rb", exists: true)
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, companions: [companion])
+  def test_finds_an_artifacts_piece_by_name
+    piece = Piece.new(name: "test", path: "test/a_test.rb", exists: true)
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, pieces: [piece])
 
-    assert_equal [companion, true], [artifact.companion("test"), artifact.companion("test").exist?]
-    assert_equal %(artifact "ruby-file" has no companion "spec"), assert_raises(KeyError) { artifact.companion("spec") }.message
+    assert_equal [piece, true], [artifact.piece("test"), artifact.piece("test").exist?]
+    assert_equal %(artifact "ruby-file" has no piece "spec"), assert_raises(KeyError) { artifact.piece("spec") }.message
   end
 
   def test_joins_words_with_the_conjunction_it_is_given

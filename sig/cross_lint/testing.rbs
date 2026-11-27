@@ -113,22 +113,22 @@ module CrossLint
     interface _PluginManifestsTest
       # A port with a manifest in each folder of `example`, relative to
       # `base`, that declares the artifact "ruby-file" (files
-      # "lib/{path}.rb", companions "signature" at "sig/{path}.rbs" and
+      # "lib/{path}.rb", pieces "signature" at "sig/{path}.rbs" and
       # "test" at "test/{path}_test.rb"); the rule "names-class" in
       # "rules/names_class.rb"; the helper "members" running
       # "helpers/members.mjs" on "node"; and, each applying to
       # "ruby-file", the policies
       #
-      # * "has-signature", with no condition, running "companion-exists"
-      #   with companion "signature" at severity "warning";
-      # * "names-match", when not companion-exists "test", running
+      # * "has-signature", with no condition, running "piece-exists"
+      #   with piece "signature" at severity "warning";
+      # * "names-match", when not piece-exists "test", running
       #   "names-class" with no severity;
-      # * "covered", when all of companion-exists "signature" and
-      #   companion-exists "test", running "companion-exists" with
-      #   companion "test" at severity "error";
-      # * "either", when any of companion-exists "signature" and not
-      #   companion-exists "test", running "companion-absent" with
-      #   companion "signature" and no severity;
+      # * "covered", when all of piece-exists "signature" and
+      #   piece-exists "test", running "piece-exists" with
+      #   piece "test" at severity "error";
+      # * "either", when any of piece-exists "signature" and not
+      #   piece-exists "test", running "piece-absent" with
+      #   piece "signature" and no severity;
       #
       # then the policy "has-debt", which a step reports, the settings
       # "file" and "report-entries", the command "update" with the help
@@ -144,7 +144,7 @@ module CrossLint
 
     # The tests every adapter of the plugin-manifest port passes.
     module PluginManifestsContract : _PluginManifestsTest, Minitest::Assertions
-      # read returns the artifacts, with their companions, the rules, and
+      # read returns the artifacts, with their pieces, the rules, and
       # the helpers the manifest declares.
       def test_reads_the_artifacts_rules_and_helpers_a_manifest_declares: () -> void
 
@@ -180,8 +180,8 @@ module CrossLint
       # The manifest of the "plugins/signatures" folder of the example.
       def signatures_manifest: () -> Core::Manifest
 
-      # A condition that the companion exists.
-      def exists: (String companion) -> Core::Condition::CompanionExists
+      # A condition that the piece exists.
+      def exists: (String piece) -> Core::Condition::PieceExists
 
       # The condition's inspection without its lines.
       def without_lines: (untyped condition) -> String

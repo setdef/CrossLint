@@ -17,7 +17,7 @@ class CheckTest < Minitest::Test
   INVOICES = %w[currency invoice line_item pdf customer tax total discount payment].map { |name| "lib/invoices/#{name}.rb" }
   TESTED = %w[invoice line_item customer total discount payment].map { |name| "test/invoices/#{name}_test.rb" }
 
-  def test_reports_each_artifact_whose_companion_is_missing
+  def test_reports_each_artifact_whose_piece_is_missing
     result = check(project(tests_plugin), files: INVOICES + TESTED)
 
     assert_equal [
@@ -43,21 +43,21 @@ class CheckTest < Minitest::Test
     assert_equal [["lib/app/a.rb", "app/a"], ["tasks.rake", nil]], check(project(plugin), files: ["lib/app/a.rb", "tasks.rake"]).findings.map { [it.artifact, it.key] }
   end
 
-  def test_passes_when_every_companion_exists
+  def test_passes_when_every_piece_exists
     result = check(project(tests_plugin), files: ["lib/a.rb", "lib/a/b.rb", "test/a_test.rb", "test/a/b_test.rb", "README.md"])
 
     assert_equal [[], "checked 2 ruby-file artifacts: no violations", false], [result.findings, result.summary.line, result.failed]
     assert_equal :normal, result.verbosity
   end
 
-  def test_asks_whether_a_companion_exists_of_the_filesystem_not_of_git
+  def test_asks_whether_a_piece_exists_of_the_filesystem_not_of_git
     result = check(project(tests_plugin), files: ["lib/a.rb"], ignored: ["test/a_test.rb"])
 
     assert_empty result.findings
   end
 
-  def test_reports_a_companion_that_exists_with_companion_absent
-    plugin = tests_plugin(rules: [rule("companion-absent", companion: "test")])
+  def test_reports_a_piece_that_exists_with_piece_absent
+    plugin = tests_plugin(rules: [rule("piece-absent", piece: "test")])
 
     assert_equal [["lib/a.rb", "test file exists at test/a_test.rb"]],
       check(project(plugin), files: ["lib/a.rb", "test/a_test.rb", "lib/b.rb"]).findings.map { |violation| [violation.artifact, violation.message] }
@@ -65,7 +65,7 @@ class CheckTest < Minitest::Test
 
   def test_applies_a_policy_only_where_its_condition_holds
     files = ["lib/a.rb", "lib/b.rb", "lib/c.rb", "lib/d.rb", "sig/a.rbs", "sig/b.rbs", "doc/a.md", "doc/c.md"]
-    has = ->(name) { Condition::CompanionExists.new(companion: name, line: 7) }
+    has = ->(name) { Condition::PieceExists.new(piece: name, line: 7) }
     cases = {
       has.call("signature") => ["lib/a.rb", "lib/b.rb"],
       Condition::Not.new(condition: has.call("signature"), line: 7) => ["lib/c.rb", "lib/d.rb"],
@@ -82,7 +82,7 @@ class CheckTest < Minitest::Test
 
   def test_runs_every_rule_of_a_policy
     plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb", "signature" => "sig/{path}.rbs")],
-      policies: [policy("complete", rules: [rule, rule(companion: "signature")])])
+      policies: [policy("complete", rules: [rule, rule(piece: "signature")])])
 
     assert_equal ["no signature file at sig/a.rbs", "no test file at test/a_test.rb"],
       check(project(plugin), files: ["lib/a.rb"]).findings.map(&:message)
@@ -182,16 +182,16 @@ class CheckTest < Minitest::Test
     assert_empty result.findings
   end
 
-  def test_lists_a_passing_artifact_with_its_companions_and_match
+  def test_lists_a_passing_artifact_with_its_pieces_and_match
     artifact = check(project(tests_plugin), files: ["lib/a/b.rb", "test/a/b_test.rb"], all: true).findings.first
 
     assert_equal Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a/b.rb", match: {"path" => "a/b"},
-      companions: [Companion.new(name: "test", path: "test/a/b_test.rb", exists: true)]), artifact
+      pieces: [Piece.new(name: "test", path: "test/a/b_test.rb", exists: true)]), artifact
   end
 
   def test_sorts_findings_by_artifact_then_plugin_policy_and_message
     other = plugin("other", artifacts: [declaration("ruby-file", "lib/{path}.rb", "spec" => "spec/{path}_spec.rb")],
-      policies: [policy("has-spec", rules: [rule(companion: "spec")]), policy("a-spec", rules: [rule(companion: "spec")])])
+      policies: [policy("has-spec", rules: [rule(piece: "spec")]), policy("a-spec", rules: [rule(piece: "spec")])])
     result = check(project(tests_plugin, other), files: ["lib/b.rb", "lib/a.rb"])
 
     assert_equal [["lib/a.rb", "other", "a-spec"], ["lib/a.rb", "other", "has-spec"], ["lib/a.rb", "tests", "has-test"],
@@ -211,12 +211,12 @@ class CheckTest < Minitest::Test
     roles = %w[zed ruby-file alpha].map { |role| declaration(role, "lib/{path}.rb", "test" => "test/{path}_test.rb") }
     passing = plugin("tests", artifacts: roles, policies: roles.map { |role| policy("p-#{role.name}", applies_to: role.name, rules: [rule]) })
     spec = plugin("spec", artifacts: [declaration("ruby-file", "lib/{path}.rb", "spec" => "spec/{path}_spec.rb")],
-      policies: [policy("has-spec", rules: [rule(companion: "spec")])])
+      policies: [policy("has-spec", rules: [rule(piece: "spec")])])
     findings = check(project(passing, spec), files: ["lib/a.rb", "test/a_test.rb", "spec/a_spec.rb"], all: true).findings
 
     assert_equal [%w[spec ruby-file], %w[tests alpha], %w[tests ruby-file], %w[tests zed]], findings.map { |finding| [finding.plugin, finding.role] }
     mixed = plugin("tests", artifacts: [roles.first, declaration("ruby-file", "lib/{path}.rb", "signature" => "sig/{path}.rbs")],
-      policies: [policy("p-zed", applies_to: "zed", rules: [rule]), policy("has-signature", rules: [rule(companion: "signature")])])
+      policies: [policy("p-zed", applies_to: "zed", rules: [rule]), policy("has-signature", rules: [rule(piece: "signature")])])
     findings = check(project(mixed), files: ["lib/a.rb", "test/a_test.rb"], all: true).findings
 
     assert_equal [[Artifact, "zed"], [Violation, "ruby-file"]], findings.map { |finding| [finding.class, finding.role] }
@@ -230,10 +230,10 @@ class CheckTest < Minitest::Test
     assert_equal "checked 1 ruby-file artifact: 1 error", result.summary.line
   end
 
-  def test_applies_a_policy_with_no_applies_to_to_each_artifact_of_its_plugin_with_the_companions_it_names
+  def test_applies_a_policy_with_no_applies_to_to_each_artifact_of_its_plugin_with_the_pieces_it_names
     artifacts = [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"), declaration("rake-file", "{path}.rake"),
       declaration("doc", "{path}.md", "test" => "test/{path}_test.md", "note" => "{path}.txt")]
-    has_note = policy("note", rules: [rule(companion: "test")], applies_to: nil, condition: Condition::CompanionExists.new(companion: "note", line: 7))
+    has_note = policy("note", rules: [rule(piece: "test")], applies_to: nil, condition: Condition::PieceExists.new(piece: "note", line: 7))
     plugin = plugin("tests", artifacts:, policies: [policy("has-test", rules: [rule], applies_to: nil), has_note])
     result = check(project(plugin), files: ["lib/a.rb", "a.rake", "a.md", "a.txt"])
 
@@ -265,7 +265,7 @@ class CheckTest < Minitest::Test
     result = check(project(plugin), files: ["lib/a.rb", "test/a_test.rb"])
 
     assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 9,
-      message: %(no file matches "docs/{path}.md", the files of artifact "doc"))], result.notices
+      message: %(no file matches "docs/{path}.md", the primary of artifact "doc"))], result.notices
     refute result.failed
   end
 
@@ -277,10 +277,10 @@ class CheckTest < Minitest::Test
     some = check(project(plugin), files: ["src/a.component.ts"])
     none = check(project(plugin), files: ["app/a.component.ts"])
 
-    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 4, message: %(no file matches "src/{path}.store.ts", the files of artifact "store"))],
+    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 4, message: %(no file matches "src/{path}.store.ts", the primary of artifact "store"))],
       some.notices
     assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 2,
-      message: %(no file matches the files of any artifact of plugin tests, such as "src/{path}.pipe.ts"))], none.notices
+      message: %(no file matches the primary of any artifact of plugin tests, such as "src/{path}.pipe.ts"))], none.notices
   end
 
   def test_finds_no_artifact_whose_match_has_a_name_that_starts_with_a_dot_when_its_declaration_leaves_dotfiles_out
@@ -481,13 +481,13 @@ class CheckTest < Minitest::Test
       .call(project, **options)
   end
 
-  def declaration(name, files, line: 1, **companions)
-    ArtifactDeclaration.new(name:, files: PathPattern.new(source: files), line:,
-      companions: companions.map { |companion, pattern| CompanionDeclaration.new(name: companion, pattern: PathPattern.new(source: pattern), line: line + 1) })
+  def declaration(name, files, line: 1, **pieces)
+    ArtifactDeclaration.new(name:, primary: PathPattern.new(source: files), line:,
+      pieces: pieces.map { |piece, pattern| PieceDeclaration.new(name: piece, pattern: PathPattern.new(source: pattern), line: line + 1) })
   end
 
-  def rule(name = "companion-exists", companion: "test", severity: nil, line: 6)
-    arguments = BuiltInRule.named(name) ? {"companion" => companion} : {}
+  def rule(name = "piece-exists", piece: "test", severity: nil, line: 6)
+    arguments = BuiltInRule.named(name) ? {"piece" => piece} : {}
     PolicyRule.new(name:, arguments:, severity:, line:)
   end
 
@@ -509,7 +509,7 @@ class CheckTest < Minitest::Test
 
   def mixed_plugin
     plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb", "signature" => "sig/{path}.rbs")],
-      policies: [policy("has-test", rules: [rule]), policy("has-signature", rules: [rule(companion: "signature", severity: :warning)])])
+      policies: [policy("has-test", rules: [rule]), policy("has-signature", rules: [rule(piece: "signature", severity: :warning)])])
   end
 
   def setting(name, enabled: nil, severity: nil) = PolicySetting.new(name:, enabled:, severity:, line: 4)

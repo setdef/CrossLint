@@ -11,8 +11,8 @@ class AppTest < Minitest::Test
   Core = CrossLint::Core
   Mistake = CrossLint::Core::Mistake
 
-  MANIFEST = %(artifact "a" {\n  files "{path}.md"\n  companion "c" "{path}.txt"\n}\n) +
-    %(policy "p" {\n  applies-to "a"\n  rule "companion-exists" companion="c"\n}\n)
+  MANIFEST = %(artifact "a" {\n  primary "{path}.md"\n  piece "c" "{path}.txt"\n}\n) +
+    %(policy "p" {\n  applies-to "a"\n  rule "piece-exists" piece="c"\n}\n)
 
   def setup
     @base = Dir.mktmpdir("crosslint")
@@ -187,7 +187,7 @@ class AppTest < Minitest::Test
 
   def test_runs_a_ruby_rule_from_its_file_in_the_plugins_folder
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r"\n))
-    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n}\nrule "says-hi" ruby="hi.rb"\n) +
+    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nrule "says-hi" ruby="hi.rb"\n) +
       %(policy "p" {\n  applies-to "a"\n  rule "says-hi"\n}\n))
     write(@base, ".config/crosslint/r/hi.rb", %(class SaysHi < CrossLint::Rule\n  def check(artifact) = [violation(artifact, "hi")]\nend\n))
     write(@base, "a.md", "")
@@ -209,10 +209,10 @@ class AppTest < Minitest::Test
 
   def test_runs_the_ruby_that_declares_a_plugins_artifacts_from_its_file
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r" {\n  folder "docs"\n}\n))
-    write(@base, ".config/crosslint/r/plugin.kdl", %(setting "folder"\nartifacts ruby="artifacts.rb"\npolicy "p" {\n  rule "companion-exists" companion="c"\n}\n))
+    write(@base, ".config/crosslint/r/plugin.kdl", %(setting "folder"\nartifacts ruby="artifacts.rb"\npolicy "p" {\n  rule "piece-exists" piece="c"\n}\n))
     write(@base, ".config/crosslint/r/artifacts.rb", <<~RUBY)
       class Artifacts < CrossLint::Artifacts
-        def declare(settings) = [artifact("doc", files: settings.first.arguments.first + "/{path}.md", companions: {"c" => "{path}.txt"})]
+        def declare(settings) = [artifact("doc", primary: settings.first.arguments.first + "/{path}.md", pieces: {"c" => "{path}.txt"})]
       end
     RUBY
     write(@base, "docs/a.md", "")
@@ -224,7 +224,7 @@ class AppTest < Minitest::Test
 
   def test_runs_a_helper_as_a_process_writing_its_standard_error_with_debug
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r"\n))
-    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n}\nrule "asks" ruby="asks.rb"\n) +
+    write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nrule "asks" ruby="asks.rb"\n) +
       %(helper "h" command="sh" file="h.sh"\npolicy "p" {\n  applies-to "a"\n  rule "asks"\n}\n))
     write(@base, ".config/crosslint/r/asks.rb", %(class Asks < CrossLint::Rule\n  def check(artifact) = [violation(artifact, helper("h").call(1))]\nend\n))
     write(@base, ".config/crosslint/r/h.sh", %(while read -r line; do echo said >&2; echo '"hi"'; done\n))
@@ -388,10 +388,10 @@ class AppTest < Minitest::Test
     core = CrossLint::Core
     configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", warnings: nil, verbosity: nil, policies: [],
       plugins: [core::ListedPlugin.new(name: "./local", ref: nil, settings: [], line: 1)])
-    artifact = core::ArtifactDeclaration.new(name: "a", files: core::PathPattern.new(source: "{path}.md"), line: 1,
-      companions: [core::CompanionDeclaration.new(name: "c", pattern: core::PathPattern.new(source: "{path}.txt"), line: 2)])
+    artifact = core::ArtifactDeclaration.new(name: "a", primary: core::PathPattern.new(source: "{path}.md"), line: 1,
+      pieces: [core::PieceDeclaration.new(name: "c", pattern: core::PathPattern.new(source: "{path}.txt"), line: 2)])
     policy = core::Policy.new(name: "p", applies_to: core::AppliesTo.new(artifact: "a", line: 2), condition: nil, line: 1,
-      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "c"}, severity: :warning, line: 3)] +
+      rules: [core::PolicyRule.new(name: "piece-exists", arguments: {"piece" => "c"}, severity: :warning, line: 3)] +
         (ruby ? [core::PolicyRule.new(name: "says-hi", arguments: {}, severity: nil, line: 4)] : []))
     rules = ruby ? [core::RuleDeclaration.new(name: "says-hi", ruby: "hi.rb", line: 5)] : []
     manifest = core::Manifest.new(file: "local/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])

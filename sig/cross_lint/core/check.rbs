@@ -1,6 +1,6 @@
 module CrossLint
   module Core
-    # Checks a loaded project: finds each artifact by its files pattern,
+    # Checks a loaded project: finds each artifact by its primary pattern,
     # applies each enabled policy where its condition holds, runs its
     # rules, gives each violation its severity, and returns what to
     # report under the --warnings mode and the verbosity. It reads the
@@ -96,7 +96,7 @@ module CrossLint
       def disabled?: (Project project, Violation violation) -> bool
 
       # A notice for each Ruby rule no policy runs and each artifact
-      # declaration whose files pattern matches no file.
+      # declaration whose primary pattern matches no file.
       def notices: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds) -> Array[Notice]
 
       # A notice for each of `plugin`'s artifact declarations that matches

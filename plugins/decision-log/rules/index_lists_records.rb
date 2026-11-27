@@ -8,7 +8,7 @@ require_relative "../records"
 # reference definition.
 class IndexListsRecords < CrossLint::Rule
   def check(artifact)
-    folder = artifact.companion("folder").path
+    folder = artifact.piece("folder").path
     records = DecisionLogRecords.in(project_files, folder)
     linked = DecisionLogMarkdown.links(artifact.read).filter_map do |written, line|
       path = DecisionLogRecords.resolve(artifact.path, written)

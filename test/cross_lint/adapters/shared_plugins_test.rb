@@ -82,7 +82,7 @@ end
 # tags v1.0.0, v1.2.0 (annotated), v1.10.0, 2.0.0-rc.1, and latest, on
 # the branch main.
 module Origin
-  PLUGIN = %(artifact "doc" {\n  files "{path}.md"\n}\n)
+  PLUGIN = %(artifact "doc" {\n  primary "{path}.md"\n}\n)
 
   @lock = Mutex.new
 

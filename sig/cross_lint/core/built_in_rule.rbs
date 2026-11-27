@@ -4,13 +4,13 @@ module CrossLint
     # arguments it takes, and the severity of its violations.
     #
     # ```ruby
-    # CrossLint::Core::BuiltInRule.named("companion-exists").arguments # => ["companion"]
+    # CrossLint::Core::BuiltInRule.named("piece-exists").arguments # => ["piece"]
     # ```
     class BuiltInRule < Data
       # Every built-in rule.
       ALL: Array[BuiltInRule]
 
-      # The rule's name, such as "companion-exists".
+      # The rule's name, such as "piece-exists".
       attr_reader name: String
 
       # The arguments the rule takes, each of them needed.
@@ -28,14 +28,14 @@ module CrossLint
       def self.named: (String name) -> BuiltInRule?
 
       # The messages of the violations the rule reports for `artifact`,
-      # given a policy's `arguments`: for companion-exists, one when the
-      # companion doesn't exist; for companion-absent, one when it does.
+      # given a policy's `arguments`: for piece-exists, one when the
+      # piece doesn't exist; for piece-absent, one when it does.
       #
       # ```ruby
-      # companion = CrossLint::Core::Companion.new(name: "test", path: "test/a_test.rb", exists: false)
+      # piece = CrossLint::Core::Piece.new(name: "test", path: "test/a_test.rb", exists: false)
       # artifact = CrossLint::Core::Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb",
-      #   match: {"path" => "a"}, companions: [companion])
-      # CrossLint::Core::BuiltInRule.named("companion-exists").messages(artifact, {"companion" => "test"})
+      #   match: {"path" => "a"}, pieces: [piece])
+      # CrossLint::Core::BuiltInRule.named("piece-exists").messages(artifact, {"piece" => "test"})
       # # => ["no test file at test/a_test.rb"]
       # ```
       def messages: (Artifact artifact, Hash[String, untyped] arguments) -> Array[String]

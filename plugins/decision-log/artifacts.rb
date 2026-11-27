@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # The index and every Markdown file, each with the folder of records as its
-# companion "folder", since a rule gets no settings and learns the folder
+# piece "folder", since a rule gets no settings and learns the folder
 # from its artifact.
 class Artifacts < CrossLint::Artifacts
   def declare(settings)
@@ -14,8 +14,8 @@ class Artifacts < CrossLint::Artifacts
     end
     folder = path(found["folder"], "docs/decisions")
     index = path(found["index"], "#{folder}/README.md")
-    [artifact("index", files: index, companions: {"folder" => folder}),
-      artifact("document", files: "{path}.md", companions: {"folder" => folder})]
+    [artifact("index", primary: index, pieces: {"folder" => folder}),
+      artifact("document", primary: "{path}.md", pieces: {"folder" => folder})]
   end
 
   private

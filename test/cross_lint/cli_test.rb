@@ -558,7 +558,7 @@ class CLITest < Minitest::Test
   def test_check_writes_what_a_helper_writes_to_standard_error_with_debug
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
-      write(project, "plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n}\nrule "asks" ruby="asks.rb"\nhelper "h" command="sh" file="h.sh"\n) +
+      write(project, "plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nrule "asks" ruby="asks.rb"\nhelper "h" command="sh" file="h.sh"\n) +
         %(policy "p" {\n  applies-to "a"\n  rule "asks"\n}\n))
       write(project, "asks.rb", %(class Asks < CrossLint::Rule\n  def check(artifact) = (helper("h").call(1) && [])\nend\n))
       write(project, "h.sh", %(while read -r line; do echo said >&2; echo 1; done\n))
@@ -573,8 +573,8 @@ class CLITest < Minitest::Test
   def test_check_writes_no_file
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
-      write(project, "plugin.kdl", %(artifact "a" {\n  files "{path}.md"\n  companion "b" "{path}.txt"\n}\n) +
-        %(policy "p" {\n  applies-to "a"\n  rule "companion-exists" companion="b"\n}\n))
+      write(project, "plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n  piece "b" "{path}.txt"\n}\n) +
+        %(policy "p" {\n  applies-to "a"\n  rule "piece-exists" piece="b"\n}\n))
       write(project, "a.md", "")
       Open3.capture3("git", "init", "-q", chdir: project)
       snapshot = lambda do
@@ -969,10 +969,10 @@ class CLITest < Minitest::Test
     listed << core::ListedPlugin.new(name: SHARED, ref: "v1.0.0", settings: [], line: 3) if shared
     rules = unused ? [core::RuleDeclaration.new(name: "unused", ruby: "unused.rb", line: 3)] : []
     rules << core::RuleDeclaration.new(name: "raises", ruby: "raises.rb", line: 4) if raises
-    artifact = core::ArtifactDeclaration.new(name: "ruby-file", files: core::PathPattern.new(source: "lib/{path}.rb"), line: 1,
-      companions: [core::CompanionDeclaration.new(name: "test", pattern: core::PathPattern.new(source: "test/{path}_test.rb"), line: 2)])
+    artifact = core::ArtifactDeclaration.new(name: "ruby-file", primary: core::PathPattern.new(source: "lib/{path}.rb"), line: 1,
+      pieces: [core::PieceDeclaration.new(name: "test", pattern: core::PathPattern.new(source: "test/{path}_test.rb"), line: 2)])
     policy = core::Policy.new(name: "has-test", applies_to: core::AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, line: 5,
-      rules: [core::PolicyRule.new(name: "companion-exists", arguments: {"companion" => "test"}, severity:, line: 7)] +
+      rules: [core::PolicyRule.new(name: "piece-exists", arguments: {"piece" => "test"}, severity:, line: 7)] +
         (raises ? [core::PolicyRule.new(name: "raises", arguments: {}, severity: nil, line: 8)] : []))
     manifest = core::Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
     configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: listed, policies: [], warnings:, verbosity:)

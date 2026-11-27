@@ -6,8 +6,8 @@ module CrossLint
   module Core
     class BuiltInRule < Data.define(:name, :arguments, :severity)
       ALL = [
-        new(name: "companion-exists", arguments: ["companion"], severity: :error),
-        new(name: "companion-absent", arguments: ["companion"], severity: :error)
+        new(name: "piece-exists", arguments: ["piece"], severity: :error),
+        new(name: "piece-absent", arguments: ["piece"], severity: :error)
       ].freeze
 
       def self.named(name) = ALL.find { |rule| rule.name == name }
@@ -17,10 +17,10 @@ module CrossLint
       end
 
       def messages(artifact, arguments)
-        companion = artifact.companion(arguments.fetch("companion"))
-        return (companion.exist? ? [] : ["no #{companion.name} file at #{companion.path}"]) if name == "companion-exists"
+        piece = artifact.piece(arguments.fetch("piece"))
+        return (piece.exist? ? [] : ["no #{piece.name} file at #{piece.path}"]) if name == "piece-exists"
 
-        companion.exist? ? ["#{companion.name} file exists at #{companion.path}"] : []
+        piece.exist? ? ["#{piece.name} file exists at #{piece.path}"] : []
       end
     end
   end

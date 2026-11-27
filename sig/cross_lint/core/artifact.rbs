@@ -1,21 +1,21 @@
 module CrossLint
   module Core
-    # One of an artifact's companions: its name, its path for the
+    # One of an artifact's pieces: its name, its path for the
     # artifact's primary file, and whether a file or folder is there.
-    class Companion < Data
-      # The companion's name, as its artifact declares it, such as "test".
+    class Piece < Data
+      # The piece's name, as its artifact declares it, such as "test".
       attr_reader name: String
 
-      # The companion's path, relative to the project's root, with `/`.
+      # The piece's path, relative to the project's root, with `/`.
       attr_reader path: String
 
       # Whether a file or folder exists at `path`, by its exact name.
       attr_reader exists: bool
 
-      # A companion with these fields.
+      # A piece with these fields.
       def self.new: (name: String, path: String, exists: bool) -> instance
 
-      # A companion with these fields.
+      # A piece with these fields.
       def initialize: (name: String, path: String, exists: bool) -> void
 
       # Whether a file or folder exists at `path`.
@@ -23,13 +23,13 @@ module CrossLint
     end
 
     # An artifact: one primary file, found by an artifact declaration's
-    # files pattern, with its companions.
+    # primary pattern, with its pieces.
     #
     # ```ruby
-    # companion = CrossLint::Core::Companion.new(name: "test", path: "test/a_test.rb", exists: false)
+    # piece = CrossLint::Core::Piece.new(name: "test", path: "test/a_test.rb", exists: false)
     # artifact = CrossLint::Core::Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb",
-    #   match: {"path" => "a"}, companions: [companion])
-    # artifact.companion("test").exist? # => false
+    #   match: {"path" => "a"}, pieces: [piece])
+    # artifact.piece("test").exist? # => false
     # ```
     class Artifact < Data
       # The name of the plugin that declares the artifact.
@@ -42,12 +42,12 @@ module CrossLint
       # The primary file's path, relative to the project's root, with `/`.
       attr_reader path: String
 
-      # What each placeholder of the files pattern matched in `path`, by
+      # What each placeholder of the primary pattern matched in `path`, by
       # name.
       attr_reader match: Hash[String, String]
 
-      # The companions, in the order the declaration has them.
-      attr_reader companions: Array[Companion]
+      # The pieces, in the order the declaration has them.
+      attr_reader pieces: Array[Piece]
 
       # The name a debt entry can give the artifact by in place of its
       # primary path, from its declaration's key pattern, or nil.
@@ -55,16 +55,16 @@ module CrossLint
 
       # An artifact with these fields, and no key unless given.
       def self.new: (plugin: String, role: String, path: String, match: Hash[String, String],
-                     companions: Array[Companion], ?key: String?) -> instance
+                     pieces: Array[Piece], ?key: String?) -> instance
 
       # An artifact with these fields, and no key unless given.
       def initialize: (plugin: String, role: String, path: String, match: Hash[String, String],
-                       companions: Array[Companion], ?key: String?) -> void
+                       pieces: Array[Piece], ?key: String?) -> void
 
-      # The companion called `name`. Raises KeyError when the declaration
+      # The piece called `name`. Raises KeyError when the declaration
       # has none of that name, which LoadProject rules out for every
       # policy.
-      def companion: (String name) -> Companion
+      def piece: (String name) -> Piece
     end
 
     # What a rule reports when an artifact fails it: the plugin and policy

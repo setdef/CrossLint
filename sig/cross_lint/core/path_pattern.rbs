@@ -3,7 +3,7 @@ module CrossLint
     # A path pattern, such as `lib/{path}.rb`: a path, with `/` on every
     # system, and placeholders in braces. In an artifact's `files`,
     # `{path}` matches a file name and the folders before it, if any, and
-    # `{name}` one segment of a path; in a companion's path, each stands
+    # `{name}` one segment of a path; in a piece's path, each stands
     # for what it matched.
     #
     # ```ruby

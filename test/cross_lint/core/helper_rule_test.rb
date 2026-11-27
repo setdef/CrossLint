@@ -13,12 +13,12 @@ class HelperRuleTest < Minitest::Test
 
   ROOT = File.expand_path("/app")
 
-  def test_sends_the_helper_the_rule_and_the_artifact_with_its_companions
+  def test_sends_the_helper_the_rule_and_the_artifact_with_its_pieces
     seen = []
     check(files: ["lib/a.rb", "sig/a.rbs"], answer: ->(input) { (seen << input) && {"violations" => []} })
 
     assert_equal [{"rule" => "names-class", "artifact" => {"path" => "lib/a.rb", "role" => "ruby-file", "match" => {"path" => "a"}, "key" => "a",
-                                                           "companions" => {"signature" => {"path" => "sig/a.rbs", "exists" => true}, "test" => {"path" => "test/a_test.rb", "exists" => false}}}}], seen
+                                                           "pieces" => {"signature" => {"path" => "sig/a.rbs", "exists" => true}, "test" => {"path" => "test/a_test.rb", "exists" => false}}}}], seen
   end
 
   def test_reports_what_the_helper_answers_as_violations_of_its_policy
@@ -57,15 +57,15 @@ class HelperRuleTest < Minitest::Test
   private
 
   def check(files:, answer:, severity: nil, others: false)
-    artifact = ArtifactDeclaration.new(name: "ruby-file", files: PathPattern.new(source: "lib/{path}.rb"), line: 1, key: PathPattern.new(source: "{path}"),
-      companions: %w[signature test].map { |name| CompanionDeclaration.new(name:, pattern: PathPattern.new(source: (name == "test") ? "test/{path}_test.rb" : "sig/{path}.rbs"), line: 2) })
+    artifact = ArtifactDeclaration.new(name: "ruby-file", primary: PathPattern.new(source: "lib/{path}.rb"), line: 1, key: PathPattern.new(source: "{path}"),
+      pieces: %w[signature test].map { |name| PieceDeclaration.new(name:, pattern: PathPattern.new(source: (name == "test") ? "test/{path}_test.rb" : "sig/{path}.rbs"), line: 2) })
     rule = PolicyRule.new(name: "names-class", arguments: {}, severity:, line: 7)
     policy = Policy.new(name: "names-match", applies_to: AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, rules: [rule], line: 5)
     manifest = Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy],
       rules: [RuleDeclaration.new(name: "names-class", helper: "reader", line: 3)], helpers: [HelperDeclaration.new(name: "reader", command: "node", file: "reader.mjs", line: 9)])
     plugins = [plugin("tests", manifest)]
     if others
-      everything = PolicyRule.new(name: "companion-exists", arguments: {"companion" => "test"}, severity: nil, line: 3)
+      everything = PolicyRule.new(name: "piece-exists", arguments: {"piece" => "test"}, severity: nil, line: 3)
       plugins << plugin("other", Manifest.new(file: ".config/other/plugin.kdl", artifacts: [], helpers: [], rules: [],
         policies: [Policy.new(name: "all", applies_to: AppliesTo.new(artifact: "tests/ruby-file", line: 2), condition: nil, rules: [everything], line: 1)]))
     end

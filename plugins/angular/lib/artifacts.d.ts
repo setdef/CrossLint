@@ -13,8 +13,8 @@ export interface Setting {
 
 export interface Artifact {
   name: string;
-  files: string;
-  companions: Record<string, string>;
+  primary: string;
+  pieces: Record<string, string>;
   key: string;
   optional: boolean;
   dotfiles: boolean;

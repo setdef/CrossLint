@@ -7,7 +7,7 @@ class ClaudeMdImportsAgentsMd < CrossLint::Rule
   IMPORT = "@AGENTS.md"
 
   def check(artifact)
-    claude = artifact.companion("claude")
+    claude = artifact.piece("claude")
     first = claude.read.delete_prefix("\uFEFF")[/\A[^\n]*/].rstrip
     return [] if first == IMPORT
 

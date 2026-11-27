@@ -1,7 +1,7 @@
 module CrossLint
   module Core
     # A warning CrossLint gives about a plugin, not about an artifact,
-    # such as a files pattern that matches no file: the manifest it is
+    # such as a primary pattern that matches no file: the manifest it is
     # about, the line, and the message.
     class Notice < Data
       # The manifest's path, relative to the project's root.

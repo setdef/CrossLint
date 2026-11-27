@@ -14,21 +14,21 @@ module CrossLint
       raise Core::PluginError, "has no declare method"
     end
 
-    def artifact(name, files:, companions: {}, key: nil, optional: false, dotfiles: true)
+    def artifact(name, primary:, pieces: {}, key: nil, optional: false, dotfiles: true)
       raise Core::PluginError, "declared an artifact named #{name.inspect}, which is no string" unless name.is_a?(String)
-      raise Core::PluginError, "declared artifact #{name.dump} with companions #{companions.inspect}, which is no hash" unless companions.is_a?(Hash)
+      raise Core::PluginError, "declared artifact #{name.dump} with pieces #{pieces.inspect}, which is no hash" unless pieces.is_a?(Hash)
       raise Core::PluginError, "declared artifact #{name.dump} with optional: #{optional.inspect}, which is neither true nor false" unless [true, false].include?(optional)
 
       raise Core::PluginError, "declared artifact #{name.dump} with dotfiles: #{dotfiles.inspect}, which is neither true nor false" unless [true, false].include?(dotfiles)
 
-      declared = companions.map do |companion, pattern|
-        unless companion.is_a?(String)
-          raise Core::PluginError, "declared artifact #{name.dump} with a companion named #{companion.inspect}, which is no string"
+      declared = pieces.map do |piece, pattern|
+        unless piece.is_a?(String)
+          raise Core::PluginError, "declared artifact #{name.dump} with a piece named #{piece.inspect}, which is no string"
         end
 
-        Core::CompanionDeclaration.new(name: companion, pattern: Core::PathPattern.declared(name, pattern), line: @crosslint_line)
+        Core::PieceDeclaration.new(name: piece, pattern: Core::PathPattern.declared(name, pattern), line: @crosslint_line)
       end
-      Core::ArtifactDeclaration.new(name:, files: Core::PathPattern.declared(name, files), companions: declared, line: @crosslint_line,
+      Core::ArtifactDeclaration.new(name:, primary: Core::PathPattern.declared(name, primary), pieces: declared, line: @crosslint_line,
         key: key && Core::PathPattern.declared(name, key), optional:, dotfiles:)
     end
 

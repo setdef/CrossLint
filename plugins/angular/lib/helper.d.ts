@@ -16,7 +16,7 @@ export interface CheckedArtifact {
   role: string;
   match: Record<string, string>;
   key: string | null;
-  companions: Record<string, Piece>;
+  pieces: Record<string, Piece>;
 }
 
 export declare function answer(

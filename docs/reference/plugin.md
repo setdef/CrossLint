@@ -6,19 +6,19 @@ Every example on this page comes from one plugin, kept in a Ruby project at `.co
 
 ```kdl
 artifact "ruby-file" {
-  files "lib/{path}.rb"
-  companion "signature" "sig/{path}.rbs"
-  companion "test" "test/{path}_test.rb"
+  primary "lib/{path}.rb"
+  piece "signature" "sig/{path}.rbs"
+  piece "test" "test/{path}_test.rb"
 }
 
 policy "has-signature" {
   applies-to "ruby-file"
-  rule "companion-exists" companion="signature"
+  rule "piece-exists" piece="signature"
 }
 
 policy "has-test" {
   applies-to "ruby-file"
-  rule "companion-exists" companion="test" severity="warning"
+  rule "piece-exists" piece="test" severity="warning"
 }
 ```
 
@@ -26,19 +26,19 @@ A plugin's name is its folder's name, here `signatures`. CrossLint names each vi
 
 ## `artifact`
 
-`artifact NAME { ... }` declares a kind of artifact: which files are its primary files, and where each of its companions belongs. `NAME` is unique within the plugin.
+`artifact NAME { ... }` declares a role: the path pattern that finds each artifact's primary piece, and where each of its other pieces belongs. `NAME` is unique within the plugin.
 
 | Child | Meaning |
 | --- | --- |
-| `files PATTERN` | The path pattern that finds the primary files, relative to the project's root. Required, once. |
-| `companion NAME PATTERN` | A companion called `NAME`, at the path `PATTERN` gives for each primary file. Any number, each name once. |
+| `primary PATTERN` | The path pattern that finds each artifact's primary piece, relative to the project's root. Required, once. |
+| `piece NAME PATTERN` | A piece called `NAME`, at the path `PATTERN` gives for each primary piece. Any number, each name once. |
 
-A path pattern is a path with placeholders in braces. In `files`, `{path}` matches a file name and the folders before it, if any, and `{name}` matches one segment of a path, with no `/`. In a companion's pattern, each placeholder stands for what it matched in `files`. For `lib/fledge/archive.rb`, the pattern `lib/{path}.rb` matches with `{path}` as `fledge/archive`, so the companion `sig/{path}.rbs` is `sig/fledge/archive.rbs`; for `lib/fledge.rb`, `{path}` is `fledge`.
+A path pattern is a path with placeholders in braces. In `primary`, `{path}` matches a file name and the folders before it, if any, and `{name}` matches one segment of a path, with no `/`. In a piece's pattern, each placeholder stands for what it matched in `primary`. For `lib/fledge/archive.rb`, the pattern `lib/{path}.rb` matches with `{path}` as `fledge/archive`, so the piece `sig/{path}.rbs` is `sig/fledge/archive.rbs`; for `lib/fledge.rb`, `{path}` is `fledge`.
 
 - A pattern uses `/` on every system, and matches case-sensitively.
 - Files that Git ignores, and anything under `.git/`, never match.
-- A file that two artifacts' `files` patterns both match is a primary file of each, and both are checked.
-- An artifact whose `files` pattern matches no file is reported once as a warning, since a pattern that finds nothing usually has a typo.
+- A file that two artifacts' `primary` patterns both match is the primary piece of each, and both are checked.
+- An artifact whose `primary` pattern matches no file is reported once as a warning, since a pattern that finds nothing usually has a typo.
 
 ## `policy`
 
@@ -46,7 +46,7 @@ A path pattern is a path with placeholders in braces. In `files`, `{path}` match
 
 | Child | Meaning |
 | --- | --- |
-| `applies-to ARTIFACT` | The artifact the policy covers, by name: one of this plugin's, or another listed plugin's as `PLUGIN/ARTIFACT`. At most once. Without it, the policy covers each of its plugin's artifacts that has every companion its `when` and its rules name; a policy that would then cover none stops CrossLint with exit status 2, unless the plugin declares its artifacts in Ruby. |
+| `applies-to ARTIFACT` | The artifact the policy covers, by name: one of this plugin's, or another listed plugin's as `PLUGIN/ARTIFACT`. At most once. Without it, the policy covers each of its plugin's artifacts that has every piece its `when` and its rules name; a policy that would then cover none stops CrossLint with exit status 2, unless the plugin declares its artifacts in Ruby. |
 | `when CONDITION` | Apply the policy only to artifacts the condition holds for. Optional; without it, the policy applies to every artifact of the kind in `applies-to`. |
 | `rule RULE ...` | A rule the policy runs on each artifact it applies to, with the rule's arguments as properties. At least one. |
 
@@ -56,12 +56,12 @@ A `rule` line also takes `severity="error"` or `severity="warning"`, which overr
 
 | Condition | Holds when |
 | --- | --- |
-| `companion-exists COMPANION` | The artifact's companion of that name exists. |
+| `piece-exists PIECE` | The artifact's piece of that name exists. |
 | `not { CONDITION }` | The condition inside doesn't hold. |
 | `all { CONDITION ... }` | Every condition inside holds. |
 | `any { CONDITION ... }` | At least one condition inside holds. |
 
-For example, ng-nudge's rule that a component with an interface must have a stub is a policy on components, `when companion-exists "interface"`, that runs `companion-exists companion="stub"`.
+For example, ng-nudge's rule that a component with an interface must have a stub is a policy on components, `when piece-exists "interface"`, that runs `piece-exists piece="stub"`.
 
 A condition that these can't state goes in a Ruby rule, which can return no violation where the condition doesn't hold.
 
@@ -73,8 +73,8 @@ A rule is built into CrossLint, written in Ruby in the plugin, or run by the plu
 
 | Rule | Arguments | Reports | Default severity |
 | --- | --- | --- | --- |
-| `companion-exists` | `companion=NAME` | The artifact's companion doesn't exist, with its path. | error |
-| `companion-absent` | `companion=NAME` | The artifact's companion exists, with its path. For a file that shouldn't be there, such as a `.scss` beside a `.css`. | error |
+| `piece-exists` | `piece=NAME` | The artifact's piece doesn't exist, with its path. | error |
+| `piece-absent` | `piece=NAME` | The artifact's piece exists, with its path. For a file that shouldn't be there, such as a `.scss` beside a `.css`. | error |
 
 ### Rules in Ruby
 
@@ -84,7 +84,7 @@ A rule is built into CrossLint, written in Ruby in the plugin, or run by the plu
 # .config/crosslint/signatures/rules/signature_names_class.rb
 class SignatureNamesClass < CrossLint::Rule
   def check(artifact)
-    signature = artifact.companion("signature")
+    signature = artifact.piece("signature")
     return [] unless signature.exist?
 
     name = artifact.match["path"].split("/").map { _1.split("_").map(&:capitalize).join }.join("::")
@@ -100,7 +100,7 @@ rule "signature-names-class" ruby="rules/signature_names_class.rb"
 
 policy "signature-matches" {
   applies-to "ruby-file"
-  when companion-exists "signature"
+  when piece-exists "signature"
   rule "signature-names-class"
 }
 ```
@@ -109,13 +109,13 @@ The artifact a rule gets has these methods:
 
 | Method | Returns |
 | --- | --- |
-| `path` | The primary file's path, relative to the project's root. |
+| `path` | The primary piece's path, relative to the project's root. |
 | `role` | The artifact's name, such as `ruby-file`. |
 | `match` | What each placeholder matched, by name: `artifact.match["path"]`. |
-| `read` | The primary file's contents. |
-| `companion(NAME)` | The companion of that name, with `name`, `path`, `exist?`, and `read`. |
+| `read` | The primary piece's contents. |
+| `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`. |
 
-A rule can also look beyond its artifact, for a path written in the artifact's text, such as a link's target, which no companion can give:
+A rule can also look beyond its artifact, for a path written in the artifact's text, such as a link's target, which no piece can give:
 
 | Method | Returns |
 | --- | --- |
@@ -146,7 +146,7 @@ A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, a
 
 ```json
 {"rule": "stub-matches-component", "artifact": {"path": "src/app/card/card.component.ts", "role": "component", "match": {"path": "app/card/card"},
-  "key": "app/card/card", "companions": {"stub": {"path": "src/app/card/card.component.stub.ts", "exists": true}}}}
+  "key": "app/card/card", "pieces": {"stub": {"path": "src/app/card/card.component.stub.ts", "exists": true}}}}
 ```
 
 The helper answers `{"violations": [{"message": TEXT, "detail": TEXT}, ...]}`, with no `detail` for a violation the rule gives none, or `{"error": MESSAGE}`. CrossLint stops the plugin with a fault at an error, at an answer of any other shape, and at a helper that fails, as it does at anything a rule in Ruby raises. The helper reads files itself, so CrossLint's `project_files` and `read` don't reach it. A rule a helper runs takes no arguments, and its violations are errors, unless a `severity=` on its policy's `rule` line or in the configuration says otherwise. The helper must be one the plugin declares.
@@ -205,7 +205,7 @@ class Artifacts < CrossLint::Artifacts
     raise mistake("lib-dir takes one folder, as in lib-dir \"lib\"", given) if given && given.arguments.size != 1
 
     lib = given ? given.arguments.first : "lib"
-    [artifact("ruby-file", files: "#{lib}/{path}.rb", companions: {"signature" => "sig/{path}.rbs"})]
+    [artifact("ruby-file", primary: "#{lib}/{path}.rb", pieces: {"signature" => "sig/{path}.rbs"})]
   end
 end
 ```
@@ -213,7 +213,7 @@ end
 | Method | Meaning |
 | --- | --- |
 | `declare(settings)` | Called once per check, before any rule runs. Each setting has `name`, `arguments`, `properties`, `children`, and `line`, as the configuration gives them. |
-| `artifact(NAME, files:, companions: {}, key: nil, optional: false, dotfiles: true)` | Declares an artifact as an `artifact` line does, with `files` and each companion's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `files` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. With `dotfiles: false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. |
+| `artifact(NAME, primary:, pieces: {}, key: nil, optional: false, dotfiles: true)` | Declares an artifact as an `artifact` line does, with `primary` and each piece's path as path patterns. `key` is a second path pattern for the artifact's key, which a debt entry can name in place of its path. With `optional: true`, a `primary` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. With `dotfiles: false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. |
 | `mistake(MESSAGE, SETTING)` | A mistake in the configuration at that setting's line, for `declare` to raise. It stops CrossLint with exit status 2, as any mistake does. |
 
 Anything else `declare` raises stops CrossLint with exit status 2, naming the plugin, since no check can run without its artifacts.
@@ -226,4 +226,4 @@ A plugin's helper can declare the artifacts in place of its Ruby, with `artifact
 {"settings": [{"name": "lib-dir", "arguments": ["src"], "properties": {}, "children": [], "line": 3}]}
 ```
 
-The helper answers with the artifacts, each with the fields of `artifact` in the table for artifacts declared in Ruby, and only `name` and `files` needed: `{"artifacts": [{"name": "ruby-file", "files": "src/{path}.rb", "companions": {"signature": "sig/{path}.rbs"}}]}`. For a setting it can't use, it answers `{"mistake": {"message": TEXT, "line": LINE}}`, with the setting's line, and CrossLint stops with exit status 2 at that line of the configuration. CrossLint also stops with exit status 2 at an error, at an answer of any other shape, and at an artifact that isn't one, naming the plugin and the manifest's `artifacts` line. A manifest declares its artifacts in Ruby or by a helper, not both.
+The helper answers with the artifacts, each with the fields of `artifact` in the table for artifacts declared in Ruby, and only `name` and `primary` needed: `{"artifacts": [{"name": "ruby-file", "primary": "src/{path}.rb", "pieces": {"signature": "sig/{path}.rbs"}}]}`. For a setting it can't use, it answers `{"mistake": {"message": TEXT, "line": LINE}}`, with the setting's line, and CrossLint stops with exit status 2 at that line of the configuration. CrossLint also stops with exit status 2 at an error, at an answer of any other shape, and at an artifact that isn't one, naming the plugin and the manifest's `artifacts` line. A manifest declares its artifacts in Ruby or by a helper, not both.

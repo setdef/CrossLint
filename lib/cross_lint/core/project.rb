@@ -4,12 +4,12 @@ module CrossLint
   module Core
     class Plugin < Data.define(:name, :folder, :listing, :manifest)
       # Without applies-to, every artifact of the plugin's own that has each
-      # companion the policy names.
+      # piece the policy names.
       def targets(policy)
         applies_to = policy.applies_to
         unless applies_to
-          named = policy.companions
-          return manifest.artifacts.select { |artifact| named.all? { |companion| artifact.companion(companion) } }.map { |artifact| [name, artifact.name] }
+          named = policy.pieces
+          return manifest.artifacts.select { |artifact| named.all? { |piece| artifact.piece(piece) } }.map { |artifact| [name, artifact.name] }
         end
 
         owner, slash, artifact = applies_to.artifact.partition("/")

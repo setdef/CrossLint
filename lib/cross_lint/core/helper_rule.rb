@@ -30,7 +30,7 @@ module CrossLint
 
       def self.described(artifact)
         {"path" => artifact.path, "role" => artifact.role, "match" => artifact.match, "key" => artifact.key,
-         "companions" => artifact.companions.to_h { |companion| [companion.name, {"path" => companion.path, "exists" => companion.exists}] }}
+         "pieces" => artifact.pieces.to_h { |piece| [piece.name, {"path" => piece.path, "exists" => piece.exists}] }}
       end
 
       private

@@ -21,13 +21,13 @@ module CrossLint
       def results: (Artifact artifact, Hash[String, untyped] arguments, ^(String path) -> String read) -> Array[RuleResult]
 
       # `artifact` as the helper is sent it: its path, role, match, key, and
-      # each companion's path and whether it exists, by name.
+      # each piece's path and whether it exists, by name.
       #
       # ```ruby
-      # companion = CrossLint::Core::Companion.new(name: "test", path: "test/a_test.rb", exists: false)
-      # artifact = CrossLint::Core::Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, companions: [companion])
+      # piece = CrossLint::Core::Piece.new(name: "test", path: "test/a_test.rb", exists: false)
+      # artifact = CrossLint::Core::Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, pieces: [piece])
       # CrossLint::Core::HelperRule.described(artifact)
-      # # => {"path" => "lib/a.rb", "role" => "ruby-file", "match" => {"path" => "a"}, "key" => nil, "companions" => {"test" => {"path" => "test/a_test.rb", "exists" => false}}}
+      # # => {"path" => "lib/a.rb", "role" => "ruby-file", "match" => {"path" => "a"}, "key" => nil, "pieces" => {"test" => {"path" => "test/a_test.rb", "exists" => false}}}
       # ```
       def self.described: (Artifact artifact) -> Hash[String, untyped]
 

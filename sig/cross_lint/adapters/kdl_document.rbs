@@ -5,9 +5,9 @@ module CrossLint
     # naming the file and the node's line.
     #
     # ```ruby
-    # document = CrossLint::Adapters::KDLDocument.new("files \"lib/{path}.rb\"\n", "plugin.kdl")
+    # document = CrossLint::Adapters::KDLDocument.new("primary \"lib/{path}.rb\"\n", "plugin.kdl")
     # document.nodes.first.line # => 1
-    # document.strings(document.nodes.first, "files PATTERN", 1) # => ["lib/{path}.rb"]
+    # document.strings(document.nodes.first, "primary PATTERN", 1) # => ["lib/{path}.rb"]
     # ```
     class KDLDocument
       # A node: its name, its line, its arguments and properties as plain

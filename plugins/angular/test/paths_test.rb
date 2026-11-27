@@ -60,7 +60,7 @@ class AngularPathsTest < Minitest::Test
     assert_equal [:warning, false], [result.violations.first.severity, result.failed]
   end
 
-  # ng-nudge asked TypeScript whether a companion exists, so a spec
+  # ng-nudge asked TypeScript whether a piece exists, so a spec
   # tsconfig.json leaves out was missing (lib/artifact/artifact-file.js:16-18).
   def test_finds_a_spec_tsconfig_leaves_out
     write(@root, "tsconfig.json", %({"include": ["src/**/*.ts"], "exclude": ["src/**/*.spec.ts"]}\n))
@@ -107,7 +107,7 @@ class AngularPathsTest < Minitest::Test
     write(@root, "src/a.pipe.spec.ts", "")
 
     assert_empty check.notices
-    assert_equal [%(no file matches the files of any artifact of plugin angular, such as "source/{path}.component.ts")],
+    assert_equal [%(no file matches the primary of any artifact of plugin angular, such as "source/{path}.component.ts")],
       check(%(src-dir "source")).notices.map(&:message)
   end
 
@@ -139,12 +139,12 @@ class AngularPathsTest < Minitest::Test
     write(@root, "src/a.service.ts", "")
     write(@root, "src/a.service.spec.ts", "")
 
-    assert_equal [%(no file matches "src/{path}.store.ts", the files of artifact "store")], check(%(role "store")).notices.map(&:message)
+    assert_equal [%(no file matches "src/{path}.store.ts", the primary of artifact "store")], check(%(role "store")).notices.map(&:message)
   end
 
   # Only a component has a stub, an interface, stylesheets, and the
-  # tsconfig as companions.
-  def test_declares_each_role_with_its_pattern_companions_key_and_whether_a_project_may_have_none
+  # tsconfig as pieces.
+  def test_declares_each_role_with_its_pattern_pieces_key_and_whether_a_project_may_have_none
     component = {"spec" => "src/{path}.component.spec.ts", "stub" => "src/{path}.component.stub.ts", "interface" => "src/{path}.component.i.d.ts",
                  "css" => "src/{path}.component.css", "scss" => "src/{path}.component.scss", "tsconfig" => "tsconfig.json"}
     default = %w[component directive pipe service guard resolver interceptor].map do |role|
@@ -156,7 +156,7 @@ class AngularPathsTest < Minitest::Test
     assert_equal default.map { |role, *rest| (role == "service") ? [role, rest[0], {}, rest[2], rest[3]] : [role, *rest] }, declared(%(role "service" {\n    expects\n  }))
     assert_equal default.map { |role, *rest| (role == "service") ? [role, "src/x/{name}.service.ts", {"spec" => "src/x/{name}.service.spec.ts"}, "x/{name}", false] : [role, *rest] },
       declared(%(role "service" files="x/{name}.service.ts"))
-    assert_equal default.map { |role, _, companions, key, optional| [role, "app/{path}.#{role}.ts", (role == "component") ? moved : companions.transform_values { it.sub("src/", "app/") }, key, optional] } +
+    assert_equal default.map { |role, _, pieces, key, optional| [role, "app/{path}.#{role}.ts", (role == "component") ? moved : pieces.transform_values { it.sub("src/", "app/") }, key, optional] } +
       [["store", "app/{path}.store.ts", {"spec" => "app/{path}.store.spec.ts"}, "{path}", false]],
       declared(%(src-dir "app"\n  tsconfig "config/tsconfig.app.json"\n  role "store"))
   end
@@ -242,14 +242,14 @@ class AngularPathsTest < Minitest::Test
       %(role "store" files="../{path}.store.ts") => [2, %(role "store" takes files= as a path pattern ending in .ts, relative to src-dir)],
       %(role "store" files="{pth}.store.ts") => [2, %(role "store" takes files= as a path pattern ending in .ts, relative to src-dir)],
       %(role "store" files=3) => [2, %(role "store" takes files= as a path pattern ending in .ts, relative to src-dir)],
-      %(role "store" {\n    expect "spec"\n  }) => [3, %(role "store" takes one thing in its block, expects COMPANION ...)],
-      %(role "store" {\n    expects "spec"\n    expects "spec"\n  }) => [4, %(role "store" takes one thing in its block, expects COMPANION ...)],
-      %(role "store" {\n    expects "spec" x=1\n  }) => [3, %(role "store" takes one thing in its block, expects COMPANION ...)],
+      %(role "store" {\n    expect "spec"\n  }) => [3, %(role "store" takes one thing in its block, expects PIECE ...)],
+      %(role "store" {\n    expects "spec"\n    expects "spec"\n  }) => [4, %(role "store" takes one thing in its block, expects PIECE ...)],
+      %(role "store" {\n    expects "spec" x=1\n  }) => [3, %(role "store" takes one thing in its block, expects PIECE ...)],
       %(role "store" {\n    expects "stub"\n  }) => [3, %(role "store" expects "stub", and a role can expect only "spec")],
       %(role "store" {\n    expects 3\n  }) => [3, %(role "store" expects 3, and a role can expect only "spec")],
-      %(role "store" {\n    expects "spec" {\n      x\n    }\n  }) => [3, %(role "store" takes one thing in its block, expects COMPANION ...)],
-      %(role "store" {\n    bad\n    expects "spec"\n  }) => [3, %(role "store" takes one thing in its block, expects COMPANION ...)],
-      %(role "store" {\n    expects "spec"\n    bad\n    worse\n  }) => [4, %(role "store" takes one thing in its block, expects COMPANION ...)],
+      %(role "store" {\n    expects "spec" {\n      x\n    }\n  }) => [3, %(role "store" takes one thing in its block, expects PIECE ...)],
+      %(role "store" {\n    bad\n    expects "spec"\n  }) => [3, %(role "store" takes one thing in its block, expects PIECE ...)],
+      %(role "store" {\n    expects "spec"\n    bad\n    worse\n  }) => [4, %(role "store" takes one thing in its block, expects PIECE ...)],
       %(srcDir "src") => [2, %(unknown setting "srcDir", did you mean "src-dir"?)]
     }.each do |settings, (line, message)|
       mistake = assert_raises(Core::Mistake, settings) { check(settings) }
@@ -264,7 +264,7 @@ class AngularPathsTest < Minitest::Test
 
   def declared(settings)
     app(settings).load_project(@root).plugins.first.manifest.artifacts.map do |artifact|
-      [artifact.name, artifact.files.source, artifact.companions.to_h { [it.name, it.pattern.source] }, artifact.key.source, artifact.optional]
+      [artifact.name, artifact.primary.source, artifact.pieces.to_h { [it.name, it.pattern.source] }, artifact.key.source, artifact.optional]
     end
   end
 

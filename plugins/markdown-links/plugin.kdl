@@ -2,7 +2,7 @@
 // to a file or folder of the project, and its anchor, when it has one, to
 // a heading or an HTML id or name of the Markdown file it points to.
 artifact "markdown-file" {
-  files "{path}.md"
+  primary "{path}.md"
 }
 
 rule "links-resolve" ruby="rules/links_resolve.rb"

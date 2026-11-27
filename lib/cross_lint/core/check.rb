@@ -102,15 +102,15 @@ module CrossLint
 
       def find(project, plugin, declaration, files)
         files.filter_map do |path|
-          match = declaration.files.match(path)
+          match = declaration.primary.match(path)
           next unless match
           next if !declaration.dotfiles && match.values.any? { |value| value.split("/").any? { |segment| segment.start_with?(".") } }
 
-          companions = declaration.companions.map do |companion|
-            companion_path = companion.pattern.expand(match)
-            Companion.new(name: companion.name, path: companion_path, exists: @project_files.exist?(project.root, companion_path))
+          pieces = declaration.pieces.map do |piece|
+            piece_path = piece.pattern.expand(match)
+            Piece.new(name: piece.name, path: piece_path, exists: @project_files.exist?(project.root, piece_path))
           end
-          Artifact.new(plugin: plugin.name, role: declaration.name, path:, match:, companions:, key: declaration.key&.expand(match))
+          Artifact.new(plugin: plugin.name, role: declaration.name, path:, match:, pieces:, key: declaration.key&.expand(match))
         end
       end
 
@@ -193,12 +193,12 @@ module CrossLint
         optional = empty.find(&:optional)
         if optional && empty.size == declarations.size
           return [Notice.new(file: plugin.manifest.file, line: optional.line,
-            message: "no file matches the files of any artifact of plugin #{plugin.name}, such as #{optional.files.source.dump}")]
+            message: "no file matches the primary of any artifact of plugin #{plugin.name}, such as #{optional.primary.source.dump}")]
         end
 
         empty.reject(&:optional).map do |declaration|
           Notice.new(file: plugin.manifest.file, line: declaration.line,
-            message: "no file matches #{declaration.files.source.dump}, the files of artifact #{declaration.name.dump}")
+            message: "no file matches #{declaration.primary.source.dump}, the primary of artifact #{declaration.name.dump}")
         end
       end
 

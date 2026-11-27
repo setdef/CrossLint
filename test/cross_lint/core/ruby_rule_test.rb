@@ -20,7 +20,7 @@ class RubyRuleTest < Minitest::Test
   NAMES_CLASS = <<~RUBY
     class NamesClass < CrossLint::Rule
       def check(artifact)
-        signature = artifact.companion("signature")
+        signature = artifact.piece("signature")
         return [] unless signature.exist?
         return [] if signature.read.include?(artifact.match["path"].capitalize)
 
@@ -44,11 +44,11 @@ class RubyRuleTest < Minitest::Test
     assert_equal [:error], check(files:, severity: :warning, override: :error).findings.map(&:severity)
   end
 
-  def test_shows_a_rule_the_artifact_its_match_and_its_companions
+  def test_shows_a_rule_the_artifact_its_match_and_its_pieces
     seen = []
     rule = Class.new(CrossLint::Rule) do
       define_method(:check) do |artifact|
-        signature = artifact.companion("signature")
+        signature = artifact.piece("signature")
         seen << [artifact.path, artifact.role, artifact.match, artifact.match.frozen?, artifact.read]
         seen << [signature.name, signature.path, signature.exist?, signature.read]
         []
@@ -61,7 +61,7 @@ class RubyRuleTest < Minitest::Test
   end
 
   # For a rule that checks a path an artifact's text names, such as a
-  # link's target, which no companion can give.
+  # link's target, which no piece can give.
   def test_shows_a_rule_the_projects_files_frozen_from_initialize_on
     seen = []
     rule = Class.new(CrossLint::Rule) do
@@ -182,7 +182,7 @@ class RubyRuleTest < Minitest::Test
       %([violation(artifact, "no", detail: :x)]) => "made a violation whose detail is :x, which is no string",
       %([violation(artifact.path, "no")]) => %(made a violation of "lib/a.rb", which is no artifact it was given),
       %(@last.then { |last| @last = artifact; last ? [violation(last, "no")] : [] }) => "returned a violation of lib/a.rb, which isn't the artifact it checked",
-      %(artifact.companion("stub")) => %(raised KeyError: artifact "ruby-file" has no companion "stub")
+      %(artifact.piece("stub")) => %(raised KeyError: artifact "ruby-file" has no piece "stub")
     }.each do |body, message|
       source = "class NamesClass < CrossLint::Rule\n  def check(artifact)\n    #{body}\n  end\nend\n"
 
@@ -226,7 +226,7 @@ class RubyRuleTest < Minitest::Test
     rules = ["loop {}", "begin\n      loop {}\n    rescue\n      []\n    end"].map do |body|
       Class.new(CrossLint::Rule) { class_eval "def check(_artifact)\n    #{body}\n  end", __FILE__, __LINE__ }
     end
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, companions: [])
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, pieces: [])
     tests = plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []))
     faults = rules.map do |rule_class|
       rule = RubyRule.new(plugin: tests, name: "slow", rule: RubyRule.make(rule_class, ->(_name, _input) {}, [], ->(_path) { "" }), time_limit: 0.2)
@@ -403,15 +403,15 @@ class RubyRuleTest < Minitest::Test
       source = others
       code = code.merge("../../other/rules/names_class.rb" => source)
     end
-    artifact = ArtifactDeclaration.new(name: "ruby-file", files: PathPattern.new(source: "lib/{path}.rb"), line: 1,
-      companions: [CompanionDeclaration.new(name: "signature", pattern: PathPattern.new(source: "sig/{path}.rbs"), line: 2)])
+    artifact = ArtifactDeclaration.new(name: "ruby-file", primary: PathPattern.new(source: "lib/{path}.rb"), line: 1,
+      pieces: [PieceDeclaration.new(name: "signature", pattern: PathPattern.new(source: "sig/{path}.rbs"), line: 2)])
     rule = PolicyRule.new(name:, arguments: {}, severity:, line: 7)
     policies = (1..policies).map { |index| Policy.new(name: "names-match#{index if index > 1}", applies_to: AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, rules: [rule], line: 5) }
     declaration = RuleDeclaration.new(name:, ruby: "rules/#{name.tr("-", "_")}.rb", line: 3)
     declared = helpers.keys.map { |helper| HelperDeclaration.new(name: helper, command: "node", file: "#{helper}.mjs", line: 9) }
     plugins = [plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies:, rules: [declaration], helpers: declared))]
     if others
-      everything = source ? rule.with(name: "names-class") : PolicyRule.new(name: "companion-exists", arguments: {"companion" => "signature"}, severity: nil, line: 3)
+      everything = source ? rule.with(name: "names-class") : PolicyRule.new(name: "piece-exists", arguments: {"piece" => "signature"}, severity: nil, line: 3)
       plugins << plugin("other", Manifest.new(file: ".config/other/plugin.kdl", artifacts: [],
         policies: [Policy.new(name: "all", applies_to: AppliesTo.new(artifact: "tests/ruby-file", line: 2), condition: nil, rules: [everything], line: 1)],
         rules: source ? [RuleDeclaration.new(name: "names-class", ruby: "rules/names_class.rb", line: 3)] : [], helpers: []))

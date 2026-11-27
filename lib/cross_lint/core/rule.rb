@@ -13,13 +13,13 @@ module CrossLint
     REFUSED = File.expand_path("refused", File.dirname(__FILE__))
     $LOAD_PATH.unshift(REFUSED)
 
-    class Companion
+    class Piece
       attr_reader :name, :path
 
-      def initialize(companion, read)
-        @name = companion.name
-        @path = companion.path
-        @exists = companion.exist?
+      def initialize(piece, read)
+        @name = piece.name
+        @path = piece.path
+        @exists = piece.exist?
         @read = read
       end
 
@@ -35,12 +35,12 @@ module CrossLint
         @role = artifact.role
         @path = artifact.path
         @match = artifact.match.freeze
-        @companions = artifact.companions.map { |companion| Companion.new(companion, read) }
+        @pieces = artifact.pieces.map { |piece| Piece.new(piece, read) }
         @read = read
       end
 
-      def companion(name)
-        @companions.find { |companion| companion.name == name } || raise(KeyError, "artifact #{role.dump} has no companion #{name.dump}")
+      def piece(name)
+        @pieces.find { |piece| piece.name == name } || raise(KeyError, "artifact #{role.dump} has no piece #{name.dump}")
       end
 
       def read = @read.call(path)

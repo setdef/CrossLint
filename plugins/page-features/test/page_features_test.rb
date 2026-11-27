@@ -70,7 +70,7 @@ class PageFeaturesTest < Minitest::Test
   def test_warns_when_no_file_matches_the_page_pattern
     write(@root, "README.md", "")
 
-    assert_equal [%(no file matches "src/pages/{path}.tsx", the files of artifact "page")], check.notices.map(&:message)
+    assert_equal [%(no file matches "src/pages/{path}.tsx", the primary of artifact "page")], check.notices.map(&:message)
   end
 
   def test_refuses_a_setting_that_isnt_one_path_pattern_inside_the_project

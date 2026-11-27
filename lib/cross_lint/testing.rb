@@ -186,7 +186,7 @@ module CrossLint
 
         assert_equal "plugins/signatures/#{port.file}", manifest.file
         assert_equal ["ruby-file", "lib/{path}.rb", [["signature", "sig/{path}.rbs"], ["test", "test/{path}_test.rb"]]],
-          [artifact.name, artifact.files.source, artifact.companions.map { |companion| [companion.name, companion.pattern.source] }]
+          [artifact.name, artifact.primary.source, artifact.pieces.map { |piece| [piece.name, piece.pattern.source] }]
         assert_equal [["names-class", "rules/names_class.rb"]], manifest.rules.map { |rule| [rule.name, rule.ruby] }
         assert_equal [["members", "node", "helpers/members.mjs"]],
           manifest.helpers.map { |helper| [helper.name, helper.command, helper.file] }
@@ -200,8 +200,8 @@ module CrossLint
         rules = policies.map { |policy| policy.rules.fetch(0) }
 
         assert_equal [1, 1, 1, 1], policies.map { |policy| policy.rules.size }
-        assert_equal %w[companion-exists names-class companion-exists companion-absent], rules.map(&:name)
-        assert_equal ["companion=signature", "", "companion=test", "companion=signature"],
+        assert_equal %w[piece-exists names-class piece-exists piece-absent], rules.map(&:name)
+        assert_equal ["piece=signature", "", "piece=test", "piece=signature"],
           rules.map { |rule| rule.arguments.map { |key, value| "#{key}=#{value}" }.join(" ") }
       end
 
@@ -254,7 +254,7 @@ module CrossLint
 
       def signatures_manifest = read_manifest(manifests_port(example: ["plugins/signatures"]), "plugins/signatures")
 
-      def exists(companion) = Core::Condition::CompanionExists.new(companion:, line: 0)
+      def exists(piece) = Core::Condition::PieceExists.new(piece:, line: 0)
 
       # Lines differ between adapters, so conditions are compared without them.
       def without_lines(condition) = condition.inspect.gsub(/,? line=\d+/, "")

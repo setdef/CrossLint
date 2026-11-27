@@ -32,7 +32,7 @@ async function check({ rule, artifact }) {
   const RuleClass = [rules.StubMatchesComponent, rules.InterfaceMatchesComponent].find((each) => each.name === rule);
   if (!RuleClass) throw new Error(`has no rule ${rule}`);
 
-  const { tsconfig, stub, interface: iface } = artifact.companions;
+  const { tsconfig, stub, interface: iface } = artifact.pieces;
   if (!tsconfig.exists) throw new Error(`reads TypeScript with ${tsconfig.path}, the tsconfig setting's file, which doesn't exist`);
   if (!codebases.has(tsconfig.path)) codebases.set(tsconfig.path, new Codebase(tsconfig.path));
   const component = new Component(codebases.get(tsconfig.path), { path: artifact.path, stub: stub.path, interface: iface.path });
