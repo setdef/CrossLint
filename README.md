@@ -88,6 +88,12 @@ CrossLint 1.0.0 carries Ruby 4.1.0-preview1, and a `(crosslint)"ruby"` helper ru
 
 Download the archive for your computer from [the releases page](https://github.com/setdef/CrossLint/releases), check it against the release's `SHA256SUMS` file, unpack it anywhere, and put `crosslint` on your `PATH`. The archive contains everything CrossLint needs, so you install no Ruby or other runtime. CrossLint sends no usage data anywhere.
 
+To check that this repository's release workflow built a file, run `gh attestation verify` from the [GitHub CLI](https://cli.github.com/manual/gh_attestation_verify) on the archive or on `SHA256SUMS`. It looks up the file's build provenance attestation and fails when none is signed by a workflow of `setdef/CrossLint`:
+
+```console
+$ gh attestation verify crosslint-VERSION-PLATFORM.tar.gz --repo setdef/CrossLint
+```
+
 To uninstall CrossLint, delete the unpacked folder. If you listed a shared plugin, also delete the cache folder CrossLint fetched it into: `$XDG_CACHE_HOME/crosslint`, or `~/.cache/crosslint` when `XDG_CACHE_HOME` isn't set to an absolute path, or `%LOCALAPPDATA%\crosslint\cache` on Windows.
 
 ## Usage

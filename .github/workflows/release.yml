@@ -10,7 +10,9 @@
 # VERSION is the version in crosslint.usage.kdl. On a tag, once every
 # archive passes, the last job checks that the tag is `v` plus that
 # version and that CI has a passing run for the tagged commit, and creates
-# the GitHub release with the archives and a SHA256SUMS file. Only that job can write to the repository.
+# the GitHub release with the archives and a SHA256SUMS file, and signs a
+# build provenance attestation for each of those files. Only that job can
+# write to the repository or sign.
 # A manual run (workflow_dispatch) is a dry run: it builds and smoke-tests
 # the tag it is given, never runs that last job, and so publishes nothing.
 # Only a pushed tag publishes.
@@ -164,7 +166,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       actions: read
+      attestations: write
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -191,6 +195,14 @@ jobs:
           [ "$(ls | wc -l)" -eq 3 ] || { echo "expected three archives:"; ls; exit 1; }
           sha256sum crosslint-* > SHA256SUMS
           sha256sum --check SHA256SUMS
+
+      # Signs a build provenance statement for each file the release
+      # attaches, with the workflow's identity, so that `gh attestation
+      # verify` can check a download against this repository. It runs
+      # after SHA256SUMS exists, since that file is attached too.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: archives/*
 
       - name: Create the GitHub release
         run: gh release create "$GITHUB_REF_NAME" archives/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
