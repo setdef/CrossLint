@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "artifact"
+require_relative "artifact_finder"
 require_relative "check_result"
 require_relative "ruby_rule"
 require_relative "helper_rule"
@@ -21,9 +22,8 @@ module CrossLint
         verbosity ||= project.configuration.verbosity || :normal
         policies = enabled_policies(project)
         files = @project_files.files(project.root)
-        kinds = project.plugins.to_h do |plugin|
-          [plugin.name, plugin.manifest.artifacts.to_h { |declaration| [declaration.name, find(project, plugin, declaration, files)] }]
-        end
+        finder = ArtifactFinder.new(project_files: @project_files, root: project.root, files:)
+        kinds = project.plugins.to_h { |plugin| [plugin.name, finder.artifacts(plugin)] }
         # Before any rule runs, since a rule that asks a helper to read a
         # language's files can keep a large project silent for a while.
         started&.call(counts(kinds, checked_kinds(project, policies))) if verbosity == :normal
@@ -98,20 +98,6 @@ module CrossLint
         end
 
         helpers.call(plugin, name, input)
-      end
-
-      def find(project, plugin, declaration, files)
-        files.filter_map do |path|
-          match = declaration.primary.match(path)
-          next unless match
-          next if !declaration.dotfiles && match.values.any? { |value| value.split("/").any? { |segment| segment.start_with?(".") } }
-
-          pieces = declaration.pieces.map do |piece|
-            piece_path = piece.pattern.expand(match)
-            Piece.new(name: piece.name, path: piece_path, exists: @project_files.exist?(project.root, piece_path))
-          end
-          Artifact.new(plugin: plugin.name, role: declaration.name, path:, match:, pieces:, key: declaration.key&.expand(match))
-        end
       end
 
       def checked_kinds(project, policies)

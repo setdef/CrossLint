@@ -66,9 +66,6 @@ module CrossLint
       # PluginError when the plugin declares no such helper.
       def call_helper: (_RunningHelpers helpers, Plugin plugin, String name, untyped input) -> untyped
 
-      # The artifacts `declaration` finds among `files`, in their order.
-      def find: (Project project, Plugin plugin, ArtifactDeclaration declaration, Array[String] files) -> Array[Artifact]
-
       # The kinds of artifact an enabled policy applies to, as plugin and
       # artifact names, in the order the plugins declare them.
       def checked_kinds: (Project project, Array[[Plugin, Policy]] policies) -> Array[[String, String]]

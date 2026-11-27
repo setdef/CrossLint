@@ -1,0 +1,27 @@
+module CrossLint
+  module Core
+    # Finds a project's artifacts: each file a declaration's primary
+    # pattern matches, with its pieces, and whether each exists, by its
+    # exact name.
+    class ArtifactFinder
+      # A finder among `files`, the project's files relative to `root`,
+      # which asks `project_files` whether each piece exists.
+      def initialize: (project_files: _ProjectFiles, root: String, files: Array[String]) -> void
+
+      # The artifacts of each of `plugin`'s declarations, by the
+      # declaration's name, each in the order of the files.
+      def artifacts: (Plugin plugin) -> Hash[String, Array[Artifact]]
+
+      private
+
+      @project_files: _ProjectFiles
+
+      @root: String
+
+      @files: Array[String]
+
+      # The artifacts `declaration` finds.
+      def find: (Plugin plugin, ArtifactDeclaration declaration) -> Array[Artifact]
+    end
+  end
+end
