@@ -255,7 +255,7 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_tells_how_to_write_what_ruby_declared_before
-    gone = %(ruby= is gone; declare the file as a helper on the Ruby CrossLint carries, helper NAME command=(crosslint)"ruby" file=FILE, and write %s helper=NAME)
+    gone = %(ruby= is gone; declare the file as a helper on CrossLint's Ruby, helper NAME command=(crosslint)"ruby" file=FILE, and write %s helper=NAME)
     assert_refuses 1, format(gone, "artifacts"), %(artifacts ruby="a.rb"\n)
     assert_refuses 1, format(gone, %(rule "r")), %(rule "r" ruby="r.rb")
   end
@@ -389,7 +389,7 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 1, "command has no words; write it as command PROGRAM ARGUMENT ...", %(helper "h" file="h.rb" { command; })
     assert_refuses 1, %(command takes strings, as in command "bundle" "exec" "ruby"), %(helper "h" file="h.rb" { command "ruby" 1; })
     assert_refuses 1, "command= takes a string, not 1", %(helper "h" command=1 file="h.rb")
-    assert_refuses 1, %(command=(crosslint) names a runtime CrossLint carries, and it carries "ruby", not "node"),
+    assert_refuses 1, %(command=(crosslint) names a runtime CrossLint runs on, and "ruby" is the only one; "node" isn't),
       %(helper "h" command=(crosslint)"node" file="h.mjs")
     assert_refuses 1, %(helper has the type annotation (other), which CrossLint doesn't read), %(helper "h" command=(other)"ruby" file="h.rb")
     assert_refuses 1, %(helper has the type annotation (crosslint), which CrossLint doesn't read), %(helper "h" file=(crosslint)"h.rb" command="ruby")

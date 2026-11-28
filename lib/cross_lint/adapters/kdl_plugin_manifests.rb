@@ -25,7 +25,7 @@ module CrossLint
 
       HELPER = "helper NAME command=COMMAND file=FILE"
 
-      GONE = "ruby= is gone; declare the file as a helper on the Ruby CrossLint carries, " \
+      GONE = "ruby= is gone; declare the file as a helper on CrossLint's Ruby, " \
         "helper NAME command=(crosslint)\"ruby\" file=FILE, and write %s helper=NAME"
 
       FLAG_MISTAKE = "flag isn't a node CrossLint reads outside a command: a plugin adds commands under its own name, " \
@@ -282,8 +282,8 @@ module CrossLint
 
       def carried(document, node, name, given, file)
         unless CARRIED.include?(given.value)
-          raise document.mistake("command=(crosslint) names a runtime CrossLint carries, and it carries #{CARRIED.map(&:dump).join(" and ")}, " \
-            "not #{given.value.inspect}", node)
+          raise document.mistake("command=(crosslint) names a runtime CrossLint runs on, and #{CARRIED.map(&:dump).join(" and ")} is the only one; " \
+            "#{given.value.inspect} isn't", node)
         end
 
         Carried.new(name:, file:, line: node.line)
