@@ -55,6 +55,8 @@ module CrossLint
                         _RunningHelpers helpers, Array[String] files) -> [Array[Violation], Array[Fault]]
 
       # Each policy the configuration doesn't disable, with its plugin.
+      # Says under "policy" on the debug output each one it disables, with
+      # the line that does.
       def enabled_policies: (Project project) -> Array[[Plugin, Policy]]
 
       # The configuration's setting for a plugin's policy, or nil.
@@ -76,9 +78,21 @@ module CrossLint
 
       # The violations a policy's rules report, with the Ruby rules in
       # `rules` reading files with `read`. Raises RubyRule::Stopped at a
-      # Ruby rule's fault.
+      # Ruby rule's fault. On the debug output, says under "policy" what
+      # the policy applies to and whether it runs on each artifact, and
+      # under "rule" what each rule found on each.
       def run: (Project project, Plugin plugin, Policy policy, Hash[String, Hash[String, Array[Artifact]]] kinds,
                 Hash[[String, String], RubyRule | HelperRule] rules, ^(String path) -> String read) -> Array[Violation]
+
+      # Whether the policy `name`, PLUGIN/POLICY, runs on `artifact`: it
+      # has no `condition`, or the condition holds. Says which on the
+      # debug output, with the condition's explanation.
+      def applies?: (String name, Core::condition? condition, Artifact artifact) -> bool
+
+      # The lines that say what `rule` of the policy `policy` found on
+      # `artifact`: one for each of `violations`, or one that says it
+      # found none.
+      def found: (PolicyRule rule, String policy, Artifact artifact, Array[Violation] violations) -> String
 
       # What each step of each plugin that didn't stop at a fault does with
       # every violation.

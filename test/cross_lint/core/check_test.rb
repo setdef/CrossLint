@@ -481,6 +481,49 @@ class CheckTest < Minitest::Test
     assert_equal ["tests/ruby-file lib/a.rb: no piece but its primary"], debug.written("artifact")
   end
 
+  def test_says_under_debug_what_each_policy_applies_to_and_whether_its_when_held_on_each_artifact
+    stub = Condition::PieceExists.new(piece: "stub", line: 7)
+    unstubbed = Condition::Not.new(condition: Condition::All.new(conditions: [stub, Condition::Any.new(conditions: [stub], line: 7)], line: 7), line: 7)
+    plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb", "stub" => "stub/{path}.rb")],
+      policies: [policy("has-test", rules: [rule]), policy("unstubbed", rules: [rule], condition: unstubbed)])
+    debug = debugged(project(plugin), files: ["lib/a.rb", "named/b.rb", "stub/a.rb"])
+
+    assert_equal [
+      "tests/has-test applies to tests/ruby-file: 1 artifact",
+      "tests/has-test runs on lib/a.rb",
+      "tests/unstubbed applies to tests/ruby-file: 1 artifact",
+      %(tests/unstubbed skips lib/a.rb, since its when fails: not { all { piece-exists "stub" (exists) any { piece-exists "stub" (exists) } } })
+    ], debug.written("policy")
+  end
+
+  def test_says_under_debug_where_a_policy_runs_on_an_artifact_named_apart_from_its_path_and_its_when_holds
+    named = declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb").with(name_pattern: PathPattern.new(source: "{path} class"))
+    untested = Condition::Not.new(condition: Condition::PieceExists.new(piece: "test", line: 7), line: 7)
+    plugin = plugin("tests", artifacts: [named], policies: [policy("has-test", rules: [rule], condition: untested)])
+
+    assert_equal ["tests/has-test applies to tests/ruby-file: 1 artifact",
+      %(tests/has-test runs on b class at lib/b.rb, since its when holds: not { piece-exists "test" (missing) })],
+      debugged(project(plugin), files: ["lib/b.rb"]).written("policy")
+  end
+
+  def test_says_under_debug_which_policy_the_configuration_turns_off
+    debug = debugged(project(mixed_plugin, policies: [setting("tests/has-signature", enabled: false)]), files: ["lib/a.rb"])
+
+    assert_equal ["tests/has-signature doesn't run, since it is off in .config/crosslint/config.kdl:4",
+      "tests/has-test applies to tests/ruby-file: 1 artifact", "tests/has-test runs on lib/a.rb"], debug.written("policy")
+  end
+
+  def test_says_under_debug_what_each_rule_found_on_each_artifact_with_its_severity_and_detail
+    debug = debugged(project(mixed_plugin, policies: [setting("tests/has-test", severity: :warning)]), files: ["lib/a.rb", "test/a_test.rb", "lib/b.rb"])
+
+    assert_equal [
+      %(piece-exists piece="test" of tests/has-test on lib/a.rb: no violation),
+      %(piece-exists piece="test" of tests/has-test on lib/b.rb: warning: no test file at test/b_test.rb, with detail "test"),
+      %(piece-exists piece="signature" of tests/has-signature on lib/a.rb: warning: no signature file at sig/a.rbs, with detail "signature"),
+      %(piece-exists piece="signature" of tests/has-signature on lib/b.rb: warning: no signature file at sig/b.rbs, with detail "signature")
+    ], debug.written("rule")
+  end
+
   def test_warns_of_a_ruby_rule_no_policy_runs
     result = check(project(tests_plugin, unused: true), files: ["lib/a.rb", "test/a_test.rb"])
 

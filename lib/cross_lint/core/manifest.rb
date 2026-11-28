@@ -34,7 +34,9 @@ module CrossLint
 
     class AppliesTo < Data.define(:artifact, :line); end
 
-    class PolicyRule < Data.define(:name, :arguments, :severity, :line); end
+    class PolicyRule < Data.define(:name, :arguments, :severity, :line)
+      def explanation = name + arguments.map { |argument, value| " #{argument}=#{value.to_s.dump}" }.join
+    end
 
     class Policy < Data.define(:name, :applies_to, :condition, :rules, :line)
       # Only a built-in rule takes arguments, and piece= is its only one.

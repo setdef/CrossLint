@@ -105,6 +105,11 @@ module CrossLint
       # ```
       def location: () -> String
 
+      # The artifact as the debug output names it: its location, after its
+      # name and "at" when the name isn't its path, as in
+      # `get /cart at config/routes.rb:1`.
+      def reference: () -> String
+
       # The artifact as the debug output says it: its plugin and role, its
       # location, its name and key when it has them, and each piece's
       # explanation: `tests/ruby-file lib/a.rb: piece "test" at
@@ -167,6 +172,11 @@ module CrossLint
       # A violation with these fields, as for `new`.
       def initialize: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
                        detail: String?, ?key: String?, ?path: String, ?line: Integer?, ?built_in: bool) -> void
+
+      # The violation as the debug output says it: its severity, its
+      # message, and its detail when it has one:
+      # `error: no test file at test/a_test.rb, with detail "test"`.
+      def explanation: () -> String
     end
   
     # What a Ruby rule reports, made with CrossLint::Rule#violation: the

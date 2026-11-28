@@ -3,6 +3,7 @@
 require_relative "artifact"
 require_relative "fault"
 require_relative "regex"
+require_relative "spelling"
 
 module CrossLint
   module Core
@@ -31,7 +32,7 @@ module CrossLint
       def said(plugin, declaration, found)
         say(plugin, declaration) do
           regex = " with regex #{declaration.regex.source.dump}" if declaration.regex
-          "#{found.size} #{(found.size == 1) ? "artifact" : "artifacts"}, from primary #{declaration.primary.source.dump}#{regex}"
+          "#{Spelling.count(found.size, "artifact")}, from primary #{declaration.primary.source.dump}#{regex}"
         end
         @debug&.write("artifact") { found.map(&:explanation).join("\n") }
         found

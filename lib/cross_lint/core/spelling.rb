@@ -17,6 +17,8 @@ module CrossLint
         "unknown #{kind} #{word.dump}; expected #{list(known.map(&:dump))}"
       end
 
+      def count(number, noun) = "#{number} #{noun}#{"s" unless number == 1}"
+
       def list(words, conjunction = "or")
         return words.join(" #{conjunction} ") if words.size < 3
 

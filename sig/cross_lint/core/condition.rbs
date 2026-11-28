@@ -25,6 +25,11 @@ module CrossLint
 
         # Whether `artifact`'s piece of this name exists.
         def holds?: (Artifact artifact) -> bool
+
+        # The condition as the debug output says it for `artifact`: as
+        # written after `when`, with whether the piece exists, as in
+        # `piece-exists "stub" (missing)`.
+        def explanation: (Artifact artifact) -> String
       end
 
       # Holds when the condition inside doesn't.
@@ -46,6 +51,9 @@ module CrossLint
 
         # Whether the condition inside doesn't hold for `artifact`.
         def holds?: (Artifact artifact) -> bool
+
+        # `not { ... }`, around the explanation of the condition inside.
+        def explanation: (Artifact artifact) -> String
       end
 
       # Holds when every condition inside does.
@@ -67,6 +75,9 @@ module CrossLint
 
         # Whether every condition inside holds for `artifact`.
         def holds?: (Artifact artifact) -> bool
+
+        # `all { ... }`, around the explanations of the conditions inside.
+        def explanation: (Artifact artifact) -> String
       end
 
       # Holds when at least one condition inside does.
@@ -88,6 +99,9 @@ module CrossLint
 
         # Whether at least one condition inside holds for `artifact`.
         def holds?: (Artifact artifact) -> bool
+
+        # `any { ... }`, around the explanations of the conditions inside.
+        def explanation: (Artifact artifact) -> String
       end
     end
   end

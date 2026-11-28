@@ -128,6 +128,10 @@ module CrossLint
 
       # A policy's rule with these fields.
       def initialize: (name: String, arguments: Hash[String, untyped], severity: severity?, line: Integer) -> void
+
+      # The rule as the debug output says it, written as on its rule
+      # line: `piece-exists piece="test"`.
+      def explanation: () -> String
     end
 
     # A policy: when rules apply, to which artifact, and under what

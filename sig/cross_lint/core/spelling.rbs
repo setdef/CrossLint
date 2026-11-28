@@ -18,6 +18,10 @@ module CrossLint
       # none.
       def self?.unknown: (String kind, String word, Array[String] known, ?none: String) -> String
 
+      # `number` of `noun`, which gets an s unless `number` is 1:
+      # "1 artifact", "0 artifacts".
+      def self?.count: (Integer number, String noun) -> String
+
       # Words joined as in a sentence: "a", "a or b", "a, b, or c", with
       # `conjunction` in place of "or" when given, as in "a, b, and c".
       def self?.list: (Array[String] words, ?String conjunction) -> String

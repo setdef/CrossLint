@@ -19,6 +19,14 @@ class CoreValuesTest < Minitest::Test
 
   include CrossLint::Core
 
+  def test_a_violation_and_a_rule_line_explain_themselves_with_their_detail_and_arguments_only_when_they_have_some
+    violation = Violation.new(plugin: "tests", policy: "p", artifact: "a.md", role: "doc", message: "no title", severity: :error, detail: nil)
+    rules = [PolicyRule.new(name: "titled", arguments: {}, severity: nil, line: 1), PolicyRule.new(name: "piece-exists", arguments: {"piece" => "note"}, severity: nil, line: 2)]
+
+    assert_equal ["error: no title", %(warning: no title, with detail "title")], [violation, violation.with(severity: :warning, detail: "title")].map(&:explanation)
+    assert_equal ["titled", %(piece-exists piece="note")], rules.map(&:explanation)
+  end
+
   def test_a_command_flag_is_written_as_the_usage_spec_writes_one_with_each_name_it_takes_and_no_more_than_its_help
     flag = CommandFlag.new(short: "s", long: "since", value: "rev", help: "H", line: 1)
     bare = CommandFlag.new(short: nil, long: "dry-run", value: nil, help: "H", line: 2)

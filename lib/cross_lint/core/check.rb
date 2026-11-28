@@ -56,7 +56,11 @@ module CrossLint
       def enabled_policies(project)
         project.plugins.flat_map do |plugin|
           plugin.manifest.policies.filter_map do |policy|
-            [plugin, policy] unless setting(project, plugin, policy)&.enabled == false
+            off = setting(project, plugin, policy)
+            next [plugin, policy] unless off && off.enabled == false
+
+            @debug&.write("policy") { "#{plugin.name}/#{policy.name} doesn't run, since it is off in #{project.configuration.file}:#{off.line}" }
+            nil
           end
         end
       end
@@ -122,19 +126,43 @@ module CrossLint
 
       def run(project, plugin, policy, kinds, rules, read)
         override = setting(project, plugin, policy)&.severity
-        plugin.targets(policy).flat_map { |owner, name| kinds.fetch(owner).fetch(name) }.flat_map do |artifact|
-          next [] unless policy.condition.nil? || policy.condition.holds?(artifact)
+        name = "#{plugin.name}/#{policy.name}"
+        targets = plugin.targets(policy)
+        artifacts = targets.flat_map { |owner, role| kinds.fetch(owner).fetch(role) }
+        @debug&.write("policy") { "#{name} applies to #{Spelling.list(targets.map { |kind| kind.join("/") }, "and")}: #{Spelling.count(artifacts.size, "artifact")}" }
+        artifacts.flat_map do |artifact|
+          next [] unless applies?(name, policy.condition, artifact)
 
           policy.rules.flat_map do |rule|
             built_in = BuiltInRule.named(rule.name)
             checker = built_in || rules.fetch([plugin.name, rule.name])
-            checker.results(artifact, rule.arguments, read).map do |result|
+            violations = checker.results(artifact, rule.arguments, read).map do |result|
               Violation.new(plugin: plugin.name, policy: policy.name, artifact: artifact.name, path: result.path, role: result.role,
                 message: result.message, severity: override || rule.severity || checker.severity, detail: result.detail, key: artifact.key,
                 line: artifact.line, built_in: !built_in.nil?)
             end
+            @debug&.write("rule") { found(rule, name, artifact, violations) }
+            violations
           end
         end
+      end
+
+      # Whether a policy, named PLUGIN/POLICY, runs on `artifact`, said on
+      # the debug output with what its condition found.
+      def applies?(name, condition, artifact)
+        holds = condition.nil? || condition.holds?(artifact)
+        @debug&.write("policy") do
+          since = ", since its when #{holds ? "holds" : "fails"}: #{condition.explanation(artifact)}" if condition
+          "#{name} #{holds ? "runs on" : "skips"} #{artifact.reference}#{since}"
+        end
+        holds
+      end
+
+      def found(rule, policy, artifact, violations)
+        said = "#{rule.explanation} of #{policy} on #{artifact.reference}: "
+        return "#{said}no violation" if violations.empty?
+
+        violations.map { |violation| said + violation.explanation }.join("\n")
       end
 
       # Each step of each plugin that didn't stop, run on every violation.

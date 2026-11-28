@@ -22,6 +22,8 @@ module CrossLint
 
       def location = line ? "#{path}:#{line}" : path
 
+      def reference = (name == path) ? location : "#{name} at #{location}"
+
       def explanation
         named = ", named #{name}" unless name == path
         keyed = ", with key #{key}" if key
@@ -35,6 +37,8 @@ module CrossLint
 
     class Violation < Data.define(:plugin, :policy, :artifact, :role, :message, :severity, :detail, :key, :path, :line, :built_in)
       def initialize(artifact:, key: nil, path: artifact, line: nil, built_in: false, **fields) = super
+
+      def explanation = "#{severity}: #{message}#{detail&.then { |text| ", with detail #{text.dump}" }}"
     end
 
     class RuleResult < Data.define(:path, :role, :message, :detail); end
