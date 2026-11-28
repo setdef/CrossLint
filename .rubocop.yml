@@ -20,3 +20,10 @@ AllCops:
 # refuse every file there.
 Layout/EndOfLine:
   Enabled: false
+
+# The baseline writes private methods inline (`private def x`). The code
+# groups them under one `private`, and writing them inline lowers
+# RubyCritic's score below its minimum, so this departs from the baseline
+# until #63 raises the score.
+Style/AccessModifierDeclarations:
+  EnforcedStyle: group

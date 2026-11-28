@@ -69,7 +69,7 @@ class ArtifactsTest < Minitest::Test
     names = %i[pattern problem declared source new match key files pieces]
     subclass = Class.new(CrossLint::Artifacts) do
       names.each { |name| define_method(name) { |*| raise "the subclass's #{name} was called" } }
-      private(*names)
+      __send__(:private, *names)
     end
     declarer = subclass.allocate
     declarer.instance_variable_set(:@crosslint_line, 4)

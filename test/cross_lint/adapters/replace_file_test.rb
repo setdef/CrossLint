@@ -59,7 +59,9 @@ class ReplaceFileTest < Minitest::Test
     assert_equal ["Permission denied - rename", "old"], [error.message, File.read(@file)]
   end
 
-  private def denying(*actions)
+  private
+
+  def denying(*actions)
     actions.each { |action| Thread.current[:"crosslint_replace_#{action}_denied"] = true }
     yield
   ensure
