@@ -1,9 +1,9 @@
 # The full run, for every push to trunk in batches, and for every pull
-# request: on each system, after installing the tools and the bundle, the
+# request: on each system, bin/setup installs the tools, the bundle, and the
 # packages the test fixtures lock (rake fixtures), a setup step that no
-# test task runs. On Linux bin/setup does all of it, and the macOS and
-# Windows jobs run its steps themselves, since they install fewer of
-# mise.toml's tools than it does. Then on Linux, the whole of rake check (RuboCop, rbs
+# test task runs. The macOS and Windows jobs name the tools they use in
+# MISE_ENABLE_TOOLS, which mise-action and bin/setup both obey, and the
+# Linux job installs all of mise.toml's. Then on Linux, the whole of rake check (RuboCop, rbs
 # validate, the comment on every public part of sig/, Steep, the tests
 # with their coverage, the tests under RBS's runtime type checker, every
 # Ruby example in the documentation, CrossLint's own check of this
@@ -90,6 +90,7 @@ jobs:
     timeout-minutes: 20
     env:
       BUNDLE_WITHOUT: check
+      MISE_ENABLE_TOOLS: ruby,node
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -99,7 +100,6 @@ jobs:
         with:
           cache_save: ${{ github.ref == 'refs/heads/trunk' }}
           version: 2026.10.11
-          install_args: ruby node
 
       - name: Place Bundler outside the checkout
         id: paths
@@ -112,11 +112,8 @@ jobs:
           path: ~/.cache/crosslint/bundle
           key: gems-${{ runner.os }}-${{ runner.arch }}-${{ steps.paths.outputs.ruby }}-${{ hashFiles('Gemfile.lock') }}
 
-      - name: Install the bundle
-        run: bundle install
-
-      - name: Install the test fixtures' packages
-        run: bundle exec rake fixtures
+      - name: Set up
+        run: bin/setup
 
       - name: Run the tests
         run: bundle exec rake test
@@ -129,6 +126,7 @@ jobs:
     timeout-minutes: 30
     env:
       BUNDLE_WITHOUT: check
+      MISE_ENABLE_TOOLS: http:rubyinstaller-head,http:msys2-zlib,http:msys2-libgcc,http:msys2,node
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -141,7 +139,6 @@ jobs:
         with:
           cache_save: ${{ github.ref == 'refs/heads/trunk' }}
           version: 2026.10.11
-          install_args: http:rubyinstaller-head http:msys2-zlib http:msys2-libgcc http:msys2 node
           add_shims_to_path: false
           mise_dir: ${{ runner.temp }}\mise
 
@@ -159,11 +156,8 @@ jobs:
           path: ${{ runner.temp }}/bundle
           key: gems-${{ runner.os }}-${{ runner.arch }}-${{ steps.paths.outputs.ruby }}-${{ hashFiles('Gemfile.lock', 'mise.toml') }}
 
-      - name: Install the bundle
-        run: bundle install
-
-      - name: Install the test fixtures' packages
-        run: bundle exec rake fixtures
+      - name: Set up
+        run: bin/setup
 
       - name: Run the tests
         run: bundle exec rake test
