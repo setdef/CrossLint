@@ -26,6 +26,28 @@ module CrossLint
         def artifacts = [artifact, key].compact.flat_map { |name| [name, "#{name}.#{role}"] }
       end
 
+      # An entry of a policy CrossLint checks, with the identities it
+      # matches.
+      class Match < Data.define(:entry, :plugin, :policy, :identities)
+        def rule = "#{plugin}/#{policy}"
+
+        def paid_off? = identities.empty?
+
+        # The warning for an entry that matches more than one artifact, or
+        # every detail on its artifact, or nil.
+        def coarse
+          artifacts = identities.map { |identity| [identity.artifact, identity.role] }.uniq
+          if artifacts.size > 1
+            "the entry for #{rule} on #{entry.artifact} matches the violations of #{artifacts.size} artifacts, " \
+              "#{Spelling.list(artifacts.map { |artifact, role| "#{artifact} as #{role}" }, 'and')}; " \
+              "crosslint debt update writes one entry for each"
+          elsif !identities.all? { |identity| identity.detail == entry.detail.to_s }
+            "the entry for #{rule} on #{entry.artifact} has no detail, so it matches every violation of #{rule} on it; " \
+              "crosslint debt update writes one entry for each, with its detail"
+          end
+        end
+      end
+
       FILE = ".config/crosslint/debt.tsv"
 
       POLICY = "has-debt"
@@ -97,10 +119,10 @@ module CrossLint
         wrote = [] #: Array[String]
         if input.command == COMMAND
           dry_run = input.flags.key?(DRY_RUN)
-          wrote.concat(update(project, input, settings, debt, identities, dry_run:))
+          wrote.concat(update(input, settings, debt, matches(input, debt, identities), identities, dry_run:))
           debt = @debt_files.read(project.root, settings.file) unless dry_run
         end
-        state(project, input, settings, debt, identities, wrote)
+        state(input, settings, debt, matches(input, debt, identities), wrote)
       end
 
       private
@@ -109,48 +131,74 @@ module CrossLint
       # matches elsewhere, and is written back with /.
       def slashed(entry) = entry.artifact.include?("\\") ? entry.with(artifact: entry.artifact.tr("\\", "/"), source: nil) : entry
 
-      def state(project, input, settings, debt, identities, wrote)
-        excused = [] #: Array[Identity]
-        paid_off = [] #: Array[PaidOffEntry]
-        notices = [] #: Array[Notice]
-        named = identities_named(project, input, debt, identities)
-        debt.entries.each do |entry|
-          rule = resolve(project, input, debt, entry)
-          matched = rule ? matches(entry, rule, identities, named) : [] #: Array[Identity]
-          said(debt, entry, rule, matched)
-          next unless rule
-
-          excused.concat(matched)
-          line = entry.line #: Integer
-          if matched.empty?
-            paid_off << PaidOffEntry.new(plugin: rule.first, policy: rule.last, artifact: entry.artifact, file: debt.file, line:,
-              message: "the debt entry at #{debt.file}:#{entry.line} is paid off, since no violation matches it; crosslint debt update removes it")
-          end
-          warning = coarse(entry, rule, matched)
-          notices << Notice.new(file: debt.file, line:, message: warning) if warning
-        end
+      def state(input, settings, debt, matches, wrote)
+        matches.each { |entry, match| said(debt, entry, match) }
+        checked = matches.filter_map(&:last)
+        excused = checked.flat_map(&:identities)
         accepted = input.violations.select { |violation| excused.include?(Identity.of(violation)) }
-        StepResult.new(excused: accepted, violations: report_entries(project, input, settings, debt), paid_off:, notices:, wrote:,
+        StepResult.new(excused: accepted, violations: report_entries(input, settings, debt, checked),
+          paid_off: checked.select(&:paid_off?).map { |match| paid_off(debt, match) }, notices: notices(debt, checked), wrote:,
           summary: accepted.empty? ? [] : ["#{accepted.size} accepted as debt"])
       end
 
-      def said(debt, entry, rule, matched)
+      def said(debt, entry, match)
         @debug&.write("debt") do
-          found = if rule.nil?
+          found = if match.nil?
             "left alone, since CrossLint doesn't check that policy: its plugin isn't listed or stopped at a fault, or it is off"
-          elsif matched.empty?
+          elsif match.paid_off?
             "matches no violation, so it is paid off"
           else
-            "matches #{Spelling.count(matched.size, 'violation')}, accepted as debt"
+            "matches #{Spelling.count(match.identities.size, 'violation')}, accepted as debt"
           end
-          "#{debt.file}:#{entry.line}, #{described(entry)}: #{found}"
+          "#{debt.file}:#{entry.line}, #{entry.description}: #{found}"
         end
+      end
+
+      def paid_off(debt, match)
+        line = match.entry.line #: Integer
+        PaidOffEntry.new(plugin: match.plugin, policy: match.policy, artifact: match.entry.artifact, file: debt.file, line:,
+          message: "the debt entry at #{debt.file}:#{line} is paid off, since no violation matches it; crosslint debt update removes it")
+      end
+
+      def notices(debt, checked)
+        checked.filter_map do |match|
+          warning = match.coarse
+          line = match.entry.line #: Integer
+          Notice.new(file: debt.file, line:, message: warning) if warning
+        end
+      end
+
+      # Each entry, with what it matches, or with nil when CrossLint
+      # doesn't check its policy and leaves it alone.
+      def matches(input, debt, identities)
+        named = debt.entries.select(&:detail).flat_map { |entry| match(input, debt, entry, identities, [])&.identities || [] }
+        debt.entries.map { |entry| [entry, match(input, debt, entry, identities, named)] }
+      end
+
+      # What an entry matches, or nil when CrossLint doesn't check its
+      # policy. An entry with no detail matches every detail of a violation
+      # a built-in rule reported, which gave none before it did, unless an
+      # entry has its detail, as the identities in `named` do; one ng-nudge
+      # wrote, with a policy's name alone, matches every detail of any
+      # violation.
+      def match(input, debt, entry, identities, named)
+        plugin, policy = resolve(input, debt, entry)
+        return unless plugin && policy
+
+        legacy = !entry.rule.include?("/") && entry.detail.nil?
+        undetailed = entry.detail.nil?
+        matched = identities.select do |identity|
+          [identity.plugin, identity.policy] == [plugin, policy] && identity.artifacts.include?(entry.artifact) &&
+            (legacy || (undetailed && identity.built_in && !named.include?(identity)) || identity.detail == entry.detail.to_s)
+        end
+        Match.new(entry:, plugin:, policy:, identities: matched)
       end
 
       # The plugin and policy an entry is for, or nil when CrossLint
       # doesn't check it: its plugin isn't listed or stopped at a fault, or
       # its policy is disabled.
-      def resolve(project, input, debt, entry)
+      def resolve(input, debt, entry)
+        project = input.project
         rule = entry.rule
         name, slash, policy = rule.partition("/")
         if slash.empty?
@@ -169,56 +217,17 @@ module CrossLint
         [name, policy] if listed && !project.configuration.off?(name, policy) && !input.faulted.include?(name)
       end
 
-      # The identities an entry matches. An entry with no detail matches
-      # every detail of a violation a built-in rule reported, which gave
-      # none before it did, unless an entry has its detail; one ng-nudge
-      # wrote, with a policy's name alone, matches every detail of any
-      # violation.
-      def matches(entry, rule, identities, named)
-        legacy = !entry.rule.include?("/") && entry.detail.nil?
-        undetailed = entry.detail.nil?
-        identities.select do |identity|
-          [identity.plugin, identity.policy] == rule && identity.artifacts.include?(entry.artifact) &&
-            (legacy || (undetailed && identity.built_in && !named.include?(identity)) || identity.detail == entry.detail.to_s)
-        end
-      end
-
-      # The identities an entry with a detail matches.
-      def identities_named(project, input, debt, identities)
-        debt.entries.reject { |entry| entry.detail.nil? }.flat_map do |entry|
-          rule = resolve(project, input, debt, entry)
-          rule ? matches(entry, rule, identities, []) : []
-        end
-      end
-
-      # The warning for an entry that matches more than one artifact, or
-      # every detail on its artifact, or nil.
-      def coarse(entry, rule, matched)
-        artifacts = matched.map { |identity| [identity.artifact, identity.role] }.uniq
-        name = rule.join("/")
-        if artifacts.size > 1
-          "the entry for #{name} on #{entry.artifact} matches the violations of #{artifacts.size} artifacts, " \
-            "#{Spelling.list(artifacts.map { |artifact, role| "#{artifact} as #{role}" }, 'and')}; " \
-            "crosslint debt update writes one entry for each"
-        elsif !matched.all? { |identity| identity.detail == entry.detail.to_s }
-          "the entry for #{name} on #{entry.artifact} has no detail, so it matches every violation of #{name} on it; " \
-            "crosslint debt update writes one entry for each, with its detail"
-        end
-      end
-
       # Writes the debt file, or with dry_run only lists what it would
       # change, in the order it writes it; and returns the lines that say so,
       # the last of them the counts.
-      def update(project, input, settings, debt, identities, dry_run:)
+      def update(input, settings, debt, matches, identities, dry_run:)
         covered = [] #: Array[Identity]
         written = [] #: Array[DebtEntry]
         changes = [] #: Array[String]
         removed = 0
         rewritten = 0
-        named = identities_named(project, input, debt, identities)
-        debt.entries.each do |entry|
-          rule = resolve(project, input, debt, entry)
-          unless rule
+        matches.each do |entry, match|
+          unless match
             written << entry
             unless entry.source
               rewritten += 1
@@ -227,18 +236,17 @@ module CrossLint
             next
           end
 
-          matched = matches(entry, rule, identities, named)
-          left = matched - covered
+          left = match.identities - covered
           covered.concat(left)
-          if coarse(entry, rule, matched)
+          if match.coarse
             rewritten += 1
             replacements = left.sort_by(&:deconstruct).map { |identity| fresh(identity, identities, entry.comment) }
-            changes << "replace #{described(entry)}, line #{entry.line}"
-            changes.concat(replacements.map { |replacement| "add #{described(replacement)}" })
+            changes << "replace #{entry.description}, line #{entry.line}"
+            changes.concat(replacements.map { |replacement| "add #{replacement.description}" })
             written.concat(replacements)
           elsif left.empty?
             removed += 1
-            changes << "remove #{described(entry)}, line #{entry.line}"
+            changes << "remove #{entry.description}, line #{entry.line}"
           else
             unless entry.source
               rewritten += 1
@@ -248,8 +256,8 @@ module CrossLint
           end
         end
         added = (identities - covered).sort_by(&:deconstruct).map { |identity| fresh(identity, identities, "") }
-        changes.concat(added.map { |entry| "add #{described(entry)}" })
-        @debt_files.write(project.root, settings.file, debt.with(entries: written + added)) unless dry_run
+        changes.concat(added.map { |entry| "add #{entry.description}" })
+        @debt_files.write(input.project.root, settings.file, debt.with(entries: written + added)) unless dry_run
         counts = ["#{added.size} #{(added.size == 1) ? 'entry' : 'entries'} added", "#{removed} removed"]
         counts << "#{rewritten} rewritten" unless rewritten.zero?
         return ["wrote #{debt.file}: #{counts.join(', ')}"] unless dry_run
@@ -258,14 +266,7 @@ module CrossLint
       end
 
       # The lines that say an entry is written again as it now is.
-      def rewrite(entry) = ["replace #{described(entry)}, line #{entry.line}", "add #{described(entry)}"]
-
-      # An entry as a person reads it: its policy, its artifact, and its
-      # detail when it has one.
-      def described(entry)
-        detail = entry.detail.to_s
-        "#{entry.rule} on #{entry.artifact}#{" (#{detail})" unless detail.empty?}"
-      end
+      def rewrite(entry) = ["replace #{entry.description}, line #{entry.line}", "add #{entry.description}"]
 
       # An entry for one identity, keyed by its artifact, or by its
       # artifact and role when another artifact of the policy has that key.
@@ -276,15 +277,14 @@ module CrossLint
           detail: (identity.detail unless identity.detail.empty?))
       end
 
-      def report_entries(project, input, settings, debt)
+      def report_entries(input, settings, debt, checked)
         report = settings.report
-        policy = project.configuration.policy_setting(input.plugin.name, POLICY)
+        policy = input.project.configuration.policy_setting(input.plugin.name, POLICY)
         return [] if report.nil? || policy&.off?
 
         severity = policy&.severity || :error
-        debt.entries.filter_map do |entry|
-          next unless resolve(project, input, debt, entry)
-
+        checked.filter_map do |match|
+          entry = match.entry
           comment = entry.comment
           commented = !comment.empty? && (report.matching.nil? || report.matching.match?(comment))
           level = commented ? (report.commented || severity) : severity

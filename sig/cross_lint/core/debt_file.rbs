@@ -41,6 +41,10 @@ module CrossLint
       # An entry no file has yet, with an empty comment unless `comment`
       # gives one.
       def self.fresh: (rule: String, artifact: String, ?comment: String, ?detail: String?) -> DebtEntry
+
+      # The entry as a person reads it: its policy, its artifact, and its
+      # detail when it has one.
+      def description: () -> String
     end
 
     # A debt file's entries, in the file's order, and how it begins.

@@ -91,6 +91,38 @@ module CrossLint
         def artifacts: () -> Array[String]
       end
 
+      # An entry of a policy CrossLint checks, with the identities it
+      # matches.
+      class Match < Data
+        # The entry.
+        attr_reader entry: DebtEntry
+
+        # The name of the plugin the entry is for.
+        attr_reader plugin: String
+
+        # The name of the policy the entry is for.
+        attr_reader policy: String
+
+        # The identities the entry matches, none when it is paid off.
+        attr_reader identities: Array[Identity]
+
+        # A match with these fields.
+        def self.new: (entry: DebtEntry, plugin: String, policy: String, identities: Array[Identity]) -> instance
+
+        # A match with these fields.
+        def initialize: (entry: DebtEntry, plugin: String, policy: String, identities: Array[Identity]) -> void
+
+        # PLUGIN/POLICY.
+        def rule: () -> String
+
+        # Whether the entry matches no violation.
+        def paid_off?: () -> bool
+
+        # The warning for an entry that matches the violations of more
+        # than one artifact, or more than its detail, or nil.
+        def coarse: () -> String?
+      end
+
       # The debt file's path when `file` gives none.
       FILE: String
 
@@ -134,59 +166,58 @@ module CrossLint
 
       @debug: _DebugOutput?
 
-      # Says on the debug output what `entry` of `debt` matched: `matched`,
-      # for the plugin and policy `rule`, or nothing CrossLint checks when
-      # `rule` is nil.
-      def said: (DebtFile debt, DebtEntry entry, [String, String]? rule, Array[Identity] matched) -> void
+      # Says on the debug output what `entry` of `debt` matched, as
+      # `match` has it, or that CrossLint leaves it alone when `match` is
+      # nil.
+      def said: (DebtFile debt, DebtEntry entry, Match? match) -> void
 
       # `entry`, with each `\` in its artifact read as `/`, and no source
       # when it had one.
       def slashed: (DebtEntry entry) -> DebtEntry
 
-      # The result for the entries of `debt`, the violations, and what
+      # The result for the entries `matches` has, the violations, and what
       # was written.
-      def state: (Project project, StepInput input, Settings settings, DebtFile debt, Array[Identity] identities,
-                  Array[String] wrote) -> StepResult
+      def state: (StepInput input, Settings settings, DebtFile debt, Array[[DebtEntry, Match?]] matches, Array[String] wrote) -> StepResult
+
+      # The paid-off entry `match` is, in `debt`.
+      def paid_off: (DebtFile debt, Match match) -> PaidOffEntry
+
+      # A notice of `debt` for each match that is coarse.
+      def notices: (DebtFile debt, Array[Match] checked) -> Array[Notice]
+
+      # Each entry of `debt`, with what it matches among `identities`, or
+      # with nil when it isn't checked.
+      def matches: (StepInput input, DebtFile debt, Array[Identity] identities) -> Array[[DebtEntry, Match?]]
+
+      # What `entry` matches among `identities`, or nil when it isn't
+      # checked: those with its detail, and, when it has none, those of a
+      # built-in rule's violations whatever their detail unless `named`
+      # has them, and, for a policy's name alone, every detail.
+      def match: (StepInput input, DebtFile debt, DebtEntry entry, Array[Identity] identities, Array[Identity] named) -> Match?
 
       # The plugin and policy `entry` is for, or nil when it isn't
       # checked. Raises Mistake for a policy's name alone that two listed
       # plugins have.
-      def resolve: (Project project, StepInput input, DebtFile debt, DebtEntry entry) -> [String, String]?
-
-      # The identities `entry` matches: those with its detail, and, when
-      # it has none, those of a built-in rule's violations whatever their
-      # detail unless `named` has them, and, for a policy's name alone,
-      # every detail.
-      def matches: (DebtEntry entry, [String, String] rule, Array[Identity] identities, Array[Identity] named) -> Array[Identity]
-
-      # The identities that the entries with a detail match, which an entry
-      # with none leaves to them.
-      def identities_named: (Project project, StepInput input, DebtFile debt, Array[Identity] identities) -> Array[Identity]
-
-      # The warning for an entry that matches more than one artifact, or
-      # more than its detail, or nil.
-      def coarse: (DebtEntry entry, [String, String] rule, Array[Identity] matched) -> String?
+      def resolve: (StepInput input, DebtFile debt, DebtEntry entry) -> [String, String]?
 
       # Writes the file `debt` is read from with the entries that still
       # match, those it rewrites, and one for each new identity, and
       # returns the line that says so. With `dry_run` it writes nothing, and
       # returns a line for each entry it would add, remove, or replace, in
       # the order it writes them, and then the line that says so.
-      def update: (Project project, StepInput input, Settings settings, DebtFile debt, Array[Identity] identities, dry_run: bool) -> Array[String]
+      def update: (StepInput input, Settings settings, DebtFile debt, Array[[DebtEntry, Match?]] matches, Array[Identity] identities,
+                   dry_run: bool) -> Array[String]
 
-      # `entry` as a line says it: its policy, its artifact, and its detail
-      # when it has one.
+      # The lines that say `entry` is written again as it now is.
       def rewrite: (DebtEntry entry) -> Array[String]
-
-      def described: (DebtEntry entry) -> String
 
       # A new entry for `identity`, with `comment`.
       def fresh: (Identity identity, Array[Identity] identities, String comment) -> DebtEntry
 
-      # A violation of `has-debt` for each entry CrossLint checks, not one for a
-      # disabled policy or an unlisted or stopped plugin, unless the settings
-      # don't report entries or the configuration disables the policy.
-      def report_entries: (Project project, StepInput input, Settings settings, DebtFile debt) -> Array[Violation]
+      # A violation of `has-debt` for each entry CrossLint checks, those
+      # `checked` has, unless the settings don't report entries or the
+      # configuration disables the policy.
+      def report_entries: (StepInput input, Settings settings, DebtFile debt, Array[Match] checked) -> Array[Violation]
     end
   end
 end
