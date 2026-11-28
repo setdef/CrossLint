@@ -10,7 +10,9 @@ module CrossLint
 
       NODES = %w[artifact artifacts policy rule helper setting command step crosslint].freeze
 
-      CONDITIONS = %w[piece-exists not all any].freeze
+      GROUPS = { "all" => Core::Condition::All, "any" => Core::Condition::Any }.freeze
+
+      CONDITIONS = ["piece-exists", "not", *GROUPS.keys].freeze
 
       SEVERITIES = %w[error warning].freeze
 
@@ -185,10 +187,8 @@ module CrossLint
           raise document.mistake("not has #{inner.size} conditions; write it as not { CONDITION }", node) unless inner.size == 1
 
           Core::Condition::Not.new(condition: inner.first, line: node.line)
-        when "all"
-          Core::Condition::All.new(conditions: conditions(document, node, "all { CONDITION ... }", nonempty: true), line: node.line)
-        when "any"
-          Core::Condition::Any.new(conditions: conditions(document, node, "any { CONDITION ... }", nonempty: true), line: node.line)
+        when *GROUPS.keys
+          GROUPS.fetch(node.name).new(conditions: conditions(document, node, "#{node.name} { CONDITION ... }", nonempty: true), line: node.line)
         else
           raise document.mistake(Core::Spelling.unknown("condition", node.name, CONDITIONS), node)
         end

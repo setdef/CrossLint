@@ -19,20 +19,22 @@ module CrossLint
         def explanation(artifact) = "not { #{condition.explanation(artifact)} }"
       end
 
-      class All < Data.define(:conditions, :line)
+      class Group < Data.define(:conditions, :line)
         def piece_conditions = conditions.flat_map(&:piece_conditions)
 
-        def holds?(artifact) = conditions.all? { |condition| condition.holds?(artifact) }
-
-        def explanation(artifact) = "all { #{conditions.map { |condition| condition.explanation(artifact) }.join(' ')} }"
+        def explanation(artifact) = "#{keyword} { #{conditions.map { |condition| condition.explanation(artifact) }.join(' ')} }"
       end
 
-      class Any < Data.define(:conditions, :line)
-        def piece_conditions = conditions.flat_map(&:piece_conditions)
+      class All < Group
+        def keyword = "all"
+
+        def holds?(artifact) = conditions.all? { |condition| condition.holds?(artifact) }
+      end
+
+      class Any < Group
+        def keyword = "any"
 
         def holds?(artifact) = conditions.any? { |condition| condition.holds?(artifact) }
-
-        def explanation(artifact) = "any { #{conditions.map { |condition| condition.explanation(artifact) }.join(' ')} }"
       end
     end
   end

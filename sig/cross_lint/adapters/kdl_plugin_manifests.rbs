@@ -11,6 +11,9 @@ module CrossLint
       # The nodes a manifest can have at its top.
       NODES: Array[String]
 
+      # The conditions on the conditions inside them, by their keyword.
+      GROUPS: Hash[String, singleton(Core::Condition::All) | singleton(Core::Condition::Any)]
+
       # The conditions a policy's `when` can state.
       CONDITIONS: Array[String]
 
