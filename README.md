@@ -349,7 +349,7 @@ To send a patch, post it on the forum, or email it with `git send-email` to `rep
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md) has the rules for every change: how it lands on the trunk, how commits are written, and how files are licensed. The [design pages](docs/design/README.md) say how each part of CrossLint works, and why.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the rules for every change: how it lands on the trunk, how commits are written, and how files are licensed. The [design pages](docs/design/README.md) say how each part of CrossLint works, and why. In a clone, `bin/setup` installs the tools, the gems, and a pre-commit hook that runs the quality gates.
 
 ## License
 
