@@ -71,17 +71,17 @@ module CrossLint
 
       # minimum returns the minimum version of a configuration, from its
       # file and a line before its plugins'.
-      def test_reads_the_oldest_crosslint_a_configuration_names_before_its_other_lines: () -> void
+      def test_reads_the_minimum_version_of_a_configuration_before_its_other_lines: () -> void
 
       # minimum returns nil for a configuration with no minimum version.
-      def test_reads_no_oldest_crosslint_from_a_configuration_that_names_none: () -> void
+      def test_reads_no_minimum_version_from_a_configuration_that_has_none: () -> void
 
       # minimum returns the minimum version of a configuration whose
       # other lines read raises a mistake at.
-      def test_reads_the_oldest_crosslint_without_reading_the_other_lines: () -> void
+      def test_reads_the_minimum_version_without_reading_the_other_lines: () -> void
 
       # minimum raises a mistake naming the file when there is none.
-      def test_names_the_file_when_the_project_it_reads_the_oldest_crosslint_of_has_no_configuration: () -> void
+      def test_names_the_file_when_the_project_it_reads_the_minimum_version_of_has_no_configuration: () -> void
 
       # set_refs sets the ref of the plugin it is given and nothing else
       # that read returns.
@@ -188,15 +188,15 @@ module CrossLint
 
       # minimum returns the minimum version of a manifest, from its file
       # and a line before its artifacts'.
-      def test_reads_the_oldest_crosslint_a_manifest_names_before_its_other_lines: () -> void
+      def test_reads_the_minimum_version_of_a_manifest_before_its_other_lines: () -> void
 
       # minimum returns nil for a manifest with no minimum version, and for
       # a folder with no manifest.
-      def test_reads_no_oldest_crosslint_from_a_manifest_that_names_none_or_a_folder_with_no_manifest: () -> void
+      def test_reads_no_minimum_version_from_a_manifest_that_has_none_or_a_folder_with_no_manifest: () -> void
 
       # minimum returns the minimum version of a manifest whose other
       # lines read raises a mistake at.
-      def test_reads_the_oldest_crosslint_of_a_manifest_without_reading_the_other_lines: () -> void
+      def test_reads_the_minimum_version_of_a_manifest_without_reading_the_other_lines: () -> void
 
       # read raises a mistake naming the file and the line.
       def test_names_the_file_and_line_of_a_mistake: () -> void

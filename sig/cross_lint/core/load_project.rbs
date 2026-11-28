@@ -47,8 +47,8 @@ module CrossLint
       # `reserved_flags` each way CrossLint's global flags are written,
       # which no flag of a plugin's command can be. `crosslint` is the
       # version of the CrossLint that loads the project: a configuration
-      # that names a newer one as the oldest that reads it stops the load
-      # with a Mistake that names both, before any other line of it is read.
+      # whose minimum version is newer stops the load with a Mistake that
+      # names both versions, before any other line of it is read.
       def initialize: (configuration: _Configuration, manifests: _PluginManifests, crosslint_ruby: _CrossLintRuby, shared_plugins: _SharedPlugins,
                        helpers: _Helpers, crosslint: Version, ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
                        ?reserved_flags: Array[String]) -> void

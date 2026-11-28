@@ -91,26 +91,26 @@ module CrossLint
         assert_equal port.file, mistake.file
       end
 
-      def test_reads_the_oldest_crosslint_a_configuration_names_before_its_other_lines
+      def test_reads_the_minimum_version_of_a_configuration_before_its_other_lines
         port = configuration_port({"app" => ["one"]}, minimum: {"app" => "1.2"})
-        found = port.minimum(folder("app")) || raise(Minitest::Assertion, "app names no oldest CrossLint")
+        found = port.minimum(folder("app")) || raise(Minitest::Assertion, "app has no minimum version")
 
         assert_equal [port.file, "1.2", [1, 2, 0]], [found.file, found.text, found.version.numbers]
         assert_operator found.line, :<, port.read(folder("app")).plugins.first.line
       end
 
-      def test_reads_no_oldest_crosslint_from_a_configuration_that_names_none
+      def test_reads_no_minimum_version_from_a_configuration_that_has_none
         assert_nil configuration_port({"app" => ["one"]}).minimum(folder("app"))
       end
 
-      def test_reads_the_oldest_crosslint_without_reading_the_other_lines
+      def test_reads_the_minimum_version_without_reading_the_other_lines
         port = configuration_port({}, broken: "app", minimum: {"app" => "9"})
 
         assert_equal ["9"], [port.minimum(folder("app"))].compact.map(&:text)
         assert_raises(Core::Mistake) { port.read(folder("app")) }
       end
 
-      def test_names_the_file_when_the_project_it_reads_the_oldest_crosslint_of_has_no_configuration
+      def test_names_the_file_when_the_project_it_reads_the_minimum_version_of_has_no_configuration
         port = configuration_port({"app" => ["one"]})
         mistake = assert_raises(Core::Mistake) { port.minimum(folder("elsewhere")) }
 
@@ -267,21 +267,21 @@ module CrossLint
         assert_nil manifests_port(example: ["plugins/signatures"]).read(base, "plugins/other")
       end
 
-      def test_reads_the_oldest_crosslint_a_manifest_names_before_its_other_lines
+      def test_reads_the_minimum_version_of_a_manifest_before_its_other_lines
         port = manifests_port(example: ["plugins/signatures"], minimum: {"plugins/signatures" => "1.2"})
-        found = port.minimum(base, "plugins/signatures") || raise(Minitest::Assertion, "plugins/signatures names no oldest CrossLint")
+        found = port.minimum(base, "plugins/signatures") || raise(Minitest::Assertion, "plugins/signatures has no minimum version")
 
         assert_equal ["plugins/signatures/#{port.file}", "1.2", [1, 2, 0]], [found.file, found.text, found.version.numbers]
         assert_operator found.line, :<, read_manifest(port, "plugins/signatures").artifacts.first.line
       end
 
-      def test_reads_no_oldest_crosslint_from_a_manifest_that_names_none_or_a_folder_with_no_manifest
+      def test_reads_no_minimum_version_from_a_manifest_that_has_none_or_a_folder_with_no_manifest
         port = manifests_port(example: ["plugins/signatures"])
 
         assert_equal [nil, nil], [port.minimum(base, "plugins/signatures"), port.minimum(base, "plugins/other")]
       end
 
-      def test_reads_the_oldest_crosslint_of_a_manifest_without_reading_the_other_lines
+      def test_reads_the_minimum_version_of_a_manifest_without_reading_the_other_lines
         port = manifests_port(broken: ["plugins/broken"], minimum: {"plugins/broken" => "9"})
 
         assert_equal ["9"], [port.minimum(base, "plugins/broken")].compact.map(&:text)

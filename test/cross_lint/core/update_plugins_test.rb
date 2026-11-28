@@ -21,7 +21,7 @@ class UpdatePluginsTest < Minitest::Test
   CROSSLINT = Core::Version.parse("1.4.0")
 
   # Raises the mistake it holds for a folder when it is asked for the
-  # oldest CrossLint of the manifest there.
+  # minimum version of the manifest there.
   class BrokenManifests < CrossLint::Adapters::MemoryPluginManifests
     def initialize(mistakes)
       super()

@@ -152,7 +152,7 @@ class KDLPluginManifestsTest < Minitest::Test
       policy.rules.first.line, manifest.rules.first.line, manifest.helpers.first.line]
   end
 
-  def test_reads_the_example_of_the_oldest_crosslint_in_the_plugin_reference
+  def test_reads_the_example_of_the_minimum_version_in_the_plugin_reference
     write(@base, "plugins/x/plugin.kdl", doc_block("docs/reference/plugin.md", "kdl", /\Acrosslint min=/))
     port = CrossLint::Adapters::KDLPluginManifests.new
     found = port.minimum(@base, "plugins/x")
@@ -166,7 +166,7 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_refuses 1, %(unknown property "soft"; expected "min"), %(crosslint min="1.2" soft=#true\n)
   end
 
-  def test_reads_the_oldest_crosslint_from_a_manifest_with_a_helper_on_crosslints_ruby_it_cant_parse
+  def test_reads_the_minimum_version_from_a_manifest_with_a_helper_on_crosslints_ruby_it_cant_parse
     write(@base, "plugins/x/plugin.kdl", %(crosslint min="9"\nhelper "h" command=(crosslint)"node" file="h.js"\nnew-syntax "x\n))
 
     assert_equal ["9"], [CrossLint::Adapters::KDLPluginManifests.new.minimum(@base, "plugins/x")].compact.map(&:text)

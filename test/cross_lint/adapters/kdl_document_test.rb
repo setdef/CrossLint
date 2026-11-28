@@ -133,7 +133,7 @@ class KDLDocumentTest < Minitest::Test
     assert_refuses "p has b twice; the first is on line 3", document, node.children.last, -> { document.optional_child(node, "b") }
   end
 
-  def test_reads_the_oldest_crosslint_the_first_line_names
+  def test_reads_the_minimum_version_on_the_first_line
     found = Document.new(%(// for CrossLint 1.2\ncrosslint min="1.2"\nplugin "a"\n), "a.kdl").minimum
 
     assert_equal ["1.2", [1, 2, 0], "a.kdl", 2], [found.text, found.version.numbers, found.file, found.line]
@@ -170,7 +170,7 @@ class KDLDocumentTest < Minitest::Test
     assert_nil Document.new(%(plugin "a"\n), "a.kdl").whole_minimum
   end
 
-  def test_reads_the_oldest_crosslint_from_the_lines_before_one_it_cant_parse
+  def test_reads_the_minimum_version_from_the_lines_before_one_it_cant_parse
     found = Document.minimum(%(crosslint min="9"\nplugin "a"\nnew-syntax "a\n), "a.kdl")
     typed = Document.minimum(%(crosslint min="9"\nhelper command=(crosslint)"node"\n), "a.kdl", typed: {"helper" => {"command" => ["crosslint"]}})
 
@@ -180,7 +180,7 @@ class KDLDocumentTest < Minitest::Test
     assert_equal "1.2", Document.minimum(%(crosslint min="1.2"\nplugin "a"\n), "a.kdl").text
   end
 
-  def test_raises_the_files_own_mistake_when_no_line_before_it_names_the_oldest_crosslint
+  def test_raises_the_files_own_mistake_when_no_line_before_it_has_the_minimum_version
     [%(plugin "a"\nnew-syntax "a\n), %(new-syntax "a\n), %(plugin {\ncrosslint min="9"\nnew-syntax "a\n), "\xFF"].each do |source|
       expected = assert_raises(Mistake) { Document.new(source.dup.force_encoding(Encoding::UTF_8), "a.kdl") }
       mistake = assert_raises(Mistake) { Document.minimum(source.dup.force_encoding(Encoding::UTF_8), "a.kdl") }
