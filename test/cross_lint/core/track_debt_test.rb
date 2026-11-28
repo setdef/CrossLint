@@ -185,6 +185,29 @@ class TrackDebtTest < Minitest::Test
     assert_equal [[], [2], []], [result.excused, result.paid_off.map(&:line), result.notices]
   end
 
+  def test_leaves_a_built_in_rules_violation_an_entry_names_by_its_detail_to_that_entry_beside_an_entry_for_a_helpers_violation_with_none
+    violations = [violation("app/card"), violation("app/card", detail: "stub", built_in: true)]
+    result = step(violations, [entry("tests/has-test", "app/card", "helper"), entry("tests/has-test", "app/card", "stub", detail: "stub", line: 3)])
+
+    assert_equal [violations, [], []], [result.excused, result.notices, result.paid_off]
+  end
+
+  def test_leaves_an_entry_with_a_detail_for_a_plugin_that_is_not_listed_out_of_what_it_leaves_to_others
+    violations = [violation("app/card", detail: "stub", built_in: true)]
+    result = step(violations, [entry("tests/has-test", "app/card", "kept"), entry("gone/has-test", "app/card", detail: "stub", line: 3)])
+
+    assert_equal [violations, []], [result.excused, result.paid_off]
+  end
+
+  def test_writes_the_entries_for_a_helpers_violation_with_no_detail_and_a_built_in_rules_so_that_the_next_check_has_no_notice
+    violations = [violation("app/card"), violation("app/card", detail: "stub", built_in: true), violation("app/card", detail: "spec", built_in: true)]
+    step(violations, [entry("tests/has-test", "app/card", "kept")], update: true)
+    result = step(violations, nil)
+
+    assert_equal [["kept", nil], ["kept", "spec"], ["kept", "stub"]], written.map { [it.comment, it.detail] }.sort_by { it.last.to_s }
+    assert_equal [violations, []], [result.excused, result.notices]
+  end
+
   def test_rewrites_an_entry_with_no_detail_as_one_for_each_violation_of_a_built_in_rule_with_its_comment
     violations = [violation("app/card", detail: "stub", built_in: true), violation("app/card", detail: "spec", built_in: true)]
     result = step(violations, [entry("tests/has-test", "app/card", "kept")], update: true)

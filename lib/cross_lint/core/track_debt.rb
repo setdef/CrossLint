@@ -112,11 +112,12 @@ module CrossLint
         excused = [] #: Array[Identity]
         paid_off = [] #: Array[PaidOffEntry]
         notices = [] #: Array[Notice]
+        named = identities_named(project, input, debt, identities)
         debt.entries.each do |entry|
           rule = resolve(project, input, debt, entry)
           next unless rule
 
-          matched = matches(entry, rule, identities)
+          matched = matches(entry, rule, identities, named)
           excused.concat(matched)
           line = entry.line #: Integer
           if matched.empty?
@@ -156,14 +157,23 @@ module CrossLint
 
       # The identities an entry matches. An entry with no detail matches
       # every detail of a violation a built-in rule reported, which gave
-      # none before it did; one ng-nudge wrote, with a policy's name alone,
-      # matches every detail of any violation.
-      def matches(entry, rule, identities)
+      # none before it did, unless an entry has its detail; one ng-nudge
+      # wrote, with a policy's name alone, matches every detail of any
+      # violation.
+      def matches(entry, rule, identities, named)
         legacy = !entry.rule.include?("/") && entry.detail.nil?
         undetailed = entry.detail.nil?
         identities.select do |identity|
           [identity.plugin, identity.policy] == rule && identity.artifacts.include?(entry.artifact) &&
-            (legacy || (undetailed && identity.built_in) || identity.detail == entry.detail.to_s)
+            (legacy || (undetailed && identity.built_in && !named.include?(identity)) || identity.detail == entry.detail.to_s)
+        end
+      end
+
+      # The identities an entry with a detail matches.
+      def identities_named(project, input, debt, identities)
+        debt.entries.reject { |entry| entry.detail.nil? }.flat_map do |entry|
+          rule = resolve(project, input, debt, entry)
+          rule ? matches(entry, rule, identities, []) : []
         end
       end
 
@@ -191,6 +201,7 @@ module CrossLint
         changes = [] #: Array[String]
         removed = 0
         rewritten = 0
+        named = identities_named(project, input, debt, identities)
         debt.entries.each do |entry|
           rule = resolve(project, input, debt, entry)
           unless rule
@@ -202,7 +213,7 @@ module CrossLint
             next
           end
 
-          matched = matches(entry, rule, identities)
+          matched = matches(entry, rule, identities, named)
           left = matched - covered
           covered.concat(left)
           if coarse(entry, rule, matched)

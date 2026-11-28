@@ -146,8 +146,13 @@ module CrossLint
 
       # The identities `entry` matches: those with its detail, and, when
       # it has none, those of a built-in rule's violations whatever their
-      # detail, and, for a policy's name alone, every detail.
-      def matches: (DebtEntry entry, [String, String] rule, Array[Identity] identities) -> Array[Identity]
+      # detail unless `named` has them, and, for a policy's name alone,
+      # every detail.
+      def matches: (DebtEntry entry, [String, String] rule, Array[Identity] identities, Array[Identity] named) -> Array[Identity]
+
+      # The identities that the entries with a detail match, which an entry
+      # with none leaves to them.
+      def identities_named: (Project project, StepInput input, DebtFile debt, Array[Identity] identities) -> Array[Identity]
 
       # The warning for an entry that matches more than one artifact, or
       # more than its detail, or nil.
