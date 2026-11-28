@@ -78,7 +78,9 @@ module CrossLint
       # One line for each update: the plugin and its URL, and what
       # moved, would move, or stays, each tag skipped since this CrossLint
       # can't read it, with why, and the newer incompatible versions,
-      # with the one `crosslint update --latest` would move to.
+      # with the highest, which `crosslint update --latest` moves to
+      # unless this CrossLint can't read it, and then to the newest
+      # tag below it that it can read.
       def lines: () -> Array[String]
 
       private

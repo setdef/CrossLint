@@ -641,7 +641,7 @@ class CLITest < Minitest::Test
     tags = %w[v1.0.0 v1.2.0 v2.0.0]
     app, configuration = update_app(one: tags)
 
-    assert_equal ["", "crosslint: #{ONE}: moved from v1.0.0 to v1.2.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0\n" \
+    assert_equal ["", "crosslint: #{ONE}: moved from v1.0.0 to v1.2.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0, or, when v2.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads\n" \
       "crosslint: #{TWO}: is at its newest tag, v3.0.0\n", 0], update("update", app:)
     assert_equal "v1.2.0", configuration.read("#{WORK}/app").plugins.first.ref
 

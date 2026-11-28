@@ -178,15 +178,15 @@ class UpdatePluginsTest < Minitest::Test
     result = update_plugins(configuration, shared).call(APP)
 
     assert_equal ["v1.5.2", "2.0.0"], configuration.read(APP).plugins.map(&:ref)
-    assert_equal ["#{ONE}: moved from v1.4.0 to v1.5.2; newer incompatible versions: v2.1.0, v3.0.0; crosslint update --latest moves to v3.0.0",
-      "#{TWO}: is at its newest compatible tag, 2.0.0; newer incompatible versions: v3.0.0; crosslint update --latest moves to v3.0.0"], result.lines
+    assert_equal ["#{ONE}: moved from v1.4.0 to v1.5.2; newer incompatible versions: v2.1.0, v3.0.0; crosslint update --latest moves to v3.0.0, or, when v3.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads",
+      "#{TWO}: is at its newest compatible tag, 2.0.0; newer incompatible versions: v3.0.0; crosslint update --latest moves to v3.0.0, or, when v3.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads"], result.lines
   end
 
   def test_names_the_newer_incompatible_versions_with_dry_run_too
     configuration, shared = project([listing(ONE, "v1.4.0")], ONE => %w[v1.4.0 v1.5.0 v2.0.0])
     result = update_plugins(configuration, shared).call(APP, dry_run: true)
 
-    assert_equal ["#{ONE}: would move from v1.4.0 to v1.5.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0"], result.lines
+    assert_equal ["#{ONE}: would move from v1.4.0 to v1.5.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0, or, when v2.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads"], result.lines
     assert_nil configuration.set
   end
 
@@ -195,8 +195,8 @@ class UpdatePluginsTest < Minitest::Test
     result = update_plugins(configuration, shared).call(APP)
 
     assert_nil configuration.set
-    assert_equal ["#{ONE}: is at its newest compatible tag, v1.4.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0",
-      "#{TWO}: is at its newest compatible tag, v0.0.3; newer incompatible versions: v0.0.4; crosslint update --latest moves to v0.0.4"], result.lines
+    assert_equal ["#{ONE}: is at its newest compatible tag, v1.4.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0, or, when v2.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads",
+      "#{TWO}: is at its newest compatible tag, v0.0.3; newer incompatible versions: v0.0.4; crosslint update --latest moves to v0.0.4, or, when v0.0.4 needs a newer CrossLint, to the newest tag below it that this CrossLint reads"], result.lines
   end
 
   def test_moves_to_the_highest_version_even_when_it_isnt_compatible_with_latest
@@ -223,6 +223,16 @@ class UpdatePluginsTest < Minitest::Test
     assert_nil configuration.set
   end
 
+  def test_says_the_incompatible_tag_it_names_may_need_a_newer_crosslint_without_fetching_it
+    configuration, shared = project([listing(ONE, "v1.0.0"), listing(TWO, "v1.0.0", 2)], {ONE => %w[v1.0.0 v1.1.0 v2.0.0], TWO => %w[v1.0.0 v2.0.0]}, {"v2.0.0" => "2"})
+    result = update_plugins(configuration, shared).call(APP)
+
+    hint = "crosslint update --latest moves to v2.0.0, or, when v2.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads"
+    assert_equal ["#{ONE}: moved from v1.0.0 to v1.1.0; newer incompatible versions: v2.0.0; #{hint}",
+      "#{TWO}: is at its newest compatible tag, v1.0.0; newer incompatible versions: v2.0.0; #{hint}"], result.lines
+    assert_equal [[ONE, "v1.1.0"]], shared.fetched
+  end
+
   def test_stops_before_reading_a_configuration_that_needs_a_newer_crosslint_and_makes_no_request
     configuration = Memory::MemoryConfiguration.new({APP => Core::Mistake.new("unknown node", file: FILE, line: 2)},
       minimums: {APP => Core::MinimumVersion.parse("2", file: FILE, line: 1)})
@@ -239,7 +249,7 @@ class UpdatePluginsTest < Minitest::Test
 
     assert_equal ["v1.1.0"], configuration.read(APP).plugins.map(&:ref)
     assert_equal ["#{ONE}: moved from v1.0.0 to v1.1.0; skipped v1.3.0, which needs CrossLint 1.6 or later, and v1.2.0, which needs CrossLint 1.5 or later, " \
-      "as this is CrossLint 1.4.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0"], result.lines
+      "as this is CrossLint 1.4.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0, or, when v2.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads"], result.lines
     assert_equal [[ONE, "v1.3.0"], [ONE, "v1.2.0"], [ONE, "v1.1.0"]], shared.fetched
   end
 

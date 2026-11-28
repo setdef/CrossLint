@@ -44,10 +44,14 @@ module CrossLint
       end
 
       # Newer incompatible versions are named whether or not the plugin moved.
+      # No update fetches them, so the line can't say whether the highest
+      # one is a tag this CrossLint reads.
       def newer(update)
         return "" if update.newer.empty?
 
-        "; newer incompatible versions: #{update.newer.join(", ")}; crosslint update --latest moves to #{update.newer.last}"
+        highest = update.newer.last
+        "; newer incompatible versions: #{update.newer.join(", ")}; crosslint update --latest moves to #{highest}, " \
+          "or, when #{highest} needs a newer CrossLint, to the newest tag below it that this CrossLint reads"
       end
     end
 
