@@ -16,10 +16,10 @@ plugin "angular" {
 plugin "debt" {
   report-entries commented="warning"
 }
-plugin ".config/crosslint/signatures"
+plugin ".config/crosslint/modules"
 
 policy "angular/prefer-css-over-scss" severity="error"
-policy "signatures/has-test" enabled=#false
+policy "modules/has-test" enabled=#false
 
 warnings "all"
 ```
@@ -34,7 +34,7 @@ CrossLint finds the configuration by looking in the current folder and then in e
 - A name that starts with `.` or `/` is a local plugin: the folder at that path, relative to the project's root, with a `plugin.kdl` in it ([plugin reference](plugin.md)).
 - A name that starts with `https://` is a shared plugin: a Git repository, at the tag or full commit SHA its `ref` property gives, such as `plugin "https://github.com/OWNER/REPO" ref="v1.2.0"`. A branch is refused, so a plugin's version changes only when the configuration does. The plugin's name is the repository's name, the URL's last segment without `.git`, and its `plugin.kdl` is at the repository's root. A `path` property lists the plugin from a folder of the repository instead, such as `plugin "https://github.com/OWNER/REPO" ref="v1.2.0" path="plugins/links"`: its `plugin.kdl` is in that folder, and its name is the folder's last part. `path` is relative to the repository's root, with `/` between folders, and an absolute path, a `..`, a `\`, a drive letter, an empty path, and a folder with no `plugin.kdl` at that commit are mistakes, with exit status 2. Folders of one repository at one ref are fetched once, and `crosslint update` moves the `ref` and keeps `path`. The first time `crosslint check` needs a shared plugin, it prints a line on standard error, fetches that commit into the user's cache (`$XDG_CACHE_HOME/crosslint/plugins`, or `~/.cache/crosslint/plugins`, or `%LOCALAPPDATA%\crosslint\cache\plugins` on Windows), and uses that copy from then on. `crosslint update` moves each shared plugin whose `ref` is a plain version tag to the newest version tag that is compatible with it, and writes a line on standard error for each plugin, which names the newer versions that aren't compatible, the highest tag of each, and the tag `crosslint update --latest` moves to; `crosslint update --latest` moves to the highest version tag, even when it isn't compatible with the `ref`. It leaves other refs alone. A URL with a user name or password is refused; give Git the credentials with a Git credential helper.
 
-  > **Warning:** a shared plugin's Ruby and helpers run with your rights, and CrossLint doesn't sandbox them. List only a plugin you would run as a script, at a ref you have read.
+  > **Warning:** a shared plugin's helpers run with your rights, on CrossLint's Ruby as on any other runtime, and CrossLint doesn't sandbox them. List only a plugin you would run as a script, at a ref you have read.
 - Any other name is a built-in plugin: `angular` or `debt`.
 
 The block holds the settings the plugin's `plugin.kdl` declares, and can be left out when there are none. A setting the plugin doesn't declare stops CrossLint with exit status 2, naming it.
@@ -47,7 +47,7 @@ ng-nudge's checks for Angular projects: a spec for every component, directive, p
 | --- | --- | --- |
 | `src-dir PATH` | The folder the plugin's artifacts are found in, relative to the project's root. A file or folder below it whose name starts with `.` is skipped, as ng-nudge skips them. | `src` |
 | `tsconfig PATH` | The `tsconfig.json` the helper reads, relative to the project's root, once a component has a stub or an interface. | `tsconfig.json` |
-| `role NAME files=PATTERN { expects PIECE ... }` | Find a role's files by this [path pattern](plugin.md#artifact), which ends in `.ts`, relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. Each piece is at the primary piece's path with `.ts` replaced, such as `.spec.ts`. `expects` takes only `spec`; without a block, the role expects a spec. | |
+| `role NAME files=PATTERN { expects PIECE ... }` | Find each artifact of the role by this [path pattern](plugin.md#artifact) for its primary piece, which ends in `.ts`, relative to `src-dir`, in place of `{path}.NAME.ts`; for a role the plugin doesn't have, add it. Each piece is at the primary piece's path with `.ts` replaced, such as `.spec.ts`. `expects` takes only `spec`; without a block, the role expects a spec. | |
 
 ### `debt`
 
@@ -58,7 +58,7 @@ Debt tracking: violations listed in the debt file don't fail the check, and an e
 | `file PATH` | The debt file, relative to the project's root. | `.config/crosslint/debt.tsv` |
 | `report-entries commented=SEVERITY matching=REGEX` | Also report each entry as a finding on the debt file, `line N lists PLUGIN/POLICY on ARTIFACT as debt: COMMENT`, from the policy `debt/has-debt`: an entry with a comment at `commented` (`error`, `warning`, or `none`; without it, the policy's severity), and one without at the policy's severity. With `matching`, only a comment the regular expression matches counts as one. | entries aren't reported |
 
-The debt file is tab-separated, in ng-nudge's format, so a file moved from ng-nudge reads unchanged: a header row `Rule`, `Artifact`, `Comment`, and an optional fourth column `Detail`, then one entry per line. `Rule` is `PLUGIN/POLICY`, or a bare policy name, which stands for the policy of that name when exactly one listed plugin has one. `Artifact` is the artifact's name, which is its primary path unless its declaration has a [`name`](plugin.md#artifact), or its [key](plugin-glossary.md#declaring), such as ng-nudge's base path `app/card/card`, alone or as `NAME.ROLE`. A field holding a tab, a newline, or `"` is wrapped in `"`, with each `"` doubled. Paths are written with `/` on every system, a path read with `\` is read as `/`, and the file keeps the line endings it had. An entry with no rule or no artifact stops CrossLint with exit status 2, naming the file and the line.
+The debt file is tab-separated, in ng-nudge's format, so a file moved from ng-nudge reads unchanged: a header row `Rule`, `Artifact`, `Comment`, and an optional fourth column `Detail`, then one entry per line. `Rule` is `PLUGIN/POLICY`, or a bare policy name, which stands for the policy of that name when exactly one listed plugin has one. `Artifact` is the artifact's name, which is its primary piece's path unless its declaration has a [`name`](plugin.md#artifact), or its [key](plugin-glossary.md#declaring), such as ng-nudge's base path `app/card/card`, alone or as `NAME.ROLE`. A field holding a tab, a newline, or `"` is wrapped in `"`, with each `"` doubled. Paths are written with `/` on every system, a path read with `\` is read as `/`, and the file keeps the line endings it had. An entry with no rule or no artifact stops CrossLint with exit status 2, naming the file and the line.
 
 An entry for a plugin the configuration doesn't list, for a disabled policy, or for a plugin that stopped at a fault is kept as it is. The check doesn't count it as paid off, which would fail the check, and `report-entries` doesn't report it. `crosslint debt update` keeps it with its comment.
 
