@@ -110,7 +110,7 @@ class DecisionLogTest < Minitest::Test
   def test_warns_of_a_log_with_no_index
     result = check({}, settings: nil)
 
-    assert_equal [%(no file matches "docs/decisions/README.md", the primary of artifact "index")], result.notices.map(&:message)
+    assert_equal [%(no file matches "docs/decisions/README.md", the primary pattern of role "index")], result.notices.map(&:message)
   end
 
   def test_refuses_a_setting_that_isnt_one_path_inside_the_project

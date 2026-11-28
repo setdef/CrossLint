@@ -36,4 +36,4 @@ A record is a Markdown file directly in `folder` whose name starts with its numb
 | `decision-log/numbers-unique` | Two or more records with the same number, such as `0004-a.md` and `4-b.md`. Its violations are on the index. |
 | `decision-log/citations-resolve` | In any Markdown file of the project, `ADR` and a number, as in `ADR 7`, `ADR 0007`, or `ADR-0007`, where no record has that number. `former ADR 7`, the way a dated document mentions a deleted record, isn't checked, nor is a number in a code span or a fenced block. |
 
-A log with no index gets CrossLint's warning that no file matches the artifact `index`. A link to a record from another file isn't this plugin's to check: [markdown-links](../markdown-links/README.md) checks every relative link.
+A log with no index gets CrossLint's warning that no file matches the primary pattern of the role `index`. A link to a record from another file isn't this plugin's to check: [markdown-links](../markdown-links/README.md) checks every relative link.

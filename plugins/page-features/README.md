@@ -34,7 +34,7 @@ Whatever `page` matches, a file is a page unless the text `{path}` matched has a
 
 The policy `page-features/feature-exists` reports a page with no feature file at the path `feature` gives, by its exact name. It doesn't read the feature file: the test runner that runs the scenarios reports one it can't parse.
 
-A project whose files `page` doesn't match gets CrossLint's warning that no file matches the artifact `page`, which usually means `page` needs the project's layout.
+A project whose files `page` doesn't match gets CrossLint's warning that no file matches the primary pattern of the role `page`, which usually means `page` needs the project's layout.
 
 ## How a page is found
 

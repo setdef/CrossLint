@@ -159,7 +159,7 @@ class CheckTest < Minitest::Test
   end
 
   def test_says_when_no_file_has_a_match_of_a_primarys_regex_and_finds_none_in_a_file_it_cant_read
-    notice = %(no file that "config/routes.rb" matches has a match of its regex, the primary of artifact "route")
+    notice = %(no file that "config/routes.rb" matches has a match of its regex, the primary pattern of role "route")
 
     assert_equal [notice], check(project(routes_plugin), files: [], contents: {"config/routes.rb" => "resources :carts\n"}).notices.map(&:message)
     assert_equal [notice], check(project(routes_plugin), files: ["config/routes.rb"]).notices.map(&:message)
@@ -387,7 +387,7 @@ class CheckTest < Minitest::Test
     result = check(project(plugin), files: ["lib/a.rb", "test/a_test.rb"])
 
     assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 9,
-      message: %(no file matches "docs/{path}.md", the primary of artifact "doc"))], result.notices
+      message: %(no file matches "docs/{path}.md", the primary pattern of role "doc"))], result.notices
     refute result.failed
   end
 
@@ -399,7 +399,7 @@ class CheckTest < Minitest::Test
     some = check(project(plugin), files: ["src/a.component.ts"])
     none = check(project(plugin), files: ["app/a.component.ts"])
 
-    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 4, message: %(no file matches "src/{path}.store.ts", the primary of artifact "store"))],
+    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 4, message: %(no file matches "src/{path}.store.ts", the primary pattern of role "store"))],
       some.notices
     assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 2,
       message: %(no file matches the primary of any artifact of plugin tests, such as "src/{path}.pipe.ts"))], none.notices

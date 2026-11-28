@@ -193,7 +193,7 @@ module CrossLint
 
         empty.reject(&:optional).map do |declaration|
           found = declaration.regex ? "no file that #{declaration.primary.source.dump} matches has a match of its regex" : "no file matches #{declaration.primary.source.dump}"
-          Notice.new(file: plugin.manifest.file, line: declaration.line, message: "#{found}, the primary of artifact #{declaration.name.dump}")
+          Notice.new(file: plugin.manifest.file, line: declaration.line, message: "#{found}, the primary pattern of role #{declaration.name.dump}")
         end
       end
 

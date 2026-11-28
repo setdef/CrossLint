@@ -139,7 +139,7 @@ class AngularPathsTest < Minitest::Test
     write(@root, "src/a.service.ts", "")
     write(@root, "src/a.service.spec.ts", "")
 
-    assert_equal [%(no file matches "src/{path}.store.ts", the primary of artifact "store")], check(%(role "store")).notices.map(&:message)
+    assert_equal [%(no file matches "src/{path}.store.ts", the primary pattern of role "store")], check(%(role "store")).notices.map(&:message)
   end
 
   # Only a component has a stub, an interface, stylesheets, and the
