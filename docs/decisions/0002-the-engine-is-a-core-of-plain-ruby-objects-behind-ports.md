@@ -27,7 +27,7 @@ CrossLint reads a configuration and plugin manifests in KDL and a debt file in T
 Chosen: option 1.
 
 - **The core** holds the domain as immutable value objects, each `class X < Data.define(...)`, and one use case per command. It requires Ruby's core and standard library and nothing else.
-- **Ports** are RBS interfaces in `sig/`, named for what the core needs, such as `_ProjectFiles` or `_DebtFile`. Ruby checks nothing about them; Steep checks each adapter's methods against them, and RBS's runtime checker checks every call during the tests.
+- **Ports** are RBS interfaces in `sig/`, named for what the core needs, such as `_ProjectFiles` or `_DebtFiles`. Ruby checks nothing about them; Steep checks each adapter's methods against them, and RBS's runtime checker checks every call during the tests.
 - **Adapters** implement the ports: KDL, TSV, Git and the filesystem, subprocesses, text and JSON. An in-memory adapter of each port ships with CrossLint, and every adapter of a port, the in-memory one included, passes the same contract tests.
 - **The command line is an adapter too,** and **one composition root** builds the adapters and hands them to the use case the command line chose.
 
