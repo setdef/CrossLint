@@ -293,16 +293,17 @@ task "build:check:angular", [:app] do |_, arguments|
 end
 
 # A project that lists the built-in debt plugin, which the app carries,
-# and whose debt file accepts its one violation; then a second violation,
-# which the plugin's command, crosslint debt update, writes to the debt
-# file. PATH holds only Git's folder.
+# and whose debt file, in the form crosslint debt update writes, with
+# the piece's name as the detail, accepts its one violation; then a
+# second violation, which the plugin's command, crosslint debt update,
+# writes to the debt file. PATH holds only Git's folder.
 task "build:check:debt", [:app] do |_, arguments|
   app = File.expand_path(arguments.fetch(:app))
   files = {
     ".config/crosslint/config.kdl" => %(plugin "debt"\nplugin ".config/crosslint/docs"\n),
     ".config/crosslint/docs/plugin.kdl" => %(artifact "doc" {\n  primary "{path}.md"\n  piece "note" "{path}.txt"\n}\n) +
       %(policy "has-note" {\n  applies-to "doc"\n  rule "piece-exists" piece="note"\n}\n),
-    ".config/crosslint/debt.tsv" => "Rule\tArtifact\tComment\r\ndocs/has-note\ta.md\tlater\r\n",
+    ".config/crosslint/debt.tsv" => "Rule\tArtifact\tComment\tDetail\r\ndocs/has-note\ta.md\tlater\tnote\r\n",
     "a.md" => ""
   }
   finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
