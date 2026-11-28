@@ -57,13 +57,28 @@ module CrossLint
       @read: ^(String path) -> String
     end
 
-    # The artifact a rule checks: its primary piece's path and its pieces.
+    # The artifact a rule checks: its name, role, and key, the path and
+    # line of its primary piece, and its other pieces.
     class Artifact
       # The artifact's role: its declaration's name, such as "ruby-file".
       attr_reader role: String
 
+      # The name CrossLint calls the artifact by in every violation and
+      # debt entry: what its declaration's name pattern gives, or its
+      # primary piece's path, such as "GET /cart".
+      attr_reader name: String
+
       # The primary piece's path, relative to the project's root, with `/`.
       attr_reader path: String
+
+      # The line of the primary piece's file where its declaration's regex
+      # matched, from 1, or nil for an artifact whose primary piece is a
+      # whole file.
+      attr_reader line: Integer?
+
+      # The name a debt entry can give the artifact by in place of its
+      # name, from its declaration's key pattern, or nil when it has none.
+      attr_reader key: String?
 
       # The text each placeholder of the primary pattern matched in `path`,
       # by name, such as `{"path" => "fledge/archive"}`; frozen.

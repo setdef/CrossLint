@@ -60,6 +60,23 @@ class RubyRuleTest < Minitest::Test
     assert_equal [["lib/x/a.rb", "ruby-file", {"path" => "x/a"}, true, "# a\n"], ["signature", "sig/x/a.rbs", true, "class A\n"]], seen
   end
 
+  def test_shows_a_rule_the_artifacts_name_line_and_key
+    seen = []
+    rule = Class.new(CrossLint::Rule) do
+      define_method(:check) do |artifact|
+        seen << [artifact.name, artifact.line, artifact.key]
+        []
+      end
+    end
+    code = {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}
+    function = ruby_file.with(regex: Regex.new(source: 'def (?<function>\w+)'), key: PathPattern.new(source: "{path}"),
+      name_pattern: PathPattern.new(source: "{path}:{function}", captures: %w[function]))
+    check(code:, files: {"lib/x/a.rb" => "# a\ndef run\nend\n"})
+    check(code:, files: {"lib/x/a.rb" => "# a\ndef run\nend\n"}, artifact: function)
+
+    assert_equal [["lib/x/a.rb", nil, nil], ["x/a:run", 2, "x/a"]], seen
+  end
+
   # For a rule that checks a path an artifact's text names, such as a
   # link's target, which no piece can give.
   def test_shows_a_rule_the_projects_files_frozen_from_initialize_on
@@ -397,14 +414,12 @@ class RubyRuleTest < Minitest::Test
   # "names-class" of its own. The plugin "tests" declares a helper of
   # each name in `helpers`, which answers with its proc, run on "node".
   def check(files:, code: {"names_class.rb" => NAMES_CLASS}, name: "names-class", severity: nil, override: nil, enabled: nil, policies: 1,
-    others: false, helpers: {}, running: CrossLint::Adapters::MemoryHelpers.new(helpers.transform_keys { |helper| "tests/#{helper}" }, commands: ["node"]),
+    others: false, artifact: ruby_file, helpers: {}, running: CrossLint::Adapters::MemoryHelpers.new(helpers.transform_keys { |helper| "tests/#{helper}" }, commands: ["node"]),
     **options)
     if others.is_a?(String)
       source = others
       code = code.merge("../../other/rules/names_class.rb" => source)
     end
-    artifact = ArtifactDeclaration.new(name: "ruby-file", primary: PathPattern.new(source: "lib/{path}.rb"), line: 1,
-      pieces: [PieceDeclaration.new(name: "signature", pattern: PathPattern.new(source: "sig/{path}.rbs"), line: 2)])
     rule = PolicyRule.new(name:, arguments: {}, severity:, line: 7)
     policies = (1..policies).map { |index| Policy.new(name: "names-match#{index if index > 1}", applies_to: AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, rules: [rule], line: 5) }
     declaration = RuleDeclaration.new(name:, ruby: "rules/#{name.tr("-", "_")}.rb", line: 3)
@@ -426,6 +441,11 @@ class RubyRuleTest < Minitest::Test
     end
     Check.new(project_files:, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(loaded), helpers: running, steps: {})
       .call(Project.new(root: ROOT, configuration:, plugins:), **options)
+  end
+
+  def ruby_file
+    ArtifactDeclaration.new(name: "ruby-file", primary: PathPattern.new(source: "lib/{path}.rb"), line: 1,
+      pieces: [PieceDeclaration.new(name: "signature", pattern: PathPattern.new(source: "sig/{path}.rbs"), line: 2)])
   end
 
   def plugin(name, manifest)
