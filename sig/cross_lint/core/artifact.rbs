@@ -150,8 +150,8 @@ module CrossLint
   
     # What a Ruby rule reports, made with CrossLint::Rule#violation: the
     # artifact it checked, by the path of its primary piece and its role, a
-    # message, and a detail where the rule gives one. The check adds the plugin, policy,
-    # and severity to make a Violation.
+    # message, and a detail where the rule gives one. The check adds the
+    # plugin, policy, and severity to make a Violation.
     class RuleResult < Data
       # The path of the artifact's primary piece, relative to the project's
       # root.

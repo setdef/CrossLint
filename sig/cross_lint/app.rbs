@@ -14,10 +14,10 @@ module CrossLint
     # An app that reads the configuration through `configuration`, the
     # manifests through `manifests`, the project's files through
     # `project_files`, helpers on the Ruby CrossLint carries through
-    # `carried_ruby`, and runs the other helpers through `helpers`, with the built-in plugins in `plugins`,
-    # each a folder named in `built_in` that holds a manifest,
-    # and whose step track-debt reads and writes debt files through
-    # `debt_files`. With no `helpers`, it runs them as processes, writing
+    # `carried_ruby`, and runs the other helpers through `helpers`, with
+    # the built-in plugins in `plugins`, each a folder named in `built_in`
+    # that holds a manifest, and whose step track-debt reads and writes
+    # debt files through `debt_files`. With no `helpers`, it runs them as processes, writing
     # what they write to standard error to `err` with `debug`. It reads
     # ng-nudge's files through `ng_nudge` and tests regular expressions
     # with Node by default, through `javascript`. It fetches

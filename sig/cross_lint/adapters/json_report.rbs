@@ -15,8 +15,7 @@ module CrossLint
     # has: the same path, unless the artifact's declaration has a name
     # pattern. Its `line` is the line a primary's regex found the
     # artifact on, and null for an artifact whose primary piece is a whole
-    # file. A paid-off
-    # entry has its `file` and `line`, its `plugin`,
+    # file. A paid-off entry has its `file` and `line`, its `plugin`,
     # `policy`, and `artifact`, and a `message`. The keys are in those
     # orders, and every character that isn't ASCII is escaped.
     class JSONReport < TextReport

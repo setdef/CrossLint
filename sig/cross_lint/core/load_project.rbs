@@ -102,8 +102,7 @@ module CrossLint
       # `plugin`, with the artifacts its helper declares from its settings
       # added to its manifest's when it has `artifacts helper=`, whether
       # the helper runs on the Ruby CrossLint carries or as a program.
-      # `root` is the project's root, and `file`
-      # the configuration's.
+      # `root` is the project's root, and `file` the configuration's.
       def declare: (String root, Plugin plugin, String file) -> Plugin
 
       # `plugin` with the artifacts its helper `declaration` names declares,

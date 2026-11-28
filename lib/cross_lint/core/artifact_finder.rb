@@ -54,9 +54,9 @@ module CrossLint
         end
       end
 
-      # What each artifact in the primary piece's file at `path` matched, with the
-      # line where its regex matched: one artifact with no line, for a
-      # primary with no regex.
+      # What each artifact in the primary piece's file at `path` matched,
+      # with the line where its regex matched: one artifact with no line,
+      # for a primary with no regex.
       def primary_matches(plugin, declaration, path, match)
         regex = declaration.regex
         return [[match, nil]] unless regex
