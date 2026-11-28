@@ -12,6 +12,12 @@
 # from the package-lock.json beside the folder. The packages come from
 # the folders the app holds, never from a list.
 #
+# Some of those packages carry another project's code inside their own
+# files, such as the TypeScript in @ts-morph/common's dist/typescript.js.
+# Each such work (tasks/bundled_works.rb) gets an entry in
+# both files, with its license text, and the build fails when the app
+# has a license notice that the table of works doesn't know.
+#
 #   ruby tasks/npm_notices.rb DIST
 #
 # DIST is the folder Fledge built into. Each archive in it is unpacked
@@ -22,6 +28,7 @@
 require "json"
 require "open3"
 require "digest"
+require_relative "bundled_works"
 
 module NpmNotices
   # A package in a node_modules folder: its name and version, the license
@@ -29,10 +36,12 @@ module NpmNotices
   # are, as paths from the app's folder.
   Package = Data.define(:name, :version, :license, :folder, :license_files)
 
-  class Failure < StandardError; end
+  Failure = BundledWorks::Failure
 
   LICENSE_FILE = /\A(licen[cs]e|notice|copying|unlicense)/i
   HEADING = "NPM PACKAGES THE APP CARRIES"
+  BUNDLED_HEADING = "WORKS THE NPM PACKAGES BUNDLE"
+  NO_VERSION = "not stated in the files that carry it"
   NOTICES = "notices/NOTICES.txt"
   SBOM = "notices/sbom.spdx.json"
 
@@ -75,17 +84,24 @@ module NpmNotices
     declared unless declared.to_s.empty?
   end
 
-  # Writes the packages of the app folder +app+ into its notices and its
-  # SBOM. +sbom+ gives the SPDX document that lists the packages a
-  # package-lock.json locks, for the folder that holds the lockfile.
-  def add(app, sbom: method(:npm_sbom))
+  # Writes the packages of the app folder +app+, and the works they bundle
+  # (BundledWorks), into its notices and its SBOM. +sbom+ gives the SPDX
+  # document that lists the packages a package-lock.json locks, for the
+  # folder that holds the lockfile. +release+ gives the license files of
+  # an npm package at a version, as BundledWorks.npm_release does.
+  def add(app, sbom: method(:npm_sbom), release: BundledWorks.method(:npm_release))
     found = installed(app)
     return if found.empty?
 
     documents = lockfile_folders(app, found).to_h { |folder| [folder, sbom.call(File.join(app, folder))] }
     check_lockfiles_match(found, documents)
-    File.binwrite(File.join(app, NOTICES), with_notices(File.binread(File.join(app, NOTICES)), found, documents))
-    File.binwrite(File.join(app, SBOM), "#{JSON.pretty_generate(with_sbom(JSON.parse(File.binread(File.join(app, SBOM))), documents))}\n")
+    works = BundledWorks.find(app, found)
+    unknown = BundledWorks.unknown(app, found, works)
+    raise Failure, unknown.join("\n") unless unknown.empty?
+
+    texts = works.to_h { |work| [work, work.release ? release.call(*work.release) : {}] }
+    File.binwrite(File.join(app, NOTICES), with_notices(File.binread(File.join(app, NOTICES)), found, documents, texts))
+    File.binwrite(File.join(app, SBOM), "#{JSON.pretty_generate(with_sbom(JSON.parse(File.binread(File.join(app, SBOM))), documents, texts.keys))}\n")
   end
 
   # The folders that hold a package-lock.json for the node_modules
@@ -124,16 +140,45 @@ module NpmNotices
   # lockfile, which is the folder's own.
   def locked_packages(document) = document.fetch("packages").reject { |package| document.fetch("documentDescribes").include?(package["SPDXID"]) }
 
-  def with_notices(text, found, documents)
+  def with_notices(text, found, documents, works)
     raise Failure, "#{NOTICES} has a #{HEADING} section already" if text.include?(HEADING)
 
     sources = documents.values.flat_map { |document| locked_packages(document) }.to_h { |package| [[package["name"], package["versionInfo"]], package["downloadLocation"]] }
     entries = found.map { |package| entry(package, sources.fetch([package.name, package.version])) }
     section = "#{HEADING}\n\nThe app carries these npm packages, which npm installed from the package-lock.json beside each node_modules folder.\n" \
-      "Each package keeps its license files in its own folder, at the path in its entry.\n\n#{entries.join("\n")}"
+      "Each package keeps its license files in its own folder, at the path in its entry.\n\n#{entries.join("\n")}#{bundled_section(works)}"
     raise Failure, "#{NOTICES} has no LICENSE TEXTS heading to put the npm packages before" unless text.match?(/^LICENSE TEXTS$/)
 
-    text.sub(/^LICENSE TEXTS$/) { "#{section}\n\nLICENSE TEXTS".b }
+    text.sub(/^LICENSE TEXTS$/) { "#{section}\n\nLICENSE TEXTS".b } + license_texts(works).b
+  end
+
+  # The section for the works that the packages bundle, which is empty
+  # when they bundle none.
+  def bundled_section(works)
+    return "" if works.empty?
+
+    "\n\n#{BUNDLED_HEADING}\n\nThe npm packages above carry these works inside their files, which no package.json lists.\n" \
+      "A work's license text is in the file of its entry, or below, under LICENSE TEXTS.\n\n#{works.map { |work, texts| bundled_entry(work, texts) }.join("\n")}"
+  end
+
+  def bundled_entry(work, texts)
+    license_text = texts.empty? ? work.places.map { |place| "#{place.file}, in the notice at line #{place.line}" }.join("; ") : "#{texts.keys.map { |file| "#{work.folder}/#{file}" }.join(", ")}, below"
+    <<~ENTRY
+      #{work.work.name} (bundled work)
+        Version: #{work.version || NO_VERSION}
+        License: #{work.work.license}
+        Copyright: #{work.copyright || "not stated in the files that carry it"}
+        Bundled in: #{work.places.map(&:package).uniq.map { |package| "#{package.name} #{package.version}" }.join(", ")}
+        Ships as: code in #{work.places.map(&:file).join(", ")}
+        Source: #{work.source}
+        License text: #{license_text}
+    ENTRY
+  end
+
+  # The license files of the works that npm packages release, in the form
+  # of the runtime's own, to follow LICENSE TEXTS.
+  def license_texts(works)
+    works.flat_map { |work, texts| texts.map { |file, text| "\n=== #{work.folder}/#{file}\n\n#{text.strip}\n" } }.join
   end
 
   def entry(package, source)
@@ -146,19 +191,42 @@ module NpmNotices
 
   # The SBOM +document+ with the packages of each npm SBOM in
   # +documents+ (by the folder of its lockfile) and what they depend on.
-  def with_sbom(document, documents)
+  # +works+ are the works the packages bundle, each a package that the
+  # packages carrying it contain.
+  def with_sbom(document, documents, works)
     added = documents.flat_map { |folder, npm| npm.fetch("packages").map { |package| located(package, folder) } }
+    bundled = works.map { |work| bundled_package(work) }
     taken = document.fetch("packages").map { |package| package["SPDXID"] }
-    clash = added.map { |package| package["SPDXID"] }.tally.select { |id, count| count > 1 || taken.include?(id) }.keys
+    clash = (added + bundled).map { |package| package["SPDXID"] }.tally.select { |id, count| count > 1 || taken.include?(id) }.keys
     raise Failure, "#{SBOM} would have two packages with the id #{clash.first}" unless clash.empty?
 
     npm = documents.values
     document.merge(
       "creationInfo" => document.fetch("creationInfo").merge("creators" => (document.dig("creationInfo", "creators") + npm.flat_map { |each| each.dig("creationInfo", "creators") }).uniq),
-      "documentNamespace" => "#{document.fetch("documentNamespace")}-npm-#{Digest::SHA256.hexdigest(JSON.generate(added))[0, 16]}",
-      "packages" => document.fetch("packages") + added,
-      "relationships" => document.fetch("relationships") + npm.flat_map { |each| each.fetch("relationships") }
+      "documentNamespace" => "#{document.fetch("documentNamespace")}-npm-#{Digest::SHA256.hexdigest(JSON.generate([added, bundled]))[0, 16]}",
+      "packages" => document.fetch("packages") + added + bundled,
+      "relationships" => document.fetch("relationships") + npm.flat_map { |each| each.fetch("relationships") } + works.flat_map { |work| contains(work, added) }
     )
+  end
+
+  # A work that packages bundle, as an SPDX package: SPDX 2.3 has a
+  # package that contains another, and a work no lockfile locks is a
+  # package of its own.
+  def bundled_package(work)
+    {"SPDXID" => work.spdx_id, "name" => work.work.name, "versionInfo" => work.version, "downloadLocation" => work.source, "filesAnalyzed" => false,
+     "licenseDeclared" => work.work.license, "licenseConcluded" => "NOASSERTION", "copyrightText" => work.copyright || "NOASSERTION",
+     "comment" => "Ships as: code in #{work.places.map(&:file).join(", ")}",
+     "externalRefs" => (work.work.release ? [{"referenceCategory" => "PACKAGE-MANAGER", "referenceType" => "purl", "referenceLocator" => "pkg:npm/#{work.work.release}@#{work.version}"}] : nil)}.compact
+  end
+
+  # The relationships from each package of +added+ that carries +work+ to it.
+  def contains(work, added)
+    work.places.map(&:package).uniq.map do |package|
+      carrier = added.find { |each| each["name"] == package.name && each["versionInfo"] == package.version }
+      raise Failure, "#{SBOM} would have no package for #{package.name} #{package.version}, which carries #{work.work.name}" unless carrier
+
+      {"spdxElementId" => carrier["SPDXID"], "relationshipType" => "CONTAINS", "relatedSpdxElement" => work.spdx_id}
+    end
   end
 
   # An npm SBOM's +package+ with a comment that says where the app has it, as Fledge's packages do.
@@ -172,13 +240,36 @@ module NpmNotices
   # the app holds, as #installed does, and not what #add wrote.
   def problems(app)
     notices = File.binread(File.join(app, NOTICES))
-    sbom = JSON.parse(File.binread(File.join(app, SBOM))).fetch("packages")
-    installed(app).flat_map do |package|
-      label = "#{package.name} #{package.version} (#{package.license})"
-      listed = notices.include?("#{package.name} (npm package)\n  Version: #{package.version}\n  License: #{package.license}\n".b)
-      found = sbom.any? { |each| each["name"] == package.name && each["versionInfo"] == package.version && each["licenseDeclared"] == package.license }
-      [("#{NOTICES} lacks #{label}" unless listed), ("#{SBOM} lacks #{label}" unless found)].compact
+    document = JSON.parse(File.binread(File.join(app, SBOM)))
+    packages = installed(app)
+    works = BundledWorks.find(app, packages)
+    packages.flat_map { |package| package_problems(package, notices, document) } + works.flat_map { |work| work_problems(work, notices, document) } +
+      BundledWorks.unknown(app, packages, works)
+  end
+
+  def package_problems(package, notices, document)
+    label = "#{package.name} #{package.version} (#{package.license})"
+    listed = notices.include?("#{package.name} (npm package)\n  Version: #{package.version}\n  License: #{package.license}\n".b)
+    found = document.fetch("packages").any? { |each| each["name"] == package.name && each["versionInfo"] == package.version && each["licenseDeclared"] == package.license }
+    [("#{NOTICES} lacks #{label}" unless listed), ("#{SBOM} lacks #{label}" unless found)].compact
+  end
+
+  # What the notices and the SBOM lack of a bundled +work+: its entry, its
+  # license text when a release has it, and the SBOM's package and the
+  # relationship from each package that carries it.
+  def work_problems(work, notices, document)
+    label = "#{work.work.name} #{work.version} (#{work.work.license})".squeeze(" ")
+    listed = notices.include?("#{work.work.name} (bundled work)\n  Version: #{work.version || NO_VERSION}\n  License: #{work.work.license}\n".b)
+    texted = !work.release || notices.match?(%r{^=== #{Regexp.escape(work.folder)}/licen[cs]e}i)
+    packages = document.fetch("packages")
+    found = packages.any? { |each| each["SPDXID"] == work.spdx_id && each["name"] == work.work.name && each["licenseDeclared"] == work.work.license }
+    relationships = document.fetch("relationships").map { |each| each.values_at("spdxElementId", "relationshipType", "relatedSpdxElement") }
+    related = work.places.map(&:package).uniq.all? do |package|
+      carrier = packages.find { |each| each["name"] == package.name && each["versionInfo"] == package.version }
+      carrier && relationships.include?([carrier["SPDXID"], "CONTAINS", work.spdx_id])
     end
+    [("#{NOTICES} lacks #{label}" unless listed), ("#{NOTICES} lacks the license text of #{label}" unless texted),
+      ("#{SBOM} lacks #{label}" unless found), ("#{SBOM} lacks the relationships that say each package carrying #{label} contains it" unless related)].compact
   end
 end
 
@@ -205,6 +296,6 @@ if $PROGRAM_NAME == __FILE__
     rescue NpmNotices::Failure => failure
       abort "npm_notices.rb: #{file}: #{failure.message}"
     end
-    puts "npm_notices.rb: #{file} lists the npm packages it carries"
+    puts "npm_notices.rb: #{file} lists the npm packages it carries, and the works they bundle"
   end
 end

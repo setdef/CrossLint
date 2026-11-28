@@ -205,7 +205,10 @@ task "build:check:notices", [:app] do |_, arguments|
   problems = NpmNotices.problems(folder)
   abort "rake build:check: #{folder}:\n#{problems.join("\n")}" unless problems.empty?
 
-  puts "#{folder}: lists the #{carried.size} npm packages it carries in its notices and SBOM"
+  works = BundledWorks.find(folder, carried)
+  abort "rake build:check: #{folder} carries no work that npm packages bundle, and @ts-morph/common bundles TypeScript" unless works.any? { |work| work.work.name == "TypeScript" }
+
+  puts "#{folder}: lists the #{carried.size} npm packages it carries, and the #{works.size} works they bundle, in its notices and SBOM"
 end
 
 # A project that lists a shared plugin at an https URL, which a Git

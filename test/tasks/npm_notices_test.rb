@@ -13,6 +13,12 @@ class NpmNoticesTest < Minitest::Test
   PLUGIN = "app/plugins/example"
   NOTICES = "Third-party software in this app\n\n\nCOMPONENTS\n\nRuby\n  Version: 4.1.0\n\n\nLICENSE TEXTS\n\n=== ruby/COPYING\n\nRuby's license\n"
 
+  APACHE_HEADER = "/*! *****\nCopyright (c) Microsoft Corporation. All rights reserved.\nLicensed under the Apache License, Version 2.0 (the \"License\"); you may not use\n" \
+    "this file except in compliance with the License.\n***** */\n\n"
+  BSD_HEADER = "/******\nCopyright (c) Microsoft Corporation.\n\nPermission to use, copy, modify, and/or distribute this software for any\npurpose with or without fee is hereby granted.\n***** */\n"
+  # The license files at the top of typescript@6.0.2, as npm pack gives them.
+  RELEASE = {"LICENSE.txt" => "Apache License\nVersion 2.0, January 2004\n", "ThirdPartyNoticeText.txt" => "Third party notices\n"}.freeze
+
   def setup
     @app = Dir.mktmpdir("npm-notices")
     write(@app, "notices/NOTICES.txt", NOTICES)
@@ -239,6 +245,165 @@ class NpmNoticesTest < Minitest::Test
     assert_equal ["notices/sbom.spdx.json lacks @ts-morph/common 0.29.1 (MIT)", "notices/NOTICES.txt lacks ts-morph 28.0.0 (MIT)"], NpmNotices.problems(@app)
   end
 
+  def test_gives_the_typescript_that_a_package_bundles_an_entry_of_its_own_and_the_license_texts_of_its_release
+    bundle_typescript
+    asked = []
+
+    NpmNotices.add(@app, sbom: locked, release: ->(name, version) {
+      asked << [name, version]
+      RELEASE
+    })
+
+    notices = File.binread(File.join(@app, "notices/NOTICES.txt"))
+
+    assert_equal [["typescript", "6.0.2"]], asked
+    assert_equal <<~ENTRY, notices[/TypeScript \(bundled work\).*?(?=\n\nLICENSE TEXTS)/m]
+      TypeScript (bundled work)
+        Version: 6.0.2
+        License: Apache-2.0
+        Copyright: Copyright (c) Microsoft Corporation. All rights reserved.
+        Bundled in: @ts-morph/common 0.29.1
+        Ships as: code in #{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js
+        Source: https://registry.npmjs.org/typescript/-/typescript-6.0.2.tgz
+        License text: typescript-6.0.2/LICENSE.txt, typescript-6.0.2/ThirdPartyNoticeText.txt, below
+    ENTRY
+    assert notices.end_with?("LICENSE TEXTS\n\n=== ruby/COPYING\n\nRuby's license\n\n=== typescript-6.0.2/LICENSE.txt\n\nApache License\nVersion 2.0, January 2004\n" \
+      "\n=== typescript-6.0.2/ThirdPartyNoticeText.txt\n\nThird party notices\n")
+  end
+
+  def test_passes_on_the_notice_file_that_the_release_of_a_bundled_work_has
+    bundle_typescript
+
+    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE.merge("NOTICE.txt" => "Notice of the work\n") })
+
+    notices = File.binread(File.join(@app, "notices/NOTICES.txt"))
+
+    assert_includes notices, "License text: typescript-6.0.2/LICENSE.txt, typescript-6.0.2/ThirdPartyNoticeText.txt, typescript-6.0.2/NOTICE.txt, below"
+    assert notices.end_with?("\n=== typescript-6.0.2/ThirdPartyNoticeText.txt\n\nThird party notices\n\n=== typescript-6.0.2/NOTICE.txt\n\nNotice of the work\n")
+  end
+
+  def test_adds_a_bundled_work_to_the_sbom_as_a_package_that_the_package_carrying_it_contains
+    bundle_typescript
+
+    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE })
+
+    sbom = JSON.parse(File.binread(File.join(@app, "notices/sbom.spdx.json")))
+
+    assert_equal({"SPDXID" => "SPDXRef-Package-bundled-TypeScript-6.0.2", "name" => "TypeScript", "versionInfo" => "6.0.2",
+                  "downloadLocation" => "https://registry.npmjs.org/typescript/-/typescript-6.0.2.tgz", "filesAnalyzed" => false, "licenseDeclared" => "Apache-2.0",
+                  "licenseConcluded" => "NOASSERTION", "copyrightText" => "Copyright (c) Microsoft Corporation. All rights reserved.",
+                  "comment" => "Ships as: code in #{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js",
+                  "externalRefs" => [{"referenceCategory" => "PACKAGE-MANAGER", "referenceType" => "purl", "referenceLocator" => "pkg:npm/typescript@6.0.2"}]},
+      sbom["packages"].last)
+    assert_equal ["SPDXRef-Package-ts-morph.common-0.29.1", "CONTAINS", "SPDXRef-Package-bundled-TypeScript-6.0.2"], sbom["relationships"].last.values_at("spdxElementId", "relationshipType", "relatedSpdxElement")
+  end
+
+  def test_gives_a_work_that_keeps_its_license_in_the_files_that_carry_it_an_entry_that_points_to_the_notice_and_asks_no_release
+    install("path-browserify", "1.0.1", license: "MIT")
+    write(@app, "#{PLUGIN}/node_modules/path-browserify/index.js", "// 'path' module extracted from Node.js v8.11.1 (only the posix part)\n\n// Copyright Joyent, Inc. and other Node contributors.\n//\n// Permission is hereby granted\n")
+
+    NpmNotices.add(@app, sbom: sbom_of("@ts-morph/common" => "0.29.1", "ts-morph" => "28.0.0", "path-browserify" => "1.0.1"), release: ->(*) { flunk "asked for a release" })
+
+    assert_includes File.binread(File.join(@app, "notices/NOTICES.txt")), <<~ENTRY
+      Node.js (bundled work)
+        Version: 8.11.1
+        License: MIT
+        Copyright: Copyright Joyent, Inc. and other Node contributors
+        Bundled in: path-browserify 1.0.1
+        Ships as: code in #{PLUGIN}/node_modules/path-browserify/index.js
+        Source: https://github.com/nodejs/node/tree/v8.11.1
+        License text: #{PLUGIN}/node_modules/path-browserify/index.js, in the notice at line 3
+    ENTRY
+  end
+
+  def test_gives_a_work_that_says_no_version_a_package_without_one_and_a_relationship_from_each_package_that_carries_it
+    bundle_tslib
+
+    NpmNotices.add(@app, sbom: locked, release: ->(*) { flunk "asked for a release" })
+
+    sbom = JSON.parse(File.binread(File.join(@app, "notices/sbom.spdx.json")))
+    work = sbom["packages"].find { |package| package["name"] == "tslib" }
+
+    assert_includes File.binread(File.join(@app, "notices/NOTICES.txt")), "tslib (bundled work)\n  Version: not stated in the files that carry it\n  License: 0BSD\n"
+    assert_equal ["SPDXRef-Package-bundled-tslib", nil, "0BSD"], work.values_at("SPDXID", "versionInfo", "licenseDeclared")
+    assert_equal [["SPDXRef-Package-ts-morph-28.0.0", "CONTAINS", "SPDXRef-Package-bundled-tslib"], ["SPDXRef-Package-ts-morph.common-0.29.1", "CONTAINS", "SPDXRef-Package-bundled-tslib"]],
+      sbom["relationships"].select { |each| each["relationshipType"] == "CONTAINS" }.map { |each| each.values_at("spdxElementId", "relationshipType", "relatedSpdxElement") }.sort
+  end
+
+  def test_refuses_a_bundled_work_whose_version_no_file_says
+    write(@app, "#{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js", "#{APACHE_HEADER}var ts = {};\n")
+
+    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE }) }
+
+    assert_equal "#{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js holds TypeScript, and no file that holds it says which version", error.message
+  end
+
+  def test_refuses_a_license_notice_in_a_file_of_a_package_that_the_works_it_knows_do_not_hold
+    write(@app, "#{PLUGIN}/node_modules/ts-morph/dist/vendored.js", "/* Licensed under the MIT License */\n")
+
+    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked) }
+
+    assert_equal "#{PLUGIN}/node_modules/ts-morph/dist/vendored.js has a license notice of a work that tasks/bundled_works.rb doesn't know", error.message
+  end
+
+  def test_finds_a_license_notice_that_came_into_the_app_after_its_notices_were_written
+    NpmNotices.add(@app, sbom: locked)
+    write(@app, "#{PLUGIN}/node_modules/ts-morph/dist/vendored.js", "// Permission is hereby granted\n")
+
+    assert_equal ["#{PLUGIN}/node_modules/ts-morph/dist/vendored.js has a license notice of a work that tasks/bundled_works.rb doesn't know"], NpmNotices.problems(@app)
+  end
+
+  def test_finds_every_part_of_a_bundled_work_that_the_notices_and_the_sbom_lack
+    bundle_typescript
+
+    assert_equal ["notices/NOTICES.txt lacks TypeScript 6.0.2 (Apache-2.0)", "notices/NOTICES.txt lacks the license text of TypeScript 6.0.2 (Apache-2.0)",
+      "notices/sbom.spdx.json lacks TypeScript 6.0.2 (Apache-2.0)",
+      "notices/sbom.spdx.json lacks the relationships that say each package carrying TypeScript 6.0.2 (Apache-2.0) contains it"], NpmNotices.problems(@app).grep(/TypeScript/)
+  end
+
+  def test_finds_no_bundled_work_missing_once_it_was_added
+    bundle_typescript
+    bundle_tslib
+
+    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE })
+
+    assert_empty NpmNotices.problems(@app)
+  end
+
+  def test_finds_the_entry_of_a_bundled_work_gone_from_the_notices
+    bundle_tslib
+    NpmNotices.add(@app, sbom: locked)
+    notices = File.join(@app, "notices/NOTICES.txt")
+    File.binwrite(notices, File.binread(notices).sub("tslib (bundled work)", "tslib (a work)"))
+
+    assert_equal ["notices/NOTICES.txt lacks tslib (0BSD)"], NpmNotices.problems(@app)
+  end
+
+  def test_finds_the_license_text_of_a_bundled_work_gone_from_the_notices
+    bundle_typescript
+    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE })
+    notices = File.join(@app, "notices/NOTICES.txt")
+    File.binwrite(notices, File.binread(notices).sub("=== typescript-6.0.2/LICENSE.txt", "=== typescript-6.0.2/README.txt"))
+
+    assert_equal ["notices/NOTICES.txt lacks the license text of TypeScript 6.0.2 (Apache-2.0)"], NpmNotices.problems(@app)
+  end
+
+  def test_finds_a_bundled_work_gone_from_the_sbom_or_no_longer_contained_by_the_package_that_carries_it
+    bundle_tslib
+    NpmNotices.add(@app, sbom: locked)
+    sbom = File.join(@app, "notices/sbom.spdx.json")
+    document = JSON.parse(File.binread(sbom))
+    document["relationships"].reject! { |each| each["spdxElementId"] == "SPDXRef-Package-ts-morph-28.0.0" && each["relationshipType"] == "CONTAINS" }
+    File.binwrite(sbom, JSON.generate(document))
+
+    assert_equal ["notices/sbom.spdx.json lacks the relationships that say each package carrying tslib (0BSD) contains it"], NpmNotices.problems(@app)
+
+    document["packages"].reject! { |package| package["name"] == "tslib" }
+    File.binwrite(sbom, JSON.generate(document))
+
+    assert_includes NpmNotices.problems(@app), "notices/sbom.spdx.json lacks tslib (0BSD)"
+  end
+
   def test_asks_npm_for_the_sbom_of_a_lockfile_without_reaching_a_registry_or_the_packages_of_development
     folder = File.join(@app, "locked")
     write(folder, "package.json", JSON.generate("name" => "locked", "version" => "1.0.0", "license" => "MIT",
@@ -262,6 +427,21 @@ class NpmNoticesTest < Minitest::Test
   end
 
   private
+
+  def locked = sbom_of("@ts-morph/common" => "0.29.1", "ts-morph" => "28.0.0")
+
+  # TypeScript, as @ts-morph/common bundles it: Microsoft's notice at the
+  # top of dist/typescript.js, and its version in the code.
+  def bundle_typescript(version = "6.0.2")
+    write(@app, "#{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js", "#{APACHE_HEADER}var ts = {};\nvar version = \"#{version}\";\n")
+  end
+
+  # The helpers of tslib, as rollup left them in the two packages that bundle them.
+  def bundle_tslib
+    %w[ts-morph/dist/ts-morph.js @ts-morph/common/dist/ts-morph-common.js].each do |file|
+      write(@app, "#{PLUGIN}/node_modules/#{file}", "class A {}\n\n#{BSD_HEADER}function __esDecorate() {}\n")
+    end
+  end
 
   def install(name, version, license: "MIT", manifest: {"license" => license}, at: "#{PLUGIN}/node_modules")
     folder = "#{at}/#{name}"
