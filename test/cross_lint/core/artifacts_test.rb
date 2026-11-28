@@ -2,8 +2,8 @@
 
 require "test_helper"
 
-# CrossLint::Artifacts, which a plugin's Ruby that declares artifacts
-# inherits from.
+# CrossLint::Artifacts, which the Ruby of a helper that declares
+# artifacts inherits from.
 class ArtifactsTest < Minitest::Test
   cover "CrossLint::Artifacts*"
 

@@ -6,9 +6,9 @@ require_relative "fault"
 require_relative "path_pattern"
 
 module CrossLint
-  # A plugin's artifacts file names this class CrossLint::Artifacts, as
-  # its rule files name CrossLint::Rule, so it is outside Core though
-  # core/ defines it.
+  # The file of a helper that declares a plugin's artifacts names this
+  # class CrossLint::Artifacts, as a Ruby rule's file names CrossLint::Rule,
+  # so it is outside Core though core/ defines it.
   class Artifacts
     def declare(_settings)
       raise Core::PluginError, "has no declare method"

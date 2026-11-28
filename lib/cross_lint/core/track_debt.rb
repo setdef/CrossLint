@@ -20,9 +20,9 @@ module CrossLint
 
         def rule = "#{plugin}/#{policy}"
 
-        # What an entry's Artifact column can hold for it: its primary
-        # path or its key, such as the base path ng-nudge writes, each
-        # alone or with its role.
+        # What an entry's Artifact column can hold for it: its name or its
+        # key, such as the base path ng-nudge writes, each alone or with
+        # its role.
         def artifacts = [artifact, key].compact.flat_map { |name| [name, "#{name}.#{role}"] }
       end
 

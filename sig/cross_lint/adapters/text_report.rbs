@@ -66,9 +66,9 @@ module CrossLint
       # Writes the result's findings to standard output.
       def write_findings: (Core::CheckResult result) -> void
 
-      # Where a finding is, as its line starts: the artifact's primary
-      # path, with the line a regex found it on, if any, then its name
-      # when that differs from the path.
+      # Where a finding is, as its line starts: the path of the artifact's
+      # primary piece, with the line a regex found it on, if any, then its
+      # name when that differs from the path.
       def where: (String path, Integer? line, String name) -> String
 
       # Writes `line` to standard error, after PREFIX.

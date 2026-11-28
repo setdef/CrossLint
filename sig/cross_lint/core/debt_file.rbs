@@ -13,8 +13,9 @@ module CrossLint
       # ng-nudge writes it.
       attr_reader rule: String
 
-      # The Artifact column: the artifact's key, such as its primary
-      # file's path, or the key, a dot, and its role.
+      # The Artifact column: the artifact's name, such as the path of its
+      # primary piece, or its key, each alone or with a dot and the
+      # artifact's role after it.
       attr_reader artifact: String
 
       # The Comment column, empty when there is none.
