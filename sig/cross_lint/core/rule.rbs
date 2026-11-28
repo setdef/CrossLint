@@ -34,7 +34,8 @@ module CrossLint
 
     # One of an artifact's pieces, as a rule sees it.
     class Piece
-      # The piece's name, as its artifact declares it, such as "test".
+      # The piece's name, as its artifact declares it, such as "test", or
+      # "primary" for the artifact's primary piece.
       attr_reader name: String
 
       # The piece's path, relative to the project's root, with `/`.
@@ -57,8 +58,8 @@ module CrossLint
       @read: ^(String path) -> String
     end
 
-    # The artifact a rule checks: its name, role, and key, the path and
-    # line of its primary piece, and its other pieces.
+    # The artifact a rule checks: its name, role, and key, its primary
+    # piece with the path and line it was found at, and its other pieces.
     class Artifact
       # The artifact's role: its declaration's name, such as "ruby-file".
       attr_reader role: String
@@ -68,7 +69,12 @@ module CrossLint
       # primary piece's path, such as "GET /cart".
       attr_reader name: String
 
-      # The primary piece's path, relative to the project's root, with `/`.
+      # The artifact's primary piece, as a piece like the others: named
+      # "primary", and existing, since CrossLint found the artifact there.
+      attr_reader primary: Piece
+
+      # The primary piece's path, relative to the project's root, with `/`;
+      # `primary.path` gives the same.
       attr_reader path: String
 
       # The line of the primary piece's file where its declaration's regex
@@ -91,7 +97,8 @@ module CrossLint
       # declaration has none of that name.
       def piece: (String name) -> Piece
 
-      # The text of the primary piece's file, its bytes as UTF-8.
+      # The text of the primary piece's file, its bytes as UTF-8;
+      # `primary.read` gives the same.
       def read: () -> String
 
       private

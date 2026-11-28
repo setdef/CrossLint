@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `rule NAME helper=HELPER` and `artifacts helper=HELPER` let a helper in any language run a rule and declare a plugin's artifacts.
 - A helper's block takes `command "PROGRAM" "WORD" ...` for a program that needs words before its file, such as `bundle exec ruby`.
 - `crosslint check` prints the line of an artifact found inside a file, and the artifact's name when it isn't its primary piece's path, before the message. `--json` adds a `line` key to each finding, which is a number or `null`.
+- The artifact a Ruby rule gets has `primary`, its primary piece, a piece like the others, with `name`, `path`, `exist?`, and `read`. `artifact.path` and `artifact.read` stay.
 - Each release file has a build provenance attestation, so `gh attestation verify` can check an archive or `SHA256SUMS` against this repository.
 
 ### Changed

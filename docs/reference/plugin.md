@@ -405,6 +405,7 @@ The artifact a rule gets has these methods. They give what a program's request h
 
 | Method | Returns |
 | --- | --- |
+| `primary` | The primary piece, like the pieces `piece(NAME)` gives, with `name`, `path`, `exist?`, and `read`. Its `name` is `"primary"`, and `exist?` is always true, since CrossLint found the artifact there. `artifact.path` and `artifact.read` give the same path and text. |
 | `path` | The primary piece's path, relative to the project's root. |
 | `role` | The artifact's role, such as `module`. |
 | `match` | What each placeholder matched, and each capture of the primary's regex, by name: `artifact.match["path"]`. |

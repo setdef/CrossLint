@@ -29,7 +29,7 @@ module CrossLint
     end
 
     class Artifact
-      attr_reader :role, :path, :match, :name, :line, :key
+      attr_reader :role, :path, :match, :name, :line, :key, :primary
 
       def initialize(artifact, read)
         @role = artifact.role
@@ -38,6 +38,7 @@ module CrossLint
         @line = artifact.line
         @key = artifact.key
         @match = artifact.match.freeze
+        @primary = Piece.new(Core::Piece.new(name: "primary", path: artifact.path, exists: true), read)
         @pieces = artifact.pieces.map { |piece| Piece.new(piece, read) }
         @read = read
       end
