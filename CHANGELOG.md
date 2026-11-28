@@ -12,10 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `crosslint update --latest` moves each shared plugin to the highest version tag of its repository, even when that version isn't compatible with the plugin's ref.
 - A `primary` line in `plugin.kdl` takes `regex=REGEX`: each match in a file the pattern finds is an artifact, on the line where the match starts. The regex's named captures are placeholders for the artifact's name, its pieces' paths, and its pieces' regexes.
 - A `piece` line takes `regex=REGEX`: the piece is a part of its file, such as a `<style>` block, and exists when the regex has a match there. CrossLint refuses a regex that Ruby reads differently from PCRE or JavaScript, and says what to write instead.
-- An `artifact` block takes `name PATTERN`, which sets each artifact's name, such as `GET /cart`, in place of its path. A violation and a debt entry use the name. Two artifacts of one role with one name are a fault.
+- An `artifact` block takes `name PATTERN`, which gives each artifact of the role a name, such as `GET /cart`, in place of its primary piece's path. A violation and a debt entry use the name. Two artifacts of one role with one name are a fault.
 - `rule NAME helper=HELPER` and `artifacts helper=HELPER` let a helper in any language run a rule and declare a plugin's artifacts.
 - A helper's block takes `command "PROGRAM" "WORD" ...` for a program that needs words before its file, such as `bundle exec ruby`.
-- `crosslint check` prints the line of an artifact found inside a file, and the artifact's name when it isn't the file's path, before the message. `--json` adds a `line` key to each finding, which is a number or `null`.
+- `crosslint check` prints the line of an artifact found inside a file, and the artifact's name when it isn't its primary piece's path, before the message. `--json` adds a `line` key to each finding, which is a number or `null`.
 - Each release file has a build provenance attestation, so `gh attestation verify` can check an archive or `SHA256SUMS` against this repository.
 
 ### Changed
