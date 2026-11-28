@@ -414,7 +414,12 @@ task "build:check:environment", [:app] do |_, arguments|
   }
   finder = CrossLint::Adapters::ProcessHelpers.new
   sh = finder.find("sh") || abort("rake build:check: no sh on the PATH")
-  folders = [finder.find("git") || abort("rake build:check: no git on the PATH"), sh].map { |program| File.dirname(program) }.uniq
+  # sh's folder comes first, so that the app finds the sh that `expected`
+  # is measured with. Git for Windows' bin folder holds an sh.exe that
+  # starts a login shell, which sets TEMP, TMP, PATH, EXEPATH, and
+  # PLINK_PROTOCOL itself, and a helper that the app starts as `sh` gets
+  # that one when its folder comes first.
+  folders = [sh, finder.find("git") || abort("rake build:check: no git on the PATH")].map { |program| File.dirname(program) }.uniq
   # None of these values is a path, which MSYS2 would convert.
   started = {
 "PATH" => folders.join(File::PATH_SEPARATOR),
