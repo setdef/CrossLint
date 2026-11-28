@@ -28,7 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Under `--debug`, a line a helper writes to standard error prints as `crosslint: debug: helper PLUGIN/HELPER wrote to standard error: LINE`, where it printed as `crosslint: helper HELPER: LINE`, so every debug line begins with `crosslint: debug:`.
-
 - A violation of the built-in rules `piece-exists` and `piece-absent` has the name of the piece it checks as its detail, such as `test`, so `crosslint check --json` prints it as `"detail"`, and `crosslint debt update` writes one debt entry for each failing piece, where it wrote one entry for all of an artifact's. A debt entry written before has no detail, and still matches every such violation of its policy on its artifact, with a warning, until `crosslint debt update` rewrites it.
 - **Breaking:** `crosslint check --json` prints `paid_off` in place of `stale`, both as the top-level key and inside `summary`. A script that reads either key has to read `paid_off`.
 - The debt plugin calls an entry that no violation matches a paid-off entry, not a stale one. The text summary says "1 entry paid off", and the entry's message is "the debt entry at FILE:LINE is paid off, since no violation matches it; crosslint debt update removes it". The check still fails on such an entry, with exit status 1, until `crosslint debt update` removes it.

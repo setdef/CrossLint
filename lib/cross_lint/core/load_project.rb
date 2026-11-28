@@ -133,7 +133,6 @@ module CrossLint
         Plugin.new(name:, folder: File.expand_path(folder, base), listing:, manifest:)
       end
 
-      # Where `plugin` comes from, as the debug output says it.
       def from(plugin)
         listing = plugin.listing
         kind = if listing.shared?(@shared_plugins)

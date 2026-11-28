@@ -148,8 +148,6 @@ module CrossLint
         end
       end
 
-      # Whether a policy, named PLUGIN/POLICY, runs on `artifact`, said on
-      # the debug output with what its condition found.
       def applies?(name, condition, artifact)
         holds = condition.nil? || condition.holds?(artifact)
         @debug&.write("policy") do

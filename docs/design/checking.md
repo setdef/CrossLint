@@ -47,7 +47,7 @@ How `crosslint check` finds a project's files, runs its plugins, and reports, an
 
 ## Debug output
 
-- **The debug output answers why a check found, or didn't find, what someone expected,** so it follows a path through the steps that question passes through: whether Git lists the file, which role's primary pattern found it as an artifact, and which of its pieces exist. Each line about an artifact has its path, and its name as the findings give it, so searching the output for one path shows each step it went through.
+- **The debug output lets a person see why a check found, or didn't find, what they expected,** so it follows a path through the steps that question passes through: whether Git lists the file, which role's primary pattern found it as an artifact, and which of its pieces exist. Each line about an artifact has its path, and its name as the findings give it, so searching the output for one path shows each step it went through.
 - **Each line begins with `crosslint: debug:` and a word for its step,** such as `file` or `artifact`, so the output is plainly not a finding, and a reader can keep one step's lines with a search. The words are fixed; the rest of the line is for people, and may change between releases.
 - **It goes to standard error, never to standard output,** where findings and `--json` go, so a script reading the findings never reads a debug line.
 - **Every file Git lists gets a line,** in order, because a count can't say whether CrossLint saw one file. In a large project that is most of the output, which is why each line starts with the word for its step.

@@ -38,7 +38,6 @@ module CrossLint
         found
       end
 
-      # What the role found, said under its plugin's and its name.
       def say(plugin, declaration)
         @debug&.write("role") { "#{plugin.name}/#{declaration.name}: #{yield}" }
       end
