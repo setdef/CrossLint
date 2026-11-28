@@ -17,6 +17,7 @@ class NpmNoticesTest < Minitest::Test
     "this file except in compliance with the License.\n***** */\n\n"
   BSD_HEADER = "/******\nCopyright (c) Microsoft Corporation.\n\nPermission to use, copy, modify, and/or distribute this software for any\npurpose with or without fee is hereby granted.\n***** */\n"
   # The license files at the top of typescript@6.0.2, as npm pack gives them.
+  TYPESCRIPT_INTEGRITY = "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="
   RELEASE = {"LICENSE.txt" => "Apache License\nVersion 2.0, January 2004\n", "ThirdPartyNoticeText.txt" => "Third party notices\n"}.freeze
 
   def setup
@@ -249,14 +250,14 @@ class NpmNoticesTest < Minitest::Test
     bundle_typescript
     asked = []
 
-    NpmNotices.add(@app, sbom: locked, release: ->(name, version) {
-      asked << [name, version]
+    NpmNotices.add(@app, sbom: locked, release: ->(release) {
+      asked << release
       RELEASE
     })
 
     notices = File.binread(File.join(@app, "notices/NOTICES.txt"))
 
-    assert_equal [["typescript", "6.0.2"]], asked
+    assert_equal [BundledWorks::Release.new(work: "TypeScript", package: "typescript", version: "6.0.2", integrity: TYPESCRIPT_INTEGRITY)], asked
     assert_equal <<~ENTRY, notices[/TypeScript \(bundled work\).*?(?=\n\nLICENSE TEXTS)/m]
       TypeScript (bundled work)
         Version: 6.0.2
@@ -269,6 +270,28 @@ class NpmNoticesTest < Minitest::Test
     ENTRY
     assert notices.end_with?("LICENSE TEXTS\n\n=== ruby/COPYING\n\nRuby's license\n\n=== typescript-6.0.2/LICENSE.txt\n\nApache License\nVersion 2.0, January 2004\n" \
       "\n=== typescript-6.0.2/ThirdPartyNoticeText.txt\n\nThird party notices\n")
+  end
+
+  def test_asks_for_a_version_of_typescript_the_table_lists_no_integrity_for_with_none_so_that_a_new_version_fails_until_one_is_listed
+    bundle_typescript("6.0.3")
+    asked = []
+
+    NpmNotices.add(@app, sbom: locked, release: ->(release) {
+      asked << release.integrity
+      RELEASE
+    })
+
+    assert_equal [nil], asked
+  end
+
+  def test_stops_at_a_tarball_of_a_bundled_work_that_fails_its_integrity_check_and_writes_nothing
+    bundle_typescript
+
+    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked, release: ->(_) { raise NpmNotices::Failure, "TypeScript 6.0.2: the tarball differs" }) }
+
+    assert_equal "TypeScript 6.0.2: the tarball differs", error.message
+    assert_equal NOTICES, File.binread(File.join(@app, "notices/NOTICES.txt"))
+    assert_equal JSON.pretty_generate(runtime_sbom), File.binread(File.join(@app, "notices/sbom.spdx.json"))
   end
 
   def test_passes_on_the_notice_file_that_the_release_of_a_bundled_work_has

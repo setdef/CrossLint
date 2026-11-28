@@ -88,7 +88,8 @@ module NpmNotices
   # (BundledWorks), into its notices and its SBOM. +sbom+ gives the SPDX
   # document that lists the packages a package-lock.json locks, for the
   # folder that holds the lockfile. +release+ gives the license files of
-  # an npm package at a version, as BundledWorks.npm_release does.
+  # a BundledWorks::Release, as BundledWorks.npm_release does, and fails
+  # when the tarball isn't the one the table lists.
   def add(app, sbom: method(:npm_sbom), release: BundledWorks.method(:npm_release))
     found = installed(app)
     return if found.empty?
@@ -99,7 +100,7 @@ module NpmNotices
     unknown = BundledWorks.unknown(app, found, works)
     raise Failure, unknown.join("\n") unless unknown.empty?
 
-    texts = works.to_h { |work| [work, work.release ? release.call(*work.release) : {}] }
+    texts = works.to_h { |work| [work, work.release ? release.call(work.release) : {}] }
     File.binwrite(File.join(app, NOTICES), with_notices(File.binread(File.join(app, NOTICES)), found, documents, texts))
     File.binwrite(File.join(app, SBOM), "#{JSON.pretty_generate(with_sbom(JSON.parse(File.binread(File.join(app, SBOM))), documents, texts.keys))}\n")
   end

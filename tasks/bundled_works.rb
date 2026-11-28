@@ -13,6 +13,7 @@
 # know.
 
 require "json"
+require "digest"
 require "rubygems/package"
 require "zlib"
 require "open3"
@@ -32,8 +33,17 @@ module BundledWorks
   # of an npm package, has its license text, and any notice, in that
   # package's files at the version, which the build reads from the
   # registry. A work with none has its license in the comment of each
-  # carrier's file, which the app carries as it is.
-  Work = Data.define(:name, :license, :carriers, :version, :source, :release)
+  # carrier's file, which the app carries as it is. +integrity+ lists, for
+  # each version of the release that the build has read, the sha512
+  # integrity of its tarball as the registry gives it (nil for a work with
+  # no release): the build fetches no tarball that differs, so a new
+  # version fails until someone has looked at what it ships and lists it.
+  Work = Data.define(:name, :license, :carriers, :version, :source, :release, :integrity)
+
+  # The tarball of a +work+'s release to fetch: the npm +package+ at its
+  # +version+, and the +integrity+ the table lists for it (nil when it
+  # lists none).
+  Release = Data.define(:work, :package, :version, :integrity)
 
   # One place the app holds a work: the +package+ (a NpmNotices::Package),
   # the carrier's +file+ as a path from the app's folder, and the +line+
@@ -46,7 +56,7 @@ module BundledWorks
   Found = Data.define(:work, :version, :copyright, :places) do
     def source = work.source.sub("%<version>s", version.to_s)
 
-    def release = work.release && [work.release, version]
+    def release = work.release && Release.new(work: work.name, package: work.release, version:, integrity: work.integrity[version])
 
     # The folder in the notices under which the work's license texts are.
     def folder = [work.name.downcase.gsub(/[^a-z0-9.]+/, "-"), version].compact.join("-")
@@ -64,6 +74,7 @@ module BundledWorks
   WORKS = [
     Work.new(
       name: "TypeScript", license: "Apache-2.0", release: "typescript",
+      integrity: {"6.0.2" => "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="},
       version: /^var version = "([^"]+)"/, source: "https://registry.npmjs.org/typescript/-/typescript-%<version>s.tgz",
       carriers: [
         Carrier.new("@ts-morph/common", "dist/typescript.js", /Licensed under the Apache License, Version 2\.0/),
@@ -74,14 +85,14 @@ module BundledWorks
       ]
     ),
     Work.new(
-      name: "tslib", license: "0BSD", release: nil, version: nil, source: "https://github.com/microsoft/tslib",
+      name: "tslib", license: "0BSD", release: nil, integrity: nil, version: nil, source: "https://github.com/microsoft/tslib",
       carriers: [
         Carrier.new("ts-morph", "dist/ts-morph.js", /Permission to use, copy, modify, and\/or distribute this software for any/),
         Carrier.new("@ts-morph/common", "dist/ts-morph-common.js", /Permission to use, copy, modify, and\/or distribute this software for any/)
       ]
     ),
     Work.new(
-      name: "Node.js", license: "MIT", release: nil, version: /extracted from Node\.js v([0-9.]+)/, source: "https://github.com/nodejs/node/tree/v%<version>s",
+      name: "Node.js", license: "MIT", release: nil, integrity: nil, version: /extracted from Node\.js v([0-9.]+)/, source: "https://github.com/nodejs/node/tree/v%<version>s",
       carriers: [
         Carrier.new("path-browserify", "index.js", /Copyright Joyent, Inc\. and other Node contributors/),
         Carrier.new("path-browserify", "test/test-path.js", /Copyright Joyent, Inc\. and other Node contributors/),
@@ -145,17 +156,34 @@ module BundledWorks
     end
   end
 
-  # The license files at the top of the npm package +name+ at +version+,
-  # by file name, read from the registry with npm pack: the files
-  # +RELEASE_TEXT+ matches, with their text. +npm+ is the command that
-  # runs npm.
-  def npm_release(name, version, npm: %w[npm])
+  # The license files at the top of the Release +release+, by file name,
+  # read from the registry with npm pack: the files +RELEASE_TEXT+
+  # matches, with their text. The tarball is read only when its integrity
+  # is the one the release lists, so that what the archive credits is what
+  # someone looked at, and not whatever the registry gives that day. +npm+
+  # is the command that runs npm.
+  def npm_release(release, npm: %w[npm])
+    name = release.package
+    version = release.version
     warn "npm_notices.rb: fetching #{name}@#{version} from the npm registry, to read its license files, for at most #{FETCH_SECONDS} seconds"
     Dir.mktmpdir("npm-release") do |folder|
       limited(npm + ["pack", "#{name}@#{version}", "--pack-destination", folder, "--loglevel=error", "--ignore-scripts"], FETCH_SECONDS)
       tarball = Dir.glob("*.tgz", base: folder).first or raise Failure, "npm pack #{name}@#{version} wrote no package"
-      texts(File.join(folder, tarball), name, version)
+      path = File.join(folder, tarball)
+      check_integrity(release, path)
+      texts(path, name, version)
     end
+  end
+
+  # Fails unless the tarball at +path+ has the integrity that +release+
+  # lists, naming the work, the version, and both values.
+  def check_integrity(release, path)
+    got = "sha512-#{Digest::SHA512.file(path).base64digest}"
+    return if got == release.integrity
+
+    raise Failure, "#{release.work} #{release.version}: the tarball that npm pack #{release.package}@#{release.version} fetched has the integrity #{got}, " \
+      "and tasks/bundled_works.rb lists #{release.integrity || "none"} for it. " \
+      "If #{release.version} is a new version, look at what its tarball ships, and then list its integrity in the table."
   end
 
   # Runs +command+, and stops it when it takes more than +seconds+.
