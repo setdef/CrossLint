@@ -5,7 +5,7 @@
 - **License:** MIT
 - **Repository:** https://github.com/setdef/CrossLint
 
-CrossLint checks how a project's files relate to each other: that each group of files that belong together has the files it should, and that a component and its stub agree. Its plugins declare which files belong together and what to check, and the project's configuration, .config/crosslint/config.kdl, lists the plugins it runs. A plugin can add commands under its own name, such as crosslint debt update, and crosslint --help lists the commands of the plugins the project lists.
+CrossLint checks a project's artifacts, such as its components or its routes: that each artifact has the pieces it should, and that its pieces agree, as a component and its stub do. Its plugins declare the roles of artifacts, where to find their pieces, and what to check, and the project's configuration, .config/crosslint/config.kdl, lists the plugins it runs. A plugin can add commands under its own name, such as crosslint debt update, and crosslint --help lists the commands of the plugins the project lists.
 
 Findings go to standard output, one per line. The lines CrossLint prints about itself go to standard error, and each begins with "crosslint:".
 
@@ -55,7 +55,7 @@ crosslint init --from-ng-nudge
 - **Usage:** `crosslint check [FLAGS]`
 - **Effect:** read-only
 
-Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the file, with the line for an artifact found inside it; the artifact's name, when it isn't the file's path; the message; and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
+Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the path of the artifact's primary piece, with the line for an artifact found inside its file; the artifact's name, when it isn't that path; the message; and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
 
 A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report paid-off entries: an entry no violation matches any more records a debt already paid, and fails the check until crosslint debt update removes it.
 
@@ -70,7 +70,7 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
 
   The object has these keys, in this order:
 
-  - "findings": an array with one object for each violation, with these keys, in this order. "path" is the artifact's primary file. "message", "plugin", and "policy" are strings. "artifact" is the artifact's name, which is its path unless its declaration names it otherwise. "role" is the artifact's kind. "severity" is "error" or "warning". "detail" is a string, or null when the rule gives none. "line" is the number of the line the artifact was found on, or null for an artifact that is a whole file. Every value but "detail" and "line" is a string. A violation the debt plugin adds when its report-entries setting is on, for an entry in the debt file, has the debt file as "artifact" and "path", "debt-file" as "role", the entry's line number as a string in "detail", and null as "line".
+  - "findings": an array with one object for each violation, with these keys, in this order. "path" is the path of the artifact's primary piece. "message", "plugin", and "policy" are strings. "artifact" is the artifact's name, which is its primary piece's path unless its declaration has a name pattern. "role" is the artifact's kind. "severity" is "error" or "warning". "detail" is a string, or null when the rule gives none. "line" is the number of the line of the primary piece's file that the artifact was found on, or null for an artifact whose primary piece is a whole file. Every value but "detail" and "line" is a string. A violation the debt plugin adds when its report-entries setting is on, for an entry in the debt file, has the debt file as "artifact" and "path", "debt-file" as "role", the entry's line number as a string in "detail", and null as "line".
   - "paid_off": an array with one object for each paid-off entry. "file" is the debt file, and "line" is the entry's line in it, a number. "plugin", "policy", "artifact", and "message" are strings.
   - "summary": an object of four numbers: "artifacts", the artifacts checked, passing ones included; "errors"; "warnings"; and "paid_off".
 
