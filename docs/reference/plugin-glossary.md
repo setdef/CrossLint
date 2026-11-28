@@ -13,7 +13,7 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | **placeholder** | `{path}`, which matches a file name and the folders before it, or `{name}`, which matches one segment of a path; or a named capture of a primary's regex, such as `{controller}`. | variable, wildcard |
 | **regex** | A regular expression in Ruby's dialect, written `regex=`. On `primary`, each of its matches in a file is an artifact; on a piece, the piece is a part of its file, and exists when the regex has a match there. A placeholder in it stands for its value, as literal text. | regexp, pattern (a regex is not a path pattern) |
 | **condition** | What a policy's `when` says must hold before its rules run on an artifact: that a piece exists, or `not`, `all`, or `any` of other conditions. | filter, predicate |
-| **built-in rule** | A rule CrossLint has, which it runs wherever a policy's `rule` line gives its name, with no code: `piece-exists` and `piece-absent`. | core rule |
+| **built-in rule** | A rule CrossLint has, which it runs wherever a policy's `rule` line gives its name, with no code: `piece-exists` and `piece-absent`. Each gives the name of the piece it checks as its violation's detail. | core rule |
 | **setting** | A value a plugin takes in its block in the project's configuration, such as the Angular plugin's `src-dir`, declared in the manifest with `setting NAME`. | option |
 
 ## Helpers

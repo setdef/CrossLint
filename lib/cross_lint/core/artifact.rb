@@ -18,8 +18,8 @@ module CrossLint
       end
     end
 
-    class Violation < Data.define(:plugin, :policy, :artifact, :role, :message, :severity, :detail, :key, :path, :line)
-      def initialize(artifact:, key: nil, path: artifact, line: nil, **fields) = super
+    class Violation < Data.define(:plugin, :policy, :artifact, :role, :message, :severity, :detail, :key, :path, :line, :built_in)
+      def initialize(artifact:, key: nil, path: artifact, line: nil, built_in: false, **fields) = super
     end
 
     class RuleResult < Data.define(:path, :role, :message, :detail); end

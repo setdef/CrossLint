@@ -169,6 +169,38 @@ class TrackDebtTest < Minitest::Test
       "violation of tests/has-test on it; crosslint debt update writes one entry for each, with its detail")], result.notices
   end
 
+  def test_matches_every_violation_of_a_built_in_rule_on_its_artifact_with_an_entry_that_has_no_detail_and_warns
+    violations = [violation("app/card", detail: "spec", built_in: true), violation("app/card", detail: "stub", built_in: true)]
+    result = step(violations, [entry("tests/has-test", "app/card", "written before details")])
+
+    assert_equal violations, result.excused
+    assert_equal [Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it matches every " \
+      "violation of tests/has-test on it; crosslint debt update writes one entry for each, with its detail")], result.notices
+    assert_empty result.paid_off
+  end
+
+  def test_matches_a_violation_a_helpers_rule_reported_with_a_detail_only_by_that_detail
+    result = step([violation("app/card", detail: "spec")], [entry("tests/has-test", "app/card", "written before details")])
+
+    assert_equal [[], [2], []], [result.excused, result.paid_off.map(&:line), result.notices]
+  end
+
+  def test_rewrites_an_entry_with_no_detail_as_one_for_each_violation_of_a_built_in_rule_with_its_comment
+    violations = [violation("app/card", detail: "stub", built_in: true), violation("app/card", detail: "spec", built_in: true)]
+    result = step(violations, [entry("tests/has-test", "app/card", "kept")], update: true)
+
+    assert_equal [["tests/has-test", "app/card", "kept", "spec"], ["tests/has-test", "app/card", "kept", "stub"]],
+      written.map { [it.rule, it.artifact, it.comment, it.detail] }
+    assert_equal [violations, ["wrote #{FILE}: 0 entries added, 0 removed, 1 rewritten"]], [result.excused, result.wrote]
+  end
+
+  def test_pays_off_the_entry_of_a_fixed_built_in_rule_violation_without_excusing_the_one_left
+    entries = [entry("tests/has-test", "app/card", "spec", detail: "spec"), entry("tests/has-test", "app/card", "stub", detail: "stub", line: 3)]
+    result = step([violation("app/card", detail: "stub", built_in: true)], entries)
+
+    assert_equal [[2]], [result.paid_off.map(&:line)]
+  end
+
   def test_rewrites_an_entry_ng_nudge_wrote_as_one_for_each_violation_with_its_detail_and_comment
     violations = [violation("app/card", detail: "size"), violation("app/card", detail: "name"), violation("app/list")]
     result = step(violations, [entry("has-test", "app/card", "legacy"), entry("has-test", "app/list", "plain", line: 3)], update: true)
@@ -467,8 +499,8 @@ class TrackDebtTest < Minitest::Test
 
   private
 
-  def violation(artifact, plugin: "tests", policy: "has-test", role: "ruby-file", detail: nil, severity: :error, key: nil)
-    Violation.new(plugin:, policy:, artifact:, role:, message: "no test", severity:, detail:, key:)
+  def violation(artifact, plugin: "tests", policy: "has-test", role: "ruby-file", detail: nil, severity: :error, key: nil, built_in: false)
+    Violation.new(plugin:, policy:, artifact:, role:, message: "no test", severity:, detail:, key:, built_in:)
   end
 
   def paid_off_at(line)

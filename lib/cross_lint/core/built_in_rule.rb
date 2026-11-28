@@ -13,7 +13,8 @@ module CrossLint
       def self.named(name) = ALL.find { |rule| rule.name == name }
 
       def results(artifact, arguments, _read)
-        messages(artifact, arguments).map { |message| RuleResult.new(path: artifact.path, role: artifact.role, message:, detail: nil) }
+        detail = arguments.fetch("piece")
+        messages(artifact, arguments).map { |message| RuleResult.new(path: artifact.path, role: artifact.role, message:, detail:) }
       end
 
       def messages(artifact, arguments)

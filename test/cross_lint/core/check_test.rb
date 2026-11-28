@@ -32,7 +32,15 @@ class CheckTest < Minitest::Test
     violation = check(project(tests_plugin), files: ["lib/a.rb"]).findings.first
 
     assert_equal Violation.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", role: "ruby-file",
-      message: "no test file at test/a_test.rb", severity: :error, detail: nil), violation
+      message: "no test file at test/a_test.rb", severity: :error, detail: "test", built_in: true), violation
+  end
+
+  def test_gives_a_violation_of_a_built_in_rule_the_name_of_the_piece_it_checked_as_its_detail
+    plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb", "signature" => "sig/{path}.rbs")],
+      policies: [policy("has-test", rules: [rule, rule(piece: "signature")])])
+    details = check(project(plugin), files: ["lib/a.rb"]).findings.map { [it.message, it.detail] }
+
+    assert_equal [["no signature file at sig/a.rbs", "signature"], ["no test file at test/a_test.rb", "test"]], details
   end
 
   def test_gives_an_artifact_and_its_violations_the_key_its_declaration_gives

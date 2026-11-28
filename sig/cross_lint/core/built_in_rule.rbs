@@ -21,7 +21,8 @@ module CrossLint
       attr_reader severity: severity
 
       # What the rule reports on `artifact` with `arguments`, its messages
-      # as results; it reads no file, so it leaves `read` alone.
+      # as results, each with the name of the piece the rule checked as its
+      # detail; it reads no file, so it leaves `read` alone.
       def results: (Artifact artifact, Hash[String, untyped] arguments, ^(String path) -> String read) -> Array[RuleResult]
 
       # The built-in rule called `name`, or nil.

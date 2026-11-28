@@ -219,7 +219,7 @@ class CLITest < Minitest::Test
     out, err, status = check("check", "--json", app: app)
 
     assert_equal [{"path" => "lib/b.rb", "message" => "no test file at test/b_test.rb", "plugin" => "tests", "policy" => "has-test",
-                   "artifact" => "lib/b.rb", "role" => "ruby-file", "severity" => "error", "detail" => nil, "line" => nil}], JSON.parse(out).fetch("findings")
+                   "artifact" => "lib/b.rb", "role" => "ruby-file", "severity" => "error", "detail" => "test", "line" => nil}], JSON.parse(out).fetch("findings")
     assert_equal ["crosslint_version", CrossLint::UsageSpec.load.version], JSON.parse(out).first
     assert_equal ["crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], [err, status]
   end
@@ -262,7 +262,7 @@ class CLITest < Minitest::Test
 
   def test_a_plugins_command_takes_the_flags_it_declares_and_tells_its_step
     project = app(debt: true)
-    expected = ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "crosslint: would add tests/has-test on lib/b.rb\ncrosslint: would write .config/crosslint/debt.tsv: 1 entry added, 0 removed\n" \
+    expected = ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "crosslint: would add tests/has-test on lib/b.rb (test)\ncrosslint: would write .config/crosslint/debt.tsv: 1 entry added, 0 removed\n" \
       "crosslint: checked 2 ruby-file artifacts: 1 error\n", 0]
 
     assert_equal expected, check("debt", "update", "--dry-run", app: project)

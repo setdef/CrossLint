@@ -124,11 +124,12 @@ module CrossLint
           next [] unless policy.condition.nil? || policy.condition.holds?(artifact)
 
           policy.rules.flat_map do |rule|
-            checker = BuiltInRule.named(rule.name) || rules.fetch([plugin.name, rule.name])
+            built_in = BuiltInRule.named(rule.name)
+            checker = built_in || rules.fetch([plugin.name, rule.name])
             checker.results(artifact, rule.arguments, read).map do |result|
               Violation.new(plugin: plugin.name, policy: policy.name, artifact: artifact.name, path: result.path, role: result.role,
                 message: result.message, severity: override || rule.severity || checker.severity, detail: result.detail, key: artifact.key,
-                line: artifact.line)
+                line: artifact.line, built_in: !built_in.nil?)
             end
           end
         end

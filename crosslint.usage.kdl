@@ -83,7 +83,7 @@ For a project with one Ruby file and no test for it, the output is this, here wi
           "artifact": "lib/a.rb",
           "role": "ruby-file",
           "severity": "error",
-          "detail": null,
+          "detail": "test",
           "line": null
         }
       ],

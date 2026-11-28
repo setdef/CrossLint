@@ -178,13 +178,13 @@ $ crosslint debt update
 crosslint: wrote .config/crosslint/debt.tsv: 2 entries added, 0 removed
 crosslint: checked 5 catalog artifacts: 2 accepted as debt
 $ cat .config/crosslint/debt.tsv
-Rule	Artifact	Comment
-translations/has-french	checkout	
-translations/has-german	checkout	
+Rule	Artifact	Comment	Detail
+translations/has-french	checkout		fr
+translations/has-german	checkout		de
 ```
 <!-- SPDX-SnippetEnd -->
 
-The debt file's columns are separated by tabs. Each line after the header is an **entry**: the plugin and policy, the artifact by its name, and an empty comment at the end. Open the file and write in each comment why the violation is still there, such as `Checkout's English is being rewritten`, so whoever reads the file later knows. Then check again:
+The debt file's columns are separated by tabs. Each line after the header is an **entry**: the plugin and policy, the artifact by its name, an empty comment, and the **detail**, here the name of the piece that is missing, which tells apart the violations one policy finds on one artifact. Open the file and write in each comment why the violation is still there, such as `Checkout's English is being rewritten`, so whoever reads the file later knows. Then check again:
 
 <!--
 SPDX-SnippetBegin

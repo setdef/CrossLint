@@ -138,14 +138,18 @@ module CrossLint
       # The artifact's line, or nil.
       attr_reader line: Integer?
 
-      # A violation with these fields, no key or line unless given, and
-      # `artifact` as its path unless given one.
+      # Whether a built-in rule reported it, not a helper's rule.
+      attr_reader built_in: bool
+
+      # A violation with these fields, no key or line unless given,
+      # `artifact` as its path unless given one, and reported by a
+      # helper's rule unless `built_in` says otherwise.
       def self.new: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
-                     detail: String?, ?key: String?, ?path: String, ?line: Integer?) -> instance
+                     detail: String?, ?key: String?, ?path: String, ?line: Integer?, ?built_in: bool) -> instance
 
       # A violation with these fields, as for `new`.
       def initialize: (plugin: String, policy: String, artifact: String, role: String, message: String, severity: severity,
-                       detail: String?, ?key: String?, ?path: String, ?line: Integer?) -> void
+                       detail: String?, ?key: String?, ?path: String, ?line: Integer?, ?built_in: bool) -> void
     end
   
     # What a Ruby rule reports, made with CrossLint::Rule#violation: the

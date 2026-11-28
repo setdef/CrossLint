@@ -14,9 +14,9 @@ module CrossLint
       class Settings < Data.define(:file, :report); end
 
       # A violation's identity, by which an entry matches it.
-      class Identity < Data.define(:plugin, :policy, :artifact, :role, :detail, :key)
+      class Identity < Data.define(:plugin, :policy, :artifact, :role, :detail, :key, :built_in)
         def self.of(violation) = new(plugin: violation.plugin, policy: violation.policy, artifact: violation.artifact,
-          role: violation.role, detail: violation.detail.to_s, key: violation.key)
+          role: violation.role, detail: violation.detail.to_s, key: violation.key, built_in: violation.built_in)
 
         def rule = "#{plugin}/#{policy}"
 
@@ -154,13 +154,16 @@ module CrossLint
         [name, policy] if listed && !disabled && !input.faulted.include?(name)
       end
 
-      # The identities an entry matches. An entry ng-nudge wrote, with a
-      # policy's name alone and no detail, matches every detail.
+      # The identities an entry matches. An entry with no detail matches
+      # every detail of a violation a built-in rule reported, which gave
+      # none before it did; one ng-nudge wrote, with a policy's name alone,
+      # matches every detail of any violation.
       def matches(entry, rule, identities)
         legacy = !entry.rule.include?("/") && entry.detail.nil?
+        undetailed = entry.detail.nil?
         identities.select do |identity|
           [identity.plugin, identity.policy] == rule && identity.artifacts.include?(entry.artifact) &&
-            (legacy || identity.detail == entry.detail.to_s)
+            (legacy || (undetailed && identity.built_in) || identity.detail == entry.detail.to_s)
         end
       end
 

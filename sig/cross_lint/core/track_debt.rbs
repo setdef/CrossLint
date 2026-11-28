@@ -70,11 +70,14 @@ module CrossLint
         # primary piece's path, or nil.
         attr_reader key: String?
 
-        # An identity with these fields.
-        def self.new: (plugin: String, policy: String, artifact: String, role: String, detail: String, key: String?) -> instance
+        # Whether a built-in rule reported the violation.
+        attr_reader built_in: bool
 
         # An identity with these fields.
-        def initialize: (plugin: String, policy: String, artifact: String, role: String, detail: String, key: String?) -> void
+        def self.new: (plugin: String, policy: String, artifact: String, role: String, detail: String, key: String?, built_in: bool) -> instance
+
+        # An identity with these fields.
+        def initialize: (plugin: String, policy: String, artifact: String, role: String, detail: String, key: String?, built_in: bool) -> void
 
         # The identity of `violation`.
         def self.of: (Violation violation) -> Identity
@@ -141,7 +144,9 @@ module CrossLint
       # plugins have.
       def resolve: (Project project, StepInput input, DebtFile debt, DebtEntry entry) -> [String, String]?
 
-      # The identities `entry` matches.
+      # The identities `entry` matches: those with its detail, and, when
+      # it has none, those of a built-in rule's violations whatever their
+      # detail, and, for a policy's name alone, every detail.
       def matches: (DebtEntry entry, [String, String] rule, Array[Identity] identities) -> Array[Identity]
 
       # The warning for an entry that matches more than one artifact, or

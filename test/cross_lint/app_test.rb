@@ -37,7 +37,7 @@ class AppTest < Minitest::Test
     Open3.capture3("git", "init", "-q", chdir: @base)
     dry = App.new.check(@base, command: ["debt", "update"], flags: {"dry-run" => true})
 
-    assert_equal ["would add tests/p on lib/a.md", "would write .config/crosslint/debt.tsv: 1 entry added, 0 removed"], dry.wrote
+    assert_equal ["would add tests/p on lib/a.md (c)", "would write .config/crosslint/debt.tsv: 1 entry added, 0 removed"], dry.wrote
     refute_path_exists File.join(@base, ".config/crosslint/debt.tsv")
   end
 
@@ -75,7 +75,7 @@ class AppTest < Minitest::Test
 
     assert_equal [true, 2, false], [before.failed, before.violations.size, updated.failed]
     assert_equal ["wrote .config/crosslint/debt.tsv: 2 entries added, 0 removed"], updated.wrote
-    assert_equal "Rule\tArtifact\tComment\ntests/p\tlib/a.md\t\ntests/p\tlib/b.md\t\n", debt
+    assert_equal "Rule\tArtifact\tComment\tDetail\ntests/p\tlib/a.md\t\tc\ntests/p\tlib/b.md\t\tc\n", debt
     File.binwrite(File.join(@base, ".config/crosslint/debt.tsv"), debt.sub("lib/a.md\t", "lib/a.md\tlater"))
     write(@base, "b.txt", "")
     after = App.new.check(@base)

@@ -96,7 +96,7 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
             "artifact": "lib/a.rb",
             "role": "ruby-file",
             "severity": "error",
-            "detail": null,
+            "detail": "test",
             "line": null
           }
         ],
