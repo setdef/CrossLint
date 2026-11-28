@@ -360,7 +360,7 @@ A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, a
 
 ### Rules in CrossLint's Ruby
 
-A helper on `command=(crosslint)"ruby"` is a file of Ruby that CrossLint runs itself, on the Ruby it carries, for each rule whose line gives the helper's name. It speaks no protocol: CrossLint calls it with the artifact as an object, and it returns the violations. The file defines one class for each such rule, named after the rule in camel case and inheriting from `CrossLint::Rule`, with a `check` method that takes the artifact and returns the rule's violations. `violation(artifact, message)` makes one. Here is the rule from [Rules a program runs](#rules-a-program-runs), in CrossLint's Ruby:
+A helper on `command=(crosslint)"ruby"` is a file of Ruby that CrossLint runs itself, on the Ruby it carries, for each rule whose line gives the helper's name, and each such rule is a [Ruby rule](plugin-glossary.md#helpers). It speaks no protocol: CrossLint calls it with the artifact as an object, and it returns the violations. The file defines one class for each such rule, named after the rule in camel case and inheriting from `CrossLint::Rule`, with a `check` method that takes the artifact and returns the rule's violations. `violation(artifact, message)` makes one. Here is the rule from [Rules a program runs](#rules-a-program-runs), in CrossLint's Ruby:
 
 <!--
 SPDX-SnippetBegin
