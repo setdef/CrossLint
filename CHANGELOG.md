@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `crosslint check` prints the line of an artifact found inside a file, and the artifact's name when it isn't its primary piece's path, before the message. `--json` adds a `line` key to each finding, which is a number or `null`.
 - The artifact a Ruby rule gets has `primary`, its primary piece, a piece like the others, with `name`, `path`, `exist?`, and `read`. `artifact.path` and `artifact.read` stay.
 - `crosslint check --json` prints the version of the CrossLint that wrote the object as its first key, `crosslint_version`, such as `"crosslint_version": "1.0.0"`.
+- A program helper's request has `name` and `line` in its `artifact` object: the name CrossLint calls the artifact by, and the line its primary piece's regex matched at (`null` for a whole file).
 - Each release file has a build provenance attestation, so `gh attestation verify` can check an archive or `SHA256SUMS` against this repository.
 
 ### Changed

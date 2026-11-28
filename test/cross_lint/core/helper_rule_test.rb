@@ -17,8 +17,17 @@ class HelperRuleTest < Minitest::Test
     seen = []
     check(files: ["lib/a.rb", "sig/a.rbs"], answer: ->(input) { (seen << input) && {"violations" => []} })
 
-    assert_equal [{"rule" => "names-class", "artifact" => {"path" => "lib/a.rb", "role" => "ruby-file", "match" => {"path" => "a"}, "key" => "a",
+    assert_equal [{"rule" => "names-class", "artifact" => {"path" => "lib/a.rb", "name" => "lib/a.rb", "role" => "ruby-file", "line" => nil,
+                                                           "match" => {"path" => "a"}, "key" => "a",
                                                            "pieces" => {"signature" => {"path" => "sig/a.rbs", "exists" => true}, "test" => {"path" => "test/a_test.rb", "exists" => false}}}}], seen
+  end
+
+  def test_sends_the_helper_the_artifacts_name_and_the_line_its_regex_matched_at
+    seen = []
+    function = ruby_file.with(regex: Regex.new(source: 'def (?<function>\w+)'), name_pattern: PathPattern.new(source: "{path}:{function}", captures: %w[function]))
+    check(files: ["lib/a.rb"], contents: {"lib/a.rb" => "# a\ndef run\nend\ndef walk\nend\n"}, artifact: function, answer: ->(input) { (seen << input) && {"violations" => []} })
+
+    assert_equal [["a:run", 2], ["a:walk", 4]], seen.map { |input| input["artifact"].values_at("name", "line") }
   end
 
   def test_reports_what_the_helper_answers_as_violations_of_its_policy
@@ -56,9 +65,12 @@ class HelperRuleTest < Minitest::Test
 
   private
 
-  def check(files:, answer:, severity: nil, others: false)
-    artifact = ArtifactDeclaration.new(name: "ruby-file", primary: PathPattern.new(source: "lib/{path}.rb"), line: 1, key: PathPattern.new(source: "{path}"),
+  def ruby_file
+    ArtifactDeclaration.new(name: "ruby-file", primary: PathPattern.new(source: "lib/{path}.rb"), line: 1, key: PathPattern.new(source: "{path}"),
       pieces: %w[signature test].map { |name| PieceDeclaration.new(name:, pattern: PathPattern.new(source: (name == "test") ? "test/{path}_test.rb" : "sig/{path}.rbs"), line: 2) })
+  end
+
+  def check(files:, answer:, contents: {}, severity: nil, others: false, artifact: ruby_file)
     rule = PolicyRule.new(name: "names-class", arguments: {}, severity:, line: 7)
     policy = Policy.new(name: "names-match", applies_to: AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, rules: [rule], line: 5)
     manifest = Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy],
@@ -70,7 +82,7 @@ class HelperRuleTest < Minitest::Test
         policies: [Policy.new(name: "all", applies_to: AppliesTo.new(artifact: "tests/ruby-file", line: 2), condition: nil, rules: [everything], line: 1)]))
     end
     configuration = Configuration.new(file: ".config/crosslint/config.kdl", plugins: plugins.map(&:listing), policies: [], warnings: nil, verbosity: nil)
-    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files})
+    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files}, contents: {ROOT => contents})
     helpers = CrossLint::Adapters::MemoryHelpers.new({"tests/reader" => answer}, commands: ["node"])
     Check.new(project_files:, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new, helpers:, steps: {})
       .call(Project.new(root: ROOT, configuration:, plugins:))

@@ -225,7 +225,8 @@ SPDX-License-Identifier: MIT-0
 SPDX-SnippetCopyrightText: 2026 setdef
 -->
 ```json
-{"rule": "declares-every-export", "artifact": {"path": "src/cart/total.js", "role": "module", "match": {"path": "cart/total"}, "key": null,
+{"rule": "declares-every-export", "artifact": {"path": "src/cart/total.js", "name": "src/cart/total.js", "role": "module", "line": null,
+  "match": {"path": "cart/total"}, "key": null,
   "pieces": {"declaration": {"path": "src/cart/total.d.ts", "exists": true}, "test": {"path": "test/cart/total.test.js", "exists": true}}}}
 ```
 <!-- SPDX-SnippetEnd -->
@@ -234,7 +235,9 @@ SPDX-SnippetCopyrightText: 2026 setdef
 | --- | --- |
 | `rule` | The rule's name, so one helper can run several rules. |
 | `artifact.path` | The primary piece's path, relative to the project's root. |
+| `artifact.name` | The artifact's name, which CrossLint calls it by in every violation and debt entry: what its declaration's `name` pattern gives, or its primary piece's path. |
 | `artifact.role` | The artifact's role, such as `module`. |
+| `artifact.line` | The line of the primary piece's file where the primary's `regex=` matched, from 1, or `null` for an artifact whose primary piece is a whole file. A helper tells apart two artifacts found in one file by their lines, or by their names. |
 | `artifact.match` | What each placeholder matched, and each capture of the primary's regex, by name. |
 | `artifact.key` | The artifact's [key](plugin-glossary.md#declaring), or `null` when its declaration gives none. |
 | `artifact.pieces` | Each piece by its name, with its `path` and whether it `exists`. For a piece with a regex, `exists` says whether its file has a match. |
