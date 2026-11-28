@@ -1,5 +1,5 @@
 # The fast tier: on every push to trunk and every pull request, on Linux,
-# after installing the tools, the bundle, and the packages the test
+# after bin/setup installs the tools, the bundle, and the packages the test
 # fixtures lock (rake fixtures), the whole of rake check (Standard, rbs
 # validate, the comment on every public part of sig/, Steep, the tests
 # with their coverage, the tests under RBS's runtime type checker, every
@@ -73,11 +73,8 @@ jobs:
           path: ~/.cache/crosslint/bundle
           key: gems-${{ runner.os }}-${{ runner.arch }}-${{ steps.paths.outputs.ruby }}-${{ hashFiles('Gemfile.lock') }}
 
-      - name: Install the bundle
-        run: bundle install
-
-      - name: Install the test fixtures' packages
-        run: bundle exec rake fixtures
+      - name: Set up
+        run: bin/setup
 
       - name: Run every check
         run: bundle exec rake check

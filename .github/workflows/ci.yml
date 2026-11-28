@@ -1,7 +1,9 @@
 # The full run, for every push to trunk in batches, and for every pull
 # request: on each system, after installing the tools and the bundle, the
 # packages the test fixtures lock (rake fixtures), a setup step that no
-# test task runs. Then on Linux, the whole of rake check (Standard, rbs
+# test task runs. On Linux bin/setup does all of it, and the macOS and
+# Windows jobs run its steps themselves, since they install fewer of
+# mise.toml's tools than it does. Then on Linux, the whole of rake check (Standard, rbs
 # validate, the comment on every public part of sig/, Steep, the tests
 # with their coverage, the tests under RBS's runtime type checker, every
 # Ruby example in the documentation, CrossLint's own check of this
@@ -76,11 +78,8 @@ jobs:
           path: ~/.cache/crosslint/bundle
           key: gems-${{ runner.os }}-${{ runner.arch }}-${{ steps.paths.outputs.ruby }}-${{ hashFiles('Gemfile.lock') }}
 
-      - name: Install the bundle
-        run: bundle install
-
-      - name: Install the test fixtures' packages
-        run: bundle exec rake fixtures
+      - name: Set up
+        run: bin/setup
 
       - name: Run every check
         run: bundle exec rake check
