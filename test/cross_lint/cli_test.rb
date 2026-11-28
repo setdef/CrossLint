@@ -608,6 +608,31 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_check_prints_debug_output_even_with_silent_or_quiet_since_it_was_asked_for
+    Dir.mktmpdir("crosslint") do |project|
+      write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
+      write(project, "plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n  piece "b" "{path}.txt"\n}\n) +
+        %(policy "p" {\n  applies-to "a"\n  rule "piece-exists" piece="b"\n}\n))
+      write(project, "a.md", "")
+      Open3.capture3("git", "init", "-q", chdir: project)
+
+      [%w[--silent --debug], %w[--quiet --debug], %w[-s --debug], %w[-q --debug]].each do |flags|
+        assert_includes check("check", "-C", project, *flags)[1].lines, "crosslint: debug: file a.md\n", flags.inspect
+      end
+      %w[--silent --quiet].each do |flag|
+        assert_includes check("check", "-C", project, flag, env: {"DEBUG" => "1"})[1].lines, "crosslint: debug: file a.md\n", flag
+      end
+    end
+  end
+
+  def test_says_in_the_help_of_silent_quiet_and_debug_that_debug_output_is_printed_with_either
+    flags = CrossLint::UsageSpec.load.global_flags.to_h { |flag| [flag.long, flag.long_help] }
+
+    assert_includes flags.fetch("silent"), "--debug, or DEBUG set to a value that isn't empty, still prints its debug output"
+    assert_includes flags.fetch("quiet"), "--debug, or DEBUG set to a value that isn't empty, still prints its debug output"
+    assert_includes flags.fetch("debug"), "They print with --quiet and --silent too, since asking for them was on purpose"
+  end
+
   def test_check_writes_no_file
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
