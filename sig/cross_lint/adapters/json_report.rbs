@@ -2,9 +2,10 @@ module CrossLint
   module Adapters
     # The report port as JSON: one object on a line of standard output,
     # with the version of the CrossLint that wrote it, the violations, the
-    # paid-off entries, and the summary, and nothing else there. Notices, faults, what a step wrote, and the summary line
-    # go to standard error as for TextReport. Under --silent it writes
-    # only the faults; passing artifacts aren't in the object.
+    # paid-off entries, and the summary, and nothing else there. Notices,
+    # faults, what a step wrote, and the summary line go to standard error
+    # as for TextReport. Under --silent it writes only the faults; passing
+    # artifacts aren't in the object.
     #
     #     {"crosslint_version":"1.0.0","findings":[{"path":"lib/a.rb","message":"no test file at test/a_test.rb","plugin":"tests",
     #       "policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null}],
