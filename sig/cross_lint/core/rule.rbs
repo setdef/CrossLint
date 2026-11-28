@@ -83,8 +83,9 @@ module CrossLint
       # whole file.
       attr_reader line: Integer?
 
-      # The name a debt entry can give the artifact by in place of its
-      # name, from its declaration's key pattern, or nil when it has none.
+      # A second name of the artifact, which a debt entry can hold in place
+      # of its name, from its declaration's key pattern, or nil when it has
+      # none.
       attr_reader key: String?
 
       # The text each placeholder of the primary pattern matched in `path`,
@@ -94,8 +95,8 @@ module CrossLint
       # A view of `artifact` that reads files with `read`.
       def initialize: (Core::Artifact artifact, ^(String path) -> String read) -> void
 
-      # The piece called `name`: `primary` for "primary", which no
-      # declaration can name a piece, and otherwise the piece its
+      # The piece called `name`: `primary` when `name` is "primary", which
+      # no declaration can give a piece, and otherwise the piece its
       # declaration gives that name. Raises KeyError when the artifact's
       # declaration has none of that name.
       def piece: (String name) -> Piece
