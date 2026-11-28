@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-28
+
 ### Added
 
 - `crosslint update --latest` moves each shared plugin to the highest version tag of its repository, even when that version isn't compatible with the plugin's ref.
@@ -75,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The debt plugin excuses the violations that a project's debt file lists, and fails the check on an entry that no violation matches. `crosslint debt update` rewrites the debt file to match the current violations.
 - Release archives of CrossLint for macOS on Apple silicon, Linux on x86-64, and Windows on x86-64, each with everything it needs, and a `SHA256SUMS` file.
 
-[Unreleased]: https://github.com/setdef/CrossLint/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/setdef/CrossLint/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/setdef/CrossLint/releases/tag/v0.3.0
 [0.2.0]: https://github.com/setdef/CrossLint/releases/tag/v0.2.0
 [0.1.0]: https://github.com/setdef/CrossLint/releases/tag/v0.1.0

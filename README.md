@@ -256,8 +256,8 @@ SPDX-SnippetCopyrightText: 2026 setdef
 -->
 ```console
 $ shasum -a 256 --ignore-missing -c SHA256SUMS
-crosslint-0.2.0-macos-aarch64.tar.gz: OK
-$ tar -xzf crosslint-0.2.0-macos-aarch64.tar.gz
+crosslint-0.3.0-macos-aarch64.tar.gz: OK
+$ tar -xzf crosslint-0.3.0-macos-aarch64.tar.gz
 ```
 <!-- SPDX-SnippetEnd -->
 
@@ -270,7 +270,7 @@ SPDX-SnippetCopyrightText: 2026 setdef
 -->
 ```console
 $ crosslint --version
-crosslint 0.2.0
+crosslint 0.3.0
 ```
 <!-- SPDX-SnippetEnd -->
 

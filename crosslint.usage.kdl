@@ -4,7 +4,7 @@
 min_usage_version "2.0.0"
 name "CrossLint"
 bin "crosslint"
-version "0.2.0"
+version "0.3.0"
 author "setdef"
 license "MIT"
 repository "https://github.com/setdef/CrossLint"

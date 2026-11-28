@@ -16,7 +16,7 @@ If you get stuck, [post on the forum](https://forum.setdef.com/c/crosslint) with
   -->
   ```console
   $ crosslint --version
-  crosslint 0.2.0
+  crosslint 0.3.0
   ```
   <!-- SPDX-SnippetEnd -->
 
