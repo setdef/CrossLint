@@ -227,7 +227,7 @@ $ echo $?
 | The Angular plugin | Angular projects with [Node](https://nodejs.org/) on the `PATH` |
 | Moving from ng-nudge | Projects that use ng-nudge 0.3.0; one whose `rc.json` sets `withComment.matching` needs Node on the `PATH` |
 
-CrossLint lists a project's files with Git, so it never checks a file Git ignores, and outside a Git working tree it stops with exit status 2.
+CrossLint lists a project's files with Git, so it never checks a file Git ignores or a file inside a submodule, and outside a Git working tree it stops with exit status 2.
 
 ## Versions
 

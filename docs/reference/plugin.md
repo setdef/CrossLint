@@ -44,6 +44,7 @@ A path pattern is a path with placeholders in braces. In `primary`, `{path}` mat
 
 - A pattern uses `/` on every system, and matches case-sensitively.
 - Files that Git ignores, and anything under `.git/`, never match.
+- No `primary` pattern matches a file inside a Git submodule: CrossLint lists a project's files with `git ls-files`, which lists a submodule as one entry and not its files.
 - A file that two artifacts' `primary` patterns both match is the primary piece of each, and both are checked.
 - An artifact whose `primary` pattern matches no file, or whose regex matches nothing in any file it matches, is reported once as a warning, since a pattern that finds nothing usually has a typo.
 
@@ -414,7 +415,7 @@ A rule can also look beyond its artifact, for a path written in the artifact's t
 
 | Method | Returns |
 | --- | --- |
-| `project_files` | Every file the project has, as CrossLint sees them: the files Git lists, tracked or not, minus those Git ignores, and nothing under `.git/`. Each is a path relative to the project's root, with `/` between folders, in no particular order. It is the same frozen list for every artifact of a check, so a rule can index it once, in `initialize` or at its first artifact. |
+| `project_files` | Every file the project has, as CrossLint sees them: the files Git lists, tracked or not, minus those Git ignores, and nothing under `.git/` or inside a submodule. Each is a path relative to the project's root, with `/` between folders, in no particular order. It is the same frozen list for every artifact of a check, so a rule can index it once, in `initialize` or at its first artifact. |
 | `read(PATH)` | The text of the file at `PATH`, relative to the project's root with `/` between folders. It raises `Errno::ENOENT` when no file has that exact name. A file Git ignores can be read, though it isn't in `project_files`. |
 
 `violation(artifact, message, detail: TEXT)` makes a violation with a detail, as the example does for each missing function. Debt records each detail as a separate entry.

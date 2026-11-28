@@ -24,7 +24,7 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | **line protocol** | How CrossLint and a helper that a program runs talk: CrossLint writes each request to the helper's standard input as one line of JSON, and the helper answers each with one line of JSON on its standard output. | |
 | **CrossLint's Ruby** | The Ruby that CrossLint carries and runs on, which every project has. A helper on it runs inside CrossLint and speaks no line protocol. | |
 | **Ruby rule** | A rule whose helper runs on CrossLint's Ruby: a class that inherits from `CrossLint::Rule`, in the helper's file. Its `check` gets one artifact and returns its violations. | custom rule |
-| **project files** | The files a Ruby rule sees through `project_files`: those Git tracks, and the untracked ones it doesn't ignore. | |
+| **project files** | The files a Ruby rule sees through `project_files`: those Git tracks, and the untracked ones it doesn't ignore, but none inside a submodule. | |
 | **detail** | What tells apart the violations one rule finds on one artifact, such as a missing input's name, so the debt plugin can excuse each alone. | |
 | **fault** | What stops a plugin, such as a helper that fails or answers with an error, a regex search that runs past its time limit, two artifacts of one role with one name, or, in CrossLint's Ruby, an exception the helper raises or a gem it requires that CrossLint wasn't built with. The plugin reports nothing else, and `crosslint check` exits with 2. | crash |
 | **mistake** | A line of a manifest or a configuration that CrossLint can't use. CrossLint stops at it with exit status 2, before it checks anything, and says which file and line. | invalid config |
