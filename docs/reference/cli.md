@@ -74,6 +74,7 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
 
   The object has these keys, in this order:
 
+  - "crosslint_version": the version of the CrossLint that wrote the object, such as "1.0.0". Its major version is the version of the form of the object, since CrossLint's versions follow Semantic Versioning.
   - "findings": an array with one object for each violation, with these keys, in this order. "path" is the path of the artifact's primary piece. "message", "plugin", and "policy" are strings. "artifact" is the artifact's name, which is its primary piece's path unless its declaration has a name pattern. "role" is the artifact's kind. "severity" is "error" or "warning". "detail" is a string, or null when the rule gives none. "line" is the number of the line of the primary piece's file that the artifact was found on, or null for an artifact whose primary piece is a whole file. Every value but "detail" and "line" is a string. A violation the debt plugin adds when its report-entries setting is on, for an entry in the debt file, has the debt file as "artifact" and "path", "debt-file" as "role", the entry's line number as a string in "detail", and null as "line".
   - "paid_off": an array with one object for each paid-off entry. "file" is the debt file, and "line" is the entry's line in it, a number. "plugin", "policy", "artifact", and "message" are strings.
   - "summary": an object of four numbers: "artifacts", the artifacts checked, passing ones included; "errors"; "warnings"; and "paid_off".
@@ -85,6 +86,7 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
   For a project with one Ruby file and no test for it, the output is this, here with line breaks added:
 
       {
+        "crosslint_version": "1.0.0",
         "findings": [
           {
             "path": "lib/a.rb",

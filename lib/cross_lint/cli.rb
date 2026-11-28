@@ -165,7 +165,8 @@ module CrossLint
       [commands, found]
     end
 
-    def application(spec) = @app || App.new(err: @err, debug: debug?, reserved: spec.commands.map(&:name), reserved_flags: App.global_flag_names(spec))
+    def application(spec) = @app || App.new(err: @err, debug: debug?, reserved: spec.commands.map(&:name), reserved_flags: App.global_flag_names(spec),
+      version: spec.version)
 
     def check_project(app, line, project, command = nil, flags = {})
       # A plugin's command has flags of its own, which may be named as

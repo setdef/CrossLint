@@ -27,10 +27,12 @@ module CrossLint
     # none given, they are the commands of the shipped usage spec.
     # `reserved_flags` has each way CrossLint's global flags are written,
     # which no flag of a plugin's command can be written as; with none
-    # given, they are those of the shipped usage spec.
+    # given, they are those of the shipped usage spec. `version` is the
+    # version of the CrossLint that runs, such as "1.0.0"; with none given,
+    # it is the shipped usage spec's.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
                      ?crosslint_ruby: _CrossLintRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String, ?built_in: Array[String],
-                     ?debt_files: _DebtFiles, ?ng_nudge: _NgNudge, ?javascript: _JavaScript, ?reserved: Array[String]?, ?reserved_flags: Array[String]?, ?err: CLI::_Output, ?debug: bool) -> void
+                     ?debt_files: _DebtFiles, ?ng_nudge: _NgNudge, ?javascript: _JavaScript, ?reserved: Array[String]?, ?reserved_flags: Array[String]?, ?version: String?, ?err: CLI::_Output, ?debug: bool) -> void
 
     # How each global flag of `spec`, with --help and --version, is
     # written on a command line, such as "--quiet" and "-q".
@@ -97,6 +99,8 @@ module CrossLint
     @reserved: Array[String]
 
     @reserved_flags: Array[String]
+
+    @version: String
 
     @manifests: _PluginManifests
 

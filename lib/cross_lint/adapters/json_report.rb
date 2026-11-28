@@ -6,6 +6,11 @@ require_relative "text_report"
 module CrossLint
   module Adapters
     class JSONReport < TextReport
+      def initialize(out:, err:, crosslint:, debug: false)
+        super(out:, err:, debug:)
+        @crosslint = crosslint
+      end
+
       def write(result)
         return write_faults(result) if result.verbosity == :silent
 
@@ -17,6 +22,7 @@ module CrossLint
       def write_findings(result)
         summary = result.summary
         @out.puts JSON.generate({
+          "crosslint_version" => @crosslint,
           "findings" => result.violations.map do |violation|
             {"path" => violation.path, "message" => violation.message, "plugin" => violation.plugin, "policy" => violation.policy,
              "artifact" => violation.artifact, "role" => violation.role, "severity" => violation.severity, "detail" => violation.detail,

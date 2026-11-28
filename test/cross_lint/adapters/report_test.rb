@@ -209,7 +209,7 @@ class JSONReportTest < Minitest::Test
   include CrossLint::Testing::ReportContract
   include ReportTestHelper
 
-  def report_port = CrossLint::Adapters::JSONReport.new(out: @out, err: @err)
+  def report_port = CrossLint::Adapters::JSONReport.new(out: @out, err: @err, crosslint: "1.4.0")
 
   def reported
     object = @out.string.empty? ? {"findings" => []} : JSON.parse(@out.string)
@@ -224,7 +224,7 @@ class JSONReportTest < Minitest::Test
     report_port.write(result_of([violation_of("lib/a.rb", "no test"), violation_of("lib/b.rb", "x", :warning, detail: "y")]))
 
     assert_equal <<~JSON.delete("\n") + "\n", @out.string
-      {"findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null},
+      {"crosslint_version":"1.4.0","findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null},
       {"path":"lib/b.rb","message":"x","plugin":"tests","policy":"has-test","artifact":"lib/b.rb","role":"ruby-file","severity":"warning","detail":"y","line":null}],
       "paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}
     JSON
@@ -243,14 +243,14 @@ class JSONReportTest < Minitest::Test
     paid_off = PaidOffEntry.new(plugin: "tests", policy: "has-test", artifact: "lib/a.rb", file: "debt.tsv", line: 2, message: "is paid off")
     report_port.write(result_of([paid_off]))
 
-    assert_equal %({"findings":[],"paid_off":[{"file":"debt.tsv","line":2,"plugin":"tests","policy":"has-test","artifact":"lib/a.rb",) +
+    assert_equal %({"crosslint_version":"1.4.0","findings":[],"paid_off":[{"file":"debt.tsv","line":2,"plugin":"tests","policy":"has-test","artifact":"lib/a.rb",) +
       %("message":"is paid off"}],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}\n), @out.string
   end
 
   def test_writes_the_object_with_no_summary_line_when_quiet
     report_port.write(result_of([], verbosity: :quiet))
 
-    assert_equal [%({"findings":[],"paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}\n), ""], [@out.string, @err.string]
+    assert_equal [%({"crosslint_version":"1.4.0","findings":[],"paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}\n), ""], [@out.string, @err.string]
   end
 
   def test_leaves_passing_artifacts_out

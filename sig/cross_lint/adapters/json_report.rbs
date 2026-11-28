@@ -1,12 +1,12 @@
 module CrossLint
   module Adapters
     # The report port as JSON: one object on a line of standard output,
-    # with the violations, the paid-off entries, and the summary, and nothing
-    # else there. Notices, faults, what a step wrote, and the summary line
+    # with the version of the CrossLint that wrote it, the violations, the
+    # paid-off entries, and the summary, and nothing else there. Notices, faults, what a step wrote, and the summary line
     # go to standard error as for TextReport. Under --silent it writes
     # only the faults; passing artifacts aren't in the object.
     #
-    #     {"findings":[{"path":"lib/a.rb","message":"no test file at test/a_test.rb","plugin":"tests",
+    #     {"crosslint_version":"1.0.0","findings":[{"path":"lib/a.rb","message":"no test file at test/a_test.rb","plugin":"tests",
     #       "policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null}],
     #      "paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":0,"paid_off":0}}
     #
@@ -19,6 +19,13 @@ module CrossLint
     # `policy`, and `artifact`, and a `message`. The keys are in those
     # orders, and every character that isn't ASCII is escaped.
     class JSONReport < TextReport
+      # A report that writes the object to `out` and the rest to `err`,
+      # with `crosslint`, the version of the CrossLint that runs, such as
+      # "1.0.0", as the object's first key, and each fault's trace when
+      # `debug` is true.
+      def initialize: (out: CLI::_Output, err: CLI::_Output, crosslint: String, ?debug: bool) -> void
+
+      @crosslint: String
     end
   end
 end

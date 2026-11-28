@@ -14,7 +14,7 @@ module CrossLint
     def initialize(configuration: Adapters::KDLConfiguration.new, manifests: Adapters::KDLPluginManifests.new,
       project_files: Adapters::GitProjectFiles.new, crosslint_ruby: Adapters::FileCrossLintRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
       built_in: BUILT_IN, debt_files: Adapters::TSVDebtFiles.new, ng_nudge: Adapters::FileNgNudge.new, javascript: Adapters::NodeJavaScript.new,
-      reserved: nil, reserved_flags: nil, err: $stderr, debug: false)
+      reserved: nil, reserved_flags: nil, version: nil, err: $stderr, debug: false)
       @configuration = configuration
       @manifests = manifests
       @project_files = project_files
@@ -27,6 +27,7 @@ module CrossLint
       @built_in = built_in_plugins(plugins, built_in)
       @reserved = reserved || UsageSpec.load.commands.map(&:name)
       @reserved_flags = reserved_flags || self.class.global_flag_names(UsageSpec.load)
+      @version = version || UsageSpec.load.version
       @steps = {"track-debt" => Core::TrackDebt.new(debt_files:)} #: Hash[String, Core::_Step]
     end
 
@@ -69,7 +70,7 @@ module CrossLint
     end
 
     def report(out:, err:, json: false, color: false, debug: false)
-      json ? Adapters::JSONReport.new(out:, err:, debug:) : Adapters::TextReport.new(out:, err:, color:, debug:)
+      json ? Adapters::JSONReport.new(out:, err:, crosslint: @version, debug:) : Adapters::TextReport.new(out:, err:, color:, debug:)
     end
 
     private

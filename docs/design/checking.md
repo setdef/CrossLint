@@ -30,6 +30,7 @@ How `crosslint check` finds a project's files, runs its plugins, and reports, an
 ## Output
 
 - **Findings go to standard output, and everything CrossLint says about itself to standard error,** so a script reading findings never reads a summary or a warning.
+- **The JSON object's first key is the version of the CrossLint that wrote it, and there is no format number beside it.** CrossLint's versions follow Semantic Versioning, so its major version already says which form of the object a script reads, and a second number would be one more thing for a script's author to compare (#47).
 - **The order of findings never depends on the order the filesystem lists files in,** or the output and the debt file would change from one computer to another.
 - **On a terminal, a first line comes before CrossLint reads any project file beyond its configuration, and before any helper starts,** so the wait for it never grows with the project. A fixed time from the moment the process starts can't be met: the app's launcher and its Ruby take about 70 ms on Linux and over 200 ms on Windows and macOS before any of CrossLint's code runs (#13).
 - **The words CrossLint writes are ASCII, and what it takes from the project prints as it is, in UTF-8.** Writing `lib/café.rb` as `lib/caf?.rb` would leave a path no editor opens and no debt entry matches.
