@@ -6,7 +6,7 @@ If you get stuck, [post on the forum](https://forum.setdef.com/c/crosslint) with
 
 ## What you need
 
-- **A project in a Git repository,** with Ruby files under `lib/` and tests under `test/`. The examples use a Ruby project called `invoices`, whose test for `lib/invoices/total.rb` is `test/invoices/total_test.rb`; where your project keeps its files elsewhere, change the paths to match.
+- **A project in a Git repository,** with source files and tests for them. The examples use a Ruby project called `invoices`, whose test for `lib/invoices/total.rb` is `test/invoices/total_test.rb`. The plugin you'll write is data, with no code, so the steps are the same in a project of any language: where your project keeps its files elsewhere, such as a JavaScript project's `src/cart/total.js` with its test at `test/cart/total.test.js`, change the paths to match.
 - **CrossLint on your `PATH`,** from [the README's installation steps](../README.md#installation). Check that the shell finds it:
 
   <!--
@@ -20,7 +20,7 @@ If you get stuck, [post on the forum](https://forum.setdef.com/c/crosslint) with
   ```
   <!-- SPDX-SnippetEnd -->
 
-You don't need Ruby installed; CrossLint carries the Ruby it runs on.
+You don't need Ruby, or any other runtime, installed; CrossLint carries the Ruby it runs on.
 
 ## Write a configuration
 
@@ -98,7 +98,7 @@ crosslint: checked 9 ruby-file artifacts: 3 errors
 ```
 <!-- SPDX-SnippetEnd -->
 
-Each **violation** is one line on standard output: the file, what's wrong, and the plugin and policy it comes from. The last line is CrossLint's summary, on standard error. What did the shell get?
+Each **violation** is one line on standard output: the artifact's name, which here is its primary piece's path, what's wrong, and the plugin and policy it comes from. The last line is CrossLint's summary, on standard error. What did the shell get?
 
 <!--
 SPDX-SnippetBegin
@@ -175,4 +175,4 @@ You've finished when all of these are true:
 - `.config/crosslint/debt.tsv` has a comment on every entry.
 - A Ruby file you add under `lib/` with no test makes `crosslint check` exit with 1.
 
-You should now be comfortable declaring an artifact, a policy and a rule, and keeping a check passing with debt. To check something a path can't show, such as what a file contains, read [Regexes](reference/plugin.md#regexes) and [Helpers](reference/plugin.md#helpers) in the plugin reference.
+You should now be comfortable declaring an artifact, a policy and a rule, and keeping a check passing with debt. To check something a path can't show, such as what a file contains, read [Regexes](reference/plugin.md#regexes) in the plugin reference, and then [Helpers](reference/plugin.md#helpers), which run a rule you write in your project's language.
