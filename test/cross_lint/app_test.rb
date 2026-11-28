@@ -73,6 +73,17 @@ class AppTest < Minitest::Test
     assert_match(/needs CrossLint 1.2 or later/, assert_raises(Mistake) { App.new(version: "1.1.9").update(root) }.message)
   end
 
+  def test_reads_a_plugin_only_when_it_is_the_crosslint_its_manifests_first_line_names_or_a_newer_one
+    write(@base, "app/.config/crosslint/config.kdl", %(plugin ".config/crosslint/modules"\n))
+    write(@base, "app/.config/crosslint/modules/plugin.kdl", %(crosslint min="2"\nnext-feature\n))
+    root = File.join(@base, "app")
+    mistake = assert_raises(Mistake) { App.new(version: "1.9.0").load_project(root) }
+
+    assert_equal [".config/crosslint/modules/plugin.kdl:1", "plugin modules needs CrossLint 2 or later, and this is CrossLint 1.9.0; upgrade CrossLint"],
+      [mistake.location, mistake.message]
+    assert_match(/unknown node "next-feature"/, assert_raises(Mistake) { App.new(version: "2.0.0").load_project(root) }.message)
+  end
+
   def test_refuses_a_version_of_crosslint_that_isnt_three_numbers
     assert_raises(ArgumentError) { App.new(version: "1.2.0-rc.1") }
   end

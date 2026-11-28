@@ -60,9 +60,18 @@ module CrossLint
     # The manifest's file name in a plugin's folder, such as "plugin.kdl".
     def file: () -> String
 
+    # The oldest CrossLint that reads the manifest of the plugin in
+    # `folder`, a path relative to `root`, which the manifest names on its
+    # first line, or nil when it names none or the folder has no manifest.
+    # Reads that line alone, as _Configuration#minimum does, and raises
+    # Core::Mistake for that line as it does.
+    def minimum: (String root, String folder) -> Core::MinimumVersion?
+
     # The manifest of the plugin in `folder`, a path relative to `root`,
     # or nil when the folder has none. Raises Core::Mistake, naming the
-    # file and the line, at a mistake in it.
+    # file and the line, at a mistake in it, the line that names the
+    # oldest CrossLint among them. Compares that version with no
+    # CrossLint's: the caller asks `minimum` first.
     def read: (String root, String folder) -> Core::Manifest?
   end
 

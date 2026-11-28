@@ -112,8 +112,9 @@ module CrossLint
         return unless placed
 
         base, folder = placed
-        manifest = @manifests.read(base, folder) || fail_at.call("no #{@manifests.file} in #{where(listing, folder)}")
         name = File.basename(File.expand_path(folder, base))
+        @manifests.minimum(base, folder)&.check(@crosslint, of: "plugin #{name}")
+        manifest = @manifests.read(base, folder) || fail_at.call("no #{@manifests.file} in #{where(listing, folder)}")
         if (listing.kind == :local || listing.shared?(@shared_plugins)) && @built_in.key?(name)
           fail_at.call("plugin #{listing.shown.dump} is named #{name.dump}, the name of a built-in plugin, which no local or shared plugin " \
             "can have; rename the plugin's folder, since a plugin's name is its folder's name")

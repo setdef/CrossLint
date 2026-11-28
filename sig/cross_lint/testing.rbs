@@ -152,7 +152,9 @@ module CrossLint
       # "track-debt".
       #
       # A manifest with a mistake on line 2 is in each folder of `broken`.
-      def manifests_port: (?example: Array[String], ?broken: Array[String]) -> _PluginManifests
+      # Each manifest in a folder of `minimum` names the oldest CrossLint
+      # that reads it, the version there, before its other lines.
+      def manifests_port: (?example: Array[String], ?broken: Array[String], ?minimum: Hash[String, String]) -> _PluginManifests
 
       # The absolute path the folders are relative to.
       def base: () -> String
@@ -184,6 +186,18 @@ module CrossLint
 
       # read returns nil for a folder with no manifest.
       def test_reads_nothing_from_a_folder_with_no_manifest: () -> void
+
+      # minimum returns the oldest CrossLint a manifest names, from its
+      # file and a line before its artifacts'.
+      def test_reads_the_oldest_crosslint_a_manifest_names_before_its_other_lines: () -> void
+
+      # minimum returns nil for a manifest that names none, and for a
+      # folder with no manifest.
+      def test_reads_no_oldest_crosslint_from_a_manifest_that_names_none_or_a_folder_with_no_manifest: () -> void
+
+      # minimum returns the oldest CrossLint of a manifest whose other
+      # lines read raises a mistake at.
+      def test_reads_the_oldest_crosslint_of_a_manifest_without_reading_the_other_lines: () -> void
 
       # read raises a mistake naming the file and the line.
       def test_names_the_file_and_line_of_a_mistake: () -> void

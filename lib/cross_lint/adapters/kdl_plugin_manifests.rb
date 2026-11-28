@@ -8,7 +8,7 @@ module CrossLint
     class KDLPluginManifests
       FILE = "plugin.kdl"
 
-      NODES = %w[artifact artifacts policy rule helper setting command step].freeze
+      NODES = %w[artifact artifacts policy rule helper setting command step crosslint].freeze
 
       CONDITIONS = %w[piece-exists not all any].freeze
 
@@ -33,11 +33,17 @@ module CrossLint
 
       def file = FILE
 
+      def minimum(root, folder)
+        path = File.join(root, folder, FILE)
+        KDLDocument.minimum(KDLDocument.source(path), shown(folder), typed: TYPED) if File.file?(path)
+      end
+
       def read(root, folder)
         path = File.join(root, folder, FILE)
         return unless File.file?(path)
 
-        document = KDLDocument.load(path, folder.empty? ? FILE : "#{folder}/#{FILE}", typed: TYPED)
+        document = KDLDocument.load(path, shown(folder), typed: TYPED)
+        document.whole_minimum
         document.nodes.each do |node|
           next if NODES.include?(node.name)
           raise document.mistake(FLAG_MISTAKE, node) if node.name == "flag"
@@ -66,6 +72,9 @@ module CrossLint
       # A helper on CrossLint's Ruby: its file runs in CrossLint,
       # as the Ruby of the rules and the artifacts that name it.
       class Carried < Data.define(:name, :file, :line); end
+
+      # The manifest's path, as messages name it: relative to `root`.
+      def shown(folder) = folder.empty? ? FILE : "#{folder}/#{FILE}"
 
       def nodes(document, name, &read) = document.nodes.select { |node| node.name == name }.map(&read)
 

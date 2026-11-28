@@ -10,10 +10,13 @@ class MemoryPluginManifestsTest < Minitest::Test
 
   def base = "/memory"
 
-  def manifests_port(example: [], broken: [])
+  def manifests_port(example: [], broken: [], minimum: {})
     held = example.to_h { |folder| [File.expand_path(folder, base), example_manifest(folder)] }
     broken.each { |folder| held[File.expand_path(folder, base)] = Mistake.new("unknown node", file: "#{folder}/plugin.kdl", line: 2) }
-    CrossLint::Adapters::MemoryPluginManifests.new(held)
+    minimums = minimum.to_h do |folder, text|
+      [File.expand_path(folder, base), CrossLint::Core::MinimumVersion.parse(text, file: "#{folder}/plugin.kdl", line: 0)]
+    end
+    CrossLint::Adapters::MemoryPluginManifests.new(held, minimums:)
   end
 
   def test_holds_no_manifest_unless_it_is_given_some

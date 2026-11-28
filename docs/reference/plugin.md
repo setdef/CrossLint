@@ -30,6 +30,38 @@ policy "has-test" {
 
 A plugin's name is its folder's name, here `modules`. CrossLint names each violation by the plugin and the policy that found it: `modules/has-declaration`.
 
+## `crosslint`
+
+In `crosslint min=VERSION`, `VERSION` is the oldest CrossLint that reads the plugin. Write the line as the manifest's first line, once, when the plugin uses something an older CrossLint doesn't have, such as a kind of line added in a later release. A plugin for CrossLint 1.2.0 or later starts:
+
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
+```kdl
+crosslint min="1.2"
+
+artifact "module" {
+  primary "src/{path}.js"
+}
+```
+<!-- SPDX-SnippetEnd -->
+
+CrossLint reads this line before any other line of the manifest. A CrossLint older than `VERSION` stops there with exit status 2, before it reads the rest of the plugin, and names the plugin and both versions:
+
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
+```text
+crosslint: .config/crosslint/modules/plugin.kdl:1: plugin modules needs CrossLint 1.2 or later, and this is CrossLint 1.1.0; upgrade CrossLint
+```
+<!-- SPDX-SnippetEnd -->
+
+`VERSION` and the line are written as in [the configuration](configuration.md#crosslint): one to three numbers in a string, with a number left out read as 0, and no operator or pre-release part. A `crosslint` line after another line, a second one, and one with anything but `min=` stop CrossLint with exit status 2. Without the line, a CrossLint reads the plugin when it reads each of its other lines.
+
 ## `artifact`
 
 `artifact ROLE { ... }` declares a role: the path pattern that finds each artifact's primary piece, the artifact's name, and where each of its other pieces belongs. `ROLE` is unique within the plugin.

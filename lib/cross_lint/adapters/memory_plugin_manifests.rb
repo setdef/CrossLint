@@ -7,10 +7,13 @@ module CrossLint
     class MemoryPluginManifests
       attr_reader :file
 
-      def initialize(folders = {}, file: "plugin.kdl")
+      def initialize(folders = {}, file: "plugin.kdl", minimums: {})
         @folders = folders
         @file = file
+        @minimums = minimums
       end
+
+      def minimum(root, folder) = @minimums[File.expand_path(folder, root)]
 
       def read(root, folder)
         manifest = @folders[File.expand_path(folder, root)]

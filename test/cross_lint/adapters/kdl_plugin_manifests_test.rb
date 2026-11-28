@@ -75,9 +75,10 @@ class KDLPluginManifestsTest < Minitest::Test
 
   attr_reader :base
 
-  def manifests_port(example: [], broken: [])
-    example.each { |folder| write(@base, File.join(folder, "plugin.kdl"), CONTRACT_EXAMPLE) }
-    broken.each { |folder| write(@base, File.join(folder, "plugin.kdl"), %(artifact "a" {\n  file "b"\n}\n)) }
+  def manifests_port(example: [], broken: [], minimum: {})
+    first = ->(folder) { minimum.key?(folder) ? %(crosslint min=#{minimum.fetch(folder).dump}\n) : "" }
+    example.each { |folder| write(@base, File.join(folder, "plugin.kdl"), first.call(folder) + CONTRACT_EXAMPLE) }
+    broken.each { |folder| write(@base, File.join(folder, "plugin.kdl"), %(#{first.call(folder)}artifact "a" {\n  file "b"\n}\n)) }
     CrossLint::Adapters::KDLPluginManifests.new
   end
 
@@ -151,10 +152,30 @@ class KDLPluginManifestsTest < Minitest::Test
       policy.rules.first.line, manifest.rules.first.line, manifest.helpers.first.line]
   end
 
+  def test_reads_the_example_of_the_oldest_crosslint_in_the_plugin_reference
+    write(@base, "plugins/x/plugin.kdl", doc_block("docs/reference/plugin.md", "kdl", /\Acrosslint min=/))
+    port = CrossLint::Adapters::KDLPluginManifests.new
+    found = port.minimum(@base, "plugins/x")
+
+    assert_equal [["1.2", 1, "plugins/x/plugin.kdl"], ["module"]], [[found&.text, found&.line, found&.file], port.read(@base, "plugins/x")&.artifacts.to_a.map(&:name)]
+  end
+
+  def test_refuses_a_crosslint_line_that_is_not_first_or_has_more_than_min
+    assert_refuses 2, "crosslint comes after step on line 1; write it as the first line, so that a CrossLint too old for the file " \
+      "says so before it reads any other", %(step "track-debt"\ncrosslint min="1.2"\n)
+    assert_refuses 1, %(unknown property "soft"; expected "min"), %(crosslint min="1.2" soft=#true\n)
+  end
+
+  def test_reads_the_oldest_crosslint_from_a_manifest_with_a_helper_on_crosslints_ruby_it_cant_parse
+    write(@base, "plugins/x/plugin.kdl", %(crosslint min="9"\nhelper "h" command=(crosslint)"node" file="h.js"\nnew-syntax "x\n))
+
+    assert_equal ["9"], [CrossLint::Adapters::KDLPluginManifests.new.minimum(@base, "plugins/x")].compact.map(&:text)
+  end
+
   def test_refuses_a_node_it_does_not_know
     assert_refuses 2, %(unknown node "primay", did you mean "primary"?), %(artifact "a" {\n  primay "lib/{path}.rb"\n}\n)
     assert_refuses 1, %(unknown node "artefact", did you mean "artifact"?), %(artefact "a")
-    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "artifacts", "policy", "rule", "helper", "setting", "command", or "step"), %(zzz)
+    assert_refuses 1, %(unknown node "zzz"; expected "artifact", "artifacts", "policy", "rule", "helper", "setting", "command", "step", or "crosslint"), %(zzz)
     assert_refuses 2, %(unknown node "polcy", did you mean "policy"?), %(rule "r" helper="h"\npolcy "p")
   end
 

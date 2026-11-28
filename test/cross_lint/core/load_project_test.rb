@@ -52,6 +52,22 @@ class LoadProjectTest < Minitest::Test
     end
   end
 
+  def test_stops_before_reading_a_manifest_that_needs_a_newer_crosslint_naming_the_plugin
+    broken = {"#{APP}/rules/tests" => Mistake.new("unknown node", file: "rules/tests/plugin.kdl", line: 2)}
+    newer = {"#{APP}/rules/tests" => MinimumVersion.parse("1.5", file: "rules/tests/plugin.kdl", line: 1)}
+
+    [false, true].each do |listed|
+      assert_mistake "rules/tests/plugin.kdl", 1, "plugin tests needs CrossLint 1.5 or later, and this is CrossLint 1.4.0; upgrade CrossLint",
+        manifests: broken, minimums: newer, listed:
+    end
+  end
+
+  def test_reads_a_manifest_that_this_crosslint_reads
+    met = {"#{APP}/rules/tests" => MinimumVersion.parse("1.4", file: "rules/tests/plugin.kdl", line: 1)}
+
+    assert_equal ["tests"], load_project(minimums: met).plugins.map(&:name)
+  end
+
   def test_stops_when_the_configuration_lists_no_plugin
     assert_mistake CONFIG, nil, "lists no plugin, so no check would run; list one with plugin NAME", plugins: []
   end
@@ -955,12 +971,13 @@ class LoadProjectTest < Minitest::Test
   end
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
-    shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false, helpers: MemoryHelpers.new, configuration: nil)
+    shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false, helpers: MemoryHelpers.new, configuration: nil,
+    minimums: {})
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration ||= MemoryConfiguration.new({APP => Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)})
     use_case = LoadProject.new(configuration:, crosslint: CROSSLINT,
-      manifests: MemoryPluginManifests.new(manifests), crosslint_ruby: MemoryCrossLintRuby.new(ruby), shared_plugins:, built_in:, steps:, helpers:,
-      **{reserved:, reserved_flags:}.compact)
+      manifests: MemoryPluginManifests.new(manifests, minimums:), crosslint_ruby: MemoryCrossLintRuby.new(ruby), shared_plugins:, built_in:, steps:,
+      helpers:, **{reserved:, reserved_flags:}.compact)
     listed ? use_case.listed(start) : use_case.call(start)
   end
 

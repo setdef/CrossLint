@@ -267,6 +267,27 @@ module CrossLint
         assert_nil manifests_port(example: ["plugins/signatures"]).read(base, "plugins/other")
       end
 
+      def test_reads_the_oldest_crosslint_a_manifest_names_before_its_other_lines
+        port = manifests_port(example: ["plugins/signatures"], minimum: {"plugins/signatures" => "1.2"})
+        found = port.minimum(base, "plugins/signatures") || raise(Minitest::Assertion, "plugins/signatures names no oldest CrossLint")
+
+        assert_equal ["plugins/signatures/#{port.file}", "1.2", [1, 2, 0]], [found.file, found.text, found.version.numbers]
+        assert_operator found.line, :<, read_manifest(port, "plugins/signatures").artifacts.first.line
+      end
+
+      def test_reads_no_oldest_crosslint_from_a_manifest_that_names_none_or_a_folder_with_no_manifest
+        port = manifests_port(example: ["plugins/signatures"])
+
+        assert_equal [nil, nil], [port.minimum(base, "plugins/signatures"), port.minimum(base, "plugins/other")]
+      end
+
+      def test_reads_the_oldest_crosslint_of_a_manifest_without_reading_the_other_lines
+        port = manifests_port(broken: ["plugins/broken"], minimum: {"plugins/broken" => "9"})
+
+        assert_equal ["9"], [port.minimum(base, "plugins/broken")].compact.map(&:text)
+        assert_raises(Core::Mistake) { port.read(base, "plugins/broken") }
+      end
+
       def test_names_the_file_and_line_of_a_mistake
         port = manifests_port(broken: ["plugins/broken"])
         mistake = assert_raises(Core::Mistake) { port.read(base, "plugins/broken") }

@@ -59,6 +59,8 @@ crosslint: .config/crosslint/config.kdl:1: needs CrossLint 1.2 or later, and thi
 - Without the line, a CrossLint reads the configuration when it reads each of its other lines.
 - A `crosslint` line after another line, a second `crosslint` line, and a line with an argument, a block, or any property but `min` stop CrossLint with exit status 2, naming the line.
 
+A [`plugin.kdl`](plugin.md#crosslint) takes the same line, for the oldest CrossLint that reads the plugin.
+
 ## `plugin`
 
 `plugin NAME { ... }` runs a plugin. List each plugin once. No plugin runs unless the configuration lists it, the built-in ones included.

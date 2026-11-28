@@ -37,6 +37,10 @@ module CrossLint
 
       private
 
+      # The path of the manifest in `folder`, as messages name it:
+      # relative to the root it is read from.
+      def shown: (String folder) -> String
+
       # A helper on CrossLint's Ruby, whose file the rules and
       # the artifacts that name it run.
       class Carried < Data
