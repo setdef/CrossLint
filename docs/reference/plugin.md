@@ -62,6 +62,8 @@ crosslint: .config/crosslint/modules/plugin.kdl:1: plugin modules needs CrossLin
 
 `VERSION` and the line are written as in [the configuration](configuration.md#crosslint): one to three numbers in a string, with a number left out read as 0, and no operator or pre-release part. A `crosslint` line after another line, a second one, and one with anything but `min=` stop CrossLint with exit status 2. Without the line, a CrossLint reads the plugin when it reads each of its other lines.
 
+For a shared plugin, `crosslint update` skips a tag whose `plugin.kdl` needs a newer CrossLint than the one that runs it, and moves the project to the newest tag below it that this CrossLint reads, so a project on an older CrossLint keeps getting the fixes a plugin's author releases for it.
+
 ## `artifact`
 
 `artifact ROLE { ... }` declares a role: the path pattern that finds each artifact's primary piece, the artifact's name, and where each of its other pieces belongs. `ROLE` is unique within the plugin.

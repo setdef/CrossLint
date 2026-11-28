@@ -20,6 +20,17 @@ class UpdatePluginsTest < Minitest::Test
   # The CrossLint that updates each project.
   CROSSLINT = Core::Version.parse("1.4.0")
 
+  # Raises the mistake it holds for a folder when it is asked for the
+  # oldest CrossLint of the manifest there.
+  class BrokenManifests < CrossLint::Adapters::MemoryPluginManifests
+    def initialize(mistakes)
+      super()
+      @mistakes = mistakes
+    end
+
+    def minimum(root, folder) = @mistakes.key?(File.expand_path(folder, root)) ? raise(@mistakes.fetch(File.expand_path(folder, root))) : nil
+  end
+
   # Sets each ref, as the configuration port should, and keeps what it was
   # asked to set.
   class RecordingConfiguration < CrossLint::Adapters::MemoryConfiguration
@@ -49,7 +60,7 @@ class UpdatePluginsTest < Minitest::Test
     assert_equal [{[ONE, "plugins/a"] => "v1.2.0", [ONE, nil] => "v1.2.0"}], configuration.set
     assert_equal [["v1.2.0", "plugins/a"], ["v9.0.0", "plugins/b"], ["v1.2.0", nil]], configuration.read(APP).plugins.map { |plugin| [plugin.ref, plugin.path] }
     assert_equal ["#{ONE} (plugins/a): moved from v1.0.0 to v1.2.0", "#{ONE} (plugins/b): is at its newest tag, v9.0.0", "#{ONE}: moved from v1.0.0 to v1.2.0"], result.lines
-    assert_equal ["crosslint: listing the tags of #{ONE}"], @err.string.lines(chomp: true)
+    assert_equal ["crosslint: listing the tags of #{ONE}", "crosslint: fetching #{ONE} at v1.2.0"], @err.string.lines(chomp: true)
   end
 
   def test_lists_what_it_would_move_and_changes_nothing_with_dry_run
@@ -113,7 +124,7 @@ class UpdatePluginsTest < Minitest::Test
 
     assert_equal [ONE], result.updates.map { |update| update.listing.name }
     assert_equal [nil, nil, "v1.1.0"], configuration.read(APP).plugins.map(&:ref)
-    assert_equal ["crosslint: listing the tags of #{ONE}"], @err.string.lines(chomp: true)
+    assert_equal ["crosslint: listing the tags of #{ONE}", "crosslint: fetching #{ONE} at v1.1.0"], @err.string.lines(chomp: true)
   end
 
   def test_stops_at_the_url_of_a_shared_plugin_that_has_a_user_name_or_password_and_doesnt_print_it
@@ -222,10 +233,73 @@ class UpdatePluginsTest < Minitest::Test
     assert_empty @err.string
   end
 
+  def test_skips_each_tag_that_needs_a_newer_crosslint_and_moves_to_the_newest_one_this_crosslint_reads
+    configuration, shared = project([listing(ONE, "v1.0.0")], {ONE => %w[v1.0.0 v1.1.0 v1.2.0 v1.3.0 v2.0.0]}, {"v1.3.0" => "1.6", "v1.2.0" => "1.5"})
+    result = update_plugins(configuration, shared).call(APP)
+
+    assert_equal ["v1.1.0"], configuration.read(APP).plugins.map(&:ref)
+    assert_equal ["#{ONE}: moved from v1.0.0 to v1.1.0; skipped v1.3.0, which needs CrossLint 1.6 or later, and v1.2.0, which needs CrossLint 1.5 or later, " \
+      "as this is CrossLint 1.4.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0"], result.lines
+    assert_equal [[ONE, "v1.3.0"], [ONE, "v1.2.0"], [ONE, "v1.1.0"]], shared.fetched
+  end
+
+  def test_fetches_no_tag_of_a_plugin_that_is_at_its_newest_tag_or_has_none_newer
+    configuration, shared = project([listing(ONE, "v1.2.0"), listing(TWO, "v1.0.0", 2)], ONE => %w[v1.0.0 v1.2.0 v2.0.0], TWO => %w[v0.9.0])
+    update_plugins(configuration, shared).call(APP)
+
+    assert_empty shared.fetched
+  end
+
+  def test_stays_where_it_is_when_every_newer_tag_needs_a_newer_crosslint
+    configuration, shared = project([listing(ONE, "v1.0.0")], {ONE => %w[v1.0.0 v1.1.0]}, {"v1.1.0" => "2"})
+    result = update_plugins(configuration, shared).call(APP)
+
+    assert_equal [nil, true], [configuration.set, result.updates.first.current?]
+    assert_equal ["#{ONE}: stays at v1.0.0; skipped v1.1.0, which needs CrossLint 2 or later, as this is CrossLint 1.4.0"], result.lines
+  end
+
+  def test_skips_a_tag_that_needs_a_newer_crosslint_with_latest_and_dry_run_too
+    configuration, shared = project([listing(ONE, "v1.0.0")], {ONE => %w[v1.0.0 v2.0.0 v3.0.0]}, {"v3.0.0" => "3"})
+    result = update_plugins(configuration, shared).call(APP, latest: true, dry_run: true)
+
+    assert_equal ["#{ONE}: would move from v1.0.0 to v2.0.0; skipped v3.0.0, which needs CrossLint 3 or later, as this is CrossLint 1.4.0"], result.lines
+    assert_nil configuration.set
+  end
+
+  def test_reads_the_manifest_in_the_folder_a_plugin_is_listed_from
+    configuration, shared = project([listing(ONE, "v1.0.0", path: "plugins/a"), listing(ONE, "v1.0.0", 2)], {ONE => %w[v1.0.0 v1.1.0]},
+      {"v1.1.0/plugins/a" => "2"})
+    update_plugins(configuration, shared).call(APP)
+
+    assert_equal [{[ONE, nil] => "v1.1.0"}], configuration.set
+  end
+
+  def test_skips_a_tag_whose_crosslint_line_this_crosslint_cant_read
+    configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.0.0 v1.1.0 v1.2.0])
+    broken = Core::Mistake.new("crosslint is set twice; the first is on line 1", file: "plugin.kdl", line: 3)
+    @manifests = BrokenManifests.new(File.expand_path("/cache/v1.2.0") => broken)
+    result = update_plugins(configuration, shared).call(APP)
+
+    assert_equal ["#{ONE}: moved from v1.0.0 to v1.1.0; skipped v1.2.0, which has a crosslint line this CrossLint can't read: plugin.kdl:3: crosslint is set " \
+      "twice; the first is on line 1, as this is CrossLint 1.4.0"], result.lines
+  end
+
+  def test_stops_at_a_tag_it_cant_fetch_naming_the_plugin_and_the_tag_and_changes_nothing
+    configuration, = project([listing(ONE, "v1.0.0", 4)], {})
+    repository = Memory::MemorySharedPlugins::Repository.new(tags: {"v1.0.0" => "/cache/v1.0.0"}, branches: ["v1.1.0"], commits: {})
+    shared = Memory::MemorySharedPlugins.new({ONE => repository}, err: StringIO.new)
+    listed = Class.new(SimpleDelegator) { def tags(_url) = %w[v1.0.0 v1.1.0] }.new(shared)
+    mistake = assert_raises(Core::Mistake) { update_plugins(configuration, listed).call(APP) }
+
+    assert_equal [FILE, 4, "couldn't fetch shared plugin one from #{ONE} at v1.1.0: v1.1.0 is a branch, and a ref is a tag or a full 40-character commit SHA"],
+      [mistake.file, mistake.line, mistake.message]
+    assert_nil configuration.set
+  end
+
   def test_says_what_each_plugin_did
     update = ->(ref, newest) { Core::Update.new(listing: listing(ONE, ref), newest:) }
     result = Core::UpdateResult.new(updates: [update.call("v1.0.0", "v1.1.0"), update.call("v1.1.0", "v1.1.0"), update.call("v1.0.0", nil), update.call("main", nil), update.call(nil, "v1.0.0")],
-      dry_run: false)
+      dry_run: false, crosslint: CROSSLINT)
 
     assert_equal [[false, false, false], [true, false, false], [false, true, false], [false, false, true], [false, false, true]],
       result.updates.map { |each| [each.current?, each.untagged?, each.pinned?] }
@@ -234,11 +308,17 @@ class UpdatePluginsTest < Minitest::Test
 
   private
 
-  def update_plugins(configuration, shared) = Core::UpdatePlugins.new(configuration:, shared_plugins: shared, crosslint: CROSSLINT)
+  def update_plugins(configuration, shared)
+    Core::UpdatePlugins.new(configuration:, shared_plugins: shared, manifests: @manifests || Memory::MemoryPluginManifests.new, crosslint: CROSSLINT)
+  end
 
   # A configuration for the project at APP that lists `plugins`, and a
   # port with a repository at each URL that has these tags.
-  def project(plugins, tags)
+  # Each tag's manifest, in its folder of the cache or in the folder of
+  # that given after it, names the CrossLint in `minimums`, by tag.
+  def project(plugins, tags, minimums = {})
+    held = minimums.to_h { |folder, text| [File.expand_path("/cache/#{folder}"), Core::MinimumVersion.parse(text, file: "plugin.kdl", line: 1)] }
+    @manifests = Memory::MemoryPluginManifests.new({}, minimums: held)
     configuration = Core::Configuration.new(file: FILE, plugins:, policies: [], warnings: nil, verbosity: nil)
     @err = StringIO.new
     repositories = tags.transform_values { |names| repository(names) }

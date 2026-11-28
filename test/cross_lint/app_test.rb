@@ -304,7 +304,20 @@ class AppTest < Minitest::Test
     assert_equal ["#{url}: moved from v1.0.0 to v1.2.0"], app.update(@base).lines
     assert_equal text.sub("v1.0.0", "v1.2.0"), File.binread(path)
     assert_equal ["#{url}: is at its newest tag, v1.2.0"], app.update(@base).lines
-    assert_equal ["crosslint: listing the tags of #{url}"] * 3, err.string.lines(chomp: true)
+    assert_equal ["crosslint: listing the tags of #{url}", "crosslint: fetching #{url} at v1.2.0", "crosslint: listing the tags of #{url}",
+      "crosslint: listing the tags of #{url}"], err.string.lines(chomp: true)
+  end
+
+  def test_moves_a_shared_plugin_to_the_newest_tag_whose_manifest_this_crosslint_reads
+    url = shared_repository(tags: %w[v1.0.0 v1.1.0])
+    origin = File.join(@base, "origin", "shared-docs")
+    write(origin, "plugin.kdl", %(crosslint min="99"\n#{MANIFEST}))
+    [%w[commit -q -a -m two], %w[tag v1.2.0]].each { |arguments| assert Open3.capture3("git", *arguments, chdir: origin).last.success? }
+    write(@base, ".config/crosslint/config.kdl", %(plugin #{url.dump} ref="v1.0.0"\n))
+    app = App.new(err: StringIO.new, version: "1.4.0",
+      shared_plugins: CrossLint::Adapters::GitSharedPlugins.new(err: StringIO.new, cache: File.join(@base, "cache"), schemes: ["file://"]))
+
+    assert_equal ["#{url}: moved from v1.0.0 to v1.1.0; skipped v1.2.0, which needs CrossLint 99 or later, as this is CrossLint 1.4.0"], app.update(@base).lines
   end
 
   def test_writes_the_configuration_with_the_recommended_plugins_through_the_port_it_is_given

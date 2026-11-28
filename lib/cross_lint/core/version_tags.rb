@@ -28,6 +28,11 @@ module CrossLint
         tied.find { |tag| tag.v? == keep.v? } || tied.first
       end
 
+      def above(current)
+        higher = tags.select { |tag| tag.version > current.version }.group_by(&:version)
+        higher.keys.sort.reverse.filter_map { |version| with(tags: higher.fetch(version)).newest(keep: current) }
+      end
+
       def newer_incompatible(current)
         above = tags.select { |tag| tag.version > current.version && !current.version.compatible_with?(tag.version) }
         newest_of_each = above.group_by { |tag| tag.version.group }.values.filter_map { |group| with(tags: group).newest(keep: current) }

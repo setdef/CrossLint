@@ -42,6 +42,11 @@ module CrossLint
       # project to a lower version, unless there are no tags.
       def newest: (keep: VersionTag) -> VersionTag?
 
+      # One tag of each version above `current`'s, the highest first: of
+      # the tags tied for a version, the one `newest` picks with `current`
+      # as its `keep`. Empty when no tag is above it.
+      def above: (VersionTag current) -> Array[VersionTag]
+
       # The tags with the highest version of each set of mutually
       # compatible versions above `current`, the lowest first. Of tags
       # tied for a version, the one `newest` picks with `current` as its

@@ -57,7 +57,8 @@ module CrossLint
     end
 
     def update(start, dry_run: false, latest: false)
-      Core::UpdatePlugins.new(configuration: @configuration, shared_plugins: @shared_plugins, crosslint: @crosslint).call(start, dry_run:, latest:)
+      Core::UpdatePlugins.new(configuration: @configuration, shared_plugins: @shared_plugins, manifests: @manifests,
+        crosslint: @crosslint).call(start, dry_run:, latest:)
     end
 
     def init(start, force: false, dry_run: false)

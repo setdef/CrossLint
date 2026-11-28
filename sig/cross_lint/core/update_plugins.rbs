@@ -8,9 +8,10 @@ module CrossLint
 
       # The tag with the highest version among the repository's tags that
       # are compatible with the plugin's ref, or among all of them when
-      # the update looks for the latest, such as "v1.4.0". Nil when no tag
-      # is a version. The tag the plugin is at already, when it is one of
-      # the tags of that version.
+      # the update looks for the latest, such as "v1.4.0", whose manifest
+      # this CrossLint reads. Nil when no tag is a version. The tag the
+      # plugin is at already, when it is one of the tags of that version,
+      # or when every newer tag needs a newer CrossLint.
       attr_reader newest: String?
 
       # The highest tag of each group of newer versions that aren't
@@ -18,11 +19,18 @@ module CrossLint
       # update looks for the latest.
       attr_reader newer: Array[String]
 
-      # An update with these fields, `newer` empty when left out.
-      def self.new: (listing: ListedPlugin, newest: String?, ?newer: Array[String]) -> instance
+      # Each tag above `newest` that the update would have moved to, the
+      # highest first, with why this CrossLint can't read its manifest,
+      # such as `["v1.3.0", "needs CrossLint 1.5 or later"]`.
+      attr_reader skipped: Array[[String, String]]
 
-      # An update with these fields, `newer` empty when left out.
-      def initialize: (listing: ListedPlugin, newest: String?, ?newer: Array[String]) -> void
+      # An update with these fields, `newer` and `skipped` empty when left
+      # out.
+      def self.new: (listing: ListedPlugin, newest: String?, ?newer: Array[String], ?skipped: Array[[String, String]]) -> instance
+
+      # An update with these fields, `newer` and `skipped` empty when left
+      # out.
+      def initialize: (listing: ListedPlugin, newest: String?, ?newer: Array[String], ?skipped: Array[[String, String]]) -> void
 
       # Whether the plugin is at its newest tag already.
       def current?: () -> bool
@@ -43,7 +51,7 @@ module CrossLint
     # ```ruby
     # listing = CrossLint::Core::ListedPlugin.new(name: "https://github.com/OWNER/REPO", ref: "v1.0.0", settings: [], line: 1)
     # update = CrossLint::Core::Update.new(listing:, newest: "v1.2.0")
-    # result = CrossLint::Core::UpdateResult.new(updates: [update], dry_run: true)
+    # result = CrossLint::Core::UpdateResult.new(updates: [update], dry_run: true, crosslint: CrossLint::Core::Version.parse("1.4.0"))
     # result.lines # => ["https://github.com/OWNER/REPO: would move from v1.0.0 to v1.2.0"]
     # ```
     class UpdateResult < Data
@@ -54,17 +62,22 @@ module CrossLint
       # Whether the update only listed what it would change.
       attr_reader dry_run: bool
 
-      # A result with these fields.
-      def self.new: (updates: Array[Update], dry_run: bool) -> instance
+      # The version of the CrossLint that updated, which the lines name
+      # when they say why a tag was skipped.
+      attr_reader crosslint: Version
 
       # A result with these fields.
-      def initialize: (updates: Array[Update], dry_run: bool) -> void
+      def self.new: (updates: Array[Update], dry_run: bool, crosslint: Version) -> instance
+
+      # A result with these fields.
+      def initialize: (updates: Array[Update], dry_run: bool, crosslint: Version) -> void
 
       # The updates that move a plugin to another tag.
       def changes: () -> Array[Update]
 
       # One line for each update: the plugin and its URL, and what
-      # moved, would move, or stays, and the newer incompatible versions,
+      # moved, would move, or stays, each tag skipped since this CrossLint
+      # can't read it, with why, and the newer incompatible versions,
       # with the one `crosslint update --latest` would move to.
       def lines: () -> Array[String]
 
@@ -72,6 +85,10 @@ module CrossLint
 
       # What the update did to its plugin, or why it did nothing.
       def what: (Update update) -> String
+
+      # What the update says of the tags it skipped, or an empty string
+      # when it skipped none.
+      def skipped: (Update update) -> String
 
       # What the update says of the newer incompatible versions it left,
       # or an empty string when there are none.
@@ -87,16 +104,25 @@ module CrossLint
     # aren't compatible. A plugin whose ref is no version tag, a
     # prerelease tag or a commit SHA among them, or whose repository has
     # no such tag, stays as it is. Local and built-in plugins are left
-    # alone. It raises Mistake, naming the file and the
-    # line, when a shared plugin has no ref or its tags can't be listed,
-    # and changes nothing then.
+    # alone. A tag whose manifest needs a newer CrossLint, or whose line
+    # naming the oldest CrossLint this one can't read, is skipped, and
+    # the plugin moves to the newest tag below it that this CrossLint
+    # reads, or stays. To learn that, it fetches each tag above the ref
+    # that it would move to, the highest first, and stops at the first
+    # it reads, so it fetches no tag of a plugin it doesn't move, and no
+    # tag below the one it moves to; the tag it moves to is then in the
+    # cache. It raises Mistake, naming the file and the line, when a
+    # shared plugin has no ref, its tags can't be listed, or a tag can't
+    # be fetched, and changes nothing then.
     class UpdatePlugins
       # A use case that reads the configuration and sets refs through
-      # `configuration`, and lists tags through `shared_plugins`, for the
+      # `configuration`, lists and fetches tags through `shared_plugins`,
+      # and reads the oldest CrossLint of each tag's manifest through
+      # `manifests`, for the
       # CrossLint whose version is `crosslint`: a configuration that names
       # a newer one as the oldest that reads it stops the update with a
       # Mistake that names both, before any request.
-      def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins, crosslint: Version) -> void
+      def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins, manifests: _PluginManifests, crosslint: Version) -> void
 
       # Updates the project whose root is `start` or the nearest folder
       # above it with a configuration. With `dry_run`, changes nothing.
@@ -108,6 +134,8 @@ module CrossLint
 
       @shared_plugins: _SharedPlugins
 
+      @manifests: _PluginManifests
+
       @crosslint: Version
 
       # The tag each of `changes` moves its plugin to, by the plugin's URL
@@ -117,6 +145,19 @@ module CrossLint
       # The update of the shared plugin `listing`, listed in `file`.
       # `tags` holds the tags listed so far, by URL.
       def update: (ListedPlugin listing, String file, Hash[String, Array[String]] tags, bool latest) -> Update
+
+      # The first of `candidates` that this CrossLint reads, or nil, and
+      # each one before it, with why it can't read it.
+      def readable: (ListedPlugin listing, Array[VersionTag] candidates, String file) -> [VersionTag?, Array[[String, String]]]
+
+      # Why this CrossLint can't read `listing` at `tag`, which it
+      # fetches, or nil when it can. Raises Mistake, at the listing's line
+      # of `file`, when the tag can't be fetched.
+      def unreadable: (ListedPlugin listing, VersionTag tag, String file) -> String?
+
+      # Why this CrossLint can't read the manifest in `path` of `folder`,
+      # or nil when it can.
+      def unread: (String folder, String path) -> String?
     end
   end
 end

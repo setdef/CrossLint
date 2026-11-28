@@ -109,6 +109,13 @@ class VersionTagsTest < Minitest::Test
     assert_same current, tags("v0.2.0", "v0.2.9").compatible_update(current)
   end
 
+  def test_gives_one_tag_of_each_version_above_the_ref_the_newest_first_in_the_form_of_the_ref
+    above = tags(*%w[v1.0.0 1.1.0 v1.1.0 v1.3.0 2.0.0 v0.9.0]).above(tag("v1.0.0"))
+
+    assert_equal %w[2.0.0 v1.3.0 v1.1.0], above.map(&:text)
+    assert_empty tags(*%w[v1.0.0 v0.9.0]).above(tag("v1.0.0"))
+  end
+
   def test_has_nothing_to_update_to_when_no_tag_is_a_version
     assert_nil tags("latest", "v1.0.0-rc.1").compatible_update(tag("v1.0.0"))
     assert_nil tags.compatible_update(tag("v1.0.0"))
