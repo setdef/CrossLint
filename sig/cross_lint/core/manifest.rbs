@@ -1,12 +1,12 @@
 module CrossLint
   module Core
     # A piece an artifact declares: its name, and the path pattern
-    # that gives its path for each primary file.
+    # that gives its path for each primary piece.
     class PieceDeclaration < Data
       # The piece's name, unique within its artifact, such as "test".
       attr_reader name: String
 
-      # Where the piece is for each primary file.
+      # Where the piece is for each primary piece.
       attr_reader pattern: PathPattern
 
       # The line the declaration is on.
@@ -24,12 +24,12 @@ module CrossLint
     end
 
     # A kind of artifact a plugin declares: the pattern that finds its
-    # primary files, and where each of its pieces is.
+    # primary pieces, and where each of its other pieces is.
     class ArtifactDeclaration < Data
       # The artifact's name, unique within its plugin, such as "ruby-file".
       attr_reader name: String
 
-      # The pattern that finds the primary files, relative to the
+      # The pattern that finds the primary pieces' files, relative to the
       # project's root.
       attr_reader primary: PathPattern
 
@@ -40,26 +40,26 @@ module CrossLint
       attr_reader line: Integer
 
       # The pattern that gives each artifact's key, the name a debt entry
-      # can give it by in place of its primary path, or nil for none.
+      # can give it by in place of its primary piece's path, or nil for none.
       attr_reader key: PathPattern?
 
-      # Whether a project may well have no file of the artifact, so that a
-      # primary pattern that matches none is reported only when no artifact
-      # of the plugin matches one.
+      # Whether a project may well have no artifact of this role, so that a
+      # primary pattern that matches no file is reported only when no
+      # artifact of the plugin matches one.
       attr_reader optional: bool
 
       # Whether a file may match with a file or a folder whose name starts
-      # with `.` in what a placeholder matches. When false, such a file is
-      # no artifact, as in a glob that skips dotfiles.
+      # with `.` in what a placeholder matches. When false, a primary piece
+      # whose path has such a name is no artifact.
       attr_reader dotfiles: bool
 
       # The pattern that gives each artifact's name, from the primary
       # pattern's placeholders and its regex's captures, or nil to name
-      # each by its primary path.
+      # each by its primary piece's path.
       attr_reader name_pattern: PathPattern?
 
-      # The regex each match of which in a primary file is an artifact,
-      # or nil for one artifact per primary file.
+      # The regex each match of which in a primary piece's file is an
+      # artifact, or nil for one artifact per primary piece's file.
       attr_reader regex: Regex?
 
       # An artifact with these fields, with no key or name pattern and no
@@ -165,17 +165,19 @@ module CrossLint
       def pieces: () -> Array[untyped]
     end
 
-    # A rule written in Ruby that a plugin declares.
+    # A rule a plugin declares, which a helper runs.
     class RuleDeclaration < Data
       # The rule's name, which a policy runs it by.
       attr_reader name: String
 
-      # The rule's file, relative to the plugin's folder, for a rule in the
-      # plugin's Ruby, declared as `rule NAME ruby=FILE`; or nil.
+      # The file of the helper on the Ruby CrossLint carries that runs the
+      # rule, relative to the plugin's folder, for a Ruby rule, declared as
+      # `rule NAME helper=HELPER`; or nil.
       attr_reader ruby: String?
 
       # The name of the plugin's helper that runs the rule, for a rule
-      # declared as `rule NAME helper=HELPER`; or nil.
+      # declared as `rule NAME helper=HELPER` whose helper a program
+      # runs; or nil.
       attr_reader helper: String?
 
       # The line the declaration is on.
@@ -350,7 +352,7 @@ module CrossLint
       # The policies, in the order they are declared.
       attr_reader policies: Array[Policy]
 
-      # The rules written in Ruby, in the order they are declared.
+      # The rules, in the order they are declared.
       attr_reader rules: Array[RuleDeclaration]
 
       # The helpers, in the order they are declared.
@@ -391,8 +393,9 @@ module CrossLint
                        ?artifacts_ruby: ArtifactsRuby?, ?artifacts_helper: ArtifactsHelper?) -> void
     end
 
-    # The file of a plugin's Ruby that declares artifacts from its
-    # settings, declared as `artifacts ruby=FILE`.
+    # The file of a helper on the Ruby CrossLint carries that declares
+    # artifacts from the plugin's settings, declared as
+    # `artifacts helper=HELPER`.
     class ArtifactsRuby < Data
       # The file, relative to the plugin's folder.
       attr_reader ruby: String

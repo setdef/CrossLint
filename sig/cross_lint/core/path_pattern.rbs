@@ -1,7 +1,7 @@
 module CrossLint
   module Core
     # A path pattern, such as `lib/{path}.rb`: a path, with `/` on every
-    # system, and placeholders in braces. In an artifact's `files`,
+    # system, and placeholders in braces. In an artifact's `primary`,
     # `{path}` matches a file name and the folders before it, if any, and
     # `{name}` one segment of a path; in a piece's path, each stands
     # for what it matched.
@@ -39,7 +39,7 @@ module CrossLint
       def self.problem: (String source, ?Array[String] known) -> String?
 
       # The pattern `source`, as an artifact named `artifact` declares it
-      # in a plugin's Ruby, which may pass anything. Raises PluginError,
+      # in a helper's Ruby, which may pass anything. Raises PluginError,
       # naming the artifact, unless `source` is a string that is a
       # pattern. A class method, so a plugin's subclass of
       # CrossLint::Artifacts can't replace it by defining a method.

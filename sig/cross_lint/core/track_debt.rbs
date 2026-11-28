@@ -67,7 +67,7 @@ module CrossLint
         attr_reader detail: String
 
         # The artifact's key, which an entry can hold in place of its
-        # primary path, or nil.
+        # primary piece's path, or nil.
         attr_reader key: String?
 
         # An identity with these fields.
@@ -83,7 +83,7 @@ module CrossLint
         def rule: () -> String
 
         # What an entry's Artifact column can hold to match this
-        # identity: the primary path and the key, each alone and as
+        # identity: the primary piece's path and the key, each alone and as
         # `NAME.ROLE`.
         def artifacts: () -> Array[String]
       end

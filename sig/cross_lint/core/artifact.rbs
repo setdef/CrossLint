@@ -1,8 +1,8 @@
 module CrossLint
   module Core
-    # One of an artifact's pieces: its name, its path for the
-    # artifact's primary file, and whether it exists: a file or folder at
-    # the path, or, for a piece with a regex, a match in the file there.
+    # One of an artifact's pieces: its name, its path, and whether it
+    # exists: a file or folder at the path, or, for a piece with a regex,
+    # a match in the file there.
     class Piece < Data
       # The piece's name, as its artifact declares it, such as "test".
       attr_reader name: String
@@ -34,8 +34,10 @@ module CrossLint
       def exist?: () -> bool
     end
 
-    # An artifact: one primary file, found by an artifact declaration's
-    # primary pattern, with its pieces.
+    # An artifact: a logical unit of a project, such as a component or a
+    # route, which is not a file. CrossLint finds it by its primary piece,
+    # which an artifact declaration's primary pattern matches, and it
+    # has its other pieces.
     #
     # ```ruby
     # piece = CrossLint::Core::Piece.new(name: "test", path: "test/a_test.rb", exists: false)
@@ -51,7 +53,7 @@ module CrossLint
       # "ruby-file".
       attr_reader role: String
 
-      # The primary file's path, relative to the project's root, with `/`.
+      # The primary piece's path, relative to the project's root, with `/`.
       attr_reader path: String
 
       # What each placeholder of the primary pattern matched in `path`, and
@@ -62,20 +64,21 @@ module CrossLint
       attr_reader pieces: Array[Piece]
 
       # The name a debt entry can give the artifact by in place of its
-      # primary path, from its declaration's key pattern, or nil.
+      # primary piece's path, from its declaration's key pattern, or nil.
       attr_reader key: String?
 
       # The name CrossLint calls the artifact by in every violation and
       # debt entry: what its declaration's name pattern gives, or its
-      # primary path.
+      # primary piece's path.
       attr_reader name: String
 
-      # The line of the primary file where its declaration's regex
-      # matched, from 1, or nil for an artifact that is a whole file.
+      # The line of the primary piece's file where its declaration's regex
+      # matched, from 1, or nil for an artifact whose primary piece is a
+      # whole file.
       attr_reader line: Integer?
 
       # An artifact with these fields, no key or line unless given, and
-      # named by its primary path unless given a name.
+      # named by its primary piece's path unless given a name.
       def self.new: (plugin: String, role: String, path: String, match: Hash[String, String],
                      pieces: Array[Piece], ?key: String?, ?name: String, ?line: Integer?) -> instance
 
@@ -98,9 +101,9 @@ module CrossLint
     end
 
     # What a rule reports when an artifact fails it: the plugin and policy
-    # that ran the rule, the artifact by its name, primary file, and role,
-    # a message, a severity, and a detail where one artifact can fail a
-    # rule in several ways.
+    # that ran the rule, the artifact by its name, the path of its primary
+    # piece, and its role, a message, a severity, and a detail where one
+    # artifact can fail a rule in several ways.
     class Violation < Data
       # The name of the plugin whose policy ran the rule.
       attr_reader plugin: String
@@ -108,8 +111,8 @@ module CrossLint
       # The policy's name.
       attr_reader policy: String
 
-      # The artifact's name, its primary file's path unless its
-      # declaration names it otherwise.
+      # The artifact's name, its primary piece's path unless its
+      # declaration has a name pattern.
       attr_reader artifact: String
 
       # The artifact's role, its declaration's name.
@@ -128,7 +131,8 @@ module CrossLint
       # The artifact's key, or nil.
       attr_reader key: String?
 
-      # The artifact's primary file, relative to the project's root.
+      # The path of the artifact's primary piece, relative to the project's
+      # root.
       attr_reader path: String
 
       # The artifact's line, or nil.
@@ -145,11 +149,12 @@ module CrossLint
     end
   
     # What a Ruby rule reports, made with CrossLint::Rule#violation: the
-    # artifact it checked, by its primary file and role, a message, and a
-    # detail where the rule gives one. The check adds the plugin, policy,
+    # artifact it checked, by the path of its primary piece and its role, a
+    # message, and a detail where the rule gives one. The check adds the plugin, policy,
     # and severity to make a Violation.
     class RuleResult < Data
-      # The artifact's primary file, relative to the project's root.
+      # The path of the artifact's primary piece, relative to the project's
+      # root.
       attr_reader path: String
 
       # The artifact's role.

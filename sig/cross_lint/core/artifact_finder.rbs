@@ -1,9 +1,9 @@
 module CrossLint
   module Core
-    # Finds a project's artifacts: each file a declaration's primary
-    # pattern matches, with its pieces, and whether each exists, by its
-    # exact name or, for a piece with a regex, by a match in its file. It
-    # reads each file once.
+    # Finds a project's artifacts: each primary piece a declaration's
+    # primary pattern matches, with the artifact's other pieces, and
+    # whether each exists, by its exact name or, for a piece with a regex,
+    # by a match in its file. It reads each file once.
     class ArtifactFinder
       # What stops finding a plugin's artifacts, with the fault to report.
       class Stopped < StandardError
@@ -42,7 +42,7 @@ module CrossLint
       # The artifacts `declaration` finds.
       def find: (Plugin plugin, ArtifactDeclaration declaration) -> Array[Artifact]
 
-      # What each artifact in the primary file at `path` matched, with the
+      # What each artifact in the primary piece's file at `path` matched, with the
       # line its declaration's regex matched on; for a declaration with no
       # regex, `match` alone, with no line. Raises Stopped at a used
       # capture that matched nothing.
@@ -52,7 +52,7 @@ module CrossLint
       # `..`.
       def inside?: (String path) -> bool
 
-      # The piece `piece` declares, for the primary file whose placeholders
+      # The piece `piece` declares, for the primary piece whose placeholders
       # matched `match`.
       def piece: (Plugin plugin, ArtifactDeclaration declaration, PieceDeclaration piece, Hash[String, String] match) -> Piece
 

@@ -41,8 +41,9 @@ module CrossLint
       def pieces = ((condition&.piece_conditions || []).map(&:piece) + rules.filter_map { |rule| rule.arguments["piece"] }).uniq
     end
 
-    # A rule a plugin declares: in its Ruby, with ruby=, or run by its
-    # helper, with helper=.
+    # A rule a plugin declares, which a helper runs: `ruby` is the file of
+    # a helper on the Ruby CrossLint carries, `helper` the name of any
+    # other.
     class RuleDeclaration < Data.define(:name, :ruby, :helper, :line)
       def initialize(ruby: nil, helper: nil, **declared) = super
     end

@@ -1,6 +1,6 @@
 module CrossLint
   module Core
-    # A rule written in Ruby, loaded through the plugin-Ruby port, with
+    # A Ruby rule, loaded through the plugin-Ruby port, with
     # the one instance of its class that checks every artifact.
     class RubyRule
       # What stops a plugin: a fault while a rule loads or checks.

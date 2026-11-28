@@ -27,7 +27,7 @@ module CrossLint
       # in a rule.
       attr_reader role: String?
 
-      # Where the artifact the rule was checking is, its primary file and,
+      # Where the artifact the rule was checking is, its primary piece's path and,
       # for one a regex found, its line, or nil when the rule was loading.
       attr_reader artifact: String?
 

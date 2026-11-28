@@ -6,7 +6,8 @@ module CrossLint
     # mistake, naming the file and the line, and the nearest valid
     # spelling where one is close.
     class LoadProject
-      # The name of the class a plugin's artifacts file defines.
+      # The name of the class that a helper's file that declares a plugin's
+      # artifacts defines.
       DECLARER: Symbol
 
       # What a helper that declares artifacts answers when its answer
@@ -52,7 +53,7 @@ module CrossLint
       # The plugins the configuration at `start`, or the nearest folder
       # above it with one, lists, whose manifests are on disk. It fetches
       # nothing: a shared plugin not in the cache is in `unfetched`, and
-      # no plugin's Ruby runs, no plugin is checked against another, and a
+      # no helper runs, no plugin is checked against another, and a
       # configuration that lists no plugin is no mistake. Raises Mistake
       # for a configuration or a manifest it can't read, as `call` does.
       def listed: (String start) -> PluginListing
@@ -98,9 +99,10 @@ module CrossLint
       # empty segment, such as "x" for "./a/../x/".
       def clean: (String name) -> String
 
-      # `plugin`, with the artifacts its Ruby or its helper declares from
-      # its settings added to its manifest's when it has `artifacts ruby=`
-      # or `artifacts helper=`. `root` is the project's root, and `file`
+      # `plugin`, with the artifacts its helper declares from its settings
+      # added to its manifest's when it has `artifacts helper=`, whether
+      # the helper runs on the Ruby CrossLint carries or as a program.
+      # `root` is the project's root, and `file`
       # the configuration's.
       def declare: (String root, Plugin plugin, String file) -> Plugin
 
@@ -116,8 +118,9 @@ module CrossLint
       # names, and PluginError at an answer that is neither.
       def declared: (untyped answer, String name, String file, Integer line) -> Array[ArtifactDeclaration]
 
-      # `plugin` with the artifacts `ruby` declares. Raises Mistake at
-      # whatever the Ruby raises.
+      # `plugin` with the artifacts the helper file `ruby` declares, which
+      # runs on the Ruby CrossLint carries. Raises Mistake at whatever the
+      # Ruby raises.
       def declare_in_ruby: (Plugin plugin, ArtifactsRuby ruby, String file) -> Plugin
 
       # Checks that a plugin's manifest declares each name once, and

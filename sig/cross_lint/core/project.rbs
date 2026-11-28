@@ -67,7 +67,7 @@ module CrossLint
       # A project with these fields.
       def initialize: (root: String, configuration: Configuration, plugins: Array[Plugin]) -> void
 
-      # Each rule written in Ruby that no policy of its plugin runs, with
+      # Each Ruby rule that no policy of its plugin runs, with
       # its plugin, so it is reported and never loaded.
       def unused_rules: () -> Array[[Plugin, RuleDeclaration]]
     end

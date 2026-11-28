@@ -31,13 +31,14 @@ module CrossLint
       # How a helper is written.
       HELPER: String
 
-      # What a mistake says about ruby=, with `%s` for the line it is on.
+      # What a mistake says about the old ruby= form, with `%s` for the
+      # line it is on.
       GONE: String
 
       private
 
-      # A helper on the Ruby CrossLint carries, which the rules and the
-      # artifacts that name it read as their Ruby.
+      # A helper on the Ruby CrossLint carries, whose file the rules and
+      # the artifacts that name it run.
       class Carried < Data
         # The helper's name.
         attr_reader name: String
@@ -104,12 +105,13 @@ module CrossLint
       def policy_rule: (KDLDocument document, KDLDocument::Node node) -> Core::PolicyRule
 
       # Reads a `rule` node, which names the helper that runs the rule;
-      # a rule whose helper is one of `carried` is that helper's Ruby.
+      # a rule whose helper is one of `carried` is a Ruby rule.
       def rule: (KDLDocument document, KDLDocument::Node node, Array[Carried] carried) -> Core::RuleDeclaration
 
-      # Reads the `artifacts` node, if there is one, which names the file
-      # whose Ruby declares more artifacts, or the helper that does: as the
-      # manifest's field for it.
+      # Reads the `artifacts` node, if there is one, which names the helper
+      # that declares more artifacts: as the manifest's field for it, one of
+      # the Ruby CrossLint carries for a helper in `carried`, or the
+      # helper's name for any other.
       def artifacts: (KDLDocument document, Array[Carried] carried) -> ({artifacts_ruby: Core::ArtifactsRuby} | {artifacts_helper: Core::ArtifactsHelper} | {})
 
       # Reads a `command` node, and the `flag` nodes in its block.

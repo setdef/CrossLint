@@ -1,17 +1,21 @@
 module CrossLint
-  # The class a rule written in Ruby inherits from. A plugin declares the
-  # rule as `rule NAME ruby=FILE`, and `FILE`, relative to the plugin's
-  # folder, defines one class named after the rule in camel case, such
-  # as `SignatureNamesClass` for "signature-names-class", with a `check`
-  # method. CrossLint defines CrossLint::Rule before it runs the file, so
-  # the file requires nothing to use it, and makes one instance of the
-  # class for each check, with no arguments, so the instance can keep
-  # what it learns from one artifact for the next.
+  # The class a Ruby rule inherits from: a rule whose helper runs on the
+  # Ruby CrossLint carries. A plugin declares the helper as
+  # `helper NAME command=(crosslint)"ruby" file=FILE` and the rule as
+  # `rule RULE helper=NAME`. `FILE`, relative to the plugin's folder,
+  # defines one class for each rule that names the helper, named after the
+  # rule in camel case, such as `SignatureNamesClass` for
+  # "signature-names-class", with a `check` method. CrossLint defines
+  # CrossLint::Rule before it runs the file, so the file requires nothing
+  # to use it, and makes one instance of the class for each check, with no
+  # arguments, so the instance can keep what it learns from one artifact
+  # for the next.
   #
-  # The file runs on CrossLint's Ruby. It can require Ruby's standard
-  # library and files in its plugin's folder, and no gem CrossLint wasn't
-  # built with; bundler/inline is refused. Anything the file or `check`
-  # raises is a fault that stops the plugin, and the other plugins run.
+  # The file runs in CrossLint's process, on the Ruby CrossLint carries.
+  # It can require Ruby's standard library and files in its plugin's
+  # folder, and no gem CrossLint wasn't built with; bundler/inline is
+  # refused. Anything the file or `check` raises is a fault that stops the
+  # plugin, and the other plugins run.
   #
   # ```ruby
   # class TestNamesItsFile < CrossLint::Rule
@@ -53,12 +57,12 @@ module CrossLint
       @read: ^(String path) -> String
     end
 
-    # The artifact a rule checks: its primary file and its pieces.
+    # The artifact a rule checks: its primary piece's path and its pieces.
     class Artifact
       # The artifact's role: its declaration's name, such as "ruby-file".
       attr_reader role: String
 
-      # The primary file's path, relative to the project's root, with `/`.
+      # The primary piece's path, relative to the project's root, with `/`.
       attr_reader path: String
 
       # The text each placeholder of the primary pattern matched in `path`,
@@ -72,7 +76,7 @@ module CrossLint
       # declaration has none of that name.
       def piece: (String name) -> Piece
 
-      # The primary file's text, its bytes as UTF-8.
+      # The text of the primary piece's file, its bytes as UTF-8.
       def read: () -> String
 
       private
