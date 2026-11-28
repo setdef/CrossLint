@@ -5,6 +5,17 @@ module CrossLint
     class Version < Data.define(:numbers)
       include Comparable
 
+      BARE = /\A\d+(?:\.\d+){0,2}\z/
+
+      def self.parse(text)
+        return unless text.match?(BARE)
+
+        given = text.split(".").map(&:to_i)
+        new(numbers: given + [0] * (3 - given.size))
+      end
+
+      def to_s = numbers.join(".")
+
       def <=>(other) = (numbers <=> other.numbers if other.is_a?(Version))
 
       def compatible_with?(other) = group == other.group

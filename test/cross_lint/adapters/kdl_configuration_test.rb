@@ -24,9 +24,10 @@ class KDLConfigurationTest < Minitest::Test
     FileUtils.rm_rf(@base)
   end
 
-  def configuration_port(projects, broken: nil)
-    projects.each { |project, plugins| write(@base, "#{project}/#{FILE}", plugins.map { |name| "plugin #{name.dump}\n" }.join) }
-    write(@base, "#{broken}/#{FILE}", %(plugin "one"\nplugn "two"\n)) if broken
+  def configuration_port(projects, broken: nil, minimum: {})
+    first = ->(project) { minimum.key?(project) ? %(crosslint min=#{minimum.fetch(project).dump}\n) : "" }
+    projects.each { |project, plugins| write(@base, "#{project}/#{FILE}", first.call(project) + plugins.map { |name| "plugin #{name.dump}\n" }.join) }
+    write(@base, "#{broken}/#{FILE}", %(#{first.call(broken)}plugin "one"\nplugn "two"\n)) if broken
     CrossLint::Adapters::KDLConfiguration.new
   end
 
@@ -120,7 +121,33 @@ class KDLConfigurationTest < Minitest::Test
 
   def test_refuses_a_node_it_does_not_know
     assert_refuses 2, %(unknown node "plugn", did you mean "plugin"?), %(plugin "a"\nplugn "b")
-    assert_refuses 1, %(unknown node "zzz"; expected "plugin", "policy", "warnings", or "verbosity"), %(zzz)
+    assert_refuses 1, %(unknown node "zzz"; expected "plugin", "policy", "warnings", "verbosity", or "crosslint"), %(zzz)
+  end
+
+  def test_reads_the_example_of_the_oldest_crosslint_in_the_configuration_reference
+    write(@base, "project/#{FILE}", doc_block("docs/reference/configuration.md", "kdl", /^crosslint min=/))
+    port = CrossLint::Adapters::KDLConfiguration.new
+    root = File.join(@base, "project")
+    found = port.minimum(root)
+
+    assert_equal [["1.2", 1], ["debt"]], [[found&.text, found&.line], port.read(root).plugins.map(&:name)]
+  end
+
+  def test_reads_a_configuration_whose_first_line_names_the_oldest_crosslint_that_reads_it
+    assert_equal [["a", 2]], read(%(crosslint min="1.2"\nplugin "a"\n)).plugins.map { |plugin| [plugin.name, plugin.line] }
+  end
+
+  def test_refuses_a_crosslint_line_that_is_not_first_or_has_more_than_min
+    assert_refuses 2, "crosslint comes after plugin on line 1; write it as the first line, so that a CrossLint too old for the file " \
+      "says so before it reads any other", %(plugin "a"\ncrosslint min="1.2"\n)
+    assert_refuses 1, %(unknown property "soft"; expected "min"), %(crosslint min="1.2" soft=#true\nplugin "a"\n)
+  end
+
+  def test_reads_the_oldest_crosslint_from_a_configuration_this_crosslint_cant_parse
+    write(@base, "project/#{FILE}", %(crosslint min="9"\nplugin "a" {\n  new-syntax "x\n}\n))
+    port = CrossLint::Adapters::KDLConfiguration.new
+
+    assert_equal ["9", 1], port.minimum(File.join(@base, "project")).then { |found| [found&.text, found&.line] }
   end
 
   def test_refuses_a_plugin_written_wrong

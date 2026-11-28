@@ -15,8 +15,11 @@ module CrossLint
     class MemoryConfiguration
       include _Configuration
 
-      # A port that holds `projects`, by root, and names `file`.
-      def initialize: (?Hash[String, Core::Configuration | Core::Mistake] projects, ?file: String) -> void
+      # A port that holds `projects`, by root, and names `file`, and whose
+      # configurations name the oldest CrossLint that reads them in
+      # `minimums`, by root, whatever a project holds.
+      def initialize: (?Hash[String, Core::Configuration | Core::Mistake] projects, ?file: String,
+                       ?minimums: Hash[String, Core::MinimumVersion]) -> void
 
       private
 

@@ -9,7 +9,7 @@ module CrossLint
     class KDLConfiguration
       FILE = ".config/crosslint/config.kdl"
 
-      NODES = %w[plugin policy warnings verbosity].freeze
+      NODES = %w[plugin policy warnings verbosity crosslint].freeze
 
       WARNINGS = %w[all none error].freeze
 
@@ -59,11 +59,11 @@ module CrossLint
         folder
       end
 
-      def read(root)
-        path = File.join(root, FILE)
-        raise Core::Mistake.new("doesn't exist", file: FILE) unless File.file?(path)
+      def minimum(root) = KDLDocument.minimum(KDLDocument.source(existing(root)), FILE)
 
-        document = KDLDocument.load(path, FILE)
+      def read(root)
+        document = KDLDocument.load(existing(root), FILE)
+        document.whole_minimum
         document.nodes.each do |node|
           next if NODES.include?(node.name)
 
@@ -75,10 +75,8 @@ module CrossLint
       end
 
       def set_refs(root, refs)
-        path = File.join(root, FILE)
-        raise Core::Mistake.new("doesn't exist", file: FILE) unless File.file?(path)
-
-        source = File.binread(path).force_encoding(Encoding::UTF_8)
+        path = existing(root)
+        source = KDLDocument.source(path)
         document = KDLDocument.new(source, FILE)
         plugins = document.nodes.select { |node| node.name == "plugin" && refs.key?(identity(node)) }
         # Last first, so that a change doesn't move the ones before it.
@@ -91,6 +89,14 @@ module CrossLint
       end
 
       private
+
+      # The path of the configuration of `root`, which has one.
+      def existing(root)
+        path = File.join(root, FILE)
+        raise Core::Mistake.new("doesn't exist", file: FILE) unless File.file?(path)
+
+        path
+      end
 
       def folder!(root)
         raise Core::Mistake, "no folder #{root}" unless File.directory?(root)

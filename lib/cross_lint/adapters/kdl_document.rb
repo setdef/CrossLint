@@ -40,11 +40,36 @@ module CrossLint
         end
       end
 
+      CROSSLINT = "crosslint"
+
+      CROSSLINT_USAGE = %(crosslint min="1.2")
+
       attr_reader :file, :nodes
 
       # Read as bytes and taken as UTF-8, so a file reads the same whatever
       # the system's default encoding.
-      def self.load(path, file, typed: {}) = new(File.binread(path).force_encoding(Encoding::UTF_8), file, typed:)
+      def self.source(path) = File.binread(path).force_encoding(Encoding::UTF_8)
+
+      def self.load(path, file, typed: {}) = new(source(path), file, typed:)
+
+      # A newer CrossLint may write KDL that this one can't parse, so when
+      # it can't, the fewest lines before the mistake that parse into a
+      # node are read alone, for a crosslint line there.
+      def self.minimum(source, file, typed: {})
+        new(source, file, typed:).minimum
+      rescue Core::Mistake => mistake
+        before = source.lines.take((mistake.line || 1) - 1)
+        first = (1..before.size).lazy.filter_map { |count| first_nodes(before.take(count).join, file, typed) }.first
+        first&.minimum || raise(mistake)
+      end
+
+      def self.first_nodes(source, file, typed)
+        document = new(source, file, typed:)
+        document unless document.nodes.empty?
+      rescue Core::Mistake
+        nil
+      end
+      private_class_method :first_nodes
 
       def initialize(source, file, typed: {})
         @file = file
@@ -57,6 +82,39 @@ module CrossLint
       end
 
       def mistake(message, node) = Core::Mistake.new(message, file:, line: node.line)
+
+      # Only the line's min= is read, so that a newer CrossLint can add
+      # other properties to the line and still have an older one name the
+      # version it needs.
+      def minimum
+        first, again = nodes.select { |node| node.name == CROSSLINT }
+        return unless first
+        raise mistake("crosslint is set twice; the first is on line #{first.line}", again) if again
+
+        top = nodes.fetch(0)
+        unless top.equal?(first)
+          raise mistake("crosslint comes after #{top.name} on line #{top.line}; write it as the first line, so that a CrossLint too old " \
+            "for the file says so before it reads any other", first)
+        end
+        raise mistake("crosslint has no min=; write it as #{CROSSLINT_USAGE}", first) unless first.properties.key?("min")
+
+        text = first.properties.fetch("min")
+        found = Core::MinimumVersion.parse(text, file:, line: first.line) if text.is_a?(String)
+        found || raise(mistake("crosslint min= takes a version of one to three numbers in a string, with no operator or pre-release part, " \
+          "such as min=\"1.2\", not #{text.inspect}", first))
+      end
+
+      # The minimum, once the rest of its line is checked too.
+      def whole_minimum
+        found = minimum
+        return unless found
+
+        line = nodes.fetch(0)
+        arguments(line, CROSSLINT_USAGE, 0)
+        properties(line, ["min"])
+        children(line, [])
+        found
+      end
 
       def arguments(node, usage, count)
         values = node.arguments

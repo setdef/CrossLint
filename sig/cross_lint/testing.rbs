@@ -8,8 +8,10 @@ module CrossLint
       # A port for the projects in `projects`, each a folder relative to
       # the test's base, with a configuration that lists those plugins.
       # With `broken`, the project in that folder has a configuration with
-      # a mistake on line 2.
-      def configuration_port: (Hash[String, Array[String]] projects, ?broken: String?) -> _Configuration
+      # a mistake on line 2. Each project in `minimum`, by its folder,
+      # names the oldest CrossLint that reads its configuration, the
+      # version there, before its other lines.
+      def configuration_port: (Hash[String, Array[String]] projects, ?broken: String?, ?minimum: Hash[String, String]) -> _Configuration
 
       # A port whose project in `folder("example")` has a configuration
       # that lists, in this order, the plugins "https://github.com/OWNER/REPO"
@@ -67,6 +69,20 @@ module CrossLint
 
       # read raises a mistake naming the file when there is none.
       def test_names_the_file_when_the_project_has_no_configuration: () -> void
+
+      # minimum returns the oldest CrossLint a configuration names, from
+      # its file and a line before its plugins'.
+      def test_reads_the_oldest_crosslint_a_configuration_names_before_its_other_lines: () -> void
+
+      # minimum returns nil for a configuration that names none.
+      def test_reads_no_oldest_crosslint_from_a_configuration_that_names_none: () -> void
+
+      # minimum returns the oldest CrossLint of a configuration whose
+      # other lines read raises a mistake at.
+      def test_reads_the_oldest_crosslint_without_reading_the_other_lines: () -> void
+
+      # minimum raises a mistake naming the file when there is none.
+      def test_names_the_file_when_the_project_it_reads_the_oldest_crosslint_of_has_no_configuration: () -> void
 
       # set_refs sets the ref of the plugin it is given and nothing else
       # that read returns.

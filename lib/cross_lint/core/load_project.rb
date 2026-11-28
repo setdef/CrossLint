@@ -26,8 +26,10 @@ module CrossLint
       # so adding the command breaks no plugin.
       RESERVED = %w[version completion config plugin plugins list cache doctor explain fix self].freeze
 
-      def initialize(configuration:, manifests:, crosslint_ruby:, shared_plugins:, helpers:, built_in: {}, steps: {}, reserved: [], reserved_flags: [])
+      def initialize(configuration:, manifests:, crosslint_ruby:, shared_plugins:, helpers:, crosslint:, built_in: {}, steps: {}, reserved: [],
+        reserved_flags: [])
         @configuration = configuration
+        @crosslint = crosslint
         @manifests = manifests
         @crosslint_ruby = crosslint_ruby
         @helpers = helpers
@@ -45,7 +47,7 @@ module CrossLint
         root = @configuration.find_root(start)
         raise Mistake.no_configuration(@configuration.file, start) unless root
 
-        configuration = @configuration.read(root)
+        configuration = read_configuration(root)
         loaded = [] #: Array[Plugin]
         unfetched = [] #: Array[ListedPlugin]
         configuration.plugins.each_index do |index|
@@ -64,7 +66,7 @@ module CrossLint
         root = @configuration.find_root(start)
         raise Mistake.no_configuration(@configuration.file, start) unless root
 
-        configuration = @configuration.read(root)
+        configuration = read_configuration(root)
         raise Mistake.new("lists no plugin, so no check would run; list one with plugin NAME", file: configuration.file) if configuration.plugins.empty?
 
         SharedPlugin.refuse_credentials(configuration)
@@ -92,6 +94,13 @@ module CrossLint
       end
 
       private
+
+      # A configuration this CrossLint is too old for is never read, since
+      # its other lines may mean what this CrossLint can't know.
+      def read_configuration(root)
+        @configuration.minimum(root)&.check(@crosslint)
+        @configuration.read(root)
+      end
 
       def plugin(root, configuration, index, loaded, fetching: true)
         listing = configuration.plugins.fetch(index)

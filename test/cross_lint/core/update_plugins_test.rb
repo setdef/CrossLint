@@ -17,6 +17,9 @@ class UpdatePluginsTest < Minitest::Test
   ONE = "https://example.com/OWNER/one"
   TWO = "https://example.com/OWNER/two"
 
+  # The CrossLint that updates each project.
+  CROSSLINT = Core::Version.parse("1.4.0")
+
   # Sets each ref, as the configuration port should, and keeps what it was
   # asked to set.
   class RecordingConfiguration < CrossLint::Adapters::MemoryConfiguration
@@ -30,7 +33,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_moves_each_shared_plugin_to_the_newest_version_tag_of_its_repository
     configuration, shared = project([listing(ONE, "v1.0.0"), listing(TWO, "v2.1.0", 2)], ONE => %w[v1.0.0 v1.10.0 v1.9.0], TWO => %w[v2.1.0 v2.1.1 latest])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal [["v1.10.0", false], ["v2.1.1", false]], result.updates.map { |update| [update.newest, update.current?] }
     assert_equal ["v1.10.0", "v2.1.1"], configuration.read(APP).plugins.map(&:ref)
@@ -41,7 +44,7 @@ class UpdatePluginsTest < Minitest::Test
   def test_moves_each_folder_listed_from_a_repository_by_itself_keeps_its_path_and_lists_the_tags_once
     configuration, shared = project([listing(ONE, "v1.0.0", 1, path: "plugins/a"), listing(ONE, "v9.0.0", 2, path: "plugins/b"), listing(ONE, "v1.0.0", 3)],
       ONE => %w[v1.0.0 v1.2.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal [{[ONE, "plugins/a"] => "v1.2.0", [ONE, nil] => "v1.2.0"}], configuration.set
     assert_equal [["v1.2.0", "plugins/a"], ["v9.0.0", "plugins/b"], ["v1.2.0", nil]], configuration.read(APP).plugins.map { |plugin| [plugin.ref, plugin.path] }
@@ -51,7 +54,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_lists_what_it_would_move_and_changes_nothing_with_dry_run
     configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.2.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, dry_run: true)
+    result = update_plugins(configuration, shared).call(APP, dry_run: true)
 
     assert_equal ["#{ONE}: would move from v1.0.0 to v1.2.0"], result.lines
     assert_nil configuration.set
@@ -63,7 +66,7 @@ class UpdatePluginsTest < Minitest::Test
   def test_leaves_a_plugin_whose_ref_is_not_a_plain_version_tag_alone_and_says_so_without_asking_for_its_tags
     refs = ["a" * 40, "v1.0.0-rc.1", "2.0.0-beta.2", "latest", "v1.0", "main", "v1.0.0+build.5"]
     configuration, shared = project(refs.each_with_index.map { |ref, index| listing("#{ONE}#{index}", ref, index + 1) }, {})
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal refs.each_with_index.map { |ref, index| "#{ONE}#{index}: is at #{ref}, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone" },
       result.lines
@@ -73,7 +76,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_moves_the_plugins_that_are_at_a_plain_version_tag_and_leaves_the_others_in_one_run
     configuration, shared = project([listing(ONE, "v1.0.0"), listing(TWO, "v2.0.0-rc.1", 2)], ONE => %w[v1.1.0 v2.0.0-rc.2], TWO => %w[v2.0.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal [{[ONE, nil] => "v1.1.0"}], configuration.set
     assert_equal ["v1.1.0", "v2.0.0-rc.1"], configuration.read(APP).plugins.map(&:ref)
@@ -83,7 +86,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_leaves_a_plugin_that_is_at_its_newest_tag_and_writes_nothing_for_it
     configuration, shared = project([listing(ONE, "v1.2.0")], ONE => %w[v1.0.0 v1.2.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal ["#{ONE}: is at its newest tag, v1.2.0"], result.lines
     assert_nil configuration.set
@@ -91,14 +94,14 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_leaves_a_plugin_at_the_tag_it_has_when_another_tag_has_the_same_version
     configuration, shared = project([listing(ONE, "v1.2.0")], ONE => %w[v1.2.0 1.2.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal [true, nil], [result.updates.first.current?, configuration.set]
   end
 
   def test_leaves_a_plugin_whose_repository_has_no_version_tag_and_says_so
     configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.0.0-rc.1 latest v2])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal [true, false, nil], [result.updates.first.untagged?, result.updates.first.pinned?, configuration.set]
     assert_equal ["#{ONE}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at v1.0.0"], result.lines
@@ -106,7 +109,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_leaves_local_and_built_in_plugins_alone_and_asks_for_no_tags_of_them
     configuration, shared = project([listing(".config/crosslint/tests", nil), listing("debt", nil, 2), listing(ONE, "v1.0.0", 3)], ONE => %w[v1.1.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal [ONE], result.updates.map { |update| update.listing.name }
     assert_equal [nil, nil, "v1.1.0"], configuration.read(APP).plugins.map(&:ref)
@@ -116,7 +119,7 @@ class UpdatePluginsTest < Minitest::Test
   def test_stops_at_the_url_of_a_shared_plugin_that_has_a_user_name_or_password_and_doesnt_print_it
     url = "https://user:secret@example.com/OWNER/one"
     configuration, shared = project([listing(ONE, "v1.0.0"), listing(url, "v1.0.0", 3)], ONE => %w[v1.1.0])
-    mistake = assert_raises(Core::Mistake) { Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP) }
+    mistake = assert_raises(Core::Mistake) { update_plugins(configuration, shared).call(APP) }
 
     assert_equal [FILE, 3, "a plugin's URL has a user name or password, which would be in the configuration and on standard error; " \
       "remove it, and give Git the credentials with a Git credential helper (git help credentials)"], [mistake.file, mistake.line, mistake.message]
@@ -130,12 +133,12 @@ class UpdatePluginsTest < Minitest::Test
     configuration, = project([listing(url, "v1.0.0")], {})
     shared = Memory::MemorySharedPlugins.new({url => repository(%w[v1.4.0])}, err: StringIO.new, schemes: ["file://"])
 
-    assert_equal ["#{url}: moved from v1.0.0 to v1.4.0"], Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP).lines
+    assert_equal ["#{url}: moved from v1.0.0 to v1.4.0"], update_plugins(configuration, shared).call(APP).lines
   end
 
   def test_stops_at_a_shared_plugin_with_no_ref_naming_the_file_and_the_line
     configuration, shared = project([listing(ONE, "v1.0.0"), listing(TWO, nil, 5)], ONE => %w[v1.1.0], TWO => %w[v1.1.0])
-    mistake = assert_raises(Core::Mistake) { Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP) }
+    mistake = assert_raises(Core::Mistake) { update_plugins(configuration, shared).call(APP) }
 
     assert_equal [FILE, 5, %(shared plugin "#{TWO}" needs ref=, a tag or a full commit SHA)], [mistake.file, mistake.line, mistake.message]
     assert_nil configuration.set
@@ -143,7 +146,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_stops_at_a_repository_whose_tags_it_cant_list_naming_the_plugin_and_changes_nothing
     configuration, shared = project([listing(ONE, "v1.0.0"), listing(TWO, "v1.0.0", 4)], ONE => %w[v1.1.0])
-    mistake = assert_raises(Core::Mistake) { Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP) }
+    mistake = assert_raises(Core::Mistake) { update_plugins(configuration, shared).call(APP) }
 
     assert_equal [FILE, 4, "couldn't list the tags of shared plugin #{TWO}: no repository at #{TWO}"], [mistake.file, mistake.line, mistake.message]
     assert_nil configuration.set
@@ -152,7 +155,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_finds_the_project_from_a_folder_inside_it_and_says_how_to_write_a_configuration_when_there_is_none
     configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.1.0])
-    use_case = Core::UpdatePlugins.new(configuration:, shared_plugins: shared)
+    use_case = update_plugins(configuration, shared)
     mistake = assert_raises(Core::Mistake) { use_case.call(File.expand_path("/elsewhere/lib")) }
 
     assert_equal 1, use_case.call(File.join(APP, "lib", "deep")).changes.size
@@ -161,7 +164,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_moves_within_the_compatible_versions_and_names_the_newer_incompatible_versions_on_the_line
     configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "2.0.0", 2)], ONE => %w[v1.4.0 v1.5.2 v2.0.0 v2.1.0 v3.0.0], TWO => %w[2.0.0 v3.0.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_equal ["v1.5.2", "2.0.0"], configuration.read(APP).plugins.map(&:ref)
     assert_equal ["#{ONE}: moved from v1.4.0 to v1.5.2; newer incompatible versions: v2.1.0, v3.0.0; crosslint update --latest moves to v3.0.0",
@@ -170,7 +173,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_names_the_newer_incompatible_versions_with_dry_run_too
     configuration, shared = project([listing(ONE, "v1.4.0")], ONE => %w[v1.4.0 v1.5.0 v2.0.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, dry_run: true)
+    result = update_plugins(configuration, shared).call(APP, dry_run: true)
 
     assert_equal ["#{ONE}: would move from v1.4.0 to v1.5.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0"], result.lines
     assert_nil configuration.set
@@ -178,7 +181,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_stays_when_every_compatible_tag_is_lower_and_a_newer_incompatible_version_exists
     configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "v0.0.3", 2)], ONE => %w[v1.2.0 v2.0.0], TWO => %w[v0.0.3 v0.0.4])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP)
+    result = update_plugins(configuration, shared).call(APP)
 
     assert_nil configuration.set
     assert_equal ["#{ONE}: is at its newest compatible tag, v1.4.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0",
@@ -187,7 +190,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_moves_to_the_highest_version_even_when_it_isnt_compatible_with_latest
     configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "v0.0.3", 2)], ONE => %w[v1.4.0 v1.5.0 v2.0.0 v3.0.0], TWO => %w[v0.0.4])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, latest: true)
+    result = update_plugins(configuration, shared).call(APP, latest: true)
 
     assert_equal ["v3.0.0", "v0.0.4"], configuration.read(APP).plugins.map(&:ref)
     assert_equal ["#{ONE}: moved from v1.4.0 to v3.0.0", "#{TWO}: moved from v0.0.3 to v0.0.4"], result.lines
@@ -195,7 +198,7 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_combines_latest_with_dry_run_and_leaves_pinned_refs_alone
     configuration, shared = project([listing(ONE, "v1.4.0"), listing(TWO, "v1.0.0-rc.1", 2)], ONE => %w[v1.4.0 v2.0.0])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, latest: true, dry_run: true)
+    result = update_plugins(configuration, shared).call(APP, latest: true, dry_run: true)
 
     assert_equal ["#{ONE}: would move from v1.4.0 to v2.0.0", "#{TWO}: is at v1.0.0-rc.1, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update leaves it alone"], result.lines
     assert_nil configuration.set
@@ -203,10 +206,20 @@ class UpdatePluginsTest < Minitest::Test
 
   def test_leaves_a_plugin_whose_repository_has_no_version_tag_where_it_is_with_latest
     configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[latest])
-    result = Core::UpdatePlugins.new(configuration:, shared_plugins: shared).call(APP, latest: true)
+    result = update_plugins(configuration, shared).call(APP, latest: true)
 
     assert_equal ["#{ONE}: has no tag that is a version, vX.Y.Z or X.Y.Z, so it stays at v1.0.0"], result.lines
     assert_nil configuration.set
+  end
+
+  def test_stops_before_reading_a_configuration_that_needs_a_newer_crosslint_and_makes_no_request
+    configuration = Memory::MemoryConfiguration.new({APP => Core::Mistake.new("unknown node", file: FILE, line: 2)},
+      minimums: {APP => Core::MinimumVersion.parse("2", file: FILE, line: 1)})
+    _, shared = project([], ONE => %w[v1.1.0])
+    mistake = assert_raises(Core::Mistake) { update_plugins(configuration, shared).call(APP) }
+
+    assert_equal ["#{FILE}:1", "needs CrossLint 2 or later, and this is CrossLint 1.4.0; upgrade CrossLint"], [mistake.location, mistake.message]
+    assert_empty @err.string
   end
 
   def test_says_what_each_plugin_did
@@ -220,6 +233,8 @@ class UpdatePluginsTest < Minitest::Test
   end
 
   private
+
+  def update_plugins(configuration, shared) = Core::UpdatePlugins.new(configuration:, shared_plugins: shared, crosslint: CROSSLINT)
 
   # A configuration for the project at APP that lists `plugins`, and a
   # port with a repository at each URL that has these tags.

@@ -13,9 +13,21 @@ module CrossLint
     # that has a configuration, or nil when none does.
     def find_root: (String start) -> String?
 
+    # The oldest CrossLint that reads the configuration of the project
+    # whose root is `root`, which the configuration names on its first
+    # line, or nil when it names none. Reads that line alone, so that a
+    # configuration written for a newer CrossLint, with lines this one
+    # can't read, still gives it. Raises Core::Mistake, naming the file and
+    # the line, when that line names it twice, comes after another line, or
+    # gives no bare version (Core::Version.parse), and when the project
+    # has no configuration.
+    def minimum: (String root) -> Core::MinimumVersion?
+
     # The configuration of the project whose root is `root`. Raises
-    # Core::Mistake, naming the file and the line, at a mistake in it, and
-    # when the project has none.
+    # Core::Mistake, naming the file and the line, at a mistake in it, the
+    # line that names the oldest CrossLint among them, and when the
+    # project has none. Reads that line as any other, and compares its
+    # version with no CrossLint's: the caller asks `minimum` first.
     def read: (String root) -> Core::Configuration
 
     # Whether the project whose root is `root` has a configuration there,

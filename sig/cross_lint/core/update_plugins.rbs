@@ -92,8 +92,11 @@ module CrossLint
     # and changes nothing then.
     class UpdatePlugins
       # A use case that reads the configuration and sets refs through
-      # `configuration`, and lists tags through `shared_plugins`.
-      def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins) -> void
+      # `configuration`, and lists tags through `shared_plugins`, for the
+      # CrossLint whose version is `crosslint`: a configuration that names
+      # a newer one as the oldest that reads it stops the update with a
+      # Mistake that names both, before any request.
+      def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins, crosslint: Version) -> void
 
       # Updates the project whose root is `start` or the nearest folder
       # above it with a configuration. With `dry_run`, changes nothing.
@@ -104,6 +107,8 @@ module CrossLint
       @configuration: _Configuration
 
       @shared_plugins: _SharedPlugins
+
+      @crosslint: Version
 
       # The tag each of `changes` moves its plugin to, by the plugin's URL
       # and path.

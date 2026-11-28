@@ -1,0 +1,54 @@
+module CrossLint
+  module Core
+    # The oldest CrossLint that reads a manifest or a configuration, as
+    # the file names it on its first line, and where: in KDL,
+    # `crosslint min="1.2"`. A CrossLint older than that stops before it
+    # reads any other line of the file, with a mistake that names both
+    # versions.
+    #
+    # ```ruby
+    # minimum = CrossLint::Core::MinimumVersion.parse("1.2", file: "plugin.kdl", line: 1)
+    # minimum.met_by?(CrossLint::Core::Version.parse("1.4.0")) # => true
+    # minimum.met_by?(CrossLint::Core::Version.parse("1.1.0")) # => false
+    # minimum.requirement # => "needs CrossLint 1.2 or later"
+    # ```
+    class MinimumVersion < Data
+      # The version as the file writes it, such as "1.2".
+      attr_reader text: String
+
+      # The version `text` names: 1.2.0 for "1.2".
+      attr_reader version: Version
+
+      # The file that names it, as messages name the file.
+      attr_reader file: String
+
+      # The line of the file that names it.
+      attr_reader line: Integer
+
+      # The minimum that `text` names, at `line` of `file`, or nil when
+      # `text` isn't a bare version of one to three numbers
+      # (Version.parse).
+      def self.parse: (String text, file: String, line: Integer) -> MinimumVersion?
+
+      # Whether `running`, the version of a CrossLint, reads the file: it
+      # is the minimum or later.
+      def met_by?: (Version running) -> bool
+
+      # What the file needs, as a message says it: "needs CrossLint 1.2 or
+      # later".
+      def requirement: () -> String
+
+      # Nothing when `running` meets the minimum. Otherwise raises Mistake,
+      # at the file's line, that says what needs which CrossLint, `of` such
+      # as "plugin links" when it is given, names `running`, and says to
+      # upgrade CrossLint.
+      def check: (Version running, ?of: String?) -> nil
+
+      private
+
+      def self.new: (text: String, version: Version, file: String, line: Integer) -> instance
+
+      def initialize: (text: String, version: Version, file: String, line: Integer) -> void
+    end
+  end
+end

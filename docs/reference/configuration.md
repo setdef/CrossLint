@@ -27,6 +27,38 @@ warnings "all"
 
 CrossLint finds the configuration by looking in the current folder and then in each folder above it, or from `-C`'s folder. A project with no configuration, or one that lists no plugin, stops CrossLint with exit status 2, since no check would run. Any node or property this page doesn't list stops CrossLint the same way, with the nearest valid spelling where one is close.
 
+## `crosslint`
+
+In `crosslint min=VERSION`, `VERSION` is the oldest CrossLint that reads the configuration. Write the line as the file's first line, once, when the configuration uses something an older CrossLint doesn't have, so that everyone who runs the project's check with an older CrossLint learns to upgrade it, in place of a mistake on a line their CrossLint can't read. A configuration for CrossLint 1.2.0 or later starts:
+
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
+```kdl
+crosslint min="1.2"
+
+plugin "debt"
+```
+<!-- SPDX-SnippetEnd -->
+
+CrossLint reads this line before any other line of the file. A CrossLint older than `VERSION` stops there with exit status 2, before it reads or fetches anything else, and names both versions:
+
+<!--
+SPDX-SnippetBegin
+SPDX-License-Identifier: MIT-0
+SPDX-SnippetCopyrightText: 2026 setdef
+-->
+```text
+crosslint: .config/crosslint/config.kdl:1: needs CrossLint 1.2 or later, and this is CrossLint 1.1.0; upgrade CrossLint
+```
+<!-- SPDX-SnippetEnd -->
+
+- `VERSION` is a string of one to three numbers between dots, such as `"1"`, `"1.2"`, or `"1.2.0"`, and a number left out is 0, so `"1.2"` is 1.2.0. It takes no operator, such as `>=` or `~>`, since it is always a minimum, and no pre-release part, such as `-rc.1`.
+- Without the line, a CrossLint reads the configuration when it reads each of its other lines.
+- A `crosslint` line after another line, a second `crosslint` line, and a line with an argument, a block, or any property but `min` stop CrossLint with exit status 2, naming the line.
+
 ## `plugin`
 
 `plugin NAME { ... }` runs a plugin. List each plugin once. No plugin runs unless the configuration lists it, the built-in ones included.

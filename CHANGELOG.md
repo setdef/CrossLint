@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A helper's block takes `command "PROGRAM" "WORD" ...` for a program that needs words before its file, such as `bundle exec ruby`.
 - `crosslint check` prints the line of an artifact found inside a file, and the artifact's name when it isn't its primary piece's path, before the message. `--json` adds a `line` key to each finding, which is a number or `null`.
 - The artifact a Ruby rule gets has `primary`, its primary piece, a piece like the others, with `name`, `path`, `exist?`, and `read`, and `artifact.piece("primary")` gives the same piece. `artifact.path` and `artifact.read` stay. `primary` is the name of the primary piece, so CrossLint stops with exit status 2 at a piece named `primary`, in a manifest or in the artifacts a helper declares.
+- A configuration can start with the oldest CrossLint that reads it, written `crosslint min="1.2"`. An older CrossLint stops at that line with exit status 2, before it reads any other, names both versions, and says to upgrade.
 - `crosslint check --json` prints the version of the CrossLint that wrote the object as its first key, `crosslint_version`, such as `"crosslint_version": "1.0.0"`.
 - A program helper's request has `name` and `line` in its `artifact` object: the name CrossLint calls the artifact by, and the line its primary piece's regex matched at (`null` for a whole file).
 - Each release file has a build provenance attestation, so `gh attestation verify` can check an archive or `SHA256SUMS` against this repository.

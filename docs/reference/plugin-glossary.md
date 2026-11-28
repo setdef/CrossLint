@@ -28,6 +28,7 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | **detail** | What tells apart the violations one rule finds on one artifact, such as a missing input's name, so the debt plugin can excuse each alone. | |
 | **fault** | What stops a plugin, such as a helper that fails or answers with an error, a regex search that runs past its time limit, two artifacts of one role with one name, or, in CrossLint's Ruby, an exception the helper raises or a gem it requires that CrossLint wasn't built with. The plugin reports nothing else, and `crosslint check` exits with 2. | crash |
 | **mistake** | A line of a manifest or a configuration that CrossLint can't use. CrossLint stops at it with exit status 2, before it checks anything, and says which file and line. | invalid config |
+| **minimum version** | The oldest CrossLint that reads a manifest or a configuration, written on the file's first line as `crosslint min="1.2"`. An older CrossLint stops at that line, and says which version the file needs, rather than at a mistake in a line it can't read. | required version, engine |
 | **notice** | A warning CrossLint gives about a plugin rather than an artifact, such as an artifact declaration whose `primary` pattern matches nothing. | |
 
 ## Steps and commands

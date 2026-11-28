@@ -9,13 +9,14 @@ class MemoryConfigurationTest < Minitest::Test
 
   FILE = ".config/crosslint/config.kdl"
 
-  def configuration_port(projects, broken: nil)
+  def configuration_port(projects, broken: nil, minimum: {})
     held = projects.to_h do |project, plugins|
       listed = plugins.each_with_index.map { |name, index| CrossLint::Core::ListedPlugin.new(name:, ref: nil, settings: [], line: index + 1) }
       [folder(project), CrossLint::Core::Configuration.new(file: FILE, plugins: listed, policies: [], warnings: nil, verbosity: nil)]
     end
     held[folder(broken)] = CrossLint::Core::Mistake.new("unknown node", file: FILE, line: 2) if broken
-    CrossLint::Adapters::MemoryConfiguration.new(held)
+    minimums = minimum.to_h { |project, text| [folder(project), CrossLint::Core::MinimumVersion.parse(text, file: FILE, line: 0)] }
+    CrossLint::Adapters::MemoryConfiguration.new(held, minimums:)
   end
 
   def example_configuration_port

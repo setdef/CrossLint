@@ -55,6 +55,22 @@ class VersionTest < Minitest::Test
     assert_equal [true, false, false, false, false], results
   end
 
+  def test_reads_one_to_three_numbers_with_a_missing_number_as_zero
+    versions = %w[1 1.2 1.2.3 10.0.12].map { |text| Version.parse(text) }
+
+    assert_equal [[1, 0, 0], [1, 2, 0], [1, 2, 3], [10, 0, 12]], versions.map(&:numbers)
+  end
+
+  def test_reads_no_version_from_text_that_isnt_bare_numbers
+    texts = ["", "1.", ".1", "1.2.3.4", "v1.2", ">=1.2", "1.2.0-rc.1", "1.2.0+build", "1 2", "1.2\n", "one"]
+
+    assert_equal [nil] * texts.size, texts.map { |text| Version.parse(text) }
+  end
+
+  def test_writes_all_three_numbers
+    assert_equal ["1.2.0", "0.0.3"], [Version.parse("1.2").to_s, version("0.0.3").to_s]
+  end
+
   def test_groups_the_versions_that_are_compatible
     groups = %w[1.0.0 1.9.9 2.0.0 0.3.0 0.3.9 0.0.3 0.0.4].map { |text| version(text).group }
 

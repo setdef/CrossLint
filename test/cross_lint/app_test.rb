@@ -62,6 +62,21 @@ class AppTest < Minitest::Test
       project.plugins.map { |plugin| [plugin.name, plugin.folder, plugin.manifest.steps.map(&:name)] }
   end
 
+  def test_reads_a_configuration_only_when_it_is_the_crosslint_its_first_line_names_or_a_newer_one
+    write(@base, "app/.config/crosslint/config.kdl", %(crosslint min="1.2"\nplugin "debt"\nnext-feature\n))
+    root = File.join(@base, "app")
+    mistake = assert_raises(Mistake) { App.new(version: "1.1.9").load_project(root) }
+
+    assert_equal [".config/crosslint/config.kdl:1", "needs CrossLint 1.2 or later, and this is CrossLint 1.1.9; upgrade CrossLint"],
+      [mistake.location, mistake.message]
+    assert_match(/unknown node "next-feature"/, assert_raises(Mistake) { App.new(version: "1.2.0").load_project(root) }.message)
+    assert_match(/needs CrossLint 1.2 or later/, assert_raises(Mistake) { App.new(version: "1.1.9").update(root) }.message)
+  end
+
+  def test_refuses_a_version_of_crosslint_that_isnt_three_numbers
+    assert_raises(ArgumentError) { App.new(version: "1.2.0-rc.1") }
+  end
+
   # ng-nudge counted its debt file as an artifact (lib/console-output.js:16).
   def test_tracks_debt_with_the_built_in_debt_plugin
     write(@base, ".config/crosslint/config.kdl", %(plugin "debt" {\n  report-entries commented="none"\n}\nplugin ".config/crosslint/tests"\n))

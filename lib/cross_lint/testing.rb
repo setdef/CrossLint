@@ -91,6 +91,32 @@ module CrossLint
         assert_equal port.file, mistake.file
       end
 
+      def test_reads_the_oldest_crosslint_a_configuration_names_before_its_other_lines
+        port = configuration_port({"app" => ["one"]}, minimum: {"app" => "1.2"})
+        found = port.minimum(folder("app")) || raise(Minitest::Assertion, "app names no oldest CrossLint")
+
+        assert_equal [port.file, "1.2", [1, 2, 0]], [found.file, found.text, found.version.numbers]
+        assert_operator found.line, :<, port.read(folder("app")).plugins.first.line
+      end
+
+      def test_reads_no_oldest_crosslint_from_a_configuration_that_names_none
+        assert_nil configuration_port({"app" => ["one"]}).minimum(folder("app"))
+      end
+
+      def test_reads_the_oldest_crosslint_without_reading_the_other_lines
+        port = configuration_port({}, broken: "app", minimum: {"app" => "9"})
+
+        assert_equal ["9"], [port.minimum(folder("app"))].compact.map(&:text)
+        assert_raises(Core::Mistake) { port.read(folder("app")) }
+      end
+
+      def test_names_the_file_when_the_project_it_reads_the_oldest_crosslint_of_has_no_configuration
+        port = configuration_port({"app" => ["one"]})
+        mistake = assert_raises(Core::Mistake) { port.minimum(folder("elsewhere")) }
+
+        assert_equal port.file, mistake.file
+      end
+
       def test_sets_the_ref_of_a_plugin_and_changes_nothing_else
         port = example_configuration_port
         before = port.read(folder("example"))

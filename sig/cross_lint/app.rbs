@@ -102,6 +102,8 @@ module CrossLint
 
     @version: String
 
+    @crosslint: Core::Version
+
     @manifests: _PluginManifests
 
     @project_files: _ProjectFiles

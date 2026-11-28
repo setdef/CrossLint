@@ -12,6 +12,19 @@ module CrossLint
     class Version < Data
       include Comparable
 
+      # A bare version: one to three numbers between dots, with no "v",
+      # operator, or pre-release part.
+      BARE: Regexp
+
+      # The version that `text` names, one to three numbers between dots
+      # such as "1", "1.2", or "1.2.0", with each number left out read as
+      # 0, so that "1.2" is 1.2.0; or nil when `text` is anything else,
+      # such as "v1.2", ">=1.2", or "1.2.0-rc.1".
+      def self.parse: (String text) -> Version?
+
+      # The version's three numbers, between dots: "1.2.0".
+      def to_s: () -> String
+
       # The version's major, minor, and patch numbers.
       attr_reader numbers: Array[Integer]
 

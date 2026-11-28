@@ -43,13 +43,15 @@ module CrossLint
     end
 
     class UpdatePlugins
-      def initialize(configuration:, shared_plugins:)
+      def initialize(configuration:, shared_plugins:, crosslint:)
         @configuration = configuration
         @shared_plugins = shared_plugins
+        @crosslint = crosslint
       end
 
       def call(start, dry_run: false, latest: false)
         root = @configuration.find_root(start) || raise(Mistake.no_configuration(@configuration.file, start))
+        @configuration.minimum(root)&.check(@crosslint)
         configuration = @configuration.read(root)
         SharedPlugin.refuse_credentials(configuration)
         shared = configuration.plugins.select { |listing| listing.shared?(@shared_plugins) }

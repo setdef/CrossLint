@@ -7,9 +7,10 @@ module CrossLint
     class MemoryConfiguration
       attr_reader :file
 
-      def initialize(projects = {}, file: ".config/crosslint/config.kdl")
+      def initialize(projects = {}, file: ".config/crosslint/config.kdl", minimums: {})
         @projects = projects
         @file = file
+        @minimums = minimums
       end
 
       def find_root(start)
@@ -33,6 +34,12 @@ module CrossLint
         configuration = read(root)
         plugins = configuration.plugins.map { |listing| refs.key?([listing.name, listing.path]) ? listing.with(ref: refs.fetch([listing.name, listing.path])) : listing }
         @projects[root] = configuration.with(plugins:)
+      end
+
+      def minimum(root)
+        raise Core::Mistake.new("doesn't exist", file:) unless @projects.key?(root)
+
+        @minimums[root]
       end
 
       def read(root)

@@ -45,9 +45,12 @@ module CrossLint
       # CrossLint has, by name. `reserved` has the name of each command of
       # CrossLint, which no plugin that adds commands can be named, and
       # `reserved_flags` each way CrossLint's global flags are written,
-      # which no flag of a plugin's command can be.
+      # which no flag of a plugin's command can be. `crosslint` is the
+      # version of the CrossLint that loads the project: a configuration
+      # that names a newer one as the oldest that reads it stops the load
+      # with a Mistake that names both, before any other line of it is read.
       def initialize: (configuration: _Configuration, manifests: _PluginManifests, crosslint_ruby: _CrossLintRuby, shared_plugins: _SharedPlugins,
-                       helpers: _Helpers, ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
+                       helpers: _Helpers, crosslint: Version, ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
                        ?reserved_flags: Array[String]) -> void
 
       # The project whose root is `start` or the nearest folder above it
@@ -77,6 +80,12 @@ module CrossLint
       @reserved: Array[String]
 
       @reserved_flags: Array[String]
+
+      @crosslint: Version
+
+      # The configuration of `root`, once its oldest CrossLint, if it names
+      # one, is no newer than this one.
+      def read_configuration: (String root) -> Configuration
 
       # The plugin listed at `index`, with its manifest, checked against
       # the plugins `loaded` before it. A local or shared plugin can't have

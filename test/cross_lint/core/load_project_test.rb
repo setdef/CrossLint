@@ -15,6 +15,9 @@ class LoadProjectTest < Minitest::Test
   TOP = File.expand_path("/")
   APP = File.expand_path("/app")
 
+  # The CrossLint that loads each project.
+  CROSSLINT = Version.parse("1.4.0")
+
   def test_finds_the_project_from_a_folder_inside_it
     project = load_project(start: "#{APP}/lib/deep")
 
@@ -27,6 +30,26 @@ class LoadProjectTest < Minitest::Test
 
     assert_equal ["", "no .config/crosslint/config.kdl in /elsewhere/lib or any folder above it; " \
       "run crosslint init in the project's root to write one"], [mistake.location, mistake.message]
+  end
+
+  def test_stops_before_reading_a_configuration_that_needs_a_newer_crosslint
+    configuration = MemoryConfiguration.new({APP => Mistake.new("unknown node", file: CONFIG, line: 2)},
+      minimums: {APP => MinimumVersion.parse("1.5", file: CONFIG, line: 1)})
+
+    [false, true].each do |listed|
+      mistake = assert_raises(Mistake) { load_project(configuration:, listed:) }
+
+      assert_equal ["#{CONFIG}:1", "needs CrossLint 1.5 or later, and this is CrossLint 1.4.0; upgrade CrossLint"], [mistake.location, mistake.message]
+    end
+  end
+
+  def test_reads_a_configuration_that_this_crosslint_or_an_older_one_reads
+    ["1.4", "1.3.9"].each do |text|
+      configuration = MemoryConfiguration.new({APP => Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], policies: [], warnings: nil,
+        verbosity: nil)}, minimums: {APP => MinimumVersion.parse(text, file: CONFIG, line: 1)})
+
+      assert_equal ["tests"], load_project(configuration:).plugins.map(&:name)
+    end
   end
 
   def test_stops_when_the_configuration_lists_no_plugin
@@ -266,7 +289,7 @@ class LoadProjectTest < Minitest::Test
 
   def test_has_no_step_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], policies: [], warnings: nil, verbosity: nil)
-    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
+    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), crosslint: CROSSLINT,
       manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}), crosslint_ruby: MemoryCrossLintRuby.new,
       shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new)
 
@@ -875,7 +898,7 @@ class LoadProjectTest < Minitest::Test
 
   def test_has_no_built_in_plugins_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("debt")], policies: [], warnings: nil, verbosity: nil)
-    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), manifests: MemoryPluginManifests.new,
+    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), crosslint: CROSSLINT, manifests: MemoryPluginManifests.new,
       crosslint_ruby: MemoryCrossLintRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new)
     mistake = assert_raises(Mistake) { use_case.call(APP) }
 
@@ -896,7 +919,7 @@ class LoadProjectTest < Minitest::Test
   def test_raises_the_mistakes_the_ports_raise
     configuration = MemoryConfiguration.new({APP => Mistake.new("broken", file: CONFIG, line: 2)})
     mistake = assert_raises(Mistake) do
-      LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, crosslint_ruby: MemoryCrossLintRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new).call(APP)
+      LoadProject.new(configuration:, crosslint: CROSSLINT, manifests: MemoryPluginManifests.new, crosslint_ruby: MemoryCrossLintRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new).call(APP)
     end
 
     assert_equal "#{CONFIG}:2", mistake.location
@@ -932,10 +955,10 @@ class LoadProjectTest < Minitest::Test
   end
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
-    shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false, helpers: MemoryHelpers.new)
+    shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false, helpers: MemoryHelpers.new, configuration: nil)
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
-    configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
-    use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
+    configuration ||= MemoryConfiguration.new({APP => Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)})
+    use_case = LoadProject.new(configuration:, crosslint: CROSSLINT,
       manifests: MemoryPluginManifests.new(manifests), crosslint_ruby: MemoryCrossLintRuby.new(ruby), shared_plugins:, built_in:, steps:, helpers:,
       **{reserved:, reserved_flags:}.compact)
     listed ? use_case.listed(start) : use_case.call(start)

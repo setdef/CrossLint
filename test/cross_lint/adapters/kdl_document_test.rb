@@ -133,7 +133,70 @@ class KDLDocumentTest < Minitest::Test
     assert_refuses "p has b twice; the first is on line 3", document, node.children.last, -> { document.optional_child(node, "b") }
   end
 
+  def test_reads_the_oldest_crosslint_the_first_line_names
+    found = Document.new(%(// for CrossLint 1.2\ncrosslint min="1.2"\nplugin "a"\n), "a.kdl").minimum
+
+    assert_equal ["1.2", [1, 2, 0], "a.kdl", 2], [found.text, found.version.numbers, found.file, found.line]
+    assert_nil Document.new(%(plugin "a"\n), "a.kdl").minimum
+    assert_nil Document.new("", "a.kdl").minimum
+  end
+
+  def test_reads_only_the_minimum_of_the_crosslint_line_so_a_newer_crosslint_can_add_to_it
+    found = Document.new(%(crosslint "x" min="2" soft=#true {\n  more\n}\nunknown-node\n), "a.kdl").minimum
+
+    assert_equal "2", found.text
+  end
+
+  def test_refuses_a_crosslint_line_that_is_not_first_or_is_there_twice
+    assert_minimum_mistake "crosslint comes after plugin on line 1; write it as the first line, so that a CrossLint too old for the file " \
+      "says so before it reads any other", 2, %(plugin "a"\ncrosslint min="1.2"\n)
+    assert_minimum_mistake "crosslint is set twice; the first is on line 1", 3, %(crosslint min="1.2"\nplugin "a"\ncrosslint min="1.3"\n)
+  end
+
+  def test_refuses_a_crosslint_line_with_no_bare_version
+    assert_minimum_mistake %(crosslint has no min=; write it as crosslint min="1.2"), 1, %(crosslint "1.2"\n)
+    [%(">=1.2"), %("1.2.0-rc.1"), %("v1.2"), %("1.2.3.4"), "1.2", "#null"].each do |value|
+      shown = Document.new("n x=#{value}", "a.kdl").nodes.first.properties.fetch("x").inspect
+      assert_minimum_mistake "crosslint min= takes a version of one to three numbers in a string, with no operator or pre-release part, " \
+        "such as min=\"1.2\", not #{shown}", 1, %(crosslint min=#{value}\n)
+    end
+  end
+
+  def test_refuses_anything_but_min_on_the_crosslint_line_once_the_minimum_is_read
+    assert_minimum_mistake %(crosslint has 1 argument; write it as crosslint min="1.2"), 1, %(crosslint "x" min="1.2"\n), whole: true
+    assert_minimum_mistake %(unknown property "soft"; expected "min"), 1, %(crosslint min="1.2" soft=#true\n), whole: true
+    assert_minimum_mistake %(unknown node "more"; crosslint takes no children), 2, %(crosslint min="1.2" {\n  more\n}\n), whole: true
+    assert_equal "1.2", Document.new(%(crosslint min="1.2"\n), "a.kdl").whole_minimum.text
+    assert_nil Document.new(%(plugin "a"\n), "a.kdl").whole_minimum
+  end
+
+  def test_reads_the_oldest_crosslint_from_the_lines_before_one_it_cant_parse
+    found = Document.minimum(%(crosslint min="9"\nplugin "a"\nnew-syntax "a\n), "a.kdl")
+    typed = Document.minimum(%(crosslint min="9"\nhelper command=(crosslint)"node"\n), "a.kdl", typed: {"helper" => {"command" => ["crosslint"]}})
+
+    commented = Document.minimum(%(// for CrossLint 9\n\ncrosslint min="9"\nnew-syntax "a\n), "a.kdl")
+
+    assert_equal [["9", 1], ["9", 1], ["9", 3]], [found, typed, commented].map { |each| [each.text, each.line] }
+    assert_equal "1.2", Document.minimum(%(crosslint min="1.2"\nplugin "a"\n), "a.kdl").text
+  end
+
+  def test_raises_the_files_own_mistake_when_no_line_before_it_names_the_oldest_crosslint
+    [%(plugin "a"\nnew-syntax "a\n), %(new-syntax "a\n), %(plugin {\ncrosslint min="9"\nnew-syntax "a\n), "\xFF"].each do |source|
+      expected = assert_raises(Mistake) { Document.new(source.dup.force_encoding(Encoding::UTF_8), "a.kdl") }
+      mistake = assert_raises(Mistake) { Document.minimum(source.dup.force_encoding(Encoding::UTF_8), "a.kdl") }
+
+      assert_equal [expected.message, expected.line], [mistake.message, mistake.line]
+    end
+  end
+
   private
+
+  def assert_minimum_mistake(message, line, source, whole: false)
+    document = Document.new(source, "a.kdl")
+    mistake = assert_raises(Mistake) { whole ? document.whole_minimum : document.minimum }
+
+    assert_equal [message, "a.kdl", line], [mistake.message, mistake.file, mistake.line]
+  end
 
   def assert_mistake(message, file, line, source)
     mistake = assert_raises(Mistake) { Document.new(source, file) }

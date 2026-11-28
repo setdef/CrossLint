@@ -37,6 +37,10 @@ module CrossLint
 
       private
 
+      # The path of the configuration of `root`. Raises Core::Mistake,
+      # naming the file, when there is none.
+      def existing: (String root) -> String
+
       # Raises Core::Mistake unless `root` is a folder.
       def folder!: (String root) -> void
 

@@ -28,6 +28,7 @@ module CrossLint
       @reserved = reserved || UsageSpec.load.commands.map(&:name)
       @reserved_flags = reserved_flags || self.class.global_flag_names(UsageSpec.load)
       @version = version || UsageSpec.load.version
+      @crosslint = Core::Version.parse(@version) || raise(ArgumentError, "#{@version.dump} isn't a version of CrossLint, X.Y.Z")
       @steps = {"track-debt" => Core::TrackDebt.new(debt_files:)} #: Hash[String, Core::_Step]
     end
 
@@ -56,7 +57,7 @@ module CrossLint
     end
 
     def update(start, dry_run: false, latest: false)
-      Core::UpdatePlugins.new(configuration: @configuration, shared_plugins: @shared_plugins).call(start, dry_run:, latest:)
+      Core::UpdatePlugins.new(configuration: @configuration, shared_plugins: @shared_plugins, crosslint: @crosslint).call(start, dry_run:, latest:)
     end
 
     def init(start, force: false, dry_run: false)
@@ -77,6 +78,7 @@ module CrossLint
 
     def loader
       Core::LoadProject.new(configuration: @configuration, manifests: @manifests, crosslint_ruby: @crosslint_ruby, shared_plugins: @shared_plugins, helpers: @helpers,
+        crosslint: @crosslint,
         built_in: @built_in, steps: @steps, reserved: @reserved, reserved_flags: @reserved_flags)
     end
 

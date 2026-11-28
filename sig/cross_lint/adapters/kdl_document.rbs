@@ -97,14 +97,32 @@ module CrossLint
         def next_token: () -> [Symbol | false, untyped]
       end
 
+      # The name of the node that names the oldest CrossLint that reads the
+      # file: "crosslint".
+      CROSSLINT: String
+
+      # How that node is written: `crosslint min="1.2"`.
+      CROSSLINT_USAGE: String
+
       # The file's path, as messages name it.
       attr_reader file: String
 
       # The nodes at the top of the file.
       attr_reader nodes: Array[Node]
 
+      # The bytes of the file at `path`, as UTF-8, whatever the system's
+      # default encoding.
+      def self.source: (String path) -> String
+
       # Reads the file at `path`, as UTF-8, and parses it as for `new`.
       def self.load: (String path, String file, ?typed: Hash[String, Hash[String, Array[String]]]) -> KDLDocument
+
+      # The oldest CrossLint that reads `source`, from `file`, as `minimum`
+      # gives it, parsed as for `new`. When `source` doesn't parse, as a
+      # file written for a newer CrossLint may not, it is the minimum of the
+      # fewest lines before the mistake that parse into a node; when those
+      # name none, or there are none, it raises the mistake `new` raises.
+      def self.minimum: (String source, String file, ?typed: Hash[String, Hash[String, Array[String]]]) -> Core::MinimumVersion?
 
       # Parses `source`, from `file`. Raises Core::Mistake when it isn't
       # valid KDL or UTF-8, or has a type annotation that `typed` doesn't
@@ -116,6 +134,19 @@ module CrossLint
 
       # A mistake in the file, on the node's line.
       def mistake: (String message, Node node) -> Core::Mistake
+
+      # The oldest CrossLint that reads the file, which a `crosslint`
+      # node at its top names with its `min=`, or nil when it has no such
+      # node. Reads the node's `min=` and nothing else of it, so that a
+      # newer CrossLint's line, with more on it, still gives its version.
+      # Raises Core::Mistake at that node when it isn't the first node, is
+      # there twice, or has no `min=` that is a bare version, a string of
+      # one to three numbers (Core::Version.parse).
+      def minimum: () -> Core::MinimumVersion?
+
+      # The minimum, as `minimum` gives it, with the rest of its node
+      # checked: no argument, no property but `min=`, and no children.
+      def whole_minimum: () -> Core::MinimumVersion?
 
       # The node's arguments, of which there must be `count`. `usage`
       # shows how the node is written.
@@ -150,6 +181,10 @@ module CrossLint
       def required_child: (Node node, String name) -> Node
 
       private
+
+      # The document `source` parses into, from `file`, when it parses and
+      # has a node at its top, or nil.
+      def self.first_nodes: (String source, String file, Hash[String, Hash[String, Array[String]]] typed) -> KDLDocument?
 
       @typed: Hash[String, Hash[String, Array[String]]]
 
