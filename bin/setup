@@ -7,6 +7,11 @@
 #
 #   bin/setup
 #
+# It installs only the tools mise.toml pins, never the ones in a contributor's
+# own mise configuration. MISE_ENABLE_TOOLS, mise's setting for the tools it
+# uses (names with commas between them, such as ruby,node), narrows that to
+# the ones named, as a CI job that needs fewer sets it.
+#
 # BUNDLE_PATH, if set, is where Bundler puts the gems (bin/bundle-path has
 # the default). The hook goes in the clone's hooks folder, which every
 # worktree of the clone shares, and `git commit --no-verify` skips it. A
@@ -66,8 +71,20 @@ HOOK
   say "installed the pre-commit hook: git commit runs the quality gates, and --no-verify skips them"
 }
 
+# The names of the tools mise.toml pins, with commas between them. The first
+# command is for mise 2026.10.22 and later; older ones have only --local to
+# leave out the global configuration.
+project_tools() {
+  { mise ls --no-global --no-header 2> /dev/null || mise ls --local --no-header; } |
+    awk '!seen[$1]++ { printf "%s%s", separator, $1; separator = "," }'
+}
+
 say "installing the tools mise.toml pins"
 mise trust -q mise.toml
+if [ -z "${MISE_ENABLE_TOOLS+set}" ]; then
+  MISE_ENABLE_TOOLS=$(project_tools)
+  export MISE_ENABLE_TOOLS
+fi
 mise install
 
 say "installing the gems into $BUNDLE_PATH"

@@ -10,6 +10,7 @@ class SetupTest < Minitest::Test
   BIN = File.expand_path("../../bin", __dir__)
   SCRIPTS = %w[setup pre-commit bundle-path].freeze
   GATES = "mise exec -- bundle exec rake"
+  LIST = "mise ls --no-global --no-header"
   INSTALLED = "bin/setup: the pre-commit hook is installed: git commit runs the quality gates, and --no-verify skips them"
 
   def setup
@@ -23,8 +24,17 @@ class SetupTest < Minitest::Test
     SCRIPTS.each { |script| FileUtils.cp(File.join(BIN, script), File.join(@clone, "bin", script)) }
     File.binwrite(File.join(@tools, "mise"), <<~MISE)
       #!/usr/bin/env bash
-      echo "mise $* [BUNDLE_PATH=${BUNDLE_PATH-unset}] [GIT_DIR=${GIT_DIR-unset}]" >> "$FAKE_LOG"
+      echo "mise $* [BUNDLE_PATH=${BUNDLE_PATH-unset}] [GIT_DIR=${GIT_DIR-unset}] [MISE_ENABLE_TOOLS=${MISE_ENABLE_TOOLS-unset}]" >> "$FAKE_LOG"
       if [ "$*" = "exec -- bundle exec rake" ]; then exit "${FAKE_GATES_STATUS:-0}"; fi
+      case "$*" in
+        "ls --no-global --no-header") [ -z "${FAKE_OLD_MISE:-}" ] || exit 2 ;;
+        "ls --local --no-header") ;;
+        *) exit 0 ;;
+      esac
+      printf '%s\\n' 'ruby        4.1.0-preview1  ~/clone/mise.toml  4.1.0-preview1' \\
+        'node        26.13.1         ~/clone/mise.toml  26.13.1' \\
+        'ruby        4.1.0-preview1  ~/parent/mise.toml  4.1.0-preview1' \\
+        'pipx:reuse  6.2.0           ~/clone/mise.toml  6.2.0'
     MISE
     File.chmod(0o755, File.join(@tools, "mise"))
     git("init", "-q")
@@ -38,8 +48,30 @@ class SetupTest < Minitest::Test
     status, out, = run_setup
 
     assert_equal 0, status.exitstatus
-    assert_equal ["mise trust -q mise.toml", "mise install", "mise exec -- bundle install", "mise exec -- bundle exec rake fixtures"], words
+    assert_equal ["mise trust -q mise.toml", LIST, "mise install", "mise exec -- bundle install", "mise exec -- bundle exec rake fixtures"], words
     assert_match(%r{^bin/setup: done$}, out)
+  end
+
+  def test_enables_only_the_tools_mise_toml_pins_for_every_call_after_listing_them
+    run_setup
+
+    assert_equal ["unset", "unset"], tool_settings.first(2)
+    assert_equal ["ruby,node,pipx:reuse"], tool_settings.drop(2).uniq
+  end
+
+  def test_lists_the_tools_with_the_older_flag_when_mise_does_not_know_the_newer_one
+    status, = run_setup("FAKE_OLD_MISE" => "1")
+
+    assert_equal 0, status.exitstatus
+    assert_equal ["mise trust -q mise.toml", LIST, "mise ls --local --no-header", "mise install", "mise exec -- bundle install", "mise exec -- bundle exec rake fixtures"], words
+    assert_equal "ruby,node,pipx:reuse", tool_settings[3]
+  end
+
+  def test_leaves_the_tools_a_caller_enables_as_they_are
+    run_setup("MISE_ENABLE_TOOLS" => "ruby,node")
+
+    assert_equal ["mise trust -q mise.toml", "mise install", "mise exec -- bundle install", "mise exec -- bundle exec rake fixtures"], words
+    assert_equal ["ruby,node"], tool_settings.uniq
   end
 
   def test_puts_the_gems_in_a_folder_under_home_unless_bundle_path_is_set
@@ -166,6 +198,7 @@ class SetupTest < Minitest::Test
 "FAKE_LOG" => @log,
 "CI" => nil,
 "BUNDLE_PATH" => nil,
+"MISE_ENABLE_TOOLS" => nil,
 "GIT_DIR" => nil,
 "GIT_INDEX_FILE" => nil,
 "GIT_WORK_TREE" => nil,
@@ -179,6 +212,11 @@ class SetupTest < Minitest::Test
   # What the calls to mise were, without the settings each one logged.
   def words
     calls.map { |call| call.sub(/ \[BUNDLE_PATH.*/, "") }
+  end
+
+  # What each call to mise had in MISE_ENABLE_TOOLS.
+  def tool_settings
+    calls.map { |call| call[/\[MISE_ENABLE_TOOLS=([^\]]*)\]/, 1] }
   end
 
   def gem_folders
