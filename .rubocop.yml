@@ -1,0 +1,22 @@
+# RuboCop (rake rubocop) checks the style of every Ruby file with the
+# baseline of Kerrick/ruby_quality (config/rubocop.yml at commit 039d0f3,
+# MIT, from Joel Drapper), kept as a copy because the check makes no network
+# request. Change the copy only to take a newer commit of its source.
+inherit_from:
+  - .config/rubocop/ruby_quality.yml
+
+AllCops:
+  # The Ruby that mise.toml pins.
+  TargetRubyVersion: "4.1"
+  Exclude:
+    - ".scratch/**/*"
+    - "build/dist/**/*"
+    - "**/node_modules/**/*"
+    - "tmp/**/*"
+    - "vendor/**/*"
+
+# Layout/EndOfLine is "native", which on Windows demands CRLF. Every text
+# file is LF on every system, so the cop has nothing to check, and it would
+# refuse every file there.
+Layout/EndOfLine:
+  Enabled: false

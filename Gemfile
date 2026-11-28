@@ -32,6 +32,9 @@ group :check do
   gem "steep", "~> 2.1"
   # Standard checks the style of the Ruby files (rake standard).
   gem "standard", "~> 1.54"
+  # RuboCop checks the style of the Ruby files with the baseline in
+  # .config/rubocop/ruby_quality.yml (rake rubocop).
+  gem "rubocop", "~> 1.91"
   # RubyCritic runs Flay, Flog, and Reek over exe/, lib/, and sig/, and
   # fails below the minimum score in .rubycritic.yml (rake rubycritic).
   gem "rubycritic", "~> 5.0"

@@ -91,6 +91,11 @@ task :standard do
   sh "standardrb"
 end
 
+desc "Check the style of every Ruby file with RuboCop (.rubocop.yml)"
+task :rubocop do
+  sh "rubocop"
+end
+
 # RubyCritic exits the process when the score is below .rubycritic.yml's
 # minimum_score, so a shell runs it and Rake reports the failure.
 desc "Check the score of exe/, lib/, and sig/ with RubyCritic (.rubycritic.yml)"

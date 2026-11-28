@@ -217,6 +217,7 @@ DEPENDENCIES
   minitest (~> 6.1)
   rake (~> 13.4)
   rbs (~> 4.2)
+  rubocop (~> 1.91)
   rubycritic (~> 5.0)
   simplecov (~> 0.22)
   standard (~> 1.54)
