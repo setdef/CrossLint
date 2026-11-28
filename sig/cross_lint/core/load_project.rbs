@@ -34,7 +34,7 @@ module CrossLint
       RESERVED: Array[String]
 
       # A use case that reads through `configuration` and `manifests`, runs
-      # the Ruby that declares a plugin's artifacts through `carried_ruby`,
+      # the Ruby that declares a plugin's artifacts through `crosslint_ruby`,
       # starts the helper that declares them through `helpers`, and fetches
       # shared plugins through `shared_plugins`. `built_in` has
       # the folder of each built-in plugin, by name, and `steps` each step
@@ -42,7 +42,7 @@ module CrossLint
       # CrossLint, which no plugin that adds commands can be named, and
       # `reserved_flags` each way CrossLint's global flags are written,
       # which no flag of a plugin's command can be.
-      def initialize: (configuration: _Configuration, manifests: _PluginManifests, carried_ruby: _CarriedRuby, shared_plugins: _SharedPlugins,
+      def initialize: (configuration: _Configuration, manifests: _PluginManifests, crosslint_ruby: _CrossLintRuby, shared_plugins: _SharedPlugins,
                        helpers: _Helpers, ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
                        ?reserved_flags: Array[String]) -> void
 
@@ -101,7 +101,7 @@ module CrossLint
 
       # `plugin`, with the artifacts its helper declares from its settings
       # added to its manifest's when it has `artifacts helper=`, whether
-      # the helper runs on the Ruby CrossLint carries or as a program.
+      # the helper runs on CrossLint's Ruby or as a program.
       # `root` is the project's root, and `file` the configuration's.
       def declare: (String root, Plugin plugin, String file) -> Plugin
 
@@ -118,7 +118,7 @@ module CrossLint
       def declared: (untyped answer, String name, String file, Integer line) -> Array[ArtifactDeclaration]
 
       # `plugin` with the artifacts the helper file `ruby` declares, which
-      # runs on the Ruby CrossLint carries. Raises Mistake at whatever the
+      # runs on CrossLint's Ruby. Raises Mistake at whatever the
       # Ruby raises.
       def declare_in_ruby: (Plugin plugin, ArtifactsRuby ruby, String file) -> Plugin
 

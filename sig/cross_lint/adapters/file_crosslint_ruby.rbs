@@ -1,12 +1,12 @@
 module CrossLint
   module Adapters
-    # The CarriedRuby port for plugins in folders: runs the file of a
-    # helper on the Ruby CrossLint carries from the plugin's folder with
+    # The CrossLintRuby port for plugins in folders: runs the file of a
+    # helper on CrossLint's Ruby from the plugin's folder with
     # Kernel.load, the namespace as the module that wraps it. A file the
     # first one requires, with require_relative or require, runs at the top
     # level.
-    class FileCarriedRuby
-      include _CarriedRuby
+    class FileCrossLintRuby
+      include _CrossLintRuby
     end
   end
 end

@@ -42,7 +42,7 @@ module CrossLint
     end
 
     # A rule a plugin declares, which a helper runs: `ruby` is the file of
-    # a helper on the Ruby CrossLint carries, `helper` the name of any
+    # a helper on CrossLint's Ruby, `helper` the name of any
     # other.
     class RuleDeclaration < Data.define(:name, :ruby, :helper, :line)
       def initialize(ruby: nil, helper: nil, **declared) = super

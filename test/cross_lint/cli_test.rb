@@ -820,7 +820,7 @@ class CLITest < Minitest::Test
 
         verbosity "quiet"
       KDL
-      assert_equal %w[angular debt], CrossLint::App.new(carried_ruby: LoadedPlugins::CarriedRuby.new).load_project(project).plugins.map(&:name)
+      assert_equal %w[angular debt], CrossLint::App.new(crosslint_ruby: LoadedPlugins::CrossLintRuby.new).load_project(project).plugins.map(&:name)
     end
   end
 
@@ -997,6 +997,6 @@ class CLITest < Minitest::Test
       debt_files: CrossLint::Adapters::MemoryDebtFiles.new,
       shared_plugins: CrossLint::Adapters::MemorySharedPlugins.new({}, err: fetch_log),
       project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}),
-      carried_ruby: CrossLint::Adapters::MemoryCarriedRuby.new({"#{WORK}/app/.config/tests/raises.rb" => RAISES}))
+      crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new({"#{WORK}/app/.config/tests/raises.rb" => RAISES}))
   end
 end

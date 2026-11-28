@@ -102,7 +102,7 @@ class PageFeaturesTest < Minitest::Test
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
     repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: {"v0.1.0" => ROOT}, branches: [], commits: {})
     shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new({URL => repository}, err: StringIO.new)
-    CrossLint::App.new(carried_ruby: LoadedPlugins::CarriedRuby.new, shared_plugins:).check(@root)
+    CrossLint::App.new(crosslint_ruby: LoadedPlugins::CrossLintRuby.new, shared_plugins:).check(@root)
   end
 
   def findings(result) = result.violations.map { [it.artifact, it.role, it.policy, it.message] }

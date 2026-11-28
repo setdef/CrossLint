@@ -445,7 +445,7 @@ class CheckTest < Minitest::Test
 
   def test_stops_at_a_root_outside_a_git_working_tree
     port = CrossLint::Adapters::MemoryProjectFiles.new
-    assert_raises(Mistake) { Check.new(project_files: port, carried_ruby: CrossLint::Adapters::MemoryCarriedRuby.new, helpers: CrossLint::Adapters::MemoryHelpers.new, steps: {}).call(project(tests_plugin)) }
+    assert_raises(Mistake) { Check.new(project_files: port, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new, helpers: CrossLint::Adapters::MemoryHelpers.new, steps: {}).call(project(tests_plugin)) }
   end
 
   # A step that records what it sees and answers with what it is given.
@@ -599,7 +599,7 @@ class CheckTest < Minitest::Test
 
   def check(project, files:, ignored: [], steps: {}, ruby: {}, contents: {}, **options)
     port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files + contents.keys}, ignored: {ROOT => ignored}, contents: {ROOT => contents})
-    Check.new(project_files: port, carried_ruby: CrossLint::Adapters::MemoryCarriedRuby.new(ruby), helpers: CrossLint::Adapters::MemoryHelpers.new, steps:)
+    Check.new(project_files: port, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(ruby), helpers: CrossLint::Adapters::MemoryHelpers.new, steps:)
       .call(project, **options)
   end
 

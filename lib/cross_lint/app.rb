@@ -12,13 +12,13 @@ module CrossLint
     BUILT_IN = %w[angular debt].freeze
 
     def initialize(configuration: Adapters::KDLConfiguration.new, manifests: Adapters::KDLPluginManifests.new,
-      project_files: Adapters::GitProjectFiles.new, carried_ruby: Adapters::FileCarriedRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
+      project_files: Adapters::GitProjectFiles.new, crosslint_ruby: Adapters::FileCrossLintRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
       built_in: BUILT_IN, debt_files: Adapters::TSVDebtFiles.new, ng_nudge: Adapters::FileNgNudge.new, javascript: Adapters::NodeJavaScript.new,
       reserved: nil, reserved_flags: nil, err: $stderr, debug: false)
       @configuration = configuration
       @manifests = manifests
       @project_files = project_files
-      @carried_ruby = carried_ruby
+      @crosslint_ruby = crosslint_ruby
       @helpers = helpers || Adapters::ProcessHelpers.new(err:, debug:)
       @shared_plugins = shared_plugins || Adapters::GitSharedPlugins.new(err:)
       @debt_files = debt_files
@@ -41,7 +41,7 @@ module CrossLint
     def check(start, **options) = check_project(load_project(start), **options)
 
     def check_project(project, warnings: nil, verbosity: nil, all: false, command: nil, flags: {}, started: nil)
-      Core::Check.new(project_files: @project_files, carried_ruby: @carried_ruby, helpers: @helpers, steps: @steps)
+      Core::Check.new(project_files: @project_files, crosslint_ruby: @crosslint_ruby, helpers: @helpers, steps: @steps)
         .call(project, warnings:, verbosity:, all:, command:, flags:, started:)
     end
 
@@ -75,7 +75,7 @@ module CrossLint
     private
 
     def loader
-      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, carried_ruby: @carried_ruby, shared_plugins: @shared_plugins, helpers: @helpers,
+      Core::LoadProject.new(configuration: @configuration, manifests: @manifests, crosslint_ruby: @crosslint_ruby, shared_plugins: @shared_plugins, helpers: @helpers,
         built_in: @built_in, steps: @steps, reserved: @reserved, reserved_flags: @reserved_flags)
     end
 

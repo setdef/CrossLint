@@ -170,7 +170,7 @@ module CrossLint
       # The rule's name, which a policy runs it by.
       attr_reader name: String
 
-      # The file of the helper on the Ruby CrossLint carries that runs the
+      # The file of the helper on CrossLint's Ruby that runs the
       # rule, relative to the plugin's folder, for a Ruby rule, declared as
       # `rule NAME helper=HELPER`; or nil.
       attr_reader ruby: String?
@@ -393,7 +393,7 @@ module CrossLint
                        ?artifacts_ruby: ArtifactsRuby?, ?artifacts_helper: ArtifactsHelper?) -> void
     end
 
-    # The file of a helper on the Ruby CrossLint carries that declares
+    # The file of a helper on CrossLint's Ruby that declares
     # artifacts from the plugin's settings, declared as
     # `artifacts helper=HELPER`.
     class ArtifactsRuby < Data

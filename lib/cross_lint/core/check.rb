@@ -10,9 +10,9 @@ require_relative "step"
 module CrossLint
   module Core
     class Check
-      def initialize(project_files:, carried_ruby:, helpers:, steps:)
+      def initialize(project_files:, crosslint_ruby:, helpers:, steps:)
         @project_files = project_files
-        @carried_ruby = carried_ruby
+        @crosslint_ruby = crosslint_ruby
         @helpers = helpers
         @steps = steps
       end
@@ -91,7 +91,7 @@ module CrossLint
             loaded[[plugin.name, name]] = if declaration.helper
               HelperRule.new(plugin:, name:, helper: declaration.helper, call:)
             else
-              RubyRule.load(@carried_ruby, plugin, declaration, namespace, call, files, read)
+              RubyRule.load(@crosslint_ruby, plugin, declaration, namespace, call, files, read)
             end
           end
         rescue RubyRule::Stopped => error

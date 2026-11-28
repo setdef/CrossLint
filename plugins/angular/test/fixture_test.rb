@@ -120,7 +120,7 @@ class AngularFixtureTest < Minitest::Test
 
   private
 
-  def app(**options) = CrossLint::App.new(carried_ruby: LoadedPlugins::CarriedRuby.new, **options)
+  def app(**options) = CrossLint::App.new(crosslint_ruby: LoadedPlugins::CrossLintRuby.new, **options)
 
   # Installing the plugin's own packages is a setup step, npm ci in
   # plugins/angular, which no test runs.

@@ -1,6 +1,6 @@
 module CrossLint
-  # The class a Ruby rule inherits from: a rule whose helper runs on the
-  # Ruby CrossLint carries. A plugin declares the helper as
+  # The class a Ruby rule inherits from: a rule whose helper runs on
+  # CrossLint's Ruby. A plugin declares the helper as
   # `helper NAME command=(crosslint)"ruby" file=FILE` and the rule as
   # `rule RULE helper=NAME`. `FILE`, relative to the plugin's folder,
   # defines one class for each rule that names the helper, named after the
@@ -11,7 +11,7 @@ module CrossLint
   # arguments, so the instance can keep what it learns from one artifact
   # for the next.
   #
-  # The file runs in CrossLint's process, on the Ruby CrossLint carries.
+  # The file runs in CrossLint's process, on CrossLint's Ruby.
   # It can require Ruby's standard library and files in its plugin's
   # folder, and no gem CrossLint wasn't built with; bundler/inline is
   # refused. Anything the file or `check` raises is a fault that stops the

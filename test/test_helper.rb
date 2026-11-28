@@ -56,7 +56,7 @@ Minitest.after_run { FileUtils.rm_rf(SANDBOX) }
 
 require "cross_lint"
 require "cross_lint/testing"
-require_relative "carried_ruby"
+require_relative "crosslint_ruby"
 
 # The tests name what each covers, with `cover "CrossLint::App*"`, a
 # declaration that mutation testing used and that nothing reads now.

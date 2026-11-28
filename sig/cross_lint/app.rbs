@@ -13,8 +13,8 @@ module CrossLint
 
     # An app that reads the configuration through `configuration`, the
     # manifests through `manifests`, the project's files through
-    # `project_files`, helpers on the Ruby CrossLint carries through
-    # `carried_ruby`, and runs the other helpers through `helpers`, with
+    # `project_files`, helpers on CrossLint's Ruby through
+    # `crosslint_ruby`, and runs the other helpers through `helpers`, with
     # the built-in plugins in `plugins`, each a folder named in `built_in`
     # that holds a manifest, and whose step track-debt reads and writes
     # debt files through `debt_files`. With no `helpers`, it runs them as processes, writing
@@ -29,7 +29,7 @@ module CrossLint
     # which no flag of a plugin's command can be written as; with none
     # given, they are those of the shipped usage spec.
     def initialize: (?configuration: _Configuration, ?manifests: _PluginManifests, ?project_files: _ProjectFiles,
-                     ?carried_ruby: _CarriedRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String, ?built_in: Array[String],
+                     ?crosslint_ruby: _CrossLintRuby, ?helpers: _Helpers?, ?shared_plugins: _SharedPlugins?, ?plugins: String, ?built_in: Array[String],
                      ?debt_files: _DebtFiles, ?ng_nudge: _NgNudge, ?javascript: _JavaScript, ?reserved: Array[String]?, ?reserved_flags: Array[String]?, ?err: CLI::_Output, ?debug: bool) -> void
 
     # How each global flag of `spec`, with --help and --version, is
@@ -102,7 +102,7 @@ module CrossLint
 
     @project_files: _ProjectFiles
 
-    @carried_ruby: _CarriedRuby
+    @crosslint_ruby: _CrossLintRuby
 
     @helpers: _Helpers
 

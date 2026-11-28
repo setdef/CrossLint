@@ -1,7 +1,7 @@
 module CrossLint
   # The class that declares a plugin's artifacts inherits from, for a
   # plugin whose artifacts depend on its settings and whose helper runs on
-  # the Ruby CrossLint carries. The plugin declares the helper as
+  # CrossLint's Ruby. The plugin declares the helper as
   # `helper NAME command=(crosslint)"ruby" file=FILE` and the artifacts as
   # `artifacts helper=NAME`, and `FILE`, relative to the plugin's folder,
   # defines one class named `Artifacts` that inherits from this one, with

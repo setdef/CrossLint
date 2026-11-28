@@ -37,7 +37,7 @@ module CrossLint
 
       private
 
-      # A helper on the Ruby CrossLint carries, whose file the rules and
+      # A helper on CrossLint's Ruby, whose file the rules and
       # the artifacts that name it run.
       class Carried < Data
         # The helper's name.
@@ -110,7 +110,7 @@ module CrossLint
 
       # Reads the `artifacts` node, if there is one, which names the helper
       # that declares more artifacts: as the manifest's field for it, one of
-      # the Ruby CrossLint carries for a helper in `carried`, or the
+      # CrossLint's Ruby for a helper in `carried`, or the
       # helper's name for any other.
       def artifacts: (KDLDocument document, Array[Carried] carried) -> ({artifacts_ruby: Core::ArtifactsRuby} | {artifacts_helper: Core::ArtifactsHelper} | {})
 
@@ -121,8 +121,8 @@ module CrossLint
       # spec's syntax.
       def command_flag: (KDLDocument document, KDLDocument::Node node) -> Core::CommandFlag
 
-      # Reads a `helper` node: a helper run as a program, or one on the
-      # Ruby CrossLint carries.
+      # Reads a `helper` node: a helper run as a program, or one on
+      # CrossLint's Ruby.
       def helper: (KDLDocument document, KDLDocument::Node node) -> (Core::HelperDeclaration | Carried)
 
       # The helper `name`, with `file`, on the runtime CrossLint carries that

@@ -4,7 +4,7 @@ require_relative "../core"
 
 module CrossLint
   module Adapters
-    class FileCarriedRuby
+    class FileCrossLintRuby
       def load(plugin, file, line, namespace)
         path = File.expand_path(file, plugin.folder)
         raise Core::Mistake.new("no file #{file.dump} in the plugin's folder", file: plugin.manifest.file, line:) unless File.file?(path)

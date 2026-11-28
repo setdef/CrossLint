@@ -3,8 +3,8 @@
 require "test_helper"
 
 # Ruby rules, run by Core::Check through the in-memory
-# CarriedRuby port: what a Ruby rule can do and how its faults stop a
-# plugin, except what only files on disk show (FileCarriedRubyTest).
+# CrossLintRuby port: what a Ruby rule can do and how its faults stop a
+# plugin, except what only files on disk show (FileCrossLintRubyTest).
 class RubyRuleTest < Minitest::Test
   cover "CrossLint::Core::RubyRule*"
   cover "CrossLint::Core::Fault*"
@@ -424,7 +424,7 @@ class RubyRuleTest < Minitest::Test
       path = File.expand_path(file, RULES)
       [path, text.is_a?(String) ? ->(namespace) { namespace.module_eval(text, path, 1) } : text]
     end
-    Check.new(project_files:, carried_ruby: CrossLint::Adapters::MemoryCarriedRuby.new(loaded), helpers: running, steps: {})
+    Check.new(project_files:, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(loaded), helpers: running, steps: {})
       .call(Project.new(root: ROOT, configuration:, plugins:), **options)
   end
 

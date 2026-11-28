@@ -15,8 +15,8 @@ module CrossLint
       SEVERITIES = %w[error warning].freeze
 
       # The one type annotation a manifest reads: a helper's command=,
-      # written (crosslint)"ruby", runs the helper on the Ruby CrossLint
-      # carries, where no project command could ever be found.
+      # written (crosslint)"ruby", runs the helper on CrossLint's
+      # Ruby, where no project command could ever be found.
       TYPED = {"helper" => {"command" => ["crosslint"]}}.freeze
 
       # What a helper's command=(crosslint) may name: the runtimes
@@ -63,7 +63,7 @@ module CrossLint
 
       private
 
-      # A helper on the Ruby CrossLint carries: its file runs in CrossLint,
+      # A helper on CrossLint's Ruby: its file runs in CrossLint,
       # as the Ruby of the rules and the artifacts that name it.
       class Carried < Data.define(:name, :file, :line); end
 

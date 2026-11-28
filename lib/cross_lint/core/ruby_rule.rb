@@ -36,9 +36,9 @@ module CrossLint
       # the check with a status that says nothing of the rule, and
       # SystemStackError, which a rule that recurses without end raises
       # and which is no StandardError.
-      def self.load(carried_ruby, plugin, declaration, namespace, helpers, files, read)
+      def self.load(crosslint_ruby, plugin, declaration, namespace, helpers, files, read)
         file = declaration.ruby #: String
-        carried_ruby.load(plugin, file, declaration.line, namespace)
+        crosslint_ruby.load(plugin, file, declaration.line, namespace)
         new(plugin:, name: declaration.name, rule: make(find(declaration, namespace), helpers, files, read))
       rescue Mistake
         raise
