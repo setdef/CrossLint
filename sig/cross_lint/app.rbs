@@ -18,7 +18,9 @@ module CrossLint
     # the built-in plugins in `plugins`, each a folder named in `built_in`
     # that holds a manifest, and whose step track-debt reads and writes
     # debt files through `debt_files`. With no `helpers`, it runs them as processes, writing
-    # what they write to standard error to `err` with `debug`. It reads
+    # what they write to standard error to `err` with `debug`. With
+    # `debug`, a check also says on `err` what it does at each step, as
+    # the debug output (Adapters::TextDebugOutput). It reads
     # ng-nudge's files through `ng_nudge` and tests regular expressions
     # with Node by default, through `javascript`. It fetches
     # shared plugins through `shared_plugins`, with Git by default, saying
@@ -111,6 +113,8 @@ module CrossLint
     @crosslint_ruby: _CrossLintRuby
 
     @helpers: _Helpers
+
+    @debug: _DebugOutput?
 
     @shared_plugins: _SharedPlugins
 

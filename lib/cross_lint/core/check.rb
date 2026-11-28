@@ -10,11 +10,12 @@ require_relative "step"
 module CrossLint
   module Core
     class Check
-      def initialize(project_files:, crosslint_ruby:, helpers:, steps:)
+      def initialize(project_files:, crosslint_ruby:, helpers:, steps:, debug: nil)
         @project_files = project_files
         @crosslint_ruby = crosslint_ruby
         @helpers = helpers
         @steps = steps
+        @debug = debug
       end
 
       def call(project, warnings: nil, verbosity: nil, all: false, command: nil, flags: {}, started: nil)
@@ -22,7 +23,8 @@ module CrossLint
         verbosity ||= project.configuration.verbosity || :normal
         policies = enabled_policies(project)
         files = @project_files.files(project.root)
-        finder = ArtifactFinder.new(project_files: @project_files, root: project.root, files:)
+        @debug&.write("file") { files.sort.join("\n") }
+        finder = ArtifactFinder.new(project_files: @project_files, root: project.root, files:, debug: @debug)
         stopped = [] #: Array[Fault]
         kinds = project.plugins.to_h do |plugin|
           [plugin.name, finder.artifacts(plugin)]

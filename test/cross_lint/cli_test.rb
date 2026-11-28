@@ -586,7 +586,24 @@ class CLITest < Minitest::Test
       Open3.capture3("git", "init", "-q", chdir: project)
 
       assert_equal ["", "crosslint: checked 1 a artifact: no violations\n", 0], check("check", "-C", project)
-      assert_equal "crosslint: helper h: said\n", check("check", "-C", project, "--debug")[1].lines.first
+      assert_equal ["crosslint: helper h: said\n"], check("check", "-C", project, "--debug")[1].lines.grep(/ said$/)
+    end
+  end
+
+  def test_check_says_what_it_does_at_each_step_on_standard_error_with_debug_or_debug_set_and_never_in_the_findings
+    Dir.mktmpdir("crosslint") do |project|
+      write(project, ".config/crosslint/config.kdl", %(plugin "."\n))
+      write(project, "plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n  piece "b" "{path}.txt"\n}\n) +
+        %(policy "p" {\n  applies-to "a"\n  rule "piece-exists" piece="b"\n}\n))
+      write(project, "a.md", "")
+      Open3.capture3("git", "init", "-q", chdir: project)
+      plain_out, plain_err, = check("check", "-C", project, "--json")
+
+      [check("check", "-C", project, "--json", "--debug"), check("check", "-C", project, "--json", env: {"DEBUG" => "1"})].each do |out, err, status|
+        assert_equal [plain_out, 1], [out, status]
+        assert_equal plain_err, err.lines.grep_v(/\Acrosslint: debug: /).join
+        assert_includes err.lines, "crosslint: debug: file a.md\n"
+      end
     end
   end
 

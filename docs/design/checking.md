@@ -44,3 +44,12 @@ How `crosslint check` finds a project's files, runs its plugins, and reports, an
 - **On a terminal, a first line comes before CrossLint reads any project file beyond its configuration, and before any helper starts,** so the wait for it never grows with the project. A fixed time from the moment the process starts can't be met: the app's launcher and its Ruby take about 70 ms on Linux and over 200 ms on Windows and macOS before any of CrossLint's code runs (#13).
 - **The words CrossLint writes are ASCII, and what it takes from the project prints as it is, in UTF-8.** Writing `lib/café.rb` as `lib/caf?.rb` would leave a path no editor opens and no debt entry matches.
 - **A check leaves nothing to clean up,** so Ctrl-C stops it at once.
+
+## Debug output
+
+- **The debug output answers why a check found, or didn't find, what someone expected,** so it follows a path through the steps that question passes through: whether Git lists the file, which role's primary pattern found it as an artifact, and which of its pieces exist. Each line about an artifact has its path, and its name as the findings give it, so searching the output for one path shows each step it went through.
+- **Each line begins with `crosslint: debug:` and a word for its step,** such as `file` or `artifact`, so the output is plainly not a finding, and a reader can keep one step's lines with a search. The words are fixed; the rest of the line is for people, and may change between releases.
+- **It goes to standard error, never to standard output,** where findings and `--json` go, so a script reading the findings never reads a debug line.
+- **Every file Git lists gets a line,** in order, because a count can't say whether CrossLint saw one file. In a large project that is most of the output, which is why each line starts with the word for its step.
+- **The core says each step through the debug-output port, with a block,** so the use cases never print ([ADR 0002](../decisions/0002-the-engine-is-a-core-of-plain-ruby-objects-behind-ports.md)) and their tests read what they said from the in-memory adapter. A use case given no debug output never calls the block, so a check without `--debug` builds no line and sorts no list for one.
+- **No time, level, or file.** A line has no timestamp, so two runs' output can be compared line by line, and no level, since all of it is debug output; it goes where standard error goes, and a person who wants a file redirects it.

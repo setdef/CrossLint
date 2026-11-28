@@ -8,12 +8,25 @@ module CrossLint
       def initialize(line: nil, readable: nil, **fields) = super
 
       def exist? = exists
+
+      def explanation
+        return %(piece #{name.dump} at #{[path, line].compact.join(":")} exists) if exists
+        return %(piece #{name.dump} at #{path} is missing) if readable.nil?
+
+        %(piece #{name.dump} is missing, since #{path} #{readable ? "has no match of its regex" : "isn't a file"})
+      end
     end
 
     class Artifact < Data.define(:plugin, :role, :path, :match, :pieces, :key, :name, :line)
       def initialize(path:, key: nil, name: path, line: nil, **fields) = super
 
       def location = line ? "#{path}:#{line}" : path
+
+      def explanation
+        named = ", named #{name}" unless name == path
+        keyed = ", with key #{key}" if key
+        "#{plugin}/#{role} #{location}#{named}#{keyed}: #{pieces.empty? ? "no piece but its primary" : pieces.map(&:explanation).join("; ")}"
+      end
 
       def piece(name)
         pieces.find { |piece| piece.name == name } || raise(KeyError, "artifact #{role.dump} has no piece #{name.dump}")

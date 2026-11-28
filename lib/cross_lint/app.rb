@@ -20,6 +20,7 @@ module CrossLint
       @project_files = project_files
       @crosslint_ruby = crosslint_ruby
       @helpers = helpers || Adapters::ProcessHelpers.new(err:, debug:)
+      @debug = Adapters::TextDebugOutput.new(err) if debug
       @shared_plugins = shared_plugins || Adapters::GitSharedPlugins.new(err:)
       @debt_files = debt_files
       @ng_nudge = ng_nudge
@@ -43,7 +44,7 @@ module CrossLint
     def check(start, **options) = check_project(load_project(start), **options)
 
     def check_project(project, warnings: nil, verbosity: nil, all: false, command: nil, flags: {}, started: nil)
-      Core::Check.new(project_files: @project_files, crosslint_ruby: @crosslint_ruby, helpers: @helpers, steps: @steps)
+      Core::Check.new(project_files: @project_files, crosslint_ruby: @crosslint_ruby, helpers: @helpers, steps: @steps, debug: @debug)
         .call(project, warnings:, verbosity:, all:, command:, flags:, started:)
     end
 

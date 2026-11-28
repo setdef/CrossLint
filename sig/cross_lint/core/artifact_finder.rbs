@@ -15,14 +15,19 @@ module CrossLint
       end
 
       # A finder among `files`, the project's files relative to `root`,
-      # which asks `project_files` whether each piece exists.
-      def initialize: (project_files: _ProjectFiles, root: String, files: Array[String]) -> void
+      # which asks `project_files` whether each piece exists, and says
+      # what it finds on `debug`, when it is given.
+      def initialize: (project_files: _ProjectFiles, root: String, files: Array[String], ?debug: _DebugOutput?) -> void
 
       # The artifacts of each of `plugin`'s declarations, by the
       # declaration's name, in the order of the files and then of the
       # matches of a primary's regex in each. Raises Stopped
       # when two artifacts of one declaration have one name, and when a
       # regex runs past its time limit or meets a file that isn't UTF-8.
+      # On the debug output, says under "role" each file the declaration
+      # leaves out for its dotfiles, each file its primary's regex has no
+      # match in or can't read, and how many artifacts it found, and under
+      # "artifact" each artifact's explanation.
       def artifacts: (Plugin plugin) -> Hash[String, Array[Artifact]]
 
       private
@@ -33,7 +38,18 @@ module CrossLint
 
       @files: Array[String]
 
+      @debug: _DebugOutput?
+
       @texts: Hash[String, String?]
+
+      # `found`, the artifacts `declaration` found, after saying how many
+      # there are and each one's explanation on the debug output.
+      def said: (Plugin plugin, ArtifactDeclaration declaration, Array[Artifact] found) -> Array[Artifact]
+
+      # Says what the block returns under "role", after the plugin's and
+      # the declaration's names, calling the block only when there is
+      # debug output.
+      def say: (Plugin plugin, ArtifactDeclaration declaration) { () -> String } -> void
 
       # The artifacts `declaration` finds, after checking that no two
       # have one name.

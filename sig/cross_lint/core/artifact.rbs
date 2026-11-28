@@ -36,6 +36,13 @@ module CrossLint
 
       # Whether the piece exists.
       def exist?: () -> bool
+
+      # The piece as the debug output says it: its name, its path, with
+      # the line of its regex's first match, and whether it exists, or why
+      # it doesn't for a piece with a regex:
+      # `piece "test" at test/a_test.rb is missing`, or
+      # `piece "action" is missing, since app/a.rb has no match of its regex`.
+      def explanation: () -> String
     end
 
     # An artifact: a logical unit of a project, such as a component or a
@@ -97,6 +104,12 @@ module CrossLint
       # # => "config/routes.rb:2"
       # ```
       def location: () -> String
+
+      # The artifact as the debug output says it: its plugin and role, its
+      # location, its name and key when it has them, and each piece's
+      # explanation: `tests/ruby-file lib/a.rb: piece "test" at
+      # test/a_test.rb exists`.
+      def explanation: () -> String
 
       # The piece called `name`. Raises KeyError when the declaration
       # has none of that name, which LoadProject rules out for every

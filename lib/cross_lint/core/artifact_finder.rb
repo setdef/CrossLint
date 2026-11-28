@@ -16,16 +16,31 @@ module CrossLint
         end
       end
 
-      def initialize(project_files:, root:, files:)
+      def initialize(project_files:, root:, files:, debug: nil)
         @project_files = project_files
         @root = root
         @files = files
+        @debug = debug
         @texts = {} #: Hash[String, String?]
       end
 
-      def artifacts(plugin) = plugin.manifest.artifacts.to_h { |declaration| [declaration.name, named_once(plugin, declaration)] }
+      def artifacts(plugin) = plugin.manifest.artifacts.to_h { |declaration| [declaration.name, said(plugin, declaration, named_once(plugin, declaration))] }
 
       private
+
+      def said(plugin, declaration, found)
+        say(plugin, declaration) do
+          regex = " with regex #{declaration.regex.source.dump}" if declaration.regex
+          "#{found.size} #{(found.size == 1) ? "artifact" : "artifacts"}, from primary #{declaration.primary.source.dump}#{regex}"
+        end
+        @debug&.write("artifact") { found.map(&:explanation).join("\n") }
+        found
+      end
+
+      # What the role found, said under its plugin's and its name.
+      def say(plugin, declaration)
+        @debug&.write("role") { "#{plugin.name}/#{declaration.name}: #{yield}" }
+      end
 
       # A violation's identity is its artifact's name, so two artifacts of
       # one role with one name couldn't be told apart in a debt file.
@@ -44,7 +59,10 @@ module CrossLint
         @files.flat_map do |path|
           match = declaration.primary.match(path)
           next [] unless match
-          next [] if !declaration.dotfiles && match.values.any? { |value| value.split("/").any? { |segment| segment.start_with?(".") } }
+          if !declaration.dotfiles && match.values.any? { |value| value.split("/").any? { |segment| segment.start_with?(".") } }
+            say(plugin, declaration) { %(leaves out #{path}, since a placeholder matched a name that starts with "." and the role has dotfiles=#false) }
+            next []
+          end
 
           primary_matches(plugin, declaration, path, match).map do |values, line|
             pieces = declaration.pieces.map { |piece| piece(plugin, declaration, piece, values) }
@@ -62,9 +80,14 @@ module CrossLint
         return [[match, nil]] unless regex
 
         text = text(path)
-        return [] unless text
+        unless text
+          say(plugin, declaration) { "#{path} isn't a file CrossLint can read" }
+          return []
+        end
 
-        search(plugin, declaration, "its primary", path, regex) { regex.matches(text, match) }.map do |captures, line|
+        found = search(plugin, declaration, "its primary", path, regex) { regex.matches(text, match) }
+        say(plugin, declaration) { "#{path} has no match of the primary's regex" } if found.empty?
+        found.map do |captures, line|
           # An empty value would make a piece's path or regex match what
           # the author never meant, such as `def \b`.
           empty = declaration.used_captures.find { |name| captures[name].to_s.empty? }

@@ -248,6 +248,22 @@ class AppTest < Minitest::Test
     assert_equal [["docs/a.md", "no c file at a.txt"]], result.violations.map { |violation| [violation.artifact, violation.message] }
   end
 
+  def test_says_what_a_check_does_at_each_step_on_standard_error_only_with_debug
+    write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/docs"\n))
+    write(@base, ".config/crosslint/docs/plugin.kdl", %(artifact "doc" {\n  primary "{path}.md"\n  piece "note" "{path}.txt"\n}\n) +
+      %(policy "p" {\n  applies-to "doc"\n  rule "piece-exists" piece="note"\n}\n))
+    write(@base, "a.md", "")
+    Open3.capture3("git", "init", "-q", chdir: @base)
+    err = StringIO.new
+    App.new(err:).check(@base)
+
+    assert_empty err.string
+    App.new(err:, debug: true).check(@base)
+
+    assert_includes err.string.lines, "crosslint: debug: file a.md\n"
+    assert_includes err.string.lines, %(crosslint: debug: artifact docs/doc a.md: piece "note" at a.txt is missing\n)
+  end
+
   def test_runs_a_helper_as_a_process_writing_its_standard_error_with_debug
     write(@base, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/r"\n))
     write(@base, ".config/crosslint/r/plugin.kdl", %(artifact "a" {\n  primary "{path}.md"\n}\nhelper "asks" command=(crosslint)"ruby" file="asks.rb"\nrule "asks" helper="asks"\n) +
@@ -261,8 +277,8 @@ class AppTest < Minitest::Test
     assert_equal ["hi"], App.new(err:).check(@base).violations.map(&:message)
     assert_empty err.string
     assert_equal ["hi"], App.new(err:, debug: true).check(@base).violations.map(&:message)
-    assert_equal "crosslint: helper h: said\n", err.string
-    assert_output(nil, "crosslint: helper h: said\n") { App.new(debug: true).check(@base) }
+    assert_equal ["crosslint: helper h: said\n"], err.string.lines.grep(/ said$/)
+    assert_output(nil, /^crosslint: helper h: said$/) { App.new(debug: true).check(@base) }
   end
 
   def test_runs_a_shared_plugin_fetched_from_a_repository_and_fetches_it_once

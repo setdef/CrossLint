@@ -431,6 +431,56 @@ class CheckTest < Minitest::Test
     assert_equal ["x/y.rb"], check(project(plugin("tests", artifacts: [pair], policies: [policy("has-test", rules: [rule], applies_to: "pair")])), files:).findings.map(&:artifact)
   end
 
+  def test_says_under_debug_each_file_git_lists_in_order
+    assert_equal ["README.md", "lib/a.rb", "lib/b.rb"], debugged(project(tests_plugin), files: ["lib/b.rb", "README.md", "lib/a.rb"]).written("file")
+  end
+
+  def test_says_under_debug_how_many_artifacts_each_roles_primary_found_and_each_artifacts_pieces
+    debug = debugged(project(tests_plugin), files: ["lib/b.rb", "lib/a.rb", "test/a_test.rb"])
+
+    assert_equal [%(tests/ruby-file: 2 artifacts, from primary "lib/{path}.rb")], debug.written("role")
+    assert_equal [%(tests/ruby-file lib/b.rb: piece "test" at test/b_test.rb is missing), %(tests/ruby-file lib/a.rb: piece "test" at test/a_test.rb exists)],
+      debug.written("artifact")
+  end
+
+  def test_says_under_debug_where_a_primarys_regex_found_each_artifact_and_what_each_pieces_regex_found
+    contents = {"config/routes.rb" => ROUTES, "app/controllers/carts_controller.rb" => "class CartsController\n  def show\n  end\nend\n",
+                "app/controllers/home_controller.rb/x" => "", "spec/requests/carts_spec.rb" => ""}
+    debug = debugged(project(routes_plugin), files: ["config/routes.rb.bak"], contents:)
+
+    assert_equal [%(routes/route: 3 artifacts, from primary "config/routes.rb" with regex #{ROUTE.dump})], debug.written("role")
+    assert_equal [
+      %(routes/route config/routes.rb:1, named get /cart: piece "action" at app/controllers/carts_controller.rb:2 exists; ) +
+        %(piece "request-spec" at spec/requests/carts_spec.rb exists),
+      %(routes/route config/routes.rb:2, named post /cart: piece "action" is missing, since app/controllers/carts_controller.rb has no match of its regex; ) +
+        %(piece "request-spec" at spec/requests/carts_spec.rb exists),
+      %(routes/route config/routes.rb:4, named get /: piece "action" is missing, since app/controllers/home_controller.rb isn't a file; ) +
+        %(piece "request-spec" at spec/requests/home_spec.rb is missing)
+    ], debug.written("artifact")
+  end
+
+  def test_says_under_debug_which_file_a_primarys_regex_has_no_match_in_or_cant_read
+    assert_includes debugged(project(routes_plugin), files: [], contents: {"config/routes.rb" => "resources :carts\n"}).written("role"),
+      "routes/route: config/routes.rb has no match of the primary's regex"
+    assert_includes debugged(project(routes_plugin), files: ["config/routes.rb"]).written("role"), "routes/route: config/routes.rb isn't a file CrossLint can read"
+  end
+
+  def test_says_under_debug_the_key_of_an_artifact_with_one
+    keyed = declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb").with(key: PathPattern.new(source: "{path}"))
+    debug = debugged(project(plugin("tests", artifacts: [keyed], policies: [policy("has-test", rules: [rule])])), files: ["lib/app/a.rb"])
+
+    assert_equal [%(tests/ruby-file lib/app/a.rb, with key app/a: piece "test" at test/app/a_test.rb is missing)], debug.written("artifact")
+  end
+
+  def test_says_under_debug_which_file_a_role_that_takes_no_dotfiles_leaves_out
+    solid = declaration("ruby-file", "lib/{path}.rb").with(dotfiles: false)
+    debug = debugged(project(plugin("tests", artifacts: [solid], policies: [])), files: ["lib/a.rb", "lib/.b.rb"])
+
+    assert_equal [%(tests/ruby-file: leaves out lib/.b.rb, since a placeholder matched a name that starts with "." and the role has dotfiles=#false),
+      %(tests/ruby-file: 1 artifact, from primary "lib/{path}.rb")], debug.written("role")
+    assert_equal ["tests/ruby-file lib/a.rb: no piece but its primary"], debug.written("artifact")
+  end
+
   def test_warns_of_a_ruby_rule_no_policy_runs
     result = check(project(tests_plugin, unused: true), files: ["lib/a.rb", "test/a_test.rb"])
 
@@ -605,10 +655,17 @@ class CheckTest < Minitest::Test
 
   private
 
-  def check(project, files:, ignored: [], steps: {}, ruby: {}, contents: {}, **options)
+  def check(project, files:, ignored: [], steps: {}, ruby: {}, contents: {}, debug: nil, **options)
     port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files + contents.keys}, ignored: {ROOT => ignored}, contents: {ROOT => contents})
-    Check.new(project_files: port, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(ruby), helpers: CrossLint::Adapters::MemoryHelpers.new, steps:)
-      .call(project, **options)
+    Check.new(project_files: port, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(ruby), helpers: CrossLint::Adapters::MemoryHelpers.new, steps:,
+      debug:).call(project, **options)
+  end
+
+  # What the check says under --debug, by topic.
+  def debugged(project, **options)
+    debug = CrossLint::Adapters::MemoryDebugOutput.new
+    check(project, debug:, **options)
+    debug
   end
 
   def declaration(name, files, line: 1, **pieces)

@@ -15,8 +15,10 @@ module CrossLint
       # A use case that reads the project's files through `project_files`,
       # runs helpers on CrossLint's Ruby through `crosslint_ruby`,
       # and the other helpers through `helpers`, and runs each plugin's steps from `steps`, by
-      # name.
-      def initialize: (project_files: _ProjectFiles, crosslint_ruby: _CrossLintRuby, helpers: _Helpers, steps: Hash[String, _Step]) -> void
+      # name. With `debug`, it says on it what it does at each step: under
+      # "file", each of the project's files, in order, and what
+      # ArtifactFinder says.
+      def initialize: (project_files: _ProjectFiles, crosslint_ruby: _CrossLintRuby, helpers: _Helpers, steps: Hash[String, _Step], ?debug: _DebugOutput?) -> void
 
       # The result of checking `project`. `warnings` and `verbosity` are
       # the command line's, nil when it gives none, and the configuration's
@@ -43,6 +45,8 @@ module CrossLint
       @crosslint_ruby: _CrossLintRuby
 
       @helpers: _Helpers
+
+      @debug: _DebugOutput?
 
       # The violations of every plugin that didn't stop, and each fault
       # that stopped one, with Ruby rules calling `helpers` and seeing
