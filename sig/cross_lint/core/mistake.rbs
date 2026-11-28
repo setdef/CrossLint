@@ -27,6 +27,11 @@ module CrossLint
       # the URL, so that no secret reaches standard error.
       def self.credentials: (String file, Integer line) -> Mistake
 
+      # The mistake for a plugin's URL, listed in `file` on `line`,
+      # that has a query or a fragment. Its message names no part of
+      # the URL, so that no secret reaches standard error.
+      def self.query_or_fragment: (String file, Integer line) -> Mistake
+
       # The file and the line, as "FILE:LINE", or what there is of them.
       def location: () -> String
     end

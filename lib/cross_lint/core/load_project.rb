@@ -72,7 +72,7 @@ module CrossLint
         raise Mistake.new("lists no plugin, so no check would run; list one with plugin NAME", file: configuration.file) if configuration.plugins.empty?
 
         @debug&.write("project") { "#{root}, with #{configuration.file}" }
-        SharedPlugin.refuse_credentials(configuration)
+        SharedPlugin.refuse_secrets(configuration)
         plugins = configuration.plugins.each_with_index.with_object([]) do |(listing, index), loaded|
           # Only a listing that doesn't fetch finds no plugin.
           found = plugin(root, configuration, index, loaded) #: Plugin

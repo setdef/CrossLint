@@ -133,6 +133,21 @@ class LoadProjectTest < Minitest::Test
     end
   end
 
+  QUERY_OR_FRAGMENT = "a plugin's URL has a query or a fragment, which could hold a secret that would be on standard error; " \
+    "remove it, and give Git the credentials with a Git credential helper (git help credentials)"
+
+  def test_stops_at_the_url_of_a_shared_plugin_that_has_a_query_or_a_fragment_and_doesnt_print_it
+    ["https://example.com/o/signatures?token=SECRET", "https://example.com/o/signatures#SECRET", "https://example.com/o/signatures?token=SECRET#SECRET",
+      "https://example.com/o/signatures.git?SECRET", "http://example.com/o/signatures?token=SECRET"].each do |url|
+      shared = shared_plugins({})
+      mistake = assert_raises(Mistake) { load_project(plugins: [listing(url, ref: "v1.2.0", line: 2), listing(url, ref: "v1.2.0", line: 3)], shared_plugins: shared) }
+
+      assert_equal [CONFIG, 2, QUERY_OR_FRAGMENT], [mistake.file, mistake.line, mistake.message]
+      refute_includes mistake.message, "SECRET"
+      assert_empty shared.fetched
+    end
+  end
+
   def test_reads_a_shared_plugin_from_the_folder_the_port_fetched
     shared = shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
     project = load_project(plugins: [listing(URL, ref: "v1.2.0", line: 3)], manifests: {"#{TOP}cache/a1/signatures" => tests_manifest("signatures")},

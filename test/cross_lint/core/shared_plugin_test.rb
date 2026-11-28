@@ -48,17 +48,38 @@ class SharedPluginTest < Minitest::Test
     assert_equal [[true] * with.size, [false] * without.size], [with, without].map { |urls| urls.map { |url| SharedPlugin.credentials?(url) } }
   end
 
+  def test_knows_a_url_with_a_query_or_a_fragment_by_a_question_mark_or_a_hash_after_the_scheme
+    with = %w[https://example.com/o/r?token=X https://example.com/o/r#frag https://example.com/o/r?token=X#frag https://example.com?a=b https://example.com#a
+      https://example.com/o/r.git? https://example.com/o/r# HTTPS://example.com/o/r?t=1 http://example.com/o/r?t=1 file:///tmp/a?b]
+    without = %w[https://example.com/o/r https://example.com/o/r.git https://example.com:8080/o/r https://example.com/o/a@b https://example.com/o/a=b
+      https://example.com/o/a%3Fb ./a?b plugins/a#b debt]
+
+    assert_equal [[true] * with.size, [false] * without.size], [with, without].map { |urls| urls.map { |url| SharedPlugin.query_or_fragment?(url) } }
+  end
+
+  def test_refuses_the_first_plugin_whose_name_is_a_url_with_a_query_or_a_fragment_and_no_other
+    listing = ->(name, line) { CrossLint::Core::ListedPlugin.new(name:, ref: "v1", settings: [], line:) }
+    plugins = [listing.call("https://example.com/o/ok", 1), listing.call("./a?b", 2), listing.call("https://example.com/o/r?token=SECRET", 3),
+      listing.call("https://example.com/o/r#SECRET", 4)]
+    configuration = CrossLint::Core::Configuration.new(file: "c.kdl", plugins:, policies: [], warnings: nil, verbosity: nil)
+    mistake = assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_secrets(configuration) }
+
+    assert_equal ["c.kdl", 3], [mistake.file, mistake.line]
+    assert_equal 4, assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_secrets(configuration.with(plugins: plugins.drop(3))) }.line
+    SharedPlugin.refuse_secrets(configuration.with(plugins: plugins.first(2)))
+  end
+
   def test_refuses_the_first_plugin_whose_name_is_a_url_with_a_user_name_or_password_and_no_other
     listing = ->(name, line, ref = nil) { CrossLint::Core::ListedPlugin.new(name:, ref:, settings: [], line:) }
     plugins = [listing.call("./a@b", 1), listing.call("https://example.com/o/ok", 2, "v1"), listing.call("http://u:p@h/o", 3, "v1"),
       listing.call("https://u:p@h/o/r", 4, "v1"), listing.call("https://v@h/o/r", 5, "v1")]
     configuration = CrossLint::Core::Configuration.new(file: "c.kdl", plugins:, policies: [], warnings: nil, verbosity: nil)
-    mistake = assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration) }
+    mistake = assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_secrets(configuration) }
 
     assert_equal ["c.kdl", 3], [mistake.file, mistake.line]
-    SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.first(2)))
-    assert_equal 4, assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_credentials(configuration.with(plugins: plugins.drop(3))) }.line
-    SharedPlugin.refuse_credentials(configuration.with(plugins: []))
+    SharedPlugin.refuse_secrets(configuration.with(plugins: plugins.first(2)))
+    assert_equal 4, assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_secrets(configuration.with(plugins: plugins.drop(3))) }.line
+    SharedPlugin.refuse_secrets(configuration.with(plugins: []))
   end
 
   def test_takes_a_relative_path_of_folders_joined_by_a_slash

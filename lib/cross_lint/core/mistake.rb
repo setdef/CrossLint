@@ -20,6 +20,11 @@ module CrossLint
           "remove it, and give Git the credentials with a Git credential helper (git help credentials)", file:, line:)
       end
 
+      def self.query_or_fragment(file, line)
+        new("a plugin's URL has a query or a fragment, which could hold a secret that would be on standard error; " \
+          "remove it, and give Git the credentials with a Git credential helper (git help credentials)", file:, line:)
+      end
+
       def location = [file, line].compact.join(":")
     end
   end

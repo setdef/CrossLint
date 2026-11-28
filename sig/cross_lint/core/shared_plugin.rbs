@@ -44,9 +44,14 @@ module CrossLint
       # https://user:token@host/path.
       def self.credentials?: (String url) -> bool
 
-      # Raises Mistake.credentials, for the first plugin `configuration`
-      # lists whose name is a URL with a user name or password.
-      def self.refuse_credentials: (Configuration configuration) -> void
+      # Whether the URL `url` has a query or a fragment, as in
+      # https://host/path?token=X or https://host/path#X.
+      def self.query_or_fragment?: (String url) -> bool
+
+      # Raises Mistake.credentials or Mistake.query_or_fragment, for the
+      # first plugin `configuration` lists whose name is a URL with a user
+      # name or password, or with a query or a fragment.
+      def self.refuse_secrets: (Configuration configuration) -> void
     end
   end
 end

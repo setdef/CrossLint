@@ -55,13 +55,17 @@ module CrossLint
       # authority, and a user name or password comes before an @ in it.
       def self.credentials?(url) = url.match?(%r{\A[a-z][a-z0-9+.-]*://[^/?#]*@}i)
 
+      # A query or a fragment starts at the first ? or # after the scheme.
+      def self.query_or_fragment?(url) = url.match?(%r{\A[a-z][a-z0-9+.-]*://[^?#]*[?#]}i)
+
       # Before any request is made, so that no secret is sent, or printed
       # in a later message. Every listing is checked, since a name that is
       # no plugin, such as one with the scheme http, is printed in the
       # mistake that says so.
-      def self.refuse_credentials(configuration)
+      def self.refuse_secrets(configuration)
         configuration.plugins.each do |listing|
           raise Mistake.credentials(configuration.file, listing.line) if credentials?(listing.name)
+          raise Mistake.query_or_fragment(configuration.file, listing.line) if query_or_fragment?(listing.name)
         end
       end
     end

@@ -67,7 +67,7 @@ module CrossLint
         root = @configuration.find_root(start) || raise(Mistake.no_configuration(@configuration.file, start))
         @configuration.minimum(root)&.check(@crosslint)
         configuration = @configuration.read(root)
-        SharedPlugin.refuse_credentials(configuration)
+        SharedPlugin.refuse_secrets(configuration)
         shared = configuration.plugins.select { |listing| listing.shared?(@shared_plugins) }
         # Plugins listed from folders of one repository share its tags.
         tags = {} #: Hash[String, Array[String]]

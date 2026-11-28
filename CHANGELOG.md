@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The same two files list the works that those npm packages carry inside their files, each as a separate entry with its version and license: Microsoft's TypeScript 6.0.2 (Apache-2.0), which `@ts-morph/common` bundles, tslib's helpers (0BSD) in `ts-morph` and `@ts-morph/common`, and Node.js's `path` module (MIT) in `path-browserify`. `NOTICES.txt` has the full text of the Apache License 2.0 and TypeScript's third-party notices, and the SBOM has each work as a package that the npm package carrying it contains.
 - `crosslint update` treats a shared plugin's `path=` that leads out of the plugin's repository, such as one with `..` or an absolute path, as a mistake: it stops with exit status 2 at that line of the configuration, with the message `crosslint check` gives for it. In 0.2.0, `update` took such a path and read a `plugin.kdl` outside the plugin it fetched.
 
+### Security
+
+- CrossLint stops with exit status 2, before any request, at a shared plugin's URL that has a query or a fragment, such as `https://example.com/OWNER/REPO?token=SECRET`, as it does at one with a user name or password, in `crosslint check`, in `crosslint update`, and in a plugin's command. The message names the line of the configuration, says to use a Git credential helper, and prints no part of the URL. CrossLint prints a shared plugin's URL on standard error before each request and in a failed fetch's message, so a token in it would reach the output of CI.
+
 ## [0.2.0] - 2026-11-26
 
 ### Added
