@@ -153,10 +153,8 @@ module CrossLint
       def fetch(listing, fail_at, fetching)
         url = listing.name
         ref = listing.ref || fail_at.call("shared plugin #{url.dump} needs ref=, a tag or a full commit SHA")
-        path = listing.path
-        if path && (problem = SharedPlugin.path_problem(path))
-          fail_at.call("shared plugin #{url.dump} at #{ref} has a path= that #{problem}: #{path.dump}")
-        end
+        refusal = SharedPlugin.path_refusal(url, ref, listing.path)
+        fail_at.call(refusal) if refusal
         SharedPlugin.plugin_name(url) || fail_at.call("can't name a plugin from #{url.dump}, whose last path segment has other characters " \
           "than letters, digits, and . _ -; a plugin's name is its repository's name")
 

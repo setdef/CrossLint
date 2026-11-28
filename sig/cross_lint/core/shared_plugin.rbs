@@ -29,6 +29,11 @@ module CrossLint
       # has an empty part, ".", or "..", or ends in a name that is no plugin's.
       def self.path_problem: (String path) -> String?
 
+      # What a mistake says of a listing of the plugin at `url`, at `ref`,
+      # whose `path=` is `path`, or nil when `path` is nil or nothing is
+      # wrong with it: the problem `path_problem` gives, and the path.
+      def self.path_refusal: (String url, String ref, String? path) -> String?
+
       # Whether `ref` is a full commit SHA or a tag name.
       def self.ref?: (String ref) -> bool
 

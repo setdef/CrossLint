@@ -42,6 +42,13 @@ module CrossLint
         end
       end
 
+      def self.path_refusal(url, ref, path)
+        return unless path
+
+        problem = path_problem(path)
+        "shared plugin #{url.dump} at #{ref} has a path= that #{problem}: #{path.dump}" if problem
+      end
+
       def self.sha?(ref) = ref.match?(SHA)
 
       # Everything between the scheme and the first /, ?, or # is the

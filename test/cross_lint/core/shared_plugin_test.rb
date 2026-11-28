@@ -91,6 +91,14 @@ class SharedPluginTest < Minitest::Test
     assert_equal problems.values, problems.keys.map { |path| SharedPlugin.path_problem(path) }
   end
 
+  def test_refuses_a_path_naming_the_url_the_ref_the_problem_and_the_path_but_not_a_missing_one_or_a_good_one
+    url = "https://example.com/o/repo"
+
+    assert_equal %(shared plugin "#{url}" at v1.2.0 has a path= that has ".."; write each folder's name, with a single / between them: "../x"),
+      SharedPlugin.path_refusal(url, "v1.2.0", "../x")
+    assert_equal [nil, nil], [SharedPlugin.path_refusal(url, "v1.2.0", nil), SharedPlugin.path_refusal(url, "v1.2.0", "plugins/a")]
+  end
+
   def test_a_listed_plugin_is_named_for_its_path_or_else_its_repository_and_has_no_path_unless_given_one
     listing = ->(path) { CrossLint::Core::ListedPlugin.new(name: "https://example.com/o/repo.git", ref: "v1", path:, settings: [], line: 1) }
     bare = CrossLint::Core::ListedPlugin.new(name: "https://example.com/o/repo.git", ref: "v1", settings: [], line: 1)
