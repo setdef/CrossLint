@@ -1,6 +1,6 @@
 # Warn about Vue components with unscoped styles
 
-This recipe adds a check to a Vue app: a single-file component's `<style>` block should be `scoped`, so its rules apply only to that component's elements. A component with a `<style>` that isn't scoped gets a warning naming the file and the block's line.
+This recipe adds a check to a Vue app: a single-file component's `<style>` block should be `scoped`, so its rules apply only to that component's elements. A component with a `<style>` block that isn't scoped gets a warning, with the component's name, which is its file's path, and the block's line.
 
 It needs CrossLint and a configuration, as [Getting started](../getting-started.md) sets up, and nothing from Vue or Node: CrossLint reads the files as text.
 
