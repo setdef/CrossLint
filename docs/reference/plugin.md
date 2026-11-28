@@ -357,7 +357,7 @@ for line in sys.stdin:
 
 CrossLint starts such a helper at its first request, as its command and then its file, in the project's root, with the environment CrossLint was started with. When the check ends, CrossLint closes the input of every helper at once, gives each 2 seconds to exit, and then ends it with everything it started; on Ctrl-C, it ends them without waiting. A helper CrossLint can't put in its process group or job object is ended at once, and is a fault. The helper's standard error appears under `--debug`. A helper that exits, answers with a line that isn't JSON, or doesn't answer within 60 seconds is a fault, and the message includes what it wrote to standard error.
 
-A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, and a message naming the plugin and the command it needs.
+A helper whose command isn't on the `PATH` stops CrossLint with exit status 2, and a message naming the plugin and the command it needs. On Windows, CrossLint looks in each folder of the `PATH` for the command with each extension in `PATHEXT`, in its order, and then for the name alone, so `command="node"` finds `node.exe` or `node.cmd`.
 
 ### Rules in CrossLint's Ruby
 

@@ -44,6 +44,10 @@ cmd "check" effect="read" help="Check the project, and exit with 1 if a check fa
   long_help #"""
 Runs every plugin the project's configuration lists, on the whole project, and prints each violation on a line of its own: the path of the artifact's primary piece, with the line for an artifact found inside its file; the artifact's name, when it isn't that path; the message; and the plugin and policy it comes from. Ends with a summary of how many artifacts it checked and what it found.
 
+The order of the findings never depends on the order the filesystem lists files in, so the output is the same on every computer. They are sorted by the path of the artifact's primary piece, then the line the artifact was found on, then the artifact's name, the plugin, the policy, and the message, with an error before a warning when all of these match.
+
+CrossLint runs Git without the GIT_ variables in CrossLint's environment, such as GIT_DIR and GIT_INDEX_FILE, which Git sets for a hook. So crosslint check checks the project when a Git hook runs it, as a pre-commit hook in a linked worktree does, and never the repository those variables name.
+
 A plugin's step can excuse violations, as the debt plugin does for those its debt file lists, and report paid-off entries: an entry no violation matches any more records a debt already paid, and fails the check until crosslint debt update removes it.
 """#
   flag "--warnings <mode>" help="Show warnings, hide them, or let them fail the check" {
