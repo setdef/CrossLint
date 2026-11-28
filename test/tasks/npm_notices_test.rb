@@ -369,6 +369,38 @@ class NpmNoticesTest < Minitest::Test
     assert_equal "#{PLUGIN}/node_modules/ts-morph/dist/vendored.js has a license notice of a work that tasks/bundled_works.rb doesn't know", error.message
   end
 
+  def test_accepts_the_license_notice_that_a_package_keeps_in_its_own_source_files_when_its_entry_credits_that_license_and_holder
+    own_header("ts-morph", "Copyright (c) 2017 David Sherret\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n")
+
+    NpmNotices.add(@app, sbom: locked)
+
+    assert_empty NpmNotices.problems(@app)
+  end
+
+  def test_refuses_a_license_notice_in_a_source_file_of_a_package_that_names_a_holder_the_packages_license_file_does_not
+    own_header("ts-morph", "Copyright (c) 2019 Julian Gruber\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n")
+
+    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked) }
+
+    assert_equal "#{PLUGIN}/node_modules/ts-morph/dist/own.js has a license notice of a work that tasks/bundled_works.rb doesn't know", error.message
+  end
+
+  def test_refuses_a_license_notice_in_a_source_file_of_a_package_that_states_a_license_the_package_does_not_declare
+    own_header("ts-morph", "Copyright (c) 2017 David Sherret\n// Licensed under the Apache License, Version 2.0\n")
+
+    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked) }
+
+    assert_equal "#{PLUGIN}/node_modules/ts-morph/dist/own.js has a license notice of a work that tasks/bundled_works.rb doesn't know", error.message
+  end
+
+  def test_finds_a_notice_that_another_holder_put_into_a_source_file_of_a_package_after_its_notices_were_written
+    own_header("ts-morph", "Copyright (c) 2017 David Sherret\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n")
+    NpmNotices.add(@app, sbom: locked)
+    own_header("ts-morph", "Copyright (c) 2019 Julian Gruber\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n")
+
+    assert_equal ["#{PLUGIN}/node_modules/ts-morph/dist/own.js has a license notice of a work that tasks/bundled_works.rb doesn't know"], NpmNotices.problems(@app)
+  end
+
   def test_finds_a_license_notice_that_came_into_the_app_after_its_notices_were_written
     NpmNotices.add(@app, sbom: locked)
     write(@app, "#{PLUGIN}/node_modules/ts-morph/dist/vendored.js", "// Permission is hereby granted\n")
@@ -452,6 +484,14 @@ class NpmNoticesTest < Minitest::Test
   private
 
   def locked = sbom_of("@ts-morph/common" => "0.29.1", "ts-morph" => "28.0.0")
+
+  # A source file of the package +name+ (MIT, with David Sherret named in
+  # its license file) that starts with a license notice, which has
+  # +notice+ after its first comment line.
+  def own_header(name, notice)
+    write(@app, "#{PLUGIN}/node_modules/#{name}/LICENSE", "The MIT License (MIT)\n\nCopyright (c) 2017 David Sherret\n")
+    write(@app, "#{PLUGIN}/node_modules/#{name}/dist/own.js", "// #{notice}\nexport {};\n")
+  end
 
   # TypeScript, as @ts-morph/common bundles it: Microsoft's notice at the
   # top of dist/typescript.js, and its version in the code.

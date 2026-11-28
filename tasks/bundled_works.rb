@@ -10,7 +10,7 @@
 # for its full text, or for a notice, to go with every copy, so tasks/
 # npm_notices.rb gives each work an entry, from this table, and
 # fails when the app carries a license notice that the table doesn't
-# know.
+# know, unless it belongs to its package (tasks/own_notices.rb).
 
 require "json"
 require "digest"
@@ -18,6 +18,7 @@ require "rubygems/package"
 require "zlib"
 require "open3"
 require "tmpdir"
+require_relative "own_notices"
 
 module BundledWorks
   class Failure < StandardError; end
@@ -101,8 +102,6 @@ module BundledWorks
     )
   ].freeze
 
-  # What marks the license notice of a work in a source file.
-  NOTICE = /Permission is hereby granted|Permission to use, copy, modify|Licensed under the|Redistribution and use in source|SPDX-License-Identifier/
   SOURCE = /\.(js|cjs|mjs|ts|cts|mts)\z/
 
   module_function
@@ -136,7 +135,8 @@ module BundledWorks
 
   # The license notices that the packages in the app carry in source
   # files that no work of +found+ is in, as a list of sentences: a work
-  # that the table doesn't know has come in.
+  # that the table doesn't know has come in. A notice that belongs to its package, the
+  # one its npm entry credits (OwnNotices), is none.
   def unknown(app, packages, found)
     known = found.flat_map(&:places).map(&:file)
     packages.flat_map { |package| notices_in(app, package, known) }.map do |file|
@@ -145,14 +145,17 @@ module BundledWorks
   end
 
   # The source files in +package+'s folder, but its node_modules and
-  # the +known+ files, that have a license notice in them.
+  # the +known+ files, that have a license notice in them that its
+  # package's entry doesn't credit.
   def notices_in(app, package, known)
     folder = File.join(app, package.folder)
+    credit = OwnNotices.credit(package.license, package.license_files.map { |file| File.binread(File.join(app, file)) })
     Dir.glob("**/*", File::FNM_DOTMATCH, base: folder).sort.filter_map do |path|
       file = "#{package.folder}/#{path}"
       next if known.include?(file) || path.match?(%r{(\A|/)node_modules(/|\z)}) || !path.match?(SOURCE) || !File.file?(File.join(app, file))
 
-      file if File.binread(File.join(app, file)).match?(NOTICE)
+      text = File.binread(File.join(app, file))
+      file if text.match?(OwnNotices::NOTICE) && !credit.covers?(text)
     end
   end
 
