@@ -59,7 +59,7 @@ class KDLConfigurationTest < Minitest::Test
   end
 
   def test_reads_the_example_in_the_configuration_reference
-    configuration = read(doc_blocks("docs/reference/configuration.md", "kdl").fetch(0))
+    configuration = read(doc_block("docs/reference/configuration.md", "kdl", /^plugin "angular"/))
     angular, debt, modules = configuration.plugins
 
     assert_equal [["angular", nil, 1], ["debt", nil, 4], [".config/crosslint/modules", nil, 7]],
@@ -73,7 +73,7 @@ class KDLConfigurationTest < Minitest::Test
   end
 
   def test_reads_the_configuration_in_the_readme
-    configuration = read(doc_blocks("README.md", "kdl").fetch(1))
+    configuration = read(doc_block("README.md", "kdl", /^plugin "debt"\nplugin /))
 
     assert_equal ["debt", ".config/crosslint/migrations"], configuration.plugins.map(&:name)
   end

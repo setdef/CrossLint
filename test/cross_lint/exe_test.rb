@@ -42,8 +42,10 @@ class ExeTest < Minitest::Test
   end
 
   def test_runs_the_tutorials_checks_as_it_shows_them
-    plugin, configuration = doc_blocks("docs/getting-started.md", "kdl")
-    first, fixed = doc_blocks("docs/getting-started.md", "console").select { |block| block.start_with?("$ crosslint check\n") }
+    plugin = doc_block("docs/getting-started.md", "kdl", /^artifact "ruby-file"/)
+    configuration = doc_block("docs/getting-started.md", "kdl", /^plugin "debt"/)
+    first = doc_block("docs/getting-started.md", "console", /\A\$ crosslint check\n.*: 3 errors\n\z/m)
+    fixed = doc_block("docs/getting-started.md", "console", /\A\$ crosslint check\n.*: 2 errors\n\z/m)
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/tests/plugin.kdl", plugin)
       write(project, ".config/crosslint/config.kdl", configuration.sub(%(plugin "debt"\n), ""))
@@ -81,8 +83,9 @@ class ExeTest < Minitest::Test
   end
 
   def test_runs_the_plugin_references_ruby_rule_as_written
-    plugin, _regexes, _methods, _helpers, _helped, rule = doc_blocks("docs/reference/plugin.md", "kdl")
-    code = doc_blocks("docs/reference/plugin.md", "ruby").first
+    plugin = doc_block("docs/reference/plugin.md", "kdl", /policy "has-declaration"/)
+    rule = doc_block("docs/reference/plugin.md", "kdl", /^rule "declares-every-export" helper="exports"/)
+    code = doc_block("docs/reference/plugin.md", "ruby", /\A# \S+declares_every_export\.rb\n/)
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/modules/plugin.kdl", "#{plugin}\n#{rule}")
       write(project, code[/\A# (\S+)\n/, 1], code)
@@ -101,7 +104,8 @@ class ExeTest < Minitest::Test
   end
 
   def test_stops_at_the_mistake_the_tutorial_shows
-    plugin, configuration = doc_blocks("docs/getting-started.md", "kdl")
+    plugin = doc_block("docs/getting-started.md", "kdl", /^artifact "ruby-file"/)
+    configuration = doc_block("docs/getting-started.md", "kdl", /^plugin "debt"/)
     Dir.mktmpdir("crosslint") do |project|
       write(project, ".config/crosslint/tests/plugin.kdl", plugin.sub("primary", "primay"))
       write(project, ".config/crosslint/config.kdl", configuration.sub(%(plugin "debt"\n), ""))

@@ -115,6 +115,17 @@ module TestHelper
   def doc_blocks(page, language)
     File.read(File.join(ROOT, page)).scan(/^```#{language}\n(.*?)^```$/m).flatten
   end
+
+  # The one code block of `language` in a documentation page that
+  # `containing` matches, found by what it holds and not by where it
+  # sits, so that adding or moving an example breaks no test. Fails
+  # when the page has none, or more than one, to say which.
+  def doc_block(page, language, containing)
+    found = doc_blocks(page, language).grep(containing)
+
+    assert_equal 1, found.size, "#{page} should have one #{language} block matching #{containing.inspect}, and has #{found.size}"
+    found.first
+  end
 end
 
 Minitest::Test.include(TestHelper)

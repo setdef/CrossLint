@@ -82,7 +82,12 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_every_example_in_the_plugin_reference
-    first, regexes, methods, helpers, helped, ruby_rule, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
+    page = "docs/reference/plugin.md"
+    first, regexes, methods, helpers, helped, ruby_rule, steps, artifacts = [
+      /policy "has-declaration"/, /piece "exports"/, /^artifact "function"/, /^helper "types"/, /^rule "declares-every-export" helper="declarations"/,
+      /^rule "declares-every-export" helper="exports"/, /^step "track-debt"/, /^artifacts helper=/
+    ].map { |containing| read(doc_block(page, "kdl", containing)) }
+    doc_blocks(page, "kdl").each { |text| read(text) }
 
     assert_equal [["module", ["declaration", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.pieces.map(&:name)] }
     assert_equal [["has-declaration", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
@@ -104,7 +109,7 @@ class KDLPluginManifestsTest < Minitest::Test
 
   def test_reads_the_plugins_in_the_readme_and_the_tutorial
     {"README.md" => ["migration", "db/migrations/{name}.up.sql"], "docs/getting-started.md" => ["ruby-file", "lib/{path}.rb"]}.each do |page, expected|
-      manifest = read(doc_blocks(page, "kdl").fetch(0))
+      manifest = read(doc_block(page, "kdl", /^artifact "#{expected.first}"/))
 
       assert_equal [expected], manifest.artifacts.map { |artifact| [artifact.name, artifact.primary.source] }, page
       assert_equal [{"piece" => manifest.artifacts.first.pieces.first.name}], manifest.policies.first.rules.map(&:arguments), page
