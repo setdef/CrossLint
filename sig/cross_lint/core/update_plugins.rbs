@@ -148,6 +148,11 @@ module CrossLint
       # `tags` holds the tags listed so far, by URL.
       def update: (ListedPlugin listing, String file, Hash[String, Array[String]] tags, bool latest) -> Update
 
+      # The ref of `listing`, a shared plugin listed in `file`. Raises
+      # Mistake, at the listing's line, when it has no ref= or its path=
+      # is one no plugin can have, before any request is made for it.
+      def ref_of: (ListedPlugin listing, String file) -> String
+
       # The first of `candidates` that this CrossLint reads, or nil, and
       # each one before it, with why it can't read it.
       def readable: (ListedPlugin listing, Array[VersionTag] candidates, String file) -> [VersionTag?, Array[[String, String]]]

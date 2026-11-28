@@ -89,7 +89,7 @@ module CrossLint
       end
 
       def update(listing, file, tags, latest)
-        ref = listing.ref || raise(Mistake.new("shared plugin #{listing.shown.dump} needs ref=, a tag or a full commit SHA", file:, line: listing.line))
+        ref = ref_of(listing, file)
         # No request for a ref that is no version: a prerelease or a
         # commit is somewhere a person put it.
         current = VersionTag.parse(ref)
@@ -106,6 +106,16 @@ module CrossLint
         Update.new(listing:, newest: (found || current).text, newer:, skipped:)
       rescue FetchError => error
         raise Mistake.new("couldn't list the tags of shared plugin #{listing.name}: " + error.message, file:, line: listing.line)
+      end
+
+      # The ref of `listing`, once its ref= and path= are ones a plugin can
+      # have, so that no path leads out of the plugin's repository.
+      def ref_of(listing, file)
+        ref = listing.ref || raise(Mistake.new("shared plugin #{listing.shown.dump} needs ref=, a tag or a full commit SHA", file:, line: listing.line))
+        refusal = SharedPlugin.path_refusal(listing.name, ref, listing.path)
+        raise Mistake.new(refusal, file:, line: listing.line) if refusal
+
+        ref
       end
 
       # The newest of `candidates`, newest first, whose manifest this

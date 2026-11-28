@@ -284,6 +284,15 @@ class UpdatePluginsTest < Minitest::Test
     assert_equal [{[ONE, nil] => "v1.1.0"}], configuration.set
   end
 
+  def test_stops_at_a_path_no_plugin_can_have_before_it_fetches_a_tag_or_reads_a_manifest_and_changes_nothing
+    configuration, shared = project([listing(ONE, "v1.0.0", 3, path: "../..")], {ONE => %w[v1.0.0 v1.1.0]})
+    mistake = assert_raises(Core::Mistake) { update_plugins(configuration, shared).call(APP) }
+
+    assert_equal [FILE, 3, %(shared plugin #{ONE.dump} at v1.0.0 has a path= that has ".."; write each folder's name, with a single / between them: "../..")],
+      [mistake.file, mistake.line, mistake.message]
+    assert_equal [[], nil], [shared.fetched, configuration.set]
+  end
+
   def test_skips_a_tag_whose_crosslint_line_this_crosslint_cant_read
     configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.0.0 v1.1.0 v1.2.0])
     broken = Core::Mistake.new("crosslint is set twice; the first is on line 1", file: "plugin.kdl", line: 3)
