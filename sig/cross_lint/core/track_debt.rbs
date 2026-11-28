@@ -123,6 +123,47 @@ module CrossLint
         def coarse: () -> String?
       end
 
+      # What an update does with one entry: keeps it, removes it, or
+      # rewrites it as the entries it writes in its place.
+      class Change < Data
+        # The entry the update read.
+        attr_reader entry: DebtEntry
+
+        # The entries the update writes in its place, in order: none when
+        # it removes it.
+        attr_reader written: Array[DebtEntry]
+
+        # `:kept` for an entry written as it was read, `:removed`, or
+        # `:rewritten`.
+        attr_reader kind: (:kept | :removed | :rewritten)
+
+        # A change with these fields.
+        def self.new: (entry: DebtEntry, written: Array[DebtEntry], kind: (:kept | :removed | :rewritten)) -> instance
+
+        # A change with these fields.
+        def initialize: (entry: DebtEntry, written: Array[DebtEntry], kind: (:kept | :removed | :rewritten)) -> void
+
+        # Keeps `entry` as it was read, or rewrites it as it now is when it
+        # wasn't read as it is written.
+        def self.keep: (DebtEntry entry) -> Change
+
+        # Rewrites `entry` as the entries in `written`.
+        def self.replace: (DebtEntry entry, Array[DebtEntry] written) -> Change
+
+        # Removes `entry`.
+        def self.remove: (DebtEntry entry) -> Change
+
+        # Whether the update removes the entry.
+        def removed?: () -> bool
+
+        # Whether the update rewrites the entry.
+        def rewritten?: () -> bool
+
+        # The lines that say what the update does with the entry, in a dry
+        # run: none when it keeps it as it was read.
+        def lines: () -> Array[String]
+      end
+
       # The debt file's path when `file` gives none.
       FILE: String
 
@@ -207,9 +248,6 @@ module CrossLint
       # the order it writes them, and then the line that says so.
       def update: (StepInput input, Settings settings, DebtFile debt, Array[[DebtEntry, Match?]] matches, Array[Identity] identities,
                    dry_run: bool) -> Array[String]
-
-      # The lines that say `entry` is written again as it now is.
-      def rewrite: (DebtEntry entry) -> Array[String]
 
       # A new entry for `identity`, with `comment`.
       def fresh: (Identity identity, Array[Identity] identities, String comment) -> DebtEntry

@@ -48,6 +48,31 @@ module CrossLint
         end
       end
 
+      # What an update does with one entry: keeps it, removes it, or
+      # rewrites it as the entries it writes in its place.
+      class Change < Data.define(:entry, :written, :kind)
+        # The entry as it was read, or, when it wasn't read as it is
+        # written, rewritten as it now is.
+        def self.keep(entry) = new(entry:, written: [entry], kind: entry.source ? :kept : :rewritten)
+
+        def self.replace(entry, written) = new(entry:, written:, kind: :rewritten)
+
+        def self.remove(entry) = new(entry:, written: [], kind: :removed)
+
+        def removed? = kind == :removed
+
+        def rewritten? = kind == :rewritten
+
+        # The lines that say what the update does, in a dry run.
+        def lines
+          case kind
+          when :kept then []
+          when :removed then ["remove #{entry.description}, line #{entry.line}"]
+          else ["replace #{entry.description}, line #{entry.line}"] + written.map { |each| "add #{each.description}" }
+          end
+        end
+      end
+
       FILE = ".config/crosslint/debt.tsv"
 
       POLICY = "has-debt"
@@ -222,51 +247,29 @@ module CrossLint
       # the last of them the counts.
       def update(input, settings, debt, matches, identities, dry_run:)
         covered = [] #: Array[Identity]
-        written = [] #: Array[DebtEntry]
-        changes = [] #: Array[String]
-        removed = 0
-        rewritten = 0
-        matches.each do |entry, match|
-          unless match
-            written << entry
-            unless entry.source
-              rewritten += 1
-              changes.concat(rewrite(entry))
-            end
-            next
-          end
+        changes = matches.map do |entry, match|
+          next Change.keep(entry) unless match
 
           left = match.identities - covered
           covered.concat(left)
           if match.coarse
-            rewritten += 1
-            replacements = left.sort_by(&:deconstruct).map { |identity| fresh(identity, identities, entry.comment) }
-            changes << "replace #{entry.description}, line #{entry.line}"
-            changes.concat(replacements.map { |replacement| "add #{replacement.description}" })
-            written.concat(replacements)
+            Change.replace(entry, left.sort_by(&:deconstruct).map { |identity| fresh(identity, identities, entry.comment) })
           elsif left.empty?
-            removed += 1
-            changes << "remove #{entry.description}, line #{entry.line}"
+            Change.remove(entry)
           else
-            unless entry.source
-              rewritten += 1
-              changes.concat(rewrite(entry))
-            end
-            written << entry
+            Change.keep(entry)
           end
         end
         added = (identities - covered).sort_by(&:deconstruct).map { |identity| fresh(identity, identities, "") }
-        changes.concat(added.map { |entry| "add #{entry.description}" })
-        @debt_files.write(input.project.root, settings.file, debt.with(entries: written + added)) unless dry_run
-        counts = ["#{added.size} #{(added.size == 1) ? 'entry' : 'entries'} added", "#{removed} removed"]
+        @debt_files.write(input.project.root, settings.file, debt.with(entries: changes.flat_map(&:written) + added)) unless dry_run
+        rewritten = changes.count(&:rewritten?)
+        counts = ["#{added.size} #{(added.size == 1) ? 'entry' : 'entries'} added", "#{changes.count(&:removed?)} removed"]
         counts << "#{rewritten} rewritten" unless rewritten.zero?
         return ["wrote #{debt.file}: #{counts.join(', ')}"] unless dry_run
 
-        changes.map { |change| "would #{change}" } + ["would write #{debt.file}: #{counts.join(', ')}"]
+        (changes.flat_map(&:lines) + added.map { |entry| "add #{entry.description}" }).map { |line| "would #{line}" } +
+          ["would write #{debt.file}: #{counts.join(', ')}"]
       end
-
-      # The lines that say an entry is written again as it now is.
-      def rewrite(entry) = ["replace #{entry.description}, line #{entry.line}", "add #{entry.description}"]
 
       # An entry for one identity, keyed by its artifact, or by its
       # artifact and role when another artifact of the policy has that key.
