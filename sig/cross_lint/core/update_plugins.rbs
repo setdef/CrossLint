@@ -123,8 +123,13 @@ module CrossLint
       # and reads the minimum version of each tag's manifest through
       # `manifests`, for the CrossLint whose version is `crosslint`: a
       # configuration whose minimum version is newer stops the update
-      # with a Mistake that names both, before any request.
-      def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins, manifests: _PluginManifests, crosslint: Version) -> void
+      # with a Mistake that names both, before any request. With `debug`,
+      # it says on it what it does at each step: under "plugin", each
+      # shared plugin it considers, with its ref; under "tag", each tag
+      # its repository lists, with whether update may move to it, and each
+      # tag it tries, skips with why, or takes; and under "write", what it
+      # sets in the configuration, or would with `dry_run`.
+      def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins, manifests: _PluginManifests, crosslint: Version, ?debug: _DebugOutput?) -> void
 
       # Updates the project whose root is `start` or the nearest folder
       # above it with a configuration. With `dry_run`, changes nothing.
@@ -139,6 +144,20 @@ module CrossLint
       @manifests: _PluginManifests
 
       @crosslint: Version
+
+      @debug: _DebugOutput?
+
+      # What update says under "write": for each of `changes`, the ref it
+      # sets in `file`, or one line saying that no plugin moves.
+      def writing: (String file, Array[Update] changes, bool dry_run) -> String
+
+      # What update says under "plugin" of `listing`, listed in `file` at
+      # `ref`, which is `current` as a version tag, or nil when it is none.
+      def considered: (ListedPlugin listing, String ref, String file, VersionTag? current) -> String
+
+      # What update says under "tag" of `tag`, which it fetched to read
+      # its manifest: that it takes it, or skips it for `reason`.
+      def tried: (ListedPlugin listing, VersionTag tag, String? reason) -> String
 
       # The tag each of `changes` moves its plugin to, by the plugin's URL
       # and path.

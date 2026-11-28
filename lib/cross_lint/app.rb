@@ -60,16 +60,16 @@ module CrossLint
 
     def update(start, dry_run: false, latest: false)
       Core::UpdatePlugins.new(configuration: @configuration, shared_plugins: @shared_plugins, manifests: @manifests,
-        crosslint: @crosslint).call(start, dry_run:, latest:)
+        crosslint: @crosslint, debug: @debug).call(start, dry_run:, latest:)
     end
 
     def init(start, force: false, dry_run: false)
-      Core::InitConfiguration.new(configuration: @configuration).call(start, force:, dry_run:)
+      Core::InitConfiguration.new(configuration: @configuration, debug: @debug).call(start, force:, dry_run:)
     end
 
     def move_from_ng_nudge(start, force: false, dry_run: false, planned: nil)
       Core::NgNudge::Move.new(configuration: @configuration, ng_nudge: @ng_nudge, debt_files: @debt_files, javascript: @javascript,
-        project_files: @project_files)
+        project_files: @project_files, debug: @debug)
         .call(start, force:, dry_run:, planned:)
     end
 

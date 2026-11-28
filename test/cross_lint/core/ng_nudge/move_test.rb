@@ -439,12 +439,73 @@ class NgNudgeMoveTest < Minitest::Test
     assert_equal [true, false], [result.notes.first.start_with?("node-glob finds src/a.pipe.ts"), world.configuration.exist?(APP)]
   end
 
+  def test_says_under_debug_what_it_read_each_setting_it_carried_and_from_where_and_what_it_will_write
+    debug = Memory::MemoryDebugOutput.new
+    world({ "srcDir" => "./app/" }, comments: %w[later]).move(debug:)
+
+    assert_equal ["#{RC}: is there", "#{NG_DEBT}: is there, with 1 entry", "#{CONFIG}: isn't there"], debug.written("read")
+    assert_equal [%(from #{RC}: convert srcDir "./app/" to src-dir "app"), %(into #{CONFIG}: set src-dir "app" in the angular plugin)], debug.written("setting")
+    assert_equal ["will write #{CONFIG}, with the plugins angular and debt", "will move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry"], debug.written("write")
+  end
+
+  def test_says_under_debug_that_it_would_write_with_dry_run
+    debug = Memory::MemoryDebugOutput.new
+    world({}).move(dry_run: true, debug:)
+
+    assert_equal ["would write #{CONFIG}, with the plugins angular and debt", "would move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry"], debug.written("write")
+  end
+
+  def test_says_under_debug_that_rc_json_and_the_debt_file_are_not_there_and_that_it_reads_rc_json_as_empty_braces
+    debug = Memory::MemoryDebugOutput.new
+    world({}, rc: false, debt: false).move(debug:)
+
+    assert_equal ["#{RC}: isn't there, so it is read as {}", "#{NG_DEBT}: isn't there", "#{CONFIG}: isn't there"], debug.written("read")
+    assert_equal ["will write #{CONFIG}, with the plugins angular and debt"], debug.written("write")
+  end
+
+  def test_says_under_debug_each_file_ng_nudge_loads_and_the_files_it_would_replace_with_force
+    files = { ".config/ng-nudge/rules/b.rule.js" => "", ".config/ng-nudge/rules/a.rule.js" => "" }
+    debug = Memory::MemoryDebugOutput.new
+    world({}, files:, existing: true, own_debt: true).move(force: true, debug:)
+
+    assert_equal [
+      "#{RC}: is there",
+      ".config/ng-nudge/rules/a.rule.js: is a file ng-nudge loads",
+      ".config/ng-nudge/rules/b.rule.js: is a file ng-nudge loads",
+      "#{NG_DEBT}: is there, with 1 entry",
+      "#{DEBT}: is there",
+      "#{CONFIG}: is there",
+    ], debug.written("read")
+    assert_equal ["will replace #{CONFIG}, with the plugins angular and debt", "will move #{NG_DEBT} to #{DEBT}, byte for byte, with 1 entry, and replace the debt file that is there"],
+      debug.written("write")
+  end
+
+  def test_says_under_debug_what_it_read_but_no_setting_and_nothing_it_will_write_when_it_refuses
+    debug = Memory::MemoryDebugOutput.new
+    assert_raises(Core::Mistake) { world({ "srcDir" => "../x" }).move(debug:) }
+
+    assert_equal ["#{RC}: is there", "#{NG_DEBT}: is there, with 1 entry", "#{CONFIG}: isn't there"], debug.written("read")
+    assert_empty debug.written("setting") + debug.written("write")
+  end
+
+  def test_makes_the_same_changes_and_says_the_same_to_planned_with_debug_as_without
+    seen = []
+    kinds = [nil, Memory::MemoryDebugOutput.new].map do |debug|
+      world = world({ "srcDir" => "./app/" })
+      result = world.move(debug:, planned: -> (changes, notes) { seen << [changes, notes] })
+      [result, world.configuration.read(APP).plugins.map(&:name), world.debt_files.exist?(APP, NG_DEBT)]
+    end
+
+    assert_equal kinds.first, kinds.last
+    assert_equal seen.first, seen.last
+  end
+
   private
 
   # A project, with ng-nudge's rc.json for `json`, a debt file with a
   # comment for each of `comments`, and the ports that hold them.
   World = Struct.new(:configuration, :ng_nudge, :debt_files, :javascript, :project_files) do
-    def move(**) = Core::NgNudge::Move.new(configuration:, ng_nudge:, debt_files:, javascript:, project_files:).call(APP, **)
+    def move(debug: nil, **) = Core::NgNudge::Move.new(configuration:, ng_nudge:, debt_files:, javascript:, project_files:, debug:).call(APP, **)
   end
 
   def world(json, comments: %w[legacy], debt: true, rc: true, existing: false, own_debt: false, files: {}, expressions: nil, debt_file: nil, globs: nil, project: [])

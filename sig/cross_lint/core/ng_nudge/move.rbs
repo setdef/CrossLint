@@ -50,8 +50,11 @@ module CrossLint
         # `ng_nudge`, writes the configuration through `configuration`,
         # reads and moves the debt file through `debt_files`, tests
         # expressions and finds files through `javascript`, and lists the
-        # files CrossLint finds through `project_files`.
-        def initialize: (configuration: _Configuration, ng_nudge: _NgNudge, debt_files: _DebtFiles, javascript: _JavaScript, project_files: _ProjectFiles) -> void
+        # files CrossLint finds through `project_files`. With `debug`, it
+        # says on it what it read, under "read", each setting it carries
+        # and from where, under "setting", and what it will write or
+        # move, under "write".
+        def initialize: (configuration: _Configuration, ng_nudge: _NgNudge, debt_files: _DebtFiles, javascript: _JavaScript, project_files: _ProjectFiles, ?debug: _DebugOutput?) -> void
 
         # Moves the project whose root is `root`. With `force`, replaces
         # a configuration and a debt file that are there; with `dry_run`,
@@ -70,6 +73,28 @@ module CrossLint
         @javascript: _JavaScript
 
         @project_files: _ProjectFiles
+
+        @debug: _DebugOutput?
+
+        # Says on the debug output, under "setting", each conversion of
+        # rc.json's `converted` and each setting the configuration it
+        # makes holds (`carried`), and, under "write", each of `files`:
+        # what init will write or move, or would with `dry_run`.
+        def said: (Rc::Result converted, Array[String] files, Array[String] carried, bool dry_run) -> void
+
+        # The lines for rc.json, which is read as `{}` when `text` is nil,
+        # and for each of `paths`, a file ng-nudge loads.
+        def settings_read: (String? text, Array[String] paths) -> String
+
+        # The lines for ng-nudge's debt file, with its entries when
+        # `debt` was read, and for CrossLint's, when `replaces`.
+        def debt_read: (DebtFile? debt, bool moves, bool replaces) -> String
+
+        # `file`, and whether it is there.
+        def existence: (String file, boolish there) -> String
+
+        # How many entries `debt` has, written for a line.
+        def entries: (DebtFile debt) -> String
 
         # The line that says a project with no rc.json, whose `text` is
         # nil, is moved as if it held `{}`, or none when it has one.

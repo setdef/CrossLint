@@ -218,7 +218,7 @@ module CrossLint
     # --silent leaves out each plugin's line, but not the line before each
     # request, which tells the person that CrossLint is reaching the network.
     def update(line)
-      app = @app || App.new(err: @err)
+      app = @app || App.new(err: @err, debug: debug?)
       result = app.update(line.value("project") || Dir.pwd, dry_run: line.flags.key?("dry-run"), latest: line.flags.key?("latest"))
       result.lines.each { |text| @err.puts(PREFIX + text) } unless line.flags.key?("silent")
       0

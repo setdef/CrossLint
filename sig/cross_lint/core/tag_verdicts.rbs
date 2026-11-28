@@ -1,0 +1,45 @@
+module CrossLint
+  module Core
+    # Why `crosslint update` may or may not move a shared plugin to each
+    # tag its repository lists, for the debug output.
+    #
+    # ```ruby
+    # current = CrossLint::Core::VersionTag.parse("v1.0.0")
+    # verdicts = CrossLint::Core::TagVerdicts.new(shown: "https://github.com/OWNER/REPO", current:, latest: false)
+    # verdicts.lines(%w[v1.2.0 latest]).first # => "https://github.com/OWNER/REPO: lists v1.2.0, which is above v1.0.0 and compatible with it, so update may move to it"
+    # ```
+    class TagVerdicts < Data
+      # The plugin as the configuration lists it, which each line begins
+      # with.
+      attr_reader shown: String
+
+      # The tag the plugin is at.
+      attr_reader current: VersionTag
+
+      # Whether the update moves to the highest version even when it
+      # isn't compatible with `current`.
+      attr_reader latest: bool
+
+      # The verdicts with these fields.
+      def self.new: (shown: String, current: VersionTag, latest: bool) -> instance
+
+      # The verdicts with these fields.
+      def initialize: (shown: String, current: VersionTag, latest: bool) -> void
+
+      # One line for each of `texts`, the tag names a repository lists, in
+      # that order: the tag, and whether it is no version, is not above
+      # `current`, is above it and allowed, or is above it and left.
+      def lines: (Array[String] texts) -> Array[String]
+
+      private
+
+      # What is true of `tag`, which is nil for a name that is no version
+      # tag.
+      def verdict: (VersionTag? tag) -> String
+
+      # What is true of a tag of `version` that is above `current`, or nil
+      # when it isn't above it.
+      def above: (Version version) -> String?
+    end
+  end
+end

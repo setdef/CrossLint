@@ -7,6 +7,7 @@ class UpdatePluginsTest < Minitest::Test
   cover "CrossLint::Core::UpdatePlugins*"
   cover "CrossLint::Core::Update*"
   cover "CrossLint::Core::UpdateResult*"
+  cover "CrossLint::Core::TagVerdicts*"
   cover "CrossLint::Core::Mistake*"
 
   Core = CrossLint::Core
@@ -356,10 +357,124 @@ class UpdatePluginsTest < Minitest::Test
     assert_equal [result.updates.first], result.changes
   end
 
+  def test_says_under_debug_each_shared_plugin_it_considers_with_its_ref_and_leaves_out_the_ones_that_are_not_shared
+    configuration, shared = project([listing(ONE, "v1.0.0", 2, path: "plugins/a"), listing(TWO, "main", 3), Core::ListedPlugin.new(name: ".config/crosslint/local", ref: nil, settings: [], line: 1)],
+      ONE => %w[v1.0.0], TWO => %w[v1.0.0])
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal [
+      "#{ONE} (plugins/a): listed at v1.0.0 on line 2 of #{FILE}",
+      "#{TWO}: listed at main on line 3 of #{FILE}, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update asks for no tags",
+    ], debug.written("plugin")
+  end
+
+  def test_says_under_debug_each_tag_it_listed_and_why_update_may_or_may_not_move_to_it
+    configuration, shared = project([listing(ONE, "v1.1.0")], ONE => %w[v0.9.0 v1.1.0 v1.2.0 latest v2.0.0])
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal [
+      "#{ONE}: lists v0.9.0, which isn't above v1.1.0, so update ignores it",
+      "#{ONE}: lists v1.1.0, which isn't above v1.1.0, so update ignores it",
+      "#{ONE}: lists v1.2.0, which is above v1.1.0 and compatible with it, so update may move to it",
+      "#{ONE}: lists latest, which isn't a version tag, vX.Y.Z or X.Y.Z, so update ignores it",
+      "#{ONE}: lists v2.0.0, which is above v1.1.0 but not compatible with it, so update leaves it; --latest allows it",
+      "#{ONE}: takes v1.2.0, whose manifest this CrossLint reads",
+    ], debug.written("tag")
+  end
+
+  def test_says_under_debug_that_latest_allows_the_incompatible_tag
+    configuration, shared = project([listing(ONE, "v1.1.0")], ONE => %w[v1.1.0 v2.0.0])
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP, latest: true)
+
+    assert_includes debug.written("tag"), "#{ONE}: lists v2.0.0, which is above v1.1.0, so update may move to it"
+  end
+
+  def test_says_under_debug_each_tag_it_skipped_for_its_minimum_version_highest_first
+    configuration, shared = project([listing(ONE, "v1.0.0")], { ONE => %w[v1.0.0 v1.1.0 v1.2.0 v1.3.0] }, { "v1.3.0" => "1.6", "v1.2.0" => "1.5" })
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal [
+      "#{ONE}: skips v1.3.0, which needs CrossLint 1.6 or later, as this is CrossLint 1.4.0",
+      "#{ONE}: skips v1.2.0, which needs CrossLint 1.5 or later, as this is CrossLint 1.4.0",
+    ], debug.written("tag").grep(/ skips /)
+  end
+
+  def test_says_under_debug_that_it_skipped_a_tag_whose_crosslint_line_it_cant_read
+    configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.0.0 v1.1.0 v1.2.0])
+    broken = Core::Mistake.new("crosslint is set twice; the first is on line 1", file: "plugin.kdl", line: 3)
+    @manifests = BrokenManifests.new(File.expand_path("/cache/v1.2.0") => broken)
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal ["#{ONE}: skips v1.2.0, which has a crosslint line this CrossLint can't read: plugin.kdl:3: crosslint is set twice; the first is on line 1, as this is CrossLint 1.4.0"],
+      debug.written("tag").grep(/ skips /)
+  end
+
+  def test_says_under_debug_the_tag_it_took
+    configuration, shared = project([listing(ONE, "v1.0.0")], { ONE => %w[v1.0.0 v1.1.0 v1.2.0] }, { "v1.2.0" => "1.6" })
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal ["#{ONE}: takes v1.1.0, whose manifest this CrossLint reads"], debug.written("tag").grep(/ takes /)
+  end
+
+  def test_says_under_debug_that_a_plugin_stays_when_it_takes_no_tag
+    configuration, shared = project([listing(ONE, "v1.0.0")], { ONE => %w[v1.0.0 v1.1.0] }, { "v1.1.0" => "2" })
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal ["#{ONE}: skips v1.1.0, which needs CrossLint 2 or later, as this is CrossLint 1.4.0", "#{ONE}: takes no tag above v1.0.0, so it stays"],
+      debug.written("tag").grep(/ (skips|takes) /)
+  end
+
+  def test_says_under_debug_what_it_would_write_with_dry_run_and_what_it_wrote_without
+    configuration, shared = project([listing(ONE, "v1.0.0", 4, path: "plugins/a"), listing(TWO, "v1.0.0", 5)], ONE => %w[v1.0.0 v1.1.0], TWO => %w[v1.0.0])
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP, dry_run: true)
+    update_plugins(configuration, shared, debug:).call(APP)
+
+    assert_equal [
+      "#{FILE}: would set ref=v1.1.0 of #{ONE} (plugins/a), where it was v1.0.0",
+      "#{FILE}: set ref=v1.1.0 of #{ONE} (plugins/a), where it was v1.0.0",
+    ], debug.written("write")
+  end
+
+  def test_says_under_debug_that_it_leaves_the_configuration_as_it_is_when_no_plugin_moves
+    configuration, shared = project([listing(ONE, "v1.0.0")], ONE => %w[v1.0.0])
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP, dry_run: true)
+    update_plugins(configuration, shared, debug:).call(APP)
+
+    assert_equal ["#{FILE}: would leave it as it is, since no plugin moves", "#{FILE}: left it as it is, since no plugin moves"], debug.written("write")
+  end
+
+  def test_says_no_plugin_or_tag_under_debug_for_a_project_that_lists_no_shared_plugin
+    configuration, shared = project([Core::ListedPlugin.new(name: ".config/crosslint/local", ref: nil, settings: [], line: 1)], {})
+    update_plugins(configuration, shared, debug: debug = Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal [["write", "#{FILE}: left it as it is, since no plugin moves"]], debug.lines
+  end
+
+  def test_gives_the_same_result_and_requests_with_debug_as_without
+    plugins = [listing(ONE, "v1.0.0"), listing(TWO, "main", 2)]
+    tags = { ONE => %w[v1.0.0 v1.1.0 v2.0.0], TWO => %w[v1.0.0] }
+    plain_configuration, plain_shared = project(plugins, tags)
+    plain = update_plugins(plain_configuration, plain_shared).call(APP)
+    plain_err = @err.string
+    configuration, shared = project(plugins, tags)
+    debugged = update_plugins(configuration, shared, debug: Memory::MemoryDebugOutput.new).call(APP)
+
+    assert_equal [plain.lines, plain_err, plain_configuration.read(APP).plugins.map(&:ref)], [debugged.lines, @err.string, configuration.read(APP).plugins.map(&:ref)]
+  end
+
+  def test_says_nothing_under_debug_of_a_url_that_has_a_user_name_or_password_since_it_stops_there
+    secret = "https://user:hunter2@example.com/OWNER/one"
+    configuration, shared = project([listing(secret, "v1.0.0")], {})
+    debug = Memory::MemoryDebugOutput.new
+
+    assert_raises(Core::Mistake) { update_plugins(configuration, shared, debug:).call(APP) }
+    assert_empty debug.lines
+  end
+
   private
 
-  def update_plugins(configuration, shared)
-    Core::UpdatePlugins.new(configuration:, shared_plugins: shared, manifests: @manifests || Memory::MemoryPluginManifests.new, crosslint: CROSSLINT)
+  def update_plugins(configuration, shared, debug: nil)
+    Core::UpdatePlugins.new(configuration:, shared_plugins: shared, manifests: @manifests || Memory::MemoryPluginManifests.new, crosslint: CROSSLINT, debug:)
   end
 
   # A configuration for the project at APP that lists `plugins`, and a

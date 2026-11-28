@@ -987,6 +987,76 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_update_says_what_it_does_at_each_step_on_standard_error_with_debug_or_debug_set_and_never_changes_standard_output
+    Dir.mktmpdir do |base|
+      url = "https://example.test/#{SecureRandom.hex(8)}/signatures"
+      origin = repository_at(File.join(base, "origin", "signatures"), { "plugin.kdl" => "" }, tags: %w[v1.0.0 v1.2.0])
+      write(base, "project/.config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
+      project = File.join(base, "project")
+      rewriting(url, origin) do
+        plain_out, plain_err, plain_status = run_cli("update", "-n", "-C", project, spec: shipped_spec)
+
+        assert_empty plain_err.lines.grep(/debug:/)
+        [run_cli("update", "-n", "-C", project, "--debug", spec: shipped_spec), run_cli("update", "-n", "-C", project, spec: shipped_spec, env: { "DEBUG" => "1" })].each do |out, err, status|
+          assert_equal [plain_out, plain_status], [out, status]
+          assert_equal plain_err.lines.reject { |line| line.include?("fetching") }, err.lines.grep_v(/\Acrosslint: debug: /).reject { |line| line.include?("fetching") }
+          assert_includes err.lines, "crosslint: debug: plugin #{url}: listed at v1.0.0 on line 1 of .config/crosslint/config.kdl\n"
+          assert_includes err.lines, "crosslint: debug: tag #{url}: lists v1.2.0, which is above v1.0.0 and compatible with it, so update may move to it\n"
+          assert_includes err.lines, "crosslint: debug: write .config/crosslint/config.kdl: would set ref=v1.2.0 of #{url}, where it was v1.0.0\n"
+        end
+      end
+    end
+  end
+
+  def test_update_prints_debug_output_even_with_silent_since_it_was_asked_for
+    Dir.mktmpdir do |base|
+      url = "https://example.test/#{SecureRandom.hex(8)}/signatures"
+      origin = repository_at(File.join(base, "origin", "signatures"), { "plugin.kdl" => "" }, tags: %w[v1.0.0 v1.2.0])
+      write(base, "project/.config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
+      out, err, = rewriting(url, origin) { run_cli("update", "--silent", "--debug", "-C", File.join(base, "project"), spec: shipped_spec) }
+
+      assert_empty out
+      assert_empty err.lines.grep_v(/\Acrosslint: (debug: |fetching |listing )/)
+      assert_includes err.lines, "crosslint: debug: write .config/crosslint/config.kdl: set ref=v1.2.0 of #{url}, where it was v1.0.0\n"
+    end
+  end
+
+  def test_init_says_what_it_does_on_standard_error_with_debug_or_debug_set_and_never_changes_standard_output
+    plain_out, plain_err, = Dir.mktmpdir { |project| run_cli("init", "-n", "-C", project, spec: shipped_spec) }
+
+    [%w[--debug], []].zip([{}, { "DEBUG" => "1" }]).each do |flags, env|
+      out, err, status = Dir.mktmpdir { |project| run_cli("init", "-n", "-C", project, *flags, spec: shipped_spec, env:) }
+
+      assert_equal [plain_out, 0], [out, status]
+      assert_equal plain_err, err.lines.grep_v(/\Acrosslint: debug: /).join
+      assert_equal [
+        "crosslint: debug: read .config/crosslint/config.kdl: isn't there\n",
+        "crosslint: debug: write would write .config/crosslint/config.kdl, which lists plugin debt\n",
+      ], err.lines.grep(/\Acrosslint: debug: /)
+    end
+  end
+
+  def test_init_from_ng_nudge_says_what_it_reads_carries_and_writes_on_standard_error_with_debug_and_never_changes_standard_output
+    Dir.mktmpdir do |project|
+      write(project, ".config/ng-nudge/rc.json", JSON.generate({ "srcDir" => "./app/" }))
+      write(project, ".config/ng-nudge/debt.tsv", "Rule\tArtifact\tComment\nspec-exists\tapp/card\tlater\n")
+      plain_out, plain_err, = run_cli("init", "--from-ng-nudge", "-n", "-C", project, spec: shipped_spec)
+      out, err, status = run_cli("init", "--from-ng-nudge", "-n", "-C", project, "--debug", spec: shipped_spec)
+
+      assert_equal [plain_out, 0], [out, status]
+      assert_equal plain_err, err.lines.grep_v(/\Acrosslint: debug: /).join
+      assert_equal [
+        "crosslint: debug: read .config/ng-nudge/rc.json: is there\n",
+        "crosslint: debug: read .config/ng-nudge/debt.tsv: is there, with 1 entry\n",
+        "crosslint: debug: read .config/crosslint/config.kdl: isn't there\n",
+        %(crosslint: debug: setting from .config/ng-nudge/rc.json: convert srcDir "./app/" to src-dir "app"\n),
+        %(crosslint: debug: setting into .config/crosslint/config.kdl: set src-dir "app" in the angular plugin\n),
+        "crosslint: debug: write would write .config/crosslint/config.kdl, with the plugins angular and debt\n",
+        "crosslint: debug: write would move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 1 entry\n",
+      ], err.lines.grep(/\Acrosslint: debug: /)
+    end
+  end
+
   def test_update_says_nothing_it_is_not_asked_to_when_no_plugin_is_shared
     Dir.mktmpdir do |project|
       write(project, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/tests"\n))

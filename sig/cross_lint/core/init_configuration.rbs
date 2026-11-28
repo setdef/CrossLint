@@ -28,6 +28,10 @@ module CrossLint
       # One line: what was written, replaced, or would be, to which file,
       # with which plugins.
       def lines: () -> Array[String]
+
+      # What init did to the file, as the lines say it: "wrote",
+      # "replaced", "would write", or "would replace".
+      def verb: () -> String
     end
 
     # Writes a project's configuration, listing the recommended plugins
@@ -38,8 +42,10 @@ module CrossLint
       RECOMMENDED: Array[String]
 
       # A use case that finds and writes the configuration through
-      # `configuration`.
-      def initialize: (configuration: _Configuration) -> void
+      # `configuration`. With `debug`, it says on it whether a
+      # configuration is there, under "read", and what it wrote, or would
+      # write, under "write".
+      def initialize: (configuration: _Configuration, ?debug: _DebugOutput?) -> void
 
       # Writes the configuration in `root`, which is the folder itself and
       # not one above it. With `force`, replaces one that is there; with
@@ -49,6 +55,8 @@ module CrossLint
       private
 
       @configuration: _Configuration
+
+      @debug: _DebugOutput?
     end
   end
 end

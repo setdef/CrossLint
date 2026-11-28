@@ -32,7 +32,8 @@ module CrossLint
         # can be found by one and not the other.
         WHY = "node-glob also returns folders, ignores case on macOS and Windows, finds files Git ignores, and follows a symlinked folder, which CrossLint doesn't"
 
-        def initialize(configuration:, ng_nudge:, debt_files:, javascript:, project_files:)
+        def initialize(configuration:, ng_nudge:, debt_files:, javascript:, project_files:, debug: nil)
+          @debug = debug
           @configuration = configuration
           @ng_nudge = ng_nudge
           @debt_files = debt_files
@@ -54,11 +55,15 @@ module CrossLint
           attempt(problems) { refuse_existing(TrackDebt::FILE, "the debt file") } if replaces && !force
           matching = found&.matching
           attempt(problems) { agree(matching, read) } if matching
+          @debug&.write("read") { [settings_read(text, paths), debt_read(read, moves, replaces), existence(@configuration.file, replaced)].join("\n") }
           raise Mistakes.of(problems) unless problems.empty?
 
           converted = found #: Rc::Result
           debt = read #: DebtFile
-          changes = [*assumed(text), *moved(replaced, converted, moves, debt, replaces), *converted.changes, *settings(converted.configuration), *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
+          files = moved(replaced, converted, moves, debt, replaces)
+          carried = settings(converted.configuration)
+          said(converted, files, carried, dry_run)
+          changes = [*assumed(text), *files, *converted.changes, *carried, *paths.map { |path| "leave #{path}, which ng-nudge never ran" }]
           notes = compare(root, converted)
           planned&.call(changes, notes)
           unless dry_run
@@ -69,6 +74,31 @@ module CrossLint
         end
 
         private
+
+        # What the debug output says of each setting the converted
+        # configuration carries, and of each file it writes or moves.
+        def said(converted, files, carried, dry_run)
+          tense = dry_run ? "would" : "will"
+          @debug&.write("setting") do
+            [*converted.changes.map { |change| "from #{SETTINGS_FILE}: #{change}" }, *carried.map { |line| "into #{@configuration.file}: #{line}" }].join("\n")
+          end
+          @debug&.write("write") { files.map { |line| "#{tense} #{line}" }.join("\n") }
+        end
+
+        def settings_read(text, paths)
+          rc = text ? existence(SETTINGS_FILE, true) : "#{SETTINGS_FILE}: isn't there, so it is read as #{EMPTY}"
+          [rc, *paths.map { |path| "#{path}: is a file ng-nudge loads" }].join("\n")
+        end
+
+        def debt_read(debt, moves, replaces)
+          lines = [moves ? "#{existence(DEBT_FILE, true)}#{", with #{entries(debt)}" if debt}" : existence(DEBT_FILE, false)]
+          lines << existence(TrackDebt::FILE, true) if replaces
+          lines.join("\n")
+        end
+
+        def existence(file, there) = "#{file}: #{there ? 'is there' : "isn't there"}"
+
+        def entries(debt) = "#{debt.entries.size} #{(debt.entries.size == 1) ? 'entry' : 'entries'}"
 
         # The line that says a project with no rc.json is moved as if it
         # held {}, or none when it has one.
@@ -153,9 +183,7 @@ module CrossLint
           lines = ["#{replaced ? 'replace' : 'write'} #{@configuration.file}, with the plugins #{plugins.join(' and ')}"]
           return lines unless moves
 
-          entries = debt.entries.size
-          lines << "move #{DEBT_FILE} to #{TrackDebt::FILE}, byte for byte, with #{entries} #{(entries == 1) ? 'entry' : 'entries'}" \
-            "#{', and replace the debt file that is there' if replaces}"
+          lines << "move #{DEBT_FILE} to #{TrackDebt::FILE}, byte for byte, with #{entries(debt)}#{', and replace the debt file that is there' if replaces}"
         end
 
         # ng-nudge compiles `withComment.matching` with JavaScript, which

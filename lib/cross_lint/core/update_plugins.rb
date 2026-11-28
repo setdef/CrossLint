@@ -56,11 +56,12 @@ module CrossLint
     end
 
     class UpdatePlugins
-      def initialize(configuration:, shared_plugins:, manifests:, crosslint:)
+      def initialize(configuration:, shared_plugins:, manifests:, crosslint:, debug: nil)
         @configuration = configuration
         @shared_plugins = shared_plugins
         @manifests = manifests
         @crosslint = crosslint
+        @debug = debug
       end
 
       def call(start, dry_run: false, latest: false)
@@ -74,10 +75,23 @@ module CrossLint
         result = UpdateResult.new(updates: shared.map { |listing| update(listing, configuration.file, tags, latest) }, dry_run:, crosslint: @crosslint)
         changes = result.changes
         @configuration.set_refs(root, refs(changes)) unless dry_run || changes.empty?
+        @debug&.write("write") { writing(configuration.file, changes, dry_run) }
         result
       end
 
       private
+
+      def writing(file, changes, dry_run)
+        set, left = dry_run ? ["would set", "would leave"] : ["set", "left"]
+        return "#{file}: #{left} it as it is, since no plugin moves" if changes.empty?
+
+        changes.map { |change| "#{file}: #{set} ref=#{change.newest} of #{change.listing.shown}, where it was #{change.listing.ref}" }.join("\n")
+      end
+
+      def considered(listing, ref, file, current)
+        line = "#{listing.shown}: listed at #{ref} on line #{listing.line} of #{file}"
+        current ? line : "#{line}, which isn't a plain version tag, vX.Y.Z or X.Y.Z, so update asks for no tags"
+      end
 
       # A change always has a newest tag: a plugin with none is untagged.
       def refs(changes)
@@ -93,9 +107,11 @@ module CrossLint
         # No request for a ref that is no version: a prerelease or a
         # commit is somewhere a person put it.
         current = VersionTag.parse(ref)
+        @debug&.write("plugin") { considered(listing, ref, file, current) }
         return Update.new(listing:, newest: nil) unless current
 
         listed = tags[listing.name] ||= @shared_plugins.tags(listing.name)
+        @debug&.write("tag") { TagVerdicts.new(shown: listing.shown, current:, latest:).lines(listed).join("\n") }
         versions = VersionTags.parse(listed)
         reachable = latest ? versions : versions.compatible_with(current)
         newer = (latest ? VersionTags.parse([]) : versions.newer_incompatible(current)).tags.map(&:text)
@@ -103,6 +119,7 @@ module CrossLint
         return Update.new(listing:, newest: target&.text, newer:) unless target && target.version > current.version
 
         found, skipped = readable(listing, reachable.above(current), file)
+        @debug&.write("tag") { "#{listing.shown}: takes no tag above #{current.text}, so it stays" } unless found
         Update.new(listing:, newest: (found || current).text, newer:, skipped:)
       rescue FetchError => error
         raise Mistake.new("couldn't list the tags of shared plugin #{listing.name}: " + error.message, file:, line: listing.line)
@@ -127,9 +144,16 @@ module CrossLint
         found = candidates.find do |tag|
           reason = unreadable(listing, tag, file)
           skipped << [tag.text, reason] if reason
+          @debug&.write("tag") { tried(listing, tag, reason) }
           reason.nil?
         end
         [found, skipped]
+      end
+
+      def tried(listing, tag, reason)
+        return "#{listing.shown}: takes #{tag.text}, whose manifest this CrossLint reads" unless reason
+
+        "#{listing.shown}: skips #{tag.text}, which #{reason}, as this is CrossLint #{@crosslint}"
       end
 
       # Why this CrossLint can't read the plugin at `tag`, or nil when it can.

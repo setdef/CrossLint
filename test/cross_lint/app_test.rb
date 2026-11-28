@@ -343,6 +343,65 @@ class AppTest < Minitest::Test
     assert_equal ["#{url}: moved from v1.0.0 to v1.1.0; skipped v1.2.0, which needs CrossLint 99 or later, as this is CrossLint 1.4.0"], app.update(@base).lines
   end
 
+  def test_says_what_update_does_at_each_step_on_standard_error_only_with_debug
+    url = shared_repository(tags: %w[v1.0.0 v1.2.0])
+    text = %(plugin #{url.dump} ref="v1.0.0"\n)
+    path = write(@base, ".config/crosslint/config.kdl", text)
+    err = StringIO.new
+    shared_plugins = CrossLint::Adapters::GitSharedPlugins.new(err:, cache: File.join(@base, "cache"), schemes: ["file://"])
+    App.new(err:, shared_plugins:).update(@base, dry_run: true)
+    err.truncate(0)
+    err.rewind
+    App.new(err:, shared_plugins:).update(@base, dry_run: true)
+    plain = err.string.dup
+
+    assert_empty plain.lines.grep(/debug:/)
+    err.truncate(0)
+    err.rewind
+    result = App.new(err:, shared_plugins:, debug: true).update(@base, dry_run: true)
+
+    assert_equal ["#{url}: would move from v1.0.0 to v1.2.0"], result.lines
+    assert_equal [plain.lines, text], [err.string.lines.grep_v(/debug:/), File.binread(path)]
+    assert_includes err.string.lines, "crosslint: debug: plugin #{url}: listed at v1.0.0 on line 1 of .config/crosslint/config.kdl\n"
+    assert_includes err.string.lines, "crosslint: debug: tag #{url}: takes v1.2.0, whose manifest this CrossLint reads\n"
+    assert_includes err.string.lines, "crosslint: debug: write .config/crosslint/config.kdl: would set ref=v1.2.0 of #{url}, where it was v1.0.0\n"
+  end
+
+  def test_says_what_init_does_on_standard_error_only_with_debug
+    err = StringIO.new
+    App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new, err:).init("/app")
+
+    assert_empty err.string
+    App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new, err:, debug: true).init("/app")
+
+    assert_equal ["crosslint: debug: read .config/crosslint/config.kdl: isn't there\n", "crosslint: debug: write wrote .config/crosslint/config.kdl, which lists plugin debt\n"], err.string.lines
+  end
+
+  def test_says_what_a_move_from_ng_nudge_does_on_standard_error_only_with_debug
+    debt = Core::DebtFile.new(file: ".config/ng-nudge/debt.tsv", entries: [], header: "Rule\tArtifact\tComment\n")
+    moved = lambda do |err, **options|
+      App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new, debt_files: CrossLint::Adapters::MemoryDebtFiles.new({ "/app/.config/ng-nudge/debt.tsv" => debt }),
+        ng_nudge: CrossLint::Adapters::MemoryNgNudge.new({ "/app" => { ".config/ng-nudge/rc.json" => %({"srcDir": "./app/"}) } }),
+        javascript: CrossLint::Adapters::MemoryJavaScript.new({}, globs: {}), project_files: CrossLint::Adapters::MemoryProjectFiles.new({ "/app" => [] }), err:, **options)
+        .move_from_ng_nudge("/app", dry_run: true)
+    end
+    err = StringIO.new
+    moved.call(err)
+
+    assert_empty err.string
+    moved.call(err, debug: true)
+
+    assert_equal [
+      "crosslint: debug: read .config/ng-nudge/rc.json: is there\n",
+      "crosslint: debug: read .config/ng-nudge/debt.tsv: is there, with 0 entries\n",
+      "crosslint: debug: read .config/crosslint/config.kdl: isn't there\n",
+      %(crosslint: debug: setting from .config/ng-nudge/rc.json: convert srcDir "./app/" to src-dir "app"\n),
+      %(crosslint: debug: setting into .config/crosslint/config.kdl: set src-dir "app" in the angular plugin\n),
+      "crosslint: debug: write would write .config/crosslint/config.kdl, with the plugins angular and debt\n",
+      "crosslint: debug: write would move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 0 entries\n",
+    ], err.string.lines
+  end
+
   def test_writes_the_configuration_with_the_recommended_plugins_through_the_port_it_is_given
     configuration = CrossLint::Adapters::MemoryConfiguration.new
     app = App.new(configuration:)
