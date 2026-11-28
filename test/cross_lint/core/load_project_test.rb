@@ -577,6 +577,13 @@ class LoadProjectTest < Minitest::Test
     assert_equal [[APP, true]], port.started.map { |running| [running.root, running.stopped] }
   end
 
+  def test_lets_a_policy_with_no_applies_to_apply_to_nothing_when_a_plugins_helper_declares_its_artifacts
+    port = HelperPort.new({"tests/roles" => ->(_) { {"artifacts" => []} }}, commands: ["node"])
+    project = load_project(manifest: helped_manifest, helpers: port)
+
+    assert_empty project.plugins.first.manifest.artifacts
+  end
+
   def test_stops_at_the_mistake_a_plugins_helper_makes_of_a_setting
     answer = ->(_) { {"mistake" => {"message" => "lib takes a folder", "line" => 3}} }
     manifest = helped_manifest.with(settings: [SettingDeclaration.new(name: "lib", line: 2)])

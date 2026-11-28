@@ -387,9 +387,9 @@ module CrossLint
         applies_to = policy.applies_to
         unless applies_to
           policy.rules.each { |rule| check_rule(plugin, nil, rule) }
-          # Artifacts declared in Ruby depend on the settings, which can
-          # leave a policy nothing to apply to.
-          return unless plugin.targets(policy).empty? && !plugin.manifest.artifacts_ruby
+          # Artifacts a helper declares, in Ruby or by a program, depend on
+          # the settings, which can leave a policy nothing to apply to.
+          return unless plugin.targets(policy).empty? && !declared_by_helper?(plugin.manifest)
 
           named = policy.pieces.map(&:dump)
           having = named.empty? ? "declares no artifact" : "has no artifact with #{Spelling.list(named, "and")}, the pieces it names"
@@ -400,6 +400,8 @@ module CrossLint
         policy.condition&.piece_conditions&.each { |exists| piece(artifact, exists.piece, file, exists.line) }
         policy.rules.each { |rule| check_rule(plugin, artifact, rule) }
       end
+
+      def declared_by_helper?(manifest) = !!(manifest.artifacts_ruby || manifest.artifacts_helper)
 
       def target(plugin, applies_to, plugins)
         fail_at = ->(message) { raise Mistake.new(message, file: plugin.manifest.file, line: applies_to.line) }
