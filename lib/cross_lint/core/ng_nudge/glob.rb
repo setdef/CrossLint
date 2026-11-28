@@ -22,7 +22,7 @@ module CrossLint
 
         def converted
           refuse("starts at the root; write it relative to srcDir") if @source.start_with?("/") || @source.match?(/\A[A-Za-z]:/)
-          refuse("ends with /, so it finds folders, and an artifact is a file") if @source.end_with?("/")
+          refuse("ends with /, so it finds folders, and a primary piece is a file") if @source.end_with?("/")
 
           segments = cleaned
           tail, names = tail(segments.pop || refuse("is empty"), segments)

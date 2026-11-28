@@ -38,7 +38,7 @@ module CrossLint
 
       # The plugins whose manifests are on disk, for a person who asks what
       # commands the project's plugins add: nothing is fetched, a shared
-      # plugin not fetched yet is only listed, and no plugin's Ruby runs.
+      # plugin not fetched yet is only listed, and no helper runs.
       def listed(start)
         root = @configuration.find_root(start)
         raise Mistake.no_configuration(@configuration.file, start) unless root
@@ -163,8 +163,8 @@ module CrossLint
         (cleaned == ".") ? "" : cleaned
       end
 
-      # The plugin with the artifacts its Ruby declares from its settings
-      # added to its manifest's. Whatever that Ruby raises but a mistake
+      # The plugin with the artifacts its helper declares from its settings
+      # added to its manifest's. Whatever a Ruby helper raises but a mistake
       # stops CrossLint the same way, since no check can run without the
       # plugin's artifacts.
       def declare(root, plugin, file)
@@ -420,7 +420,7 @@ module CrossLint
           fail_at.call(Spelling.unknown("rule", rule.name, BuiltInRule::ALL.map(&:name) + declared)) unless declared.include?(rule.name)
           return if rule.arguments.empty?
 
-          fail_at.call("rule #{rule.name.dump} is written in Ruby, and takes no #{rule.arguments.keys.first}=")
+          fail_at.call("rule #{rule.name.dump} is run by a helper, and takes no #{rule.arguments.keys.first}=")
         end
 
         unknown = rule.arguments.keys - built_in.arguments

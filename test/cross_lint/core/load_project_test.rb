@@ -694,7 +694,7 @@ class LoadProjectTest < Minitest::Test
     manifest = tests_manifest(rules:, policies: [policy(rules: [policy_rule("names-class")])])
 
     assert_empty load_project(manifests: {"#{APP}/rules/tests" => manifest}).unused_rules
-    assert_mistake "rules/tests/plugin.kdl", 7, %(rule "names-class" is written in Ruby, and takes no style=),
+    assert_mistake "rules/tests/plugin.kdl", 7, %(rule "names-class" is run by a helper, and takes no style=),
       manifest: tests_manifest(rules:, policies: [policy(rules: [policy_rule("names-class", arguments: {"style" => "strict"})])])
   end
 

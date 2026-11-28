@@ -48,7 +48,7 @@ class NgNudgeGlobTest < Minitest::Test
     assert_refused "is empty", "./."
     assert_refused "starts at the root; write it relative to srcDir", "/src/*.ts"
     assert_refused "starts at the root; write it relative to srcDir", "C:/src/*.ts"
-    assert_refused "ends with /, so it finds folders, and an artifact is a file", "app/"
+    assert_refused "ends with /, so it finds folders, and a primary piece is a file", "app/"
   end
 
   def test_refuses_dot_dot_that_cleaning_cannot_take_out
