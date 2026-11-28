@@ -30,7 +30,7 @@ module CrossLint
       @reserved_flags = reserved_flags || self.class.global_flag_names(UsageSpec.load)
       @version = version || UsageSpec.load.version
       @crosslint = Core::Version.parse(@version) || raise(ArgumentError, "#{@version.dump} isn't a version of CrossLint, X.Y.Z")
-      @steps = {"track-debt" => Core::TrackDebt.new(debt_files:)} #: Hash[String, Core::_Step]
+      @steps = {"track-debt" => Core::TrackDebt.new(debt_files:, debug: @debug)} #: Hash[String, Core::_Step]
     end
 
     # How each global flag of `spec`, with --help and --version, is
@@ -81,7 +81,7 @@ module CrossLint
     def loader
       Core::LoadProject.new(configuration: @configuration, manifests: @manifests, crosslint_ruby: @crosslint_ruby, shared_plugins: @shared_plugins, helpers: @helpers,
         crosslint: @crosslint,
-        built_in: @built_in, steps: @steps, reserved: @reserved, reserved_flags: @reserved_flags)
+        built_in: @built_in, steps: @steps, reserved: @reserved, reserved_flags: @reserved_flags, debug: @debug)
     end
 
     def built_in_plugins(folder, names)

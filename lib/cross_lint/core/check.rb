@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "artifact"
+require_relative "helper_exchange"
 require_relative "artifact_finder"
 require_relative "check_result"
 require_relative "ruby_rule"
@@ -111,7 +112,7 @@ module CrossLint
           raise PluginError, "called helper #{name.inspect}, which plugin #{plugin.name} doesn't declare"
         end
 
-        helpers.call(plugin, name, input)
+        HelperExchange.said(@debug, "#{plugin.name}/#{name}", input) { helpers.call(plugin, name, input) }
       end
 
       def checked_kinds(project, policies)

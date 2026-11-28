@@ -1,0 +1,15 @@
+module CrossLint
+  module Core
+    # One request to a helper and its answer, as the debug output says
+    # them.
+    module HelperExchange
+      # What the block answers, the answer of the helper `name`,
+      # PLUGIN/HELPER, to `input`. On `debug`, when it is given, says under
+      # "helper" what the helper gets and what it answers, each as JSON:
+      # `tests/reader gets {"rule":"names-class",...}`, then
+      # `tests/reader answers {"violations":[]}`. Says no answer when the
+      # block raises.
+      def self.said: (_DebugOutput? debug, String name, untyped input) { () -> untyped } -> untyped
+    end
+  end
+end

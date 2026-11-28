@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "artifacts"
+require_relative "helper_exchange"
 require_relative "ruby_rule"
 
 module CrossLint
@@ -27,7 +28,8 @@ module CrossLint
       RESERVED = %w[version completion config plugin plugins list cache doctor explain fix self].freeze
 
       def initialize(configuration:, manifests:, crosslint_ruby:, shared_plugins:, helpers:, crosslint:, built_in: {}, steps: {}, reserved: [],
-        reserved_flags: [])
+        reserved_flags: [], debug: nil)
+        @debug = debug
         @configuration = configuration
         @crosslint = crosslint
         @manifests = manifests
@@ -69,9 +71,13 @@ module CrossLint
         configuration = read_configuration(root)
         raise Mistake.new("lists no plugin, so no check would run; list one with plugin NAME", file: configuration.file) if configuration.plugins.empty?
 
+        @debug&.write("project") { "#{root}, with #{configuration.file}" }
         SharedPlugin.refuse_credentials(configuration)
         plugins = configuration.plugins.each_with_index.with_object([]) do |(listing, index), loaded|
-          loaded << plugin(root, configuration, index, loaded)
+          # Only a listing that doesn't fetch finds no plugin.
+          found = plugin(root, configuration, index, loaded) #: Plugin
+          @debug&.write("plugin") { from(found) }
+          loaded << found
         end
         # Every plugin's artifacts before any policy is checked, since a
         # policy can apply to another plugin's.
@@ -125,6 +131,17 @@ module CrossLint
             "since a plugin's name is its folder's name")
         end
         Plugin.new(name:, folder: File.expand_path(folder, base), listing:, manifest:)
+      end
+
+      # Where `plugin` comes from, as the debug output says it.
+      def from(plugin)
+        listing = plugin.listing
+        kind = if listing.shared?(@shared_plugins)
+          "a shared plugin from #{listing.name} at #{listing.ref}#{" (#{listing.path})" if listing.path}"
+        else
+          (listing.kind == :local) ? "a local plugin" : "a built-in plugin"
+        end
+        "#{plugin.name}, #{kind}, in #{plugin.folder}"
       end
 
       def where(listing, folder)
@@ -198,7 +215,8 @@ module CrossLint
 
         running = @helpers.start(root, [plugin])
         answer = begin
-          running.call(plugin, name, {"settings" => plugin.listing.settings.map { |setting| LoadProject.described(setting) }})
+          input = {"settings" => plugin.listing.settings.map { |setting| LoadProject.described(setting) }}
+          HelperExchange.said(@debug, "#{plugin.name}/#{name}", input) { running.call(plugin, name, input) }
         ensure
           running.stop
         end

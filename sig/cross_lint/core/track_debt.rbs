@@ -123,12 +123,21 @@ module CrossLint
       # that isn't one.
       def self.report: (Setting setting, String file) -> Report
 
-      # A step that reads and writes debt files through `debt_files`.
-      def initialize: (debt_files: _DebtFiles) -> void
+      # A step that reads and writes debt files through `debt_files`, and,
+      # with `debug`, says on it under "debt" what each entry matched, or
+      # that CrossLint leaves it alone.
+      def initialize: (debt_files: _DebtFiles, ?debug: _DebugOutput?) -> void
 
       private
 
       @debt_files: _DebtFiles
+
+      @debug: _DebugOutput?
+
+      # Says on the debug output what `entry` of `debt` matched: `matched`,
+      # for the plugin and policy `rule`, or nothing CrossLint checks when
+      # `rule` is nil.
+      def said: (DebtFile debt, DebtEntry entry, [String, String]? rule, Array[Identity] matched) -> void
 
       # `entry`, with each `\` in its artifact read as `/`, and no source
       # when it had one.

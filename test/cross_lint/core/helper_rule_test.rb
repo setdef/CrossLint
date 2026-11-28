@@ -63,6 +63,15 @@ class HelperRuleTest < Minitest::Test
     assert_equal [[:error], [:warning]], [nil, :warning].map { |severity| check(files: ["lib/a.rb"], answer:, severity:).findings.map(&:severity) }
   end
 
+  def test_says_under_debug_what_the_helper_gets_and_answers_as_json
+    debug = CrossLint::Adapters::MemoryDebugOutput.new
+    check(files: ["lib/a.rb"], answer: ->(_) { {"violations" => [{"message" => "no class Café"}]} }, debug:)
+
+    assert_equal [%(tests/reader gets {"rule":"names-class","artifact":{"path":"lib/a.rb","name":"lib/a.rb","role":"ruby-file","line":null,"match":{"path":"a"},) +
+      %("key":"a","pieces":{"signature":{"path":"sig/a.rbs","exists":false},"test":{"path":"test/a_test.rb","exists":false}}}}),
+      %(tests/reader answers {"violations":[{"message":"no class Café"}]})], debug.written("helper")
+  end
+
   private
 
   def ruby_file
@@ -70,7 +79,7 @@ class HelperRuleTest < Minitest::Test
       pieces: %w[signature test].map { |name| PieceDeclaration.new(name:, pattern: PathPattern.new(source: (name == "test") ? "test/{path}_test.rb" : "sig/{path}.rbs"), line: 2) })
   end
 
-  def check(files:, answer:, contents: {}, severity: nil, others: false, artifact: ruby_file)
+  def check(files:, answer:, contents: {}, severity: nil, others: false, artifact: ruby_file, debug: nil)
     rule = PolicyRule.new(name: "names-class", arguments: {}, severity:, line: 7)
     policy = Policy.new(name: "names-match", applies_to: AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, rules: [rule], line: 5)
     manifest = Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy],
@@ -84,7 +93,7 @@ class HelperRuleTest < Minitest::Test
     configuration = Configuration.new(file: ".config/crosslint/config.kdl", plugins: plugins.map(&:listing), policies: [], warnings: nil, verbosity: nil)
     project_files = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files}, contents: {ROOT => contents})
     helpers = CrossLint::Adapters::MemoryHelpers.new({"tests/reader" => answer}, commands: ["node"])
-    Check.new(project_files:, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new, helpers:, steps: {})
+    Check.new(project_files:, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new, helpers:, steps: {}, debug:)
       .call(Project.new(root: ROOT, configuration:, plugins:))
   end
 

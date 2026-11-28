@@ -77,8 +77,9 @@ module CrossLint
         raise Mistake.new("matching= isn't a regular expression CrossLint reads: #{error}", file:, line: setting.line)
       end
 
-      def initialize(debt_files:)
+      def initialize(debt_files:, debug: nil)
         @debt_files = debt_files
+        @debug = debug
       end
 
       def policies = [POLICY]
@@ -115,9 +116,10 @@ module CrossLint
         named = identities_named(project, input, debt, identities)
         debt.entries.each do |entry|
           rule = resolve(project, input, debt, entry)
+          matched = rule ? matches(entry, rule, identities, named) : [] #: Array[Identity]
+          said(debt, entry, rule, matched)
           next unless rule
 
-          matched = matches(entry, rule, identities, named)
           excused.concat(matched)
           line = entry.line #: Integer
           if matched.empty?
@@ -130,6 +132,19 @@ module CrossLint
         accepted = input.violations.select { |violation| excused.include?(Identity.of(violation)) }
         StepResult.new(excused: accepted, violations: report_entries(project, input, settings, debt), paid_off:, notices:, wrote:,
           summary: accepted.empty? ? [] : ["#{accepted.size} accepted as debt"])
+      end
+
+      def said(debt, entry, rule, matched)
+        @debug&.write("debt") do
+          found = if rule.nil?
+            "left alone, since CrossLint doesn't check that policy: its plugin isn't listed or stopped at a fault, or it is off"
+          elsif matched.empty?
+            "matches no violation, so it is paid off"
+          else
+            "matches #{Spelling.count(matched.size, "violation")}, accepted as debt"
+          end
+          "#{debt.file}:#{entry.line}, #{described(entry)}: #{found}"
+        end
       end
 
       # The plugin and policy an entry is for, or nil when CrossLint

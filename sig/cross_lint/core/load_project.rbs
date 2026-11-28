@@ -49,12 +49,17 @@ module CrossLint
       # version of the CrossLint that loads the project: a configuration
       # whose minimum version is newer stops the load with a Mistake that
       # names both versions, before any other line of it is read.
+      # With `debug`, `call` says on it what it does at each step.
       def initialize: (configuration: _Configuration, manifests: _PluginManifests, crosslint_ruby: _CrossLintRuby, shared_plugins: _SharedPlugins,
                        helpers: _Helpers, crosslint: Version, ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
-                       ?reserved_flags: Array[String]) -> void
+                       ?reserved_flags: Array[String], ?debug: _DebugOutput?) -> void
 
       # The project whose root is `start` or the nearest folder above it
-      # with a configuration.
+      # with a configuration. On the debug output, says under "project"
+      # the root and its configuration's file, under "plugin" each
+      # plugin's name, whether it is local, built in, or shared, with its
+      # URL and ref, and its folder, and under "helper" what the helper
+      # that declares a plugin's artifacts gets and answers.
       def call: (String start) -> Project
 
       # The plugins the configuration at `start`, or the nearest folder
@@ -82,6 +87,13 @@ module CrossLint
       @reserved_flags: Array[String]
 
       @crosslint: Version
+
+      @debug: _DebugOutput?
+
+      # Where `plugin` comes from, as the debug output says it: its name,
+      # the kind of plugin, with a shared plugin's URL, ref, and path,
+      # and its folder.
+      def from: (Plugin plugin) -> String
 
       # The configuration of `root`, once its minimum version, if it has
       # one, is no newer than this CrossLint.

@@ -632,6 +632,34 @@ class LoadProjectTest < Minitest::Test
     assert_equal [[APP, true]], port.started.map { |running| [running.root, running.stopped] }
   end
 
+  def test_says_under_debug_what_the_helper_that_declares_a_plugins_artifacts_gets_and_answers
+    debug = CrossLint::Adapters::MemoryDebugOutput.new
+    port = HelperPort.new({"tests/roles" => ->(_) { {"artifacts" => []} }}, commands: ["node"])
+    load_project(manifest: helped_manifest, helpers: port, debug:)
+
+    assert_equal [%(tests/roles gets {"settings":[]}), %(tests/roles answers {"artifacts":[]})], debug.written("helper")
+  end
+
+  def test_says_under_debug_the_projects_root_and_where_each_plugin_is_from
+    debug = CrossLint::Adapters::MemoryDebugOutput.new
+    load_project(plugins: [listing("./rules/tests"), listing("debt"), listing(URL, ref: "v1.2.0", line: 3)], built_in: {"debt" => "#{TOP}c/plugins/debt"},
+      manifests: {"#{APP}/rules/tests" => tests_manifest, "#{TOP}c/plugins/debt" => debt_manifest, "#{TOP}cache/a1/signatures" => tests_manifest("signatures")},
+      steps: {"track-debt" => RecordingStep.new}, shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures"), debug:)
+
+    assert_equal ["#{APP}, with #{CONFIG}"], debug.written("project")
+    assert_equal ["tests, a local plugin, in #{APP}/rules/tests", "debt, a built-in plugin, in #{TOP}c/plugins/debt",
+      "signatures, a shared plugin from #{URL} at v1.2.0, in #{TOP}cache/a1/signatures"], debug.written("plugin")
+  end
+
+  def test_says_under_debug_the_folder_of_a_shared_plugins_repository_it_is_from
+    debug = CrossLint::Adapters::MemoryDebugOutput.new
+    folder = "#{TOP}cache/a1/signatures/plugins/markdown-links"
+    load_project(plugins: [listing(URL, ref: "v1.2.0", path: "plugins/markdown-links")], manifests: {folder => tests_manifest("markdown-links")},
+      shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures"), debug:)
+
+    assert_equal ["markdown-links, a shared plugin from #{URL} at v1.2.0 (plugins/markdown-links), in #{folder}"], debug.written("plugin")
+  end
+
   def test_lets_a_policy_with_no_applies_to_apply_to_nothing_when_a_plugins_helper_declares_its_artifacts
     port = HelperPort.new({"tests/roles" => ->(_) { {"artifacts" => []} }}, commands: ["node"])
     project = load_project(manifest: helped_manifest, helpers: port)
@@ -972,12 +1000,12 @@ class LoadProjectTest < Minitest::Test
 
   def load_project(plugins: [listing("./rules/tests")], policies: [], manifests: nil, manifest: nil, built_in: {}, steps: {}, start: APP, ruby: {},
     shared_plugins: shared_plugins({}), reserved: nil, reserved_flags: nil, listed: false, helpers: MemoryHelpers.new, configuration: nil,
-    minimums: {})
+    minimums: {}, debug: nil)
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration ||= MemoryConfiguration.new({APP => Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)})
     use_case = LoadProject.new(configuration:, crosslint: CROSSLINT,
       manifests: MemoryPluginManifests.new(manifests, minimums:), crosslint_ruby: MemoryCrossLintRuby.new(ruby), shared_plugins:, built_in:, steps:,
-      helpers:, **{reserved:, reserved_flags:}.compact)
+      helpers:, debug:, **{reserved:, reserved_flags:}.compact)
     listed ? use_case.listed(start) : use_case.call(start)
   end
 

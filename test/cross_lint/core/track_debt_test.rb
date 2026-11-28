@@ -27,6 +27,17 @@ class TrackDebtTest < Minitest::Test
       [result.excused, result.paid_off, result.notices, result.violations, result.summary]
   end
 
+  def test_says_under_debug_what_each_entry_matched_or_why_it_is_left_alone
+    debug = CrossLint::Adapters::MemoryDebugOutput.new
+    entries = [entry("tests/has-test", "lib/a.rb", detail: "test"), entry("tests/has-test", "lib/b.rb", line: 3), entry("tests/has-signature", "lib/c.rb", line: 4)]
+    step([violation("lib/a.rb", detail: "test")], entries, disabled: ["tests/has-signature"], debug:)
+
+    assert_equal [%(#{FILE}:2, tests/has-test on lib/a.rb (test): matches 1 violation, accepted as debt),
+      "#{FILE}:3, tests/has-test on lib/b.rb: matches no violation, so it is paid off",
+      "#{FILE}:4, tests/has-signature on lib/c.rb: left alone, since CrossLint doesn't check that policy: " \
+      "its plugin isn't listed or stopped at a fault, or it is off"], debug.written("debt")
+  end
+
   def test_reports_an_entry_no_violation_matches_as_paid_off
     result = step([], [entry("tests/has-test", "lib/b.rb"), entry("tests/has-test", "lib/a.rb")])
 
@@ -553,7 +564,8 @@ class TrackDebtTest < Minitest::Test
     Plugin.new(name:, folder: "#{ROOT}/#{name}", manifest:, listing: ListedPlugin.new(name: "./#{name}", ref: nil, settings: [], line: 1))
   end
 
-  def step(violations, entries, plugins: %w[tests], settings: [], disabled: [], faulted: [], update: false, command: nil, severity: nil, extra: [], dry_run: false)
+  def step(violations, entries, plugins: %w[tests], settings: [], disabled: [], faulted: [], update: false, command: nil, severity: nil, extra: [], dry_run: false,
+    debug: nil)
     @files.write(ROOT, FILE, DebtFile.new(file: FILE, entries:, header: nil)) if entries
     debt = plugin("debt", []).then { |found| found.with(listing: found.listing.with(name: "debt", settings:)) }
     listed = {"tests" => %w[has-test has-signature], "other" => %w[has-test names-class]}.slice(*plugins).map { |name, owned| plugin(name, owned) }
@@ -562,7 +574,7 @@ class TrackDebtTest < Minitest::Test
     policies.concat(extra)
     configuration = Configuration.new(file: CONFIG, plugins: [debt, *listed].map(&:listing), policies:, warnings: nil, verbosity: nil)
     project = Project.new(root: ROOT, configuration:, plugins: [debt, *listed])
-    TrackDebt.new(debt_files: @files).call(StepInput.new(project:, plugin: debt, violations:, faulted:, command: update ? "update" : command,
+    TrackDebt.new(debt_files: @files, debug:).call(StepInput.new(project:, plugin: debt, violations:, faulted:, command: update ? "update" : command,
       flags: dry_run ? {"dry-run" => true} : {}))
   end
 end
