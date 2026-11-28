@@ -17,8 +17,8 @@ end
 # package-lock.json locks, installed with npm ci and no dev dependencies.
 # The app carries them: Fledge copies the plugin's node_modules with the
 # rest of the project, and leaves out only a folder a CACHEDIR.TAG marks.
-# The release build (.github/scripts/build-archive.sh) runs this task
-# before it builds; setup runs it with the fixtures. A plugin installed
+# The build (rake build) runs this task before it builds; setup runs it
+# with the fixtures. A plugin installed
 # from the same lockfile is left as it is.
 desc "Install the packages each built-in plugin runs with, with npm ci"
 task :packages do
@@ -144,8 +144,13 @@ FLEDGE_ENV = {
   "BUNDLE_WITHOUT" => "development:test:check"
 }.freeze
 
+# The app carries the packages rake packages installs, so the build needs
+# them, and lists each in the notices (tasks/npm_notices.rb), which Fledge
+# writes for the runtime alone. The task packs each archive again with
+# the notices, and fails when an archive's notices or SBOM lack a package
+# it carries.
 desc "Build the app for this computer with Fledge, into build/dist"
-task :build do
+task build: :packages do
   # build/Gemfile.lock names the Bundler that locked it, and a Bundler of
   # another version rewrites that name in the lock. Bundler switches to
   # the locked version when it finds that version among the gems it can
@@ -158,11 +163,12 @@ task :build do
   Bundler.with_unbundled_env do
     sh env, "bundle", "install", chdir: "build"
     sh env, "bundle", "exec", "fledge", "build", "..", chdir: "build"
+    sh env, "bundle", "exec", "ruby", "../tasks/npm_notices.rb", "dist", chdir: "build"
   end
 end
 
-desc "Run the built app with nothing on PATH, and check its --version and --help, its rules in Ruby and helpers, the environment of a helper, " \
-  "its built-in plugins and their commands, and a shared plugin"
+desc "Run the built app with nothing on PATH, and check its --version and --help, its notices and SBOM, its rules in Ruby and helpers, " \
+  "the environment of a helper, its built-in plugins and their commands, and a shared plugin"
 task "build:check" do
   require_relative "lib/cross_lint"
   app = Dir["build/dist/*/crosslint{,.exe}"].first || abort("rake build:check: no app in build/dist; run rake build")
@@ -179,11 +185,27 @@ task "build:check" do
       end
     end
   end
+  Rake::Task["build:check:notices"].invoke(app)
   Rake::Task["build:check:plugins"].invoke(app)
   Rake::Task["build:check:environment"].invoke(app)
   Rake::Task["build:check:debt"].invoke(app)
   Rake::Task["build:check:angular"].invoke(app)
   Rake::Task["build:check:shared"].invoke(app)
+end
+
+# The built app's notices and SBOM list each npm package the app carries,
+# with its version and license, which rake build puts there for each
+# archive and checks in the archive.
+task "build:check:notices", [:app] do |_, arguments|
+  require_relative "tasks/npm_notices"
+  folder = File.dirname(File.expand_path(arguments.fetch(:app)))
+  carried = NpmNotices.installed(folder)
+  abort "rake build:check: #{folder} carries no npm package, and the Angular plugin needs ts-morph" if carried.empty?
+
+  problems = NpmNotices.problems(folder)
+  abort "rake build:check: #{folder}:\n#{problems.join("\n")}" unless problems.empty?
+
+  puts "#{folder}: lists the #{carried.size} npm packages it carries in its notices and SBOM"
 end
 
 # A project that lists a shared plugin at an https URL, which a Git

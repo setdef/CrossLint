@@ -10,8 +10,9 @@
 # carry coverage/ into the archive. The script refuses to build when
 # `git status --porcelain --ignored` prints anything, and prints it. The
 # bundle goes outside the checkout for the same reason, unless BUNDLE_PATH
-# says where. After that check, it installs the packages each built-in
-# plugin runs with (rake packages), which the app then carries.
+# says where. After that check, rake build installs the packages each
+# built-in plugin runs with (rake packages), which the app then carries,
+# and lists them in the archive's notices and SBOM.
 
 set -eu
 
@@ -37,7 +38,6 @@ fi
 export BUNDLE_WITHOUT=${BUNDLE_WITHOUT:-check}
 export BUNDLE_PATH=${BUNDLE_PATH:-${TMPDIR:-/tmp}/crosslint-bundle}
 bundle install
-bundle exec rake packages
 bundle exec rake build
 
 set -- build/dist/*."$extension"
