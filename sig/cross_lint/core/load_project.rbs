@@ -168,6 +168,10 @@ module CrossLint
       # Checks a policy's artifact, condition, and rules.
       def check_policy: (Plugin plugin, Policy policy, Array[Plugin] plugins) -> void
 
+      # Whether a helper declares the plugin's artifacts, in Ruby or by a
+      # program, from its settings.
+      def declared_by_helper?: (Manifest manifest) -> bool
+
       # The artifact a policy applies to.
       def target: (Plugin plugin, AppliesTo applies_to, Array[Plugin] plugins) -> ArtifactDeclaration
 
