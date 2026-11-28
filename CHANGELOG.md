@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A configuration or a plugin's `plugin.kdl` can start with the oldest CrossLint that reads it, written `crosslint min="1.2"`. An older CrossLint stops at that line with exit status 2, before it reads any other, names both versions, and the plugin for a `plugin.kdl`, and says to upgrade.
 - `crosslint update` skips a tag whose `plugin.kdl` needs a newer CrossLint, and moves to the newest tag below it that this CrossLint reads. To learn which, it fetches each tag it would move to, the highest first, saying so on standard error, and stops at the first one it reads, with `--dry-run` too. The line it writes for the plugin lists each tag it skipped, with the CrossLint that tag needs.
 - `crosslint check --json` prints the version of the CrossLint that wrote the object as its first key, `crosslint_version`, such as `"crosslint_version": "1.0.0"`.
+- The artifact a Ruby rule gets has `name`, `line`, and `key`, as a program helper's request does: the name CrossLint calls the artifact by, the line its primary piece's regex matched at (`nil` for a whole file), and its key (`nil` when its declaration gives none).
 - A program helper's request has `name` and `line` in its `artifact` object: the name CrossLint calls the artifact by, and the line its primary piece's regex matched at (`null` for a whole file).
 - Each release file has a build provenance attestation, so `gh attestation verify` can check an archive or `SHA256SUMS` against this repository.
 

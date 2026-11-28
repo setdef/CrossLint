@@ -438,13 +438,16 @@ policy "declaration-matches" {
 ```
 <!-- SPDX-SnippetEnd -->
 
-The artifact a rule gets has these methods. They give what a program's request holds, apart from the key, and read the pieces' text:
+The artifact a rule gets has these methods. They give what a program's request holds, and read the pieces' text:
 
 | Method | Returns |
 | --- | --- |
 | `primary` | The primary piece, like the pieces `piece(NAME)` gives, with `name`, `path`, `exist?`, and `read`. Its `name` is `"primary"`, and `exist?` is always true, since CrossLint found the artifact there. `artifact.path` and `artifact.read` give the same path and text, and `piece("primary")` gives this piece. |
 | `path` | The primary piece's path, relative to the project's root. |
+| `name` | The artifact's name, which CrossLint calls it by in every violation and debt entry: what its declaration's `name` pattern gives, or its primary piece's path. |
 | `role` | The artifact's role, such as `module`. |
+| `line` | The line of the primary piece's file where the primary's `regex=` matched, from 1, or `nil` for an artifact whose primary piece is a whole file. A rule tells apart two artifacts found in one file by their lines, or by their names. |
+| `key` | The artifact's [key](plugin-glossary.md#declaring), or `nil` when its declaration gives none. |
 | `match` | What each placeholder matched, and each capture of the primary's regex, by name: `artifact.match["path"]`. |
 | `read` | The primary piece's contents. |
 | `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`; for `"primary"`, the primary piece. For a piece with a regex, `exist?` says whether its file has a match, and `read` gives the whole file. |
