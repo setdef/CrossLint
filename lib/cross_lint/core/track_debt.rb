@@ -166,8 +166,7 @@ module CrossLint
           policy = rule
         end
         listed = project.plugins.any? { |plugin| plugin.name == name }
-        disabled = project.configuration.policies.any? { |setting| setting.name == "#{name}/#{policy}" && setting.enabled == false }
-        [name, policy] if listed && !disabled && !input.faulted.include?(name)
+        [name, policy] if listed && !project.configuration.off?(name, policy) && !input.faulted.include?(name)
       end
 
       # The identities an entry matches. An entry with no detail matches
@@ -279,9 +278,8 @@ module CrossLint
 
       def report_entries(project, input, settings, debt)
         report = settings.report
-        name = "#{input.plugin.name}/#{POLICY}"
-        policy = project.configuration.policies.find { |setting| setting.name == name }
-        return [] if report.nil? || policy&.enabled == false
+        policy = project.configuration.policy_setting(input.plugin.name, POLICY)
+        return [] if report.nil? || policy&.off?
 
         severity = policy&.severity || :error
         debt.entries.filter_map do |entry|

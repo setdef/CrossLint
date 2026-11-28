@@ -99,6 +99,9 @@ module CrossLint
 
       # A policy setting with these fields.
       def initialize: (name: String, enabled: bool?, severity: severity?, line: Integer) -> void
+
+      # Whether the setting turns its policy off.
+      def off?: () -> bool
     end
 
     # A project's configuration: the plugins it lists, what it says about
@@ -128,6 +131,14 @@ module CrossLint
       # A configuration with these fields.
       def initialize: (file: String, plugins: Array[ListedPlugin], policies: Array[PolicySetting],
                        warnings: (:all | :none | :error)?, verbosity: (:normal | :quiet | :silent)?) -> void
+
+      # The setting for the policy `policy` of the plugin named `plugin`,
+      # or nil when the configuration has none.
+      def policy_setting: (String plugin, String policy) -> PolicySetting?
+
+      # Whether the configuration turns off the policy `policy` of the
+      # plugin named `plugin`.
+      def off?: (String plugin, String policy) -> bool
     end
   end
 end

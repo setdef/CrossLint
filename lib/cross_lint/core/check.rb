@@ -57,17 +57,13 @@ module CrossLint
       def enabled_policies(project)
         project.plugins.flat_map do |plugin|
           plugin.manifest.policies.filter_map do |policy|
-            off = setting(project, plugin, policy)
-            next [plugin, policy] unless off && off.enabled == false
+            off = project.configuration.policy_setting(plugin.name, policy.name)
+            next [plugin, policy] unless off&.off?
 
             @debug&.write("policy") { "#{plugin.name}/#{policy.name} doesn't run, since it is off in #{project.configuration.file}:#{off.line}" }
             nil
           end
         end
-      end
-
-      def setting(project, plugin, policy)
-        project.configuration.policies.find { |setting| setting.name == "#{plugin.name}/#{policy.name}" }
       end
 
       def run_plugins(project, policies, kinds, helpers, files)
@@ -126,7 +122,7 @@ module CrossLint
       end
 
       def run(project, plugin, policy, kinds, rules, read)
-        override = setting(project, plugin, policy)&.severity
+        override = project.configuration.policy_setting(plugin.name, policy.name)&.severity
         name = "#{plugin.name}/#{policy.name}"
         targets = plugin.targets(policy)
         artifacts = targets.flat_map { |owner, role| kinds.fetch(owner).fetch(role) }
@@ -180,7 +176,7 @@ module CrossLint
         hidden = warnings == :none
         excused = steps.flat_map(&:excused)
         left = violations.reject { |violation| excused.include?(violation) }
-        added = steps.flat_map(&:violations).reject { |violation| disabled?(project, violation) }
+        added = steps.flat_map(&:violations).reject { |violation| project.configuration.off?(violation.plugin, violation.policy) }
         shown = (left + added).select { |violation| !hidden || violation.severity == :error }
         paid_off = steps.flat_map(&:paid_off)
         notices = notices(project, kinds)
@@ -197,10 +193,6 @@ module CrossLint
         summary = summary(kinds, checked, shown, hidden, faults.size).with(paid_off: paid_off.size, excused: excused.uniq.size, steps: steps.flat_map(&:summary))
         CheckResult.new(notices:, findings: sort((findings + paid_off).reject { verbosity == :silent }), summary:, verbosity:, failed:,
           faults:, wrote: wrote.reject { verbosity == :silent })
-      end
-
-      def disabled?(project, violation)
-        project.configuration.policies.any? { |setting| setting.name == "#{violation.plugin}/#{violation.policy}" && setting.enabled == false }
       end
 
       def notices(project, kinds)

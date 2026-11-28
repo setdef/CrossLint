@@ -59,9 +59,6 @@ module CrossLint
       # the line that does.
       def enabled_policies: (Project project) -> Array[[Plugin, Policy]]
 
-      # The configuration's setting for a plugin's policy, or nil.
-      def setting: (Project project, Plugin plugin, Policy policy) -> PolicySetting?
-
       # Each rule an enabled policy runs that is no built-in rule, loaded, by
       # its plugin's and its name: a Ruby rule, seeing `files` as the
       # project's files and reading them with `read`, or a rule a helper
@@ -106,9 +103,6 @@ module CrossLint
       def report: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
                    Array[Violation] violations, Array[Fault] faults, Array[StepResult] steps, warnings: (:all | :none | :error)?,
                    verbosity: (:normal | :quiet | :silent), all: bool, command: [String, String]?) -> CheckResult
-
-      # Whether the configuration disables the policy of `violation`.
-      def disabled?: (Project project, Violation violation) -> bool
 
       # A notice for each Ruby rule no policy runs and each artifact
       # declaration whose primary pattern matches no file.

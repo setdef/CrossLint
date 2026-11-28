@@ -25,8 +25,14 @@ module CrossLint
       def shown = path ? "#{name} (#{path})" : name
     end
 
-    class PolicySetting < Data.define(:name, :enabled, :severity, :line); end
+    class PolicySetting < Data.define(:name, :enabled, :severity, :line)
+      def off? = enabled == false
+    end
 
-    class Configuration < Data.define(:file, :plugins, :policies, :warnings, :verbosity); end
+    class Configuration < Data.define(:file, :plugins, :policies, :warnings, :verbosity)
+      def policy_setting(plugin, policy) = policies.find { |setting| setting.name == "#{plugin}/#{policy}" }
+
+      def off?(plugin, policy) = !!policy_setting(plugin, policy)&.off?
+    end
   end
 end
