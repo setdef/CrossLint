@@ -75,7 +75,7 @@ class AgentsMdTest < Minitest::Test
     FileUtils.rm_rf(File.join(@root, "a"))
     write(@root, "README.md", "")
 
-    assert_equal [%(no file matches the primary of any artifact of plugin agents-md, such as "AGENTS.md")], check.notices.map(&:message)
+    assert_equal [%(no file matches the primary pattern of any role of plugin agents-md, such as "AGENTS.md")], check.notices.map(&:message)
   end
 
   private

@@ -188,7 +188,7 @@ module CrossLint
         optional = empty.find(&:optional)
         if optional && empty.size == declarations.size
           return [Notice.new(file: plugin.manifest.file, line: optional.line,
-            message: "no file matches the primary of any artifact of plugin #{plugin.name}, such as #{optional.primary.source.dump}")]
+            message: "no file matches the primary pattern of any role of plugin #{plugin.name}, such as #{optional.primary.source.dump}")]
         end
 
         empty.reject(&:optional).map do |declaration|

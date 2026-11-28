@@ -82,7 +82,7 @@ plugin ".config/crosslint/tests"
 
 ## Run the check
 
-Before you run it, which files do you expect it to report? Then run:
+Before you run it, which artifacts do you expect to fail? Then run:
 
 <!--
 SPDX-SnippetBegin

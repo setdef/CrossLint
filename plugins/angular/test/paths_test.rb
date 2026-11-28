@@ -107,7 +107,7 @@ class AngularPathsTest < Minitest::Test
     write(@root, "src/a.pipe.spec.ts", "")
 
     assert_empty check.notices
-    assert_equal [%(no file matches the primary of any artifact of plugin angular, such as "source/{path}.component.ts")],
+    assert_equal [%(no file matches the primary pattern of any role of plugin angular, such as "source/{path}.component.ts")],
       check(%(src-dir "source")).notices.map(&:message)
   end
 

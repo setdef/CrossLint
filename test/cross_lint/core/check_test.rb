@@ -402,7 +402,7 @@ class CheckTest < Minitest::Test
     assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 4, message: %(no file matches "src/{path}.store.ts", the primary pattern of role "store"))],
       some.notices
     assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 2,
-      message: %(no file matches the primary of any artifact of plugin tests, such as "src/{path}.pipe.ts"))], none.notices
+      message: %(no file matches the primary pattern of any role of plugin tests, such as "src/{path}.pipe.ts"))], none.notices
   end
 
   def test_finds_no_artifact_whose_match_has_a_name_that_starts_with_a_dot_when_its_declaration_leaves_dotfiles_out

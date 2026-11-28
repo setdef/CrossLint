@@ -20,11 +20,11 @@ plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/agents-md"
 
 ## What it checks
 
-Each `AGENTS.md` is the primary piece of an artifact whose piece `claude` is the `CLAUDE.md` in its folder: the `AGENTS.md` at the project's root of an `agents-md` artifact, and each `AGENTS.md` in a folder of a `nested-agents-md` artifact. The plugin's policies apply to both:
+The `AGENTS.md` at the project's root is the primary piece of an `agents-md` artifact, and each `AGENTS.md` in a folder is the primary piece of a `nested-agents-md` artifact. The `CLAUDE.md` in the same folder is each artifact's piece `claude`. The plugin's policies apply to both:
 
 | Policy | Reports |
 | --- | --- |
 | `agents-md/claude-md-exists` | An `AGENTS.md` with no `CLAUDE.md` in its folder. The name is matched exactly, so a `claude.md` doesn't count. |
 | `agents-md/claude-md-imports-agents-md` | A `CLAUDE.md` whose first line isn't `@AGENTS.md`. A byte order mark before the line, and spaces, tabs, or a CRLF line ending after it, are ignored. |
 
-A `CLAUDE.md` that is a symbolic link to its `AGENTS.md` is read as that `AGENTS.md`, so its first line is the `AGENTS.md`'s first line, and `claude-md-imports-agents-md` reports it. Files Git ignores are never checked. A project with no `AGENTS.md` anywhere gets CrossLint's warning that no file matches the plugin's artifacts.
+A `CLAUDE.md` that is a symbolic link to its `AGENTS.md` is read as that `AGENTS.md`, so its first line is the `AGENTS.md`'s first line, and `claude-md-imports-agents-md` reports it. Files Git ignores are never checked. A project with no `AGENTS.md` anywhere gets CrossLint's warning that no file matches the primary pattern of any of the plugin's roles.
