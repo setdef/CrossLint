@@ -85,7 +85,7 @@ class AgentsMdTest < Minitest::Test
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
     repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: {"v0.1.0" => ROOT}, branches: [], commits: {})
     shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new({URL => repository}, err: StringIO.new)
-    CrossLint::App.new(plugin_ruby: LoadedPlugins::PluginRuby.new, shared_plugins:).check(@root)
+    CrossLint::App.new(carried_ruby: LoadedPlugins::CarriedRuby.new, shared_plugins:).check(@root)
   end
 
   def findings(result) = result.violations.map { |violation| [violation.artifact, violation.role, violation.policy, violation.message] }.sort

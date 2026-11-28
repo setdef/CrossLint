@@ -267,7 +267,7 @@ class LoadProjectTest < Minitest::Test
   def test_has_no_step_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], policies: [], warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}), plugin_ruby: MemoryPluginRuby.new,
+      manifests: MemoryPluginManifests.new({"#{APP}/rules/tests" => debt_manifest("rules/tests")}), carried_ruby: MemoryCarriedRuby.new,
       shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new)
 
     assert_equal %(unknown step "track-debt"; this CrossLint has none), assert_raises(Mistake) { use_case.call(APP) }.message
@@ -624,7 +624,7 @@ class LoadProjectTest < Minitest::Test
 
       def declare(_) = [artifact("ruby-file", primary: @folder + "/{path}.rb", pieces: {"test" => "t/{path}"})]
     RUBY
-    # A built-in plugin's Artifacts, which test/plugin_ruby.rb loaded at the top level, is put back.
+    # A built-in plugin's Artifacts, which test/carried_ruby.rb loaded at the top level, is put back.
     loaded = Object.__send__(:remove_const, :Artifacts) if Object.const_defined?(:Artifacts, false)
     Object.const_set(:Artifacts, Class.new(CrossLint::Artifacts))
     project = load_project(manifest: declaring_manifest, ruby:)
@@ -853,7 +853,7 @@ class LoadProjectTest < Minitest::Test
   def test_has_no_built_in_plugins_unless_it_is_given_some
     configuration = Configuration.new(file: CONFIG, plugins: [listing("debt")], policies: [], warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}), manifests: MemoryPluginManifests.new,
-      plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new)
+      carried_ruby: MemoryCarriedRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new)
     mistake = assert_raises(Mistake) { use_case.call(APP) }
 
     assert_equal %(unknown built-in plugin "debt"; this CrossLint has none), mistake.message
@@ -873,7 +873,7 @@ class LoadProjectTest < Minitest::Test
   def test_raises_the_mistakes_the_ports_raise
     configuration = MemoryConfiguration.new({APP => Mistake.new("broken", file: CONFIG, line: 2)})
     mistake = assert_raises(Mistake) do
-      LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, plugin_ruby: MemoryPluginRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new).call(APP)
+      LoadProject.new(configuration:, manifests: MemoryPluginManifests.new, carried_ruby: MemoryCarriedRuby.new, shared_plugins: shared_plugins({}), helpers: MemoryHelpers.new).call(APP)
     end
 
     assert_equal "#{CONFIG}:2", mistake.location
@@ -883,7 +883,7 @@ class LoadProjectTest < Minitest::Test
 
   MemoryConfiguration = CrossLint::Adapters::MemoryConfiguration
   MemoryPluginManifests = CrossLint::Adapters::MemoryPluginManifests
-  MemoryPluginRuby = CrossLint::Adapters::MemoryPluginRuby
+  MemoryCarriedRuby = CrossLint::Adapters::MemoryCarriedRuby
   MemorySharedPlugins = CrossLint::Adapters::MemorySharedPlugins
   MemoryHelpers = CrossLint::Adapters::MemoryHelpers
 
@@ -913,7 +913,7 @@ class LoadProjectTest < Minitest::Test
     manifests ||= {"#{APP}/rules/tests" => manifest || tests_manifest}
     configuration = Configuration.new(file: CONFIG, plugins:, policies:, warnings: nil, verbosity: nil)
     use_case = LoadProject.new(configuration: MemoryConfiguration.new({APP => configuration}),
-      manifests: MemoryPluginManifests.new(manifests), plugin_ruby: MemoryPluginRuby.new(ruby), shared_plugins:, built_in:, steps:, helpers:,
+      manifests: MemoryPluginManifests.new(manifests), carried_ruby: MemoryCarriedRuby.new(ruby), shared_plugins:, built_in:, steps:, helpers:,
       **{reserved:, reserved_flags:}.compact)
     listed ? use_case.listed(start) : use_case.call(start)
   end

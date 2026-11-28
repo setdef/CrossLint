@@ -225,18 +225,18 @@ module CrossLint
       def test_stops_at_a_root_outside_a_git_working_tree: () -> void
     end
 
-    # What a test of a plugin-Ruby adapter defines.
-    interface _PluginRubyTest
+    # What a test of a CarriedRuby adapter defines.
+    interface _CarriedRubyTest
       # A port that holds `files`, each Ruby source by its path relative
       # to plugin_base, with `/`.
-      def plugin_ruby_port: (Hash[String, String] files) -> _PluginRuby
+      def carried_ruby_port: (Hash[String, String] files) -> _CarriedRuby
 
       # The absolute path of the folder that holds each plugin's folder.
       def plugin_base: () -> String
     end
 
-    # The tests every adapter of the plugin-Ruby port passes.
-    module PluginRubyContract : _PluginRubyTest, Minitest::Assertions
+    # The tests every adapter of the CarriedRuby port passes.
+    module CarriedRubyContract : _CarriedRubyTest, Minitest::Assertions
       # load defines a file's classes in the namespace, not at the top level.
       def test_puts_a_files_constants_in_the_namespace_it_is_given: () -> void
 

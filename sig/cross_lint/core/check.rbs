@@ -4,8 +4,8 @@ module CrossLint
     # applies each enabled policy where its condition holds, runs its
     # rules, gives each violation its severity, and returns what to
     # report under the --warnings mode and the verbosity. It reads the
-    # project's files only through `project_files`, plugins' Ruby only
-    # through `plugin_ruby`, and runs helpers only through `helpers`, and
+    # project's files only through `project_files`, the Ruby CrossLint
+    # carries only through `carried_ruby`, and runs helpers only through `helpers`, and
     # writes nothing itself. A plugin whose Ruby rule has a fault, while
     # it loads or checks, or whose artifacts can't be told apart by name,
     # reports the fault alone, and the other plugins run. Then each step of each plugin that didn't stop runs on every
@@ -13,10 +13,10 @@ module CrossLint
     # what they report.
     class Check
       # A use case that reads the project's files through `project_files`,
-      # loads plugins' Ruby through `plugin_ruby`, and runs their helpers
-      # through `helpers`, and runs each plugin's steps from `steps`, by
+      # runs helpers on the Ruby CrossLint carries through `carried_ruby`,
+      # and the other helpers through `helpers`, and runs each plugin's steps from `steps`, by
       # name.
-      def initialize: (project_files: _ProjectFiles, plugin_ruby: _PluginRuby, helpers: _Helpers, steps: Hash[String, _Step]) -> void
+      def initialize: (project_files: _ProjectFiles, carried_ruby: _CarriedRuby, helpers: _Helpers, steps: Hash[String, _Step]) -> void
 
       # The result of checking `project`. `warnings` and `verbosity` are
       # the command line's, nil when it gives none, and the configuration's
@@ -40,7 +40,7 @@ module CrossLint
 
       @steps: Hash[String, _Step]
 
-      @plugin_ruby: _PluginRuby
+      @carried_ruby: _CarriedRuby
 
       @helpers: _Helpers
 

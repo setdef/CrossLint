@@ -149,7 +149,7 @@ class DecisionLogTest < Minitest::Test
     write(@root, ".config/crosslint/config.kdl", %(plugin "#{URL}" ref="v0.1.0" path="plugins/decision-log"#{block}\n))
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
     repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: {"v0.1.0" => ROOT}, branches: [], commits: {})
-    CrossLint::App.new(plugin_ruby: LoadedPlugins::PluginRuby.new, shared_plugins: CrossLint::Adapters::MemorySharedPlugins.new({URL => repository}, err: StringIO.new))
+    CrossLint::App.new(carried_ruby: LoadedPlugins::CarriedRuby.new, shared_plugins: CrossLint::Adapters::MemorySharedPlugins.new({URL => repository}, err: StringIO.new))
   end
 
   def findings(result) = result.violations.map { [it.artifact, it.policy, it.message, it.detail] }

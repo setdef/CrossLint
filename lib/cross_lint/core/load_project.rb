@@ -24,10 +24,10 @@ module CrossLint
       # so adding the command breaks no plugin.
       RESERVED = %w[version completion config plugin plugins list cache doctor explain fix self].freeze
 
-      def initialize(configuration:, manifests:, plugin_ruby:, shared_plugins:, helpers:, built_in: {}, steps: {}, reserved: [], reserved_flags: [])
+      def initialize(configuration:, manifests:, carried_ruby:, shared_plugins:, helpers:, built_in: {}, steps: {}, reserved: [], reserved_flags: [])
         @configuration = configuration
         @manifests = manifests
-        @plugin_ruby = plugin_ruby
+        @carried_ruby = carried_ruby
         @helpers = helpers
         @shared_plugins = shared_plugins
         @built_in = built_in
@@ -228,7 +228,7 @@ module CrossLint
       def declare_in_ruby(plugin, ruby, file)
         manifest = plugin.manifest
         namespace = Module.new
-        @plugin_ruby.load(plugin, ruby.ruby, ruby.line, namespace)
+        @carried_ruby.load(plugin, ruby.ruby, ruby.line, namespace)
         found = namespace.const_get(DECLARER) if namespace.const_defined?(DECLARER, false)
         raise PluginError, "defines no class Artifacts" unless found.instance_of?(Class)
         raise PluginError, "has a class Artifacts that doesn't inherit from CrossLint::Artifacts" unless found < Artifacts

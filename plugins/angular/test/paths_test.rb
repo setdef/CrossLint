@@ -274,7 +274,7 @@ class AngularPathsTest < Minitest::Test
     block = settings ? " {\n  #{settings}\n}" : ""
     write(@root, ".config/crosslint/config.kdl", %(plugin "angular"#{block}\n#{%(plugin "debt"\n) if debt}#{lines}))
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
-    CrossLint::App.new(plugin_ruby: LoadedPlugins::PluginRuby.new)
+    CrossLint::App.new(carried_ruby: LoadedPlugins::CarriedRuby.new)
   end
 
   def findings(result) = result.violations.map { |violation| [violation.artifact, violation.role, violation.policy, violation.message] }.sort

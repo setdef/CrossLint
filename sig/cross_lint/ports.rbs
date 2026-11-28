@@ -80,11 +80,12 @@ module CrossLint
     def read: (String root, String path) -> String
   end
 
-  # Where the core loads a plugin's Ruby files, such as its rules.
-  # Adapters::FilePluginRuby runs the files in the plugin's folder, and
-  # Adapters::MemoryPluginRuby holds code in memory; both pass
-  # Testing::PluginRubyContract.
-  interface _PluginRuby
+  # Where the core loads the files of a plugin's helpers that run on the
+  # Ruby CrossLint carries, such as its Ruby rules.
+  # Adapters::FileCarriedRuby runs the files in the plugin's folder, and
+  # Adapters::MemoryCarriedRuby holds code in memory; both pass
+  # Testing::CarriedRubyContract.
+  interface _CarriedRuby
     # Runs the Ruby file `file`, relative to `plugin`'s folder, with its
     # constants in `namespace` rather than at the top level, so that two
     # plugins' classes of one name stay apart. Raises Core::Mistake,

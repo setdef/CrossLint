@@ -4,7 +4,7 @@ require_relative "../core"
 
 module CrossLint
   module Adapters
-    class MemoryPluginRuby
+    class MemoryCarriedRuby
       def initialize(files = {})
         # Windows puts a drive letter on the expanded path a file is
         # looked up by, so the paths it is given must be expanded too.

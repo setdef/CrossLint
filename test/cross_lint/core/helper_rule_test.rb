@@ -72,7 +72,7 @@ class HelperRuleTest < Minitest::Test
     configuration = Configuration.new(file: ".config/crosslint/config.kdl", plugins: plugins.map(&:listing), policies: [], warnings: nil, verbosity: nil)
     project_files = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files})
     helpers = CrossLint::Adapters::MemoryHelpers.new({"tests/reader" => answer}, commands: ["node"])
-    Check.new(project_files:, plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new, helpers:, steps: {})
+    Check.new(project_files:, carried_ruby: CrossLint::Adapters::MemoryCarriedRuby.new, helpers:, steps: {})
       .call(Project.new(root: ROOT, configuration:, plugins:))
   end
 

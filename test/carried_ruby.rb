@@ -6,7 +6,7 @@
 # last check loaded it. Here each file a manifest names loads once, before
 # any test runs (test/test_helper.rb requires this file), into a module of
 # its plugin's own, since two plugins can each define Artifacts; the
-# plugins' tests give CrossLint::App a PluginRuby, which puts the classes
+# plugins' tests give CrossLint::App a CarriedRuby, which puts the classes
 # that file defined in the namespace a check asks for. A file no manifest
 # names loads as a check loads it, by a require from one that is named.
 require "cross_lint"
@@ -29,11 +29,11 @@ module LoadedPlugins
     end
   end
 
-  # The port of CrossLint::Adapters::FilePluginRuby that gives each file
+  # The port of CrossLint::Adapters::FileCarriedRuby that gives each file
   # the classes it defined when it loaded, and loads any other file as
   # that port does.
-  class PluginRuby
-    def initialize(other = CrossLint::Adapters::FilePluginRuby.new)
+  class CarriedRuby
+    def initialize(other = CrossLint::Adapters::FileCarriedRuby.new)
       @other = other
     end
 

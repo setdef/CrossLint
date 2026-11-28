@@ -34,7 +34,7 @@ module CrossLint
       RESERVED: Array[String]
 
       # A use case that reads through `configuration` and `manifests`, runs
-      # the Ruby that declares a plugin's artifacts through `plugin_ruby`,
+      # the Ruby that declares a plugin's artifacts through `carried_ruby`,
       # starts the helper that declares them through `helpers`, and fetches
       # shared plugins through `shared_plugins`. `built_in` has
       # the folder of each built-in plugin, by name, and `steps` each step
@@ -42,7 +42,7 @@ module CrossLint
       # CrossLint, which no plugin that adds commands can be named, and
       # `reserved_flags` each way CrossLint's global flags are written,
       # which no flag of a plugin's command can be.
-      def initialize: (configuration: _Configuration, manifests: _PluginManifests, plugin_ruby: _PluginRuby, shared_plugins: _SharedPlugins,
+      def initialize: (configuration: _Configuration, manifests: _PluginManifests, carried_ruby: _CarriedRuby, shared_plugins: _SharedPlugins,
                        helpers: _Helpers, ?built_in: Hash[String, String], ?steps: Hash[String, _Step], ?reserved: Array[String],
                        ?reserved_flags: Array[String]) -> void
 

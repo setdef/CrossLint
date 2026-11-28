@@ -1,6 +1,6 @@
 module CrossLint
   module Core
-    # A Ruby rule, loaded through the plugin-Ruby port, with
+    # A Ruby rule, loaded through the CarriedRuby port, with
     # the one instance of its class that checks every artifact.
     class RubyRule
       # What stops a plugin: a fault while a rule loads or checks.
@@ -39,7 +39,7 @@ module CrossLint
       # sees `files` as the project's files, and reads them with `read`.
       # Raises Mistake when the file isn't there, and Stopped when anything
       # else goes wrong.
-      def self.load: (_PluginRuby plugin_ruby, Plugin plugin, RuleDeclaration declaration, Module namespace,
+      def self.load: (_CarriedRuby carried_ruby, Plugin plugin, RuleDeclaration declaration, Module namespace,
                       ^(String name, untyped input) -> untyped helpers, Array[String] files,
                       ^(String path) -> String read) -> RubyRule
 

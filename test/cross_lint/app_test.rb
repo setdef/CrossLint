@@ -23,7 +23,7 @@ class AppTest < Minitest::Test
   end
 
   def test_reads_crosslints_own_configuration_and_plugins
-    project = App.new(plugin_ruby: LoadedPlugins::PluginRuby.new).load_project(File.join(ROOT, "lib", "cross_lint"))
+    project = App.new(carried_ruby: LoadedPlugins::CarriedRuby.new).load_project(File.join(ROOT, "lib", "cross_lint"))
 
     assert_equal [ROOT, [["signatures", File.join(ROOT, ".config/crosslint/signatures")], ["markdown-links", File.join(ROOT, "plugins/markdown-links")], ["decision-log", File.join(ROOT, "plugins/decision-log")]]],
       [project.root, project.plugins.map { |plugin| [plugin.name, plugin.folder] }]
@@ -154,7 +154,7 @@ class AppTest < Minitest::Test
   end
 
   def test_checks_crosslint_itself_with_git
-    result = App.new(plugin_ruby: LoadedPlugins::PluginRuby.new).check(ROOT)
+    result = App.new(carried_ruby: LoadedPlugins::CarriedRuby.new).check(ROOT)
     markdown, = Open3.capture3("git", "-C", ROOT, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "*.md")
 
     documents = markdown.split("\0").uniq.size
@@ -397,7 +397,7 @@ class AppTest < Minitest::Test
     manifest = core::Manifest.new(file: "local/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
     App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}),
       manifests: CrossLint::Adapters::MemoryPluginManifests.new({File.expand_path("/app/local") => manifest}),
-      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"/app" => files}), plugin_ruby: CrossLint::Adapters::MemoryPluginRuby.new(ruby || {}),
+      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"/app" => files}), carried_ruby: CrossLint::Adapters::MemoryCarriedRuby.new(ruby || {}),
       helpers:, plugins: @base)
   end
 end

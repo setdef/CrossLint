@@ -302,10 +302,10 @@ module CrossLint
       end
     end
 
-    module PluginRubyContract
+    module CarriedRubyContract
       def test_puts_a_files_constants_in_the_namespace_it_is_given
         namespace = Module.new
-        plugin_ruby_port({"tests/rules/a.rb" => "class NamesClass < CrossLint::Rule\nend\n"}).load(ruby_plugin("tests"), "rules/a.rb", 3, namespace)
+        carried_ruby_port({"tests/rules/a.rb" => "class NamesClass < CrossLint::Rule\nend\n"}).load(ruby_plugin("tests"), "rules/a.rb", 3, namespace)
 
         assert_operator namespace.const_get(:NamesClass, false), :<, CrossLint::Rule
         refute Object.const_defined?(:NamesClass, false)
@@ -313,7 +313,7 @@ module CrossLint
 
       def test_keeps_two_plugins_classes_of_one_name_apart
         files = {"one/a.rb" => "class Same < CrossLint::Rule\n  def name = 1\nend\n", "two/a.rb" => "class Same < CrossLint::Rule\n  def name = 2\nend\n"}
-        port = plugin_ruby_port(files)
+        port = carried_ruby_port(files)
         found = %w[one two].map do |plugin|
           namespace = Module.new
           port.load(ruby_plugin(plugin), "a.rb", 3, namespace)
@@ -324,13 +324,13 @@ module CrossLint
       end
 
       def test_stops_at_a_file_the_plugins_folder_lacks
-        mistake = assert_raises(Core::Mistake) { plugin_ruby_port({}).load(ruby_plugin("tests"), "rules/missing.rb", 7, Module.new) }
+        mistake = assert_raises(Core::Mistake) { carried_ruby_port({}).load(ruby_plugin("tests"), "rules/missing.rb", 7, Module.new) }
 
         assert_equal ["tests/plugin.kdl:7", %(no file "rules/missing.rb" in the plugin's folder)], [mistake.location, mistake.message]
       end
 
       def test_raises_what_the_file_raises
-        port = plugin_ruby_port({"tests/a.rb" => "raise ArgumentError, \"boom\"\n"})
+        port = carried_ruby_port({"tests/a.rb" => "raise ArgumentError, \"boom\"\n"})
         error = assert_raises(ArgumentError) { port.load(ruby_plugin("tests"), "a.rb", 3, Module.new) }
 
         assert_equal "boom", error.message
