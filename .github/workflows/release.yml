@@ -2,8 +2,9 @@
 # builds the app
 # with Fledge from a fresh checkout on each platform in the README's
 # Compatibility table, packs it as crosslint-VERSION-PLATFORM.tar.gz (.zip
-# on Windows), and unpacks each archive on a computer of the same platform,
-# with no Ruby on PATH, to run `crosslint --version` and `crosslint --help`.
+# on Windows), runs `rake build:check` on the app it built, and unpacks each
+# archive on a computer of the same platform, with no Ruby on PATH, to run
+# `crosslint --version` and `crosslint --help`.
 # A push to trunk starts nothing here, so its runs don't queue for the
 # runners ci.yml needs.
 # The Linux archive runs in an Ubuntu 24.04 container that has no Ruby.
@@ -107,10 +108,21 @@ jobs:
         if: runner.os == 'Windows'
         run: .github/scripts/windows-ruby-env.sh
 
+      # The build and the check after it share one bundle, outside the
+      # checkout, since build-archive.sh refuses a checkout that holds an
+# untracked or ignored file.
+      - name: Place Bundler outside the checkout
+        run: echo "BUNDLE_PATH=$RUNNER_TEMP/crosslint-bundle" >> "$GITHUB_ENV"
+
       - name: Build the app and pack the archive
         run: .github/scripts/build-archive.sh "$PLATFORM" archives
         env:
           PLATFORM: ${{ matrix.platform }}
+
+      # Runs the app the build left in build/dist, so that an app that
+      # fails build:check's tasks never reaches the upload or a release.
+      - name: Check the built app
+        run: bundle exec rake build:check
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
