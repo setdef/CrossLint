@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `crosslint check --json` adds `debt` to its `summary`: the number of violations the check accepted as debt, which the summary line calls "accepted as debt". A script can tell a project with no violations from one whose every violation is debt. `--quiet` and `--warnings=none` don't change it, and it is 0 when the project lists no debt plugin.
+- `--debug`, or `DEBUG` set to a value that isn't empty, makes `crosslint update` and `crosslint init` print what they do at each step, on standard error, in the form `crosslint check` uses, and they print with `--quiet` and `--silent` too. `crosslint update` says, under `plugin`, each shared plugin it considers, with its ref; under `tag`, each tag the plugin's repository lists, with whether update may move to it, and each tag it skips, with why, or takes; and under `write`, which ref it sets in the configuration, or would with `--dry-run`. `crosslint init` says, under `read`, which of its files are there; under `setting`, each setting `--from-ng-nudge` carries and the key of `rc.json` it comes from; and under `write`, what it writes or moves, or would. Standard output is the same with and without them.
 
 ## [0.3.0] - 2026-11-28
 
