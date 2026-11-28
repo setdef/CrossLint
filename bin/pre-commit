@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# The quality gates, as `bundle exec rake` runs them, which bin/setup's
+# pre-commit hook runs before each commit. It checks the working tree.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+. bin/bundle-path
+
+# Git sets repository variables, such as GIT_DIR, in a hook, and a test
+# that makes a repository would find this one through them.
+# shellcheck disable=SC2046
+unset $(git rev-parse --local-env-vars)
+
+exec mise exec -- bundle exec rake

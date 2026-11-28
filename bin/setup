@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Sets up a clone of CrossLint for work, on a stock machine that has mise
+# (https://mise.jdx.dev): installs the tools mise.toml pins, the gems, the
+# packages the tests lock (rake fixtures), and a pre-commit hook that runs
+# bin/pre-commit, the quality gates (bundle exec rake). It asks nothing, needs
+# no sudo, and takes a few seconds to run again when nothing has changed.
+#
+#   bin/setup
+#
+# BUNDLE_PATH, if set, is where Bundler puts the gems (bin/bundle-path has
+# the default). The hook goes in the clone's hooks folder, which every
+# worktree of the clone shares, and `git commit --no-verify` skips it. A
+# pre-commit hook that bin/setup didn't write stays as it is, and with
+# core.hooksPath set, or CI, as on a CI runner, no hook is installed.
+
+set -euo pipefail
+
+say() {
+  printf 'bin/setup: %s\n' "$*"
+}
+
+if ! command -v mise > /dev/null; then
+  say "mise isn't installed. Install it from https://mise.jdx.dev/installing-mise.html, and run bin/setup again." >&2
+  exit 1
+fi
+
+cd "$(dirname "$0")/.."
+. bin/bundle-path
+
+install_hook() {
+  if [ -n "${CI:-}" ]; then
+    say "CI is set, so no pre-commit hook"
+    return
+  fi
+  local hooks hook wanted
+  if ! hooks=$(git rev-parse --git-common-dir 2> /dev/null); then
+    say "this isn't a Git clone, so no pre-commit hook"
+    return
+  fi
+  if hook=$(git config --get core.hooksPath); then
+    say "core.hooksPath is $hook, so Git reads hooks from there and not from this clone, and no pre-commit hook is installed. To run the quality gates before each commit, make a pre-commit hook in that folder run bin/pre-commit."
+    return
+  fi
+  hooks="$hooks/hooks"
+  hook="$hooks/pre-commit"
+  wanted=$(cat << 'HOOK'
+#!/bin/sh
+# Installed by CrossLint's bin/setup: runs the quality gates before each
+# commit. `git commit --no-verify` skips them.
+script="$(git rev-parse --show-toplevel)/bin/pre-commit"
+[ -f "$script" ] || exit 0
+exec bash "$script"
+HOOK
+)
+  if [ -f "$hook" ] && ! grep -q "^# Installed by CrossLint's bin/setup" "$hook"; then
+    say "left $hook as it is, since bin/setup didn't write it. To run the quality gates before each commit, make it run bin/pre-commit."
+    return
+  fi
+  if [ -f "$hook" ] && [ "$(cat "$hook")" = "$wanted" ]; then
+    say "the pre-commit hook is installed: git commit runs the quality gates, and --no-verify skips them"
+    return
+  fi
+  mkdir -p "$hooks"
+  printf '%s\n' "$wanted" > "$hook"
+  chmod +x "$hook"
+  say "installed the pre-commit hook: git commit runs the quality gates, and --no-verify skips them"
+}
+
+say "installing the tools mise.toml pins"
+mise trust -q mise.toml
+mise install
+
+say "installing the gems into $BUNDLE_PATH"
+mise exec -- bundle install
+
+say "installing the packages the tests lock"
+mise exec -- bundle exec rake fixtures
+
+install_hook
+say "done"

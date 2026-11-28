@@ -1,0 +1,7 @@
+# Sourced by bin/setup and bin/pre-commit, so that both put Bundler's gems
+# in one folder outside the repository (CONTRIBUTING.md): RuboCop and
+# `reuse lint` read gems in any folder inside it. The folder is the one
+# ci.yml uses, under HOME, which a build machine's workspace has to
+# itself. Set BUNDLE_PATH before you run either script to use another.
+: "${BUNDLE_PATH:=$HOME/.cache/crosslint/bundle}"
+export BUNDLE_PATH
