@@ -86,11 +86,6 @@ task :doctest do
   ruby "-Ilib", "tasks/doctest.rb"
 end
 
-desc "Check the style of every Ruby file with Standard (.standard.yml)"
-task :standard do
-  sh "standardrb"
-end
-
 desc "Check the style of every Ruby file with RuboCop (.rubocop.yml)"
 task :rubocop do
   sh "rubocop"

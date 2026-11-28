@@ -30,8 +30,6 @@ end
 group :check do
   # Steep checks lib/ against sig/ (rake steep).
   gem "steep", "~> 2.1"
-  # Standard checks the style of the Ruby files (rake standard).
-  gem "standard", "~> 1.54"
   # RuboCop checks the style of the Ruby files with the baseline in
   # .config/rubocop/ruby_quality.yml (rake rubocop).
   gem "rubocop", "~> 1.91"
