@@ -434,7 +434,7 @@ class NgNudgeRcTest < Minitest::Test
   def assert_refused_all(messages, data)
     mistakes = assert_raises(Core::Mistakes) { Core::NgNudge::Rc.new(JSON.generate(data)).call }
 
-    assert_equal messages, mistakes.all.map { |mistake| mistake.message }
+    assert_equal messages, mistakes.all.map(&:message)
     assert_equal [FILE], mistakes.all.map(&:file).uniq
   end
 

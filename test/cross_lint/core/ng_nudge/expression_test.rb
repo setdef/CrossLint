@@ -10,7 +10,7 @@ class NgNudgeExpressionTest < Minitest::Test
   Expression = CrossLint::Core::NgNudge::Expression
 
   # JavaScript's \s, and the characters its . leaves out, as Ruby escapes.
-  def self.escaped(*codes) = codes.map { |code| "\\" + "u" + code }.join
+  def self.escaped(*codes) = codes.map { |code| "\\u#{code}" }.join
 
   SPACE = [escaped("0009"), "-", escaped("000d", "0020", "00a0", "1680", "2000"), "-", escaped("200a", "2028", "2029", "202f", "205f", "3000", "feff")].join
   LINE_END = escaped("000a", "000d", "2028", "2029")
@@ -18,7 +18,7 @@ class NgNudgeExpressionTest < Minitest::Test
   NOT_BOUNDARY = "(?:(?<![A-Za-z0-9_])(?![A-Za-z0-9_])|(?<=[A-Za-z0-9_])(?=[A-Za-z0-9_]))"
 
   def test_writes_the_contents_of_a_class_for_codes_and_ranges_of_codes_as_unicode_escapes
-    expected = self.class.escaped("0041", "0061") + "-" + self.class.escaped("0063", "0020")
+    expected = "#{self.class.escaped('0041', '0061')}-#{self.class.escaped('0063', '0020')}"
 
     assert_equal expected, Expression.escapes([0x41, 0x61..0x63, 0x20])
     assert_equal "", Expression.escapes([])
@@ -65,7 +65,7 @@ class NgNudgeExpressionTest < Minitest::Test
   end
 
   def test_writes_a_code_given_by_x_or_u_as_the_character_with_that_code
-    source = '\x41\xE9' + self.class.escaped("00E9") + "é"
+    source = "\\x41\\xE9#{self.class.escaped('00E9')}é"
 
     assert_equal "#{self.class.escaped('0041', '00e9', '00e9')}é", Expression.translate(source)
     assert_equal "[#{self.class.escaped('00ff')}]", Expression.translate('[\xff]')

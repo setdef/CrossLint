@@ -45,7 +45,7 @@ module NpmNotices
   NOTICES = "notices/NOTICES.txt"
   SBOM = "notices/sbom.spdx.json"
 
-  module_function
+  extend self
 
   # Every package in the node_modules folders under the app folder +app+,
   # the folders a package holds in its own node_modules included.

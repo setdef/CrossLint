@@ -93,7 +93,7 @@ module CrossLint
           end
           lines.empty? ? lines : [*lines, WHY]
         rescue JavaScriptError, Mistake => error
-          ["couldn't compare the files node-glob finds with the files CrossLint finds: " + error.message]
+          ["couldn't compare the files node-glob finds with the files CrossLint finds: #{error.message}"]
         end
 
         def refuse_existing(file, what)

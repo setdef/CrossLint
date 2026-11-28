@@ -59,7 +59,7 @@ module CrossLint
         new(source, file, typed:).minimum
       rescue Core::Mistake => mistake
         before = source.lines.take((mistake.line || 1) - 1)
-        first = (1..before.size).lazy.filter_map { |count| first_nodes(before.take(count).join, file, typed) }.first
+        first = (1..(before.size)).lazy.filter_map { |count| first_nodes(before.take(count).join, file, typed) }.first
         first&.minimum || raise(mistake)
       end
 

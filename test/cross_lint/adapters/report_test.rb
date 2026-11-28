@@ -223,7 +223,7 @@ class JSONReportTest < Minitest::Test
   def test_writes_one_object_with_its_keys_in_order
     report_port.write(result_of([violation_of("lib/a.rb", "no test"), violation_of("lib/b.rb", "x", :warning, detail: "y")]))
 
-    assert_equal <<~JSON.delete("\n") + "\n", @out.string
+    assert_equal "#{<<~JSON.delete("\n")}\n", @out.string
       {"crosslint_version":"1.4.0","findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null},
       {"path":"lib/b.rb","message":"x","plugin":"tests","policy":"has-test","artifact":"lib/b.rb","role":"ruby-file","severity":"warning","detail":"y","line":null}],
       "paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}

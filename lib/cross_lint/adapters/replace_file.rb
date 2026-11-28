@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "securerandom"
 
 module CrossLint
@@ -16,7 +17,7 @@ module CrossLint
           File.chmod(File.stat(full).mode, temporary) if File.file?(full)
           File.rename(temporary, full)
         ensure
-          File.delete(temporary) if File.exist?(temporary)
+          FileUtils.rm_f(temporary)
         end
       end
     end

@@ -6,7 +6,7 @@ require "test_helper"
 # the user's home folder, cache, or Git settings.
 class IsolationTest < Minitest::Test
   def test_points_every_folder_a_program_would_use_in_the_users_home_at_a_folder_that_goes_with_the_run
-    assert_equal [SANDBOX_HOME] * 3, [ENV["HOME"], ENV["USERPROFILE"], Dir.home]
+    assert_equal [SANDBOX_HOME] * 3, [*ENV.values_at("HOME", "USERPROFILE"), Dir.home]
     assert_equal [CACHE] * 2, [ENV["XDG_CACHE_HOME"], ENV["LOCALAPPDATA"]]
     assert_equal [SANDBOX] * 2, [File.dirname(SANDBOX_HOME), File.dirname(CACHE)]
   end

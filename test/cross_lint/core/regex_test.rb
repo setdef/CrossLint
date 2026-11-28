@@ -82,7 +82,7 @@ class RegexTest < Minitest::Test
   def test_ends_a_search_that_runs_longer_than_its_time_limit
     regex = Regex.new(source: '^(a+)+\1$', time_limit: 0.01)
 
-    assert_raises(Regexp::TimeoutError) { regex.first_line(("a" * 32) + "c", {}) }
+    assert_raises(Regexp::TimeoutError) { regex.first_line("#{'a' * 32}c", {}) }
     assert_equal 1, Regex::TIME_LIMIT
   end
 

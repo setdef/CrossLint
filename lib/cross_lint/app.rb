@@ -5,7 +5,7 @@ require_relative "adapters"
 
 module CrossLint
   class App
-    PLUGINS = File.expand_path("../../../plugins", __FILE__)
+    PLUGINS = File.expand_path("../../plugins", File.dirname(__FILE__))
 
     # The other folders of PLUGINS are shared plugins, which a project lists
     # by URL and path=, so a folder there is built in only by name.

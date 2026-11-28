@@ -323,7 +323,7 @@ class GitSharedPluginsTest < Minitest::Test
 
   def test_leaves_nothing_in_the_cache_when_a_fetch_fails
     assert_raises(Core::FetchError) { port.fetch(repository_url, "main") }
-    assert_raises(Core::FetchError) { port.fetch(repository_url, ("0" * 39) + "1") }
+    assert_raises(Core::FetchError) { port.fetch(repository_url, "#{'0' * 39}1") }
 
     assert_empty Dir.children(File.join(@base, "cache", "plugins"))
   end
@@ -515,7 +515,7 @@ class GitSharedPluginsTest < Minitest::Test
     started = []
     joined = []
     began = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    error = assert_raises(Core::FetchError) { port(git: fake("sleeps.rb", "sleep 30\n"), tree: unholding_tree(started, joined) { |_pid| }).tags(repository_url) }
+    error = assert_raises(Core::FetchError) { port(git: fake("sleeps.rb", "sleep 30\n"), tree: unholding_tree(started, joined)).tags(repository_url) }
     *pipes, waiter = started
 
     assert_equal "git couldn't be put in a tree, so CrossLint ended it", error.message
@@ -841,9 +841,10 @@ class GitSharedPluginsTest < Minitest::Test
   end
 
   # A tree class that holds nothing: it pushes the pipes and waiter of each
-  # process it starts to `started`, runs the block with the pid, and
-  # raises that it couldn't hold the process.
+  # process it starts to `started`, runs the block, if there is one, with
+  # the pid, and raises that it couldn't hold the process.
   def unholding_tree(started, joined = [], &before)
+    before ||= -> (_pid) {}
     Class.new(Adapters::ProcessHelpers::TREE) do
       define_singleton_method(:popen3) do |*arguments|
         super(*arguments, &nil).tap do |started_by_it|
@@ -879,11 +880,11 @@ class GitSharedPluginsTest < Minitest::Test
   def as_windows(windows)
     processes = Adapters::ProcessHelpers
     actual = processes::WINDOWS
-    processes.send(:remove_const, :WINDOWS)
+    processes.__send__(:remove_const, :WINDOWS)
     processes.const_set(:WINDOWS, windows)
     yield
   ensure
-    processes.send(:remove_const, :WINDOWS)
+    processes.__send__(:remove_const, :WINDOWS)
     processes.const_set(:WINDOWS, actual)
   end
 

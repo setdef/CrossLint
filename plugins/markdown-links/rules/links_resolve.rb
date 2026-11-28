@@ -18,7 +18,7 @@ class LinksResolve < CrossLint::Rule
     @folders = { "" => true }
     project_files.each do |file|
       parts = file.split("/")
-      (1...parts.size).each { |size| @folders[parts.take(size).join("/")] = true }
+      (1...(parts.size)).each { |size| @folders[parts.take(size).join("/")] = true }
     end
     @anchors = {}
   end
@@ -117,7 +117,7 @@ class LinksResolve < CrossLint::Rule
       end
       while (match = INLINE.match(text))
         found << [match[1], line(text, match.begin(0))]
-        text = text[0...match.begin(0)] + fill(match[0]) + text[match.end(0)..]
+        text = text[0...(match.begin(0))] + fill(match[0]) + text[(match.end(0))..]
       end
       found.map { |written, at| [restore(written.delete_prefix("<").delete_suffix(">")), at] }.reject { |written, _| written.empty? }
     end

@@ -115,7 +115,7 @@ module CrossLint
         def parse
           JSON.parse(@text)
         rescue JSON::ParserError => error
-          raise Mistake.new("isn't valid JSON; fix it, as ng-nudge's schema says: " + error.message, file: @file)
+          raise Mistake.new("isn't valid JSON; fix it, as ng-nudge's schema says: #{error.message}", file: @file)
         end
 
         # Keeps a mistake for each key of `given` that isn't one of
@@ -315,7 +315,7 @@ module CrossLint
           @changes << "convert #{key} #{expression.dump} to matching #{translated.dump}" unless translated == expression
           Matching.new(key:, source: expression, translated:)
         rescue Expression::Unsupported => error
-          refuse(key, "is #{expression.dump}, which " + error.message + "; write it another way, or remove it")
+          refuse(key, "is #{expression.dump}, which #{error.message}; write it another way, or remove it")
         end
 
         def options(data)

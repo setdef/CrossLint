@@ -65,7 +65,7 @@ module CrossLint
         fail_at = -> (message) { raise Mistake.new(message, file:, line: setting.line) }
         fail_at.call("report-entries takes no arguments, only commented= and matching=") unless setting.arguments.empty?
         unknown = setting.properties.keys - REPORT
-        fail_at.call(Spelling.unknown("property", unknown.fetch(0), REPORT) + " for report-entries") unless unknown.empty?
+        fail_at.call("#{Spelling.unknown('property', unknown.fetch(0), REPORT)} for report-entries") unless unknown.empty?
         commented = setting.properties["commented"]
         unless commented.nil? || SEVERITIES.include?(commented)
           fail_at.call("commented= takes #{Spelling.list(SEVERITIES.map(&:dump))}, not #{commented.inspect}")

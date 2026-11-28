@@ -22,7 +22,7 @@ module Doctest
 
   class Failure < StandardError; end
 
-  module_function
+  extend self
 
   def examples(root)
     markdown = Dir.glob("{*.md,docs/**/*.md}", base: root).sort

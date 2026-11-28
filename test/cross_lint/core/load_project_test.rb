@@ -235,7 +235,7 @@ APP => Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], poli
   def test_stops_at_a_folder_of_a_repository_with_the_name_of_a_built_in_plugin
     built_in = { "debt" => "#{TOP}c/plugins/debt" }
 
-    assert_mistake CONFIG, 1, %(plugin "#{URL} (plugins/debt)" is named "debt", the name of a built-in plugin, which no local or shared plugin can have; ) +
+    assert_mistake CONFIG, 1, %(plugin "#{URL} (plugins/debt)" is named "debt", the name of a built-in plugin, which no local or shared plugin can have; ) \
       "rename the plugin's folder, since a plugin's name is its folder's name", built_in:, steps: { "track-debt" => RecordingStep.new },
       plugins: [listing(URL, ref: "v1.2.0", path: "plugins/debt")], shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures"),
       manifests: { "#{TOP}cache/a1/signatures/plugins/debt" => debt_manifest("debt") }
@@ -262,10 +262,10 @@ APP => Configuration.new(file: CONFIG, plugins: [listing("./rules/tests")], poli
   end
 
   def test_names_the_plugin_and_the_url_when_a_fetch_fails
-    assert_mistake CONFIG, 2, %(couldn't fetch shared plugin signatures from #{URL} at v9.9.9: the repository has no tag v9.9.9, ) +
+    assert_mistake CONFIG, 2, %(couldn't fetch shared plugin signatures from #{URL} at v9.9.9: the repository has no tag v9.9.9, ) \
       "and a ref is a tag or a full 40-character commit SHA", plugins: [listing(URL, ref: "v9.9.9", line: 2)],
       shared_plugins: shared_plugins("v1.2.0" => "#{TOP}cache/a1/signatures")
-    assert_mistake CONFIG, 1, %(couldn't fetch shared plugin signatures from #{URL} at main: main is a branch, ) +
+    assert_mistake CONFIG, 1, %(couldn't fetch shared plugin signatures from #{URL} at main: main is a branch, ) \
       "and a ref is a tag or a full 40-character commit SHA", plugins: [listing(URL, ref: "main")], shared_plugins: shared_plugins({})
   end
 

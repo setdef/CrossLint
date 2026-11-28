@@ -4,7 +4,7 @@ require "kdl"
 
 module CrossLint
   class UsageSpec
-    PATH = File.expand_path("../../../crosslint.usage.kdl", __FILE__)
+    PATH = File.expand_path("../../crosslint.usage.kdl", File.dirname(__FILE__))
 
     class Error < StandardError; end
 

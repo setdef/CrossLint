@@ -104,7 +104,7 @@ module BundledWorks
 
   SOURCE = /\.(js|cjs|mjs|ts|cts|mts)\z/
 
-  module_function
+  extend self
 
   # The works of WORKS that the +packages+ (NpmNotices::Package) in the
   # app folder +app+ carry.

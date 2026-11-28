@@ -23,7 +23,7 @@ module CrossLint
 
       # An Exception, not a StandardError, so that a rule's own
       # `rescue => error` doesn't swallow it and run on.
-      class Overran < Exception # standard:disable Lint/InheritException
+      class Overran < Exception
       end
 
       FAULTS = [StandardError, ScriptError, SystemExit, SystemStackError].freeze

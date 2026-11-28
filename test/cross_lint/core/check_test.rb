@@ -114,7 +114,7 @@ class CheckTest < Minitest::Test
       policies: [policy("fast", rules: [rule(piece: "slow")], applies_to: "text")])
 
     assert_equal ["fault in plugin texts: artifact text ran past the 0.01-second time limit searching a.txt with the regex of piece \"slow\""],
-      check(project(plugin), files: [], contents: { "a.txt" => ("a" * 32) + "c" }).faults.map(&:line)
+      check(project(plugin), files: [], contents: { "a.txt" => "#{'a' * 32}c" }).faults.map(&:line)
     assert_equal ["fault in plugin texts: artifact text can't search a.txt with the regex of piece \"slow\", since it isn't UTF-8"],
       check(project(plugin), files: [], contents: { "a.txt" => "caf\xE9".b.force_encoding(Encoding::UTF_8) }).faults.map(&:line)
   end
@@ -177,7 +177,7 @@ class CheckTest < Minitest::Test
     slow = routes_plugin('^(a+)+\1$', time_limit: 0.01)
 
     assert_equal ["fault in plugin routes: artifact route ran past the 0.01-second time limit searching config/routes.rb with the regex of its primary"],
-      check(project(slow), files: [], contents: { "config/routes.rb" => ("a" * 32) + "c" }).faults.map(&:line)
+      check(project(slow), files: [], contents: { "config/routes.rb" => "#{'a' * 32}c" }).faults.map(&:line)
   end
 
   def test_says_when_no_file_has_a_match_of_a_primarys_regex_and_finds_none_in_a_file_it_cant_read

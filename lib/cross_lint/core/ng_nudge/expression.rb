@@ -106,7 +106,7 @@ module CrossLint
           begin
             Regexp.new(@out)
           rescue RegexpError => error
-            refuse("isn't a regular expression Ruby reads once translated: " + error.message)
+            refuse("isn't a regular expression Ruby reads once translated: #{error.message}")
           end
           @out
         end

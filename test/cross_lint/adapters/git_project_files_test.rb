@@ -110,7 +110,7 @@ class GitProjectFilesTest < Minitest::Test
     port = project_files_port(listed: ["a.rb", "x.rb"])
     write(@base, "home/.gitconfig", "[core]\n\texcludesFile = #{@base}/ignore\n")
     write(@base, "ignore", "x.rb\n")
-    home = ENV.fetch("HOME", nil)
+    home = Dir.home
     ENV["HOME"] = File.join(@base, "home")
 
     assert_equal ["a.rb"], port.files(project_root)

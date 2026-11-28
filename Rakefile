@@ -370,9 +370,9 @@ task "build:check:plugins", [:app] do |_, arguments|
     ".config/crosslint/asks/rule.rb" => rule.call("Asks", %([violation(artifact, "answered \#{helper("answers").call("hi")}")])),
     ".config/crosslint/asks/answers.sh" => %(while read -r line; do echo "$line"; done\n),
     ".config/crosslint/gems/plugin.kdl" => plugin.call("uses-gem"),
-    ".config/crosslint/gems/rule.rb" => %(require "rainbow"\n) + rule.call("UsesGem", "[]"),
+    ".config/crosslint/gems/rule.rb" => %(require "rainbow"\n#{rule.call('UsesGem', '[]')}),
     ".config/crosslint/inline/plugin.kdl" => plugin.call("uses-inline"),
-    ".config/crosslint/inline/rule.rb" => %(require "bundler/inline"\n) + rule.call("UsesInline", "[]"),
+    ".config/crosslint/inline/rule.rb" => %(require "bundler/inline"\n#{rule.call('UsesInline', '[]')}),
     "a.md" => "",
   }
   finder = CrossLint::Adapters::ProcessHelpers.new

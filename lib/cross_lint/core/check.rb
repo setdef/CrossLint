@@ -39,7 +39,7 @@ module CrossLint
         helpers = @helpers.start(project.root, project.plugins)
         begin
           running = policies.reject { |plugin, _| stopped.any? { |fault| fault.plugin == plugin.name } }
-          violations, faults = run_plugins(project, running, kinds, helpers, files.map { -it }.freeze)
+          violations, faults = run_plugins(project, running, kinds, helpers, files.map(&:-@).freeze)
           faults = stopped + faults
         rescue Interrupt
           # Before stop, which waits for each helper to finish.

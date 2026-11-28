@@ -17,7 +17,7 @@ module SignatureComments
   # A declaration: where it is, its name, and whether it has a comment.
   Found = Data.define(:file, :line, :name, :commented)
 
-  module_function
+  extend self
 
   def missing(sources)
     found = sources.flat_map do |file, source|

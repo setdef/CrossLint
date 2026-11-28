@@ -54,7 +54,7 @@ module OwnNotices
     def tagged(text) = text.scan(TAGGED).flatten.flat_map { |expression| OwnNotices.licenses(expression) }
   end
 
-  module_function
+  extend self
 
   # The Credit of a package that declares +license+, an SPDX expression
   # (nil when it declares none), and whose license files have +texts+.

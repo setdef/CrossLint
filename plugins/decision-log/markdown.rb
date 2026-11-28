@@ -44,7 +44,7 @@ module DecisionLogMarkdown
     end
     while (match = INLINE.match(text))
       found << [match[1], line(text, match.begin(0))]
-      text = text[0...match.begin(0)] + mask(match[0], /[^\n]+/) + text[match.end(0)..]
+      text = text[0...(match.begin(0))] + mask(match[0], /[^\n]+/) + text[(match.end(0))..]
     end
     found.map { |written, at| [restore(written.delete_prefix("<").delete_suffix(">")), at] }.reject { |written, _| written.empty? }
   end

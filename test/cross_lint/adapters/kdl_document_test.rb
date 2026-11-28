@@ -42,7 +42,7 @@ class KDLDocumentTest < Minitest::Test
     assert_mistake "isn't valid KDL: unexpected $end :EOF", "a.kdl", 3, %(a 1\nb {\n)
     assert_mistake "isn't valid KDL: Identifier cannot be a literal", "a.kdl", 2, %(a 1\nb true\n)
     assert_mistake %(isn't valid KDL: unexpected STRING "late"), "a.kdl", 2, %(n {\n} "late"\n)
-    assert_mistake "isn't valid KDL: Unexpected NEWLINE in string literal", "a.kdl", 12, ("x\n" * 11) + %(n            "a\n)
+    assert_mistake "isn't valid KDL: Unexpected NEWLINE in string literal", "a.kdl", 12, %(#{"x\n" * 11}n            "a\n)
   end
 
   def test_refuses_a_type_annotation

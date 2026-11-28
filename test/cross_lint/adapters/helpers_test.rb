@@ -324,7 +324,7 @@ class ProcessHelpersTest < Minitest::Test
 
   def test_ends_a_helper_it_cant_put_in_a_process_tree_and_fails_it
     started = []
-    running = start("stays", tree: unholding_tree(started) { |_pid| })
+    running = start("stays", tree: unholding_tree(started))
     error = assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("stays"), "stays", {}) }
     *pipes, waiter = started
 
@@ -389,7 +389,7 @@ class ProcessHelpersTest < Minitest::Test
     running = CrossLint::Adapters::ProcessHelpers.new(env:).start(@base, [plugin_of("dumps")])
     running.call(plugin_of("dumps"), "dumps", {})
     running.stop
-    seen = File.read(File.join(@base, "env.txt")).lines(chomp: true).map { |line| line.split("=", 2) }.to_h
+    seen = File.read(File.join(@base, "env.txt")).lines(chomp: true).to_h { |line| line.split("=", 2) }
 
     assert_equal ["-W0", nil, []], [seen["RUBYOPT"], seen["CROSSLINT_TEST_SET"], seen.keys.grep(/\ABUNDLER_ORIG_/)]
   ensure
@@ -441,9 +441,10 @@ class ProcessHelpersTest < Minitest::Test
   private
 
   # A tree class that holds nothing: it pushes the pipes and waiter of
-  # each helper it starts to `started`, runs the block with the helper's
-  # pid, and raises that it couldn't hold the helper.
+  # each helper it starts to `started`, runs the block, if there is one,
+  # with the helper's pid, and raises that it couldn't hold the helper.
   def unholding_tree(started, &before)
+    before ||= -> (_pid) {}
     Class.new(CrossLint::Adapters::ProcessHelpers::TREE) do
       define_singleton_method(:popen3) { |*arguments| super(*arguments, &nil).tap { |started_by_it| started.concat(started_by_it) } }
       define_method(:initialize) do |pid|

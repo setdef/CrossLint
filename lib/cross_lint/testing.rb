@@ -708,7 +708,7 @@ module CrossLint
       end
 
       def test_refuses_a_commit_the_repository_doesnt_have
-        sha = ("0" * 39) + "1"
+        sha = "#{'0' * 39}1"
         error = assert_raises(Core::FetchError) { shared_plugins_port.fetch(repository_url, sha) }
 
         assert_includes error.message, sha

@@ -5,7 +5,7 @@ require "did_you_mean"
 module CrossLint
   module Core
     module Spelling
-      module_function
+      extend self
 
       def nearest(word, known) = DidYouMean::SpellChecker.new(dictionary: known).correct(word).first
 

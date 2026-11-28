@@ -64,11 +64,11 @@ class DoctestTest < Minitest::Test
 
   def stub_const_pending(pending)
     original = Doctest::PENDING
-    Doctest.send(:remove_const, :PENDING)
+    Doctest.__send__(:remove_const, :PENDING)
     Doctest.const_set(:PENDING, pending)
     yield
   ensure
-    Doctest.send(:remove_const, :PENDING)
+    Doctest.__send__(:remove_const, :PENDING)
     Doctest.const_set(:PENDING, original)
   end
 end
