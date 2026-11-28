@@ -586,7 +586,8 @@ class CLITest < Minitest::Test
       Open3.capture3("git", "init", "-q", chdir: project)
 
       assert_equal ["", "crosslint: checked 1 a artifact: no violations\n", 0], check("check", "-C", project)
-      assert_equal ["crosslint: helper h: said\n"], check("check", "-C", project, "--debug")[1].lines.grep(/ said$/)
+      assert_equal ["crosslint: debug: helper #{File.basename(project)}/h wrote to standard error: said\n"],
+        check("check", "-C", project, "--debug")[1].lines.grep(/ said$/)
     end
   end
 

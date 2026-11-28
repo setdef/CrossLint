@@ -19,8 +19,8 @@ module CrossLint
       @manifests = manifests
       @project_files = project_files
       @crosslint_ruby = crosslint_ruby
-      @helpers = helpers || Adapters::ProcessHelpers.new(err:, debug:)
       @debug = Adapters::TextDebugOutput.new(err) if debug
+      @helpers = helpers || Adapters::ProcessHelpers.new(debug: @debug)
       @shared_plugins = shared_plugins || Adapters::GitSharedPlugins.new(err:)
       @debt_files = debt_files
       @ng_nudge = ng_nudge

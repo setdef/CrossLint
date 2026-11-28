@@ -22,8 +22,7 @@ module CrossLint
 
       attr_reader :time_limit, :stop_limit
 
-      def initialize(err:, debug:, time_limit: TIME_LIMIT, stop_limit: STOP_LIMIT, env: ENV, tree: TREE)
-        @err = err
+      def initialize(debug: nil, time_limit: TIME_LIMIT, stop_limit: STOP_LIMIT, env: ENV, tree: TREE)
         @tree_class = tree
         @debug = debug
         @time_limit = time_limit
@@ -37,7 +36,7 @@ module CrossLint
             [[plugin.name, helper.name], command(plugin, helper)] #: [[String, String], Array[String]]
           end
         end
-        Running.new(root, commands.to_h, err: @err, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit, tree: @tree_class,
+        Running.new(root, commands.to_h, debug: @debug, time_limit: @time_limit, stop_limit: @stop_limit, tree: @tree_class,
           environment: @environment.changes)
       end
 
@@ -69,12 +68,11 @@ module CrossLint
       end
 
       class Running
-        def initialize(root, commands, err:, debug:, time_limit:, stop_limit:, tree:, environment:)
+        def initialize(root, commands, debug:, time_limit:, stop_limit:, tree:, environment:)
           @environment = environment
           @tree_class = tree
           @root = root
           @commands = commands
-          @err = err
           @debug = debug
           @time_limit = time_limit
           @stop_limit = stop_limit
@@ -83,7 +81,7 @@ module CrossLint
 
         def call(plugin, name, input)
           key = [plugin.name, name] #: [String, String]
-          process = @processes[key] ||= HelperProcess.new(name, @commands.fetch(key), root: @root, err: @err, debug: @debug, time_limit: @time_limit,
+          process = @processes[key] ||= HelperProcess.new(name, @commands.fetch(key), root: @root, debug: @debug, label: key.join("/"), time_limit: @time_limit,
             stop_limit: @stop_limit, tree: @tree_class, environment: @environment)
           process.call(input)
         end
@@ -101,7 +99,7 @@ module CrossLint
       end
 
       class HelperProcess
-        def initialize(name, command, root:, err:, debug:, time_limit:, stop_limit:, tree:, environment:)
+        def initialize(name, command, root:, debug:, label:, time_limit:, stop_limit:, tree:, environment:)
           @name = name
           @time_limit = time_limit
           @stop_limit = stop_limit
@@ -117,7 +115,7 @@ module CrossLint
           @reader = Thread.new do
             stderr.each_line do |line|
               @written << line
-              err.puts("crosslint: helper #{name}: #{line}") if debug
+              debug&.write("helper") { "#{label} wrote to standard error: #{line.chomp}" }
             rescue IOError, SystemCallError
               # CrossLint's own standard error is closed or broken: the
               # line is lost, and the helper's standard error is still read.

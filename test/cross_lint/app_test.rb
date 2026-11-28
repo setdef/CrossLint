@@ -277,8 +277,8 @@ class AppTest < Minitest::Test
     assert_equal ["hi"], App.new(err:).check(@base).violations.map(&:message)
     assert_empty err.string
     assert_equal ["hi"], App.new(err:, debug: true).check(@base).violations.map(&:message)
-    assert_equal ["crosslint: helper h: said\n"], err.string.lines.grep(/ said$/)
-    assert_output(nil, /^crosslint: helper h: said$/) { App.new(debug: true).check(@base) }
+    assert_equal ["crosslint: debug: helper r/h wrote to standard error: said\n"], err.string.lines.grep(/ said$/)
+    assert_output(nil, /^crosslint: debug: helper r\/h wrote to standard error: said$/) { App.new(debug: true).check(@base) }
   end
 
   def test_runs_a_shared_plugin_fetched_from_a_repository_and_fetches_it_once

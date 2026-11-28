@@ -5,8 +5,9 @@ module CrossLint
     # in the project's root, from its first call to the check's end. A
     # request is one line of JSON on its standard input, and its answer
     # one line of JSON on its standard output. What it writes to standard
-    # error goes to CrossLint's standard error under --debug, each line
-    # after "crosslint: helper NAME: ", and into the error when it fails.
+    # error goes to the debug output under --debug, under "helper" as
+    # "PLUGIN/HELPER wrote to standard error: LINE", and into the error
+    # when it fails.
     #
     # A helper runs with the environment CrossLint was started with
     # (HelperEnvironment), and finds its command on that PATH.
@@ -42,13 +43,13 @@ module CrossLint
       # closed, in seconds.
       attr_reader stop_limit: Numeric
 
-      # A port that writes what a helper writes to standard error to `err`
-      # when `debug` is true, waits `time_limit` seconds for each answer
+      # A port that says what a helper writes to standard error on `debug`
+      # when it is given, waits `time_limit` seconds for each answer
       # and `stop_limit` seconds for each helper to exit once its input
       # is closed, and finds commands on the PATH in `env`, the
       # environment. A helper starts in `tree`, a class of the shape of
       # TREE's two; a helper that can't be put in a tree is ended, and fails.
-      def initialize: (err: CLI::_Output, debug: bool, ?time_limit: Numeric, ?stop_limit: Numeric, ?env: _Environment,
+      def initialize: (?debug: _DebugOutput?, ?time_limit: Numeric, ?stop_limit: Numeric, ?env: _Environment,
                        ?tree: _Tree) -> void
 
       # What starts a helper and holds the processes it starts: a class,
@@ -92,9 +93,7 @@ module CrossLint
 
       private
 
-      @err: CLI::_Output
-
-      @debug: bool
+      @debug: _DebugOutput?
 
       @environment: HelperEnvironment
 
@@ -111,7 +110,7 @@ module CrossLint
 
         # Helpers that run `commands`, each a program and a file by the
         # plugin's and the helper's names, in `root`.
-        def initialize: (String root, Hash[[String, String], Array[String]] commands, err: CLI::_Output, debug: bool,
+        def initialize: (String root, Hash[[String, String], Array[String]] commands, debug: _DebugOutput?,
                          time_limit: Numeric, stop_limit: Numeric, tree: _Tree, environment: Hash[String, String?]) -> void
 
         private
@@ -124,9 +123,7 @@ module CrossLint
 
         @commands: Hash[[String, String], Array[String]]
 
-        @err: CLI::_Output
-
-        @debug: bool
+        @debug: _DebugOutput?
 
         @time_limit: Numeric
 
@@ -138,10 +135,12 @@ module CrossLint
       # One helper's process, with the tree of processes it starts.
       class HelperProcess
         # Starts the helper `name` as `command` in `root`, in `tree`, with
-        # `environment`'s changes to CrossLint's environment.
+        # `environment`'s changes to CrossLint's environment, saying each
+        # line it writes to standard error on `debug`, after `label`, the
+        # plugin's and the helper's names.
         # Raises Core::PluginError, after ending the helper, when `tree`
         # can't hold it.
-        def initialize: (String name, Array[String] command, root: String, err: CLI::_Output, debug: bool,
+        def initialize: (String name, Array[String] command, root: String, debug: _DebugOutput?, label: String,
                          time_limit: Numeric, stop_limit: Numeric, tree: _Tree, environment: Hash[String, String?]) -> void
 
         # Writes `input` as a line of JSON, and returns the line of JSON

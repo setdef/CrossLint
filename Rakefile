@@ -219,7 +219,7 @@ task "build:check:shared", [:app] do |_, arguments|
   url = "https://example.test/OWNER/signatures"
   plugin = %(artifact "doc" {\n  primary "{path}.md"\n  piece "note" "{path}.txt"\n}\n) +
     %(policy "has-note" {\n  applies-to "doc"\n  rule "piece-exists" piece="note"\n}\n)
-  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  finder = CrossLint::Adapters::ProcessHelpers.new
   git = File.dirname(finder.find("git") || abort("rake build:check: no git on the PATH"))
   fetching = "crosslint: fetching #{url} at v1.0.0"
   violation = "a.md: no note file at a.txt (signatures/has-note)"
@@ -270,7 +270,7 @@ task "build:check:angular", [:app] do |_, arguments|
     "src/app/card/card.component.i.d.ts" => %(export interface CardApi {\n  title: unknown;\n}\n),
     "src/app/card/card.component.scss" => ""
   }
-  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  finder = CrossLint::Adapters::ProcessHelpers.new
   path = %w[git node].map { |command| File.dirname(finder.find(command) || abort("rake build:check: no #{command} on the PATH")) }.uniq
   Dir.mktmpdir do |project|
     files.each do |file, text|
@@ -306,7 +306,7 @@ task "build:check:debt", [:app] do |_, arguments|
     ".config/crosslint/debt.tsv" => "Rule\tArtifact\tComment\tDetail\r\ndocs/has-note\ta.md\tlater\tnote\r\n",
     "a.md" => ""
   }
-  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  finder = CrossLint::Adapters::ProcessHelpers.new
   git = File.dirname(finder.find("git") || abort("rake build:check: no git on the PATH"))
   Dir.mktmpdir do |project|
     files.each do |file, text|
@@ -356,7 +356,7 @@ task "build:check:plugins", [:app] do |_, arguments|
     ".config/crosslint/inline/rule.rb" => %(require "bundler/inline"\n) + rule.call("UsesInline", "[]"),
     "a.md" => ""
   }
-  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  finder = CrossLint::Adapters::ProcessHelpers.new
   path = %w[git sh].map { |command| File.dirname(finder.find(command) || abort("rake build:check: no #{command} on the PATH")) }.uniq
   expected = [
     "a.md: answered hi (asks/p)",
@@ -398,7 +398,7 @@ task "build:check:environment", [:app] do |_, arguments|
     ".config/crosslint/dumps/dumper.sh" => %(env > helper-env.txt\nread -r line\necho '{}'\n),
     "a.md" => ""
   }
-  finder = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false)
+  finder = CrossLint::Adapters::ProcessHelpers.new
   sh = finder.find("sh") || abort("rake build:check: no sh on the PATH")
   folders = [finder.find("git") || abort("rake build:check: no git on the PATH"), sh].map { |program| File.dirname(program) }.uniq
   # None of these values is a path, which MSYS2 would convert.

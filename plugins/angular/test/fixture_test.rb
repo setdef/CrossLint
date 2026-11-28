@@ -87,7 +87,7 @@ class AngularFixtureTest < Minitest::Test
   # plugin and the command.
   def test_stops_with_2_naming_the_plugin_and_node_when_node_isnt_on_the_path
     packages_installed
-    without_node = app(helpers: CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env: {"PATH" => ""}))
+    without_node = app(helpers: CrossLint::Adapters::ProcessHelpers.new(env: {"PATH" => ""}))
     err = StringIO.new
     status = CrossLint::CLI.new(["check", "-C", FIXTURE], out: StringIO.new, err:, env: {}, app: without_node).run
 

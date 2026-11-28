@@ -65,12 +65,12 @@ class ProcessHelpersTest < Minitest::Test
     FileUtils.rm_rf(@base)
   end
 
-  def helpers_port = CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false)
+  def helpers_port = CrossLint::Adapters::ProcessHelpers.new
 
   def helper_root = @base
 
   def test_waits_a_minute_for_each_answer_and_two_seconds_for_each_exit_unless_told_otherwise
-    other = CrossLint::Adapters::ProcessHelpers.new(err: $stderr, debug: false, time_limit: 0.5, stop_limit: 0.25)
+    other = CrossLint::Adapters::ProcessHelpers.new(time_limit: 0.5, stop_limit: 0.25)
 
     assert_equal [[60, 2], [0.5, 0.25]], [helpers_port, other].map { |port| [port.time_limit, port.stop_limit] }
   end
@@ -143,7 +143,7 @@ class ProcessHelpersTest < Minitest::Test
   def test_writes_everything_a_helper_wrote_to_standard_error_by_the_time_it_stops
     allowed = Queue.new
     err = StringIO.new
-    err.define_singleton_method(:puts) do |line|
+    err.define_singleton_method(:write) do |line|
       allowed.pop
       super(line)
     end
@@ -157,7 +157,7 @@ class ProcessHelpersTest < Minitest::Test
     allowed << true
     stopping.join(EVENT_LIMIT)
 
-    assert_equal "crosslint: helper talks: heard\n", err.string
+    assert_equal "crosslint: debug: helper tests/talks wrote to standard error: heard\n", err.string
   end
 
   def test_shows_a_short_answer_that_isnt_json_whole
@@ -181,7 +181,7 @@ class ProcessHelpersTest < Minitest::Test
   end
 
   def test_finds_no_command_with_no_path
-    assert_nil CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env: {}).find("sh")
+    assert_nil CrossLint::Adapters::ProcessHelpers.new(env: {}).find("sh")
   end
 
   def test_fails_a_helper_that_answers_with_what_isnt_json
@@ -217,7 +217,7 @@ class ProcessHelpersTest < Minitest::Test
       err.string
     end
 
-    assert_equal ["", "crosslint: helper talks: heard\n"], [quiet, debugged]
+    assert_equal ["", "crosslint: debug: helper tests/talks wrote to standard error: heard\n"], [quiet, debugged]
   end
 
   def test_ends_what_a_helper_left_running_when_the_check_ends
@@ -261,7 +261,7 @@ class ProcessHelpersTest < Minitest::Test
   def test_gives_every_helper_its_time_to_exit_at_once_not_one_after_another
     helpers = %w[one two three].map { |name| CrossLint::Core::HelperDeclaration.new(name:, command: "sh", file: "listens.sh", line: 4) }
     plugin = helper_plugin.then { |tests| tests.with(manifest: tests.manifest.with(helpers:)) }
-    running = CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, stop_limit: 100).start(@base, [plugin])
+    running = CrossLint::Adapters::ProcessHelpers.new(stop_limit: 100).start(@base, [plugin])
     helpers.each { |helper| running.call(plugin, helper.name, {}) }
     stopping = stop_in_a_thread(running)
     listened = File.join(@base, "listened.txt")
@@ -384,7 +384,7 @@ class ProcessHelpersTest < Minitest::Test
     unset = CrossLint::Adapters::HelperEnvironment::UNSET
     ENV["CROSSLINT_TEST_SET"] = "by the launcher"
     env = ENV.to_h.merge("RUBYOPT" => "-rbundler/setup -W0", "BUNDLER_ORIG_RUBYOPT" => "-W0", "BUNDLER_ORIG_CROSSLINT_TEST_SET" => unset)
-    running = CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env:).start(@base, [plugin_of("dumps")])
+    running = CrossLint::Adapters::ProcessHelpers.new(env:).start(@base, [plugin_of("dumps")])
     running.call(plugin_of("dumps"), "dumps", {})
     running.stop
     seen = File.read(File.join(@base, "env.txt")).lines(chomp: true).map { |line| line.split("=", 2) }.to_h
@@ -399,7 +399,7 @@ class ProcessHelpersTest < Minitest::Test
     File.chmod(0o755, File.join(@base, "saved/tool.exe"))
     env = {"PATH" => File.join(@base, "other"), "BUNDLER_ORIG_PATH" => File.join(@base, "saved")}
 
-    assert_equal File.join(@base, "saved/tool.exe"), CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env:).find("tool.exe")
+    assert_equal File.join(@base, "saved/tool.exe"), CrossLint::Adapters::ProcessHelpers.new(env:).find("tool.exe")
   end
 
   def test_stops_at_a_helper_file_the_plugins_folder_lacks
@@ -465,14 +465,16 @@ class ProcessHelpersTest < Minitest::Test
     plugin.with(manifest: plugin.manifest.with(helpers: [helper]))
   end
 
+  # The helper `name` started, saying what it writes to standard error
+  # on `err` as debug output when `debug` is true.
   def start(name, err: StringIO.new, debug: false, **options)
-    CrossLint::Adapters::ProcessHelpers.new(err:, debug:, **options).start(@base, [plugin_of(name)])
+    CrossLint::Adapters::ProcessHelpers.new(debug: (CrossLint::Adapters::TextDebugOutput.new(err) if debug), **options).start(@base, [plugin_of(name)])
   end
 
   # A port whose PATH is `folders`, and whose PATHEXT is `pathext`.
   def port_finding(folders, pathext: nil)
     env = {"PATH" => folders.join(File::PATH_SEPARATOR), "PATHEXT" => pathext}.compact
-    CrossLint::Adapters::ProcessHelpers.new(err: StringIO.new, debug: false, env:)
+    CrossLint::Adapters::ProcessHelpers.new(env:)
   end
 
   # Ruby warns at every change of Encoding.default_external.
