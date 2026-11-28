@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `crosslint version`, and any other word that isn't one of CrossLint's commands, stops with exit status 2 in a folder with no `.config/crosslint/config.kdl`, where it printed the program's help and exited with 0. The word `version` gets `did you mean --version?`, as does any word that is the name of a flag. A word that may be a plugin's name, which CrossLint can't know without the configuration, stops with the message that says the configuration is missing. `--help`, `-h`, and `help` still print help.
 - `notices/NOTICES.txt` and `notices/sbom.spdx.json` in each release archive list the npm packages the archive carries for the Angular plugin (ts-morph, `@ts-morph/common`, and their dependencies), each with its version and license.
+- `crosslint update` treats a shared plugin's `path=` that leads out of the plugin's repository, such as one with `..` or an absolute path, as a mistake: it stops with exit status 2 at that line of the configuration, with the message `crosslint check` gives for it. In 0.2.0, `update` took such a path and read a `plugin.kdl` outside the plugin it fetched.
 
 ## [0.2.0] - 2026-11-26
 
