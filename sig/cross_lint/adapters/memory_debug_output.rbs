@@ -1,0 +1,18 @@
+module CrossLint
+  module Adapters
+    # The debug-output port in memory, for the tests: every line written
+    # to it, with its topic, in order.
+    class MemoryDebugOutput
+      include _DebugOutput
+
+      # Each line written, as its topic and the line, in order.
+      attr_reader lines: Array[[String, String]]
+
+      # Debug output that holds no line yet.
+      def initialize: () -> void
+
+      # The lines written under `topic`, in order.
+      def written: (String topic) -> Array[String]
+    end
+  end
+end

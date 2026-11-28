@@ -167,6 +167,21 @@ module CrossLint
     def write: (Core::CheckResult result) -> void
   end
 
+  # Where the core says what it does at each step of a run, for a person
+  # who asks why a check found, or didn't find, what they expected: the
+  # debug output, which CrossLint writes under --debug or with DEBUG set.
+  # Adapters::TextDebugOutput writes lines to standard error, and
+  # Adapters::MemoryDebugOutput holds them in memory; both pass
+  # Testing::DebugOutputContract. A use case given none says nothing, and
+  # builds no text to say.
+  interface _DebugOutput
+    # Says the text the block returns, under `topic`, a word that names
+    # what the text is about, such as "artifact": each line of the text
+    # as a line of its own, in order, and nothing for a text with no
+    # lines. Calls the block once.
+    def write: (String topic) { () -> String } -> void
+  end
+
   # Where the core reads and writes a project's debt file: a format, such
   # as ng-nudge's tab-separated values, and where its files are.
   # Adapters::TSVDebtFiles reads and writes the files, and

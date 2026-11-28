@@ -1,0 +1,22 @@
+module CrossLint
+  module Adapters
+    # The debug-output port as lines of standard error, each beginning
+    # with "crosslint: debug: " and the topic, then a space and one line
+    # of the text, as it is:
+    #
+    #     crosslint: debug: file lib/a.rb
+    class TextDebugOutput
+      include _DebugOutput
+
+      # What begins each line.
+      PREFIX: String
+
+      # Debug output that writes its lines to `err`.
+      def initialize: (CLI::_Output err) -> void
+
+      private
+
+      @err: CLI::_Output
+    end
+  end
+end

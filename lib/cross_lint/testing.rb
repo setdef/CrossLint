@@ -418,6 +418,38 @@ module CrossLint
       end
     end
 
+    module DebugOutputContract
+      def test_writes_each_text_under_its_topic_in_order
+        port = debug_output_port
+        port.write("file") { "lib/a.rb" }
+        port.write("artifact") { "tests/ruby-file lib/a.rb" }
+
+        assert_equal [["file", "lib/a.rb"], ["artifact", "tests/ruby-file lib/a.rb"]], debug_lines
+      end
+
+      def test_writes_each_line_of_a_text_as_a_line_of_its_own
+        debug_output_port.write("file") { "lib/a.rb\nlib/b.rb\n" }
+
+        assert_equal [["file", "lib/a.rb"], ["file", "lib/b.rb"]], debug_lines
+      end
+
+      def test_writes_nothing_for_a_text_with_no_lines
+        debug_output_port.write("file") { "" }
+
+        assert_empty debug_lines
+      end
+
+      def test_asks_for_the_text_once
+        asked = 0
+        debug_output_port.write("file") do
+          asked += 1
+          "lib/a.rb"
+        end
+
+        assert_equal 1, asked
+      end
+    end
+
     module ReportContract
       def test_reports_each_violation_in_order
         port = report_port

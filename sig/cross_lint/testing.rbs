@@ -317,6 +317,30 @@ module CrossLint
       def test_stops_before_any_helper_starts_at_a_command_not_on_the_path: () -> void
     end
 
+    # What a debug-output adapter's test defines.
+    interface _DebugOutputTest
+      # A port that writes where `debug_lines` reads.
+      def debug_output_port: () -> _DebugOutput
+
+      # What the port wrote: each line as its topic and the line, in order.
+      def debug_lines: () -> Array[[String, String]]
+    end
+
+    # The tests every adapter of the debug-output port passes.
+    module DebugOutputContract : _DebugOutputTest, Minitest::Assertions
+      # write writes each text under its topic, in the order written.
+      def test_writes_each_text_under_its_topic_in_order: () -> void
+
+      # write writes each line of a text with several as a line of its own.
+      def test_writes_each_line_of_a_text_as_a_line_of_its_own: () -> void
+
+      # write writes nothing for an empty text.
+      def test_writes_nothing_for_a_text_with_no_lines: () -> void
+
+      # write calls its block once.
+      def test_asks_for_the_text_once: () -> void
+    end
+
     # What a report adapter's test defines.
     interface _ReportTest
       # A port that writes where `reported` reads.
