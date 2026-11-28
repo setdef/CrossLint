@@ -32,4 +32,7 @@ group :check do
   gem "steep", "~> 2.1"
   # Standard checks the style of the Ruby files (rake standard).
   gem "standard", "~> 1.54"
+  # RubyCritic runs Flay, Flog, and Reek over exe/, lib/, and sig/, and
+  # fails below the minimum score in .rubycritic.yml (rake rubycritic).
+  gem "rubycritic", "~> 5.0"
 end

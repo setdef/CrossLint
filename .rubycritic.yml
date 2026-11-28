@@ -1,0 +1,18 @@
+# RubyCritic's settings (rake rubycritic), which also run when you call
+# rubycritic yourself in this folder.
+
+# The lowest score the code under exe/, lib/, and sig/ may have, to two
+# places, as RubyCritic prints it at the end of its report. It only ever
+# rises: raise it when the score rises, and never lower it.
+minimum_score: 71
+
+paths:
+  - exe
+  - lib
+  - sig
+formats:
+  - console
+  - html
+no_browser: true
+# The report, which Git ignores.
+path: tmp/rubycritic

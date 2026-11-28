@@ -91,6 +91,13 @@ task :standard do
   sh "standardrb"
 end
 
+# RubyCritic exits the process when the score is below .rubycritic.yml's
+# minimum_score, so a shell runs it and Rake reports the failure.
+desc "Check the score of exe/, lib/, and sig/ with RubyCritic (.rubycritic.yml)"
+task :rubycritic do
+  sh "rubycritic"
+end
+
 desc "Check lib/ against sig/ with Steep (Steepfile)"
 task :steep do
   sh "steep", "check"
@@ -130,7 +137,7 @@ end
 # checker (test:rbs), since a call that breaks sig/ is otherwise found
 # only after the push.
 desc "Run every check CI's Linux job runs"
-task check: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :reuse, :steep, :test, "test:rbs"]
+task check: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :rubycritic, :reuse, :steep, :test, "test:rbs"]
 
 desc "Run every check, before a push"
 task gate: :check

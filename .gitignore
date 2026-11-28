@@ -8,8 +8,9 @@
 /build/.bundle/
 /build/vendor/
 
-# What the tests and the Fledge build write.
+# What the tests, RubyCritic, and the Fledge build write.
 /coverage/
+/tmp/rubycritic/
 /build/dist/
 
 # The packages a plugin's tests install into their fixtures.
