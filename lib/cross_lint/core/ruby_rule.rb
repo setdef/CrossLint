@@ -25,7 +25,7 @@ module CrossLint
       # `rescue => error` doesn't swallow it and run on. Timeout's own
       # exception for that would reach a rule's `rescue Timeout::Error` as
       # well, and be reported for a timeout the rule set itself.
-      class Overran < Exception # rubocop:disable Lint/InheritException
+      class Overran < Exception
       end
 
       FAULTS = [StandardError, ScriptError, SystemExit, SystemStackError].freeze
