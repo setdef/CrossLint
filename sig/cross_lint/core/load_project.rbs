@@ -83,8 +83,8 @@ module CrossLint
 
       @crosslint: Version
 
-      # The configuration of `root`, once its oldest CrossLint, if it names
-      # one, is no newer than this one.
+      # The configuration of `root`, once its minimum version, if it has
+      # one, is no newer than this CrossLint.
       def read_configuration: (String root) -> Configuration
 
       # The plugin listed at `index`, with its manifest, checked against

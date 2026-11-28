@@ -11,7 +11,8 @@ module CrossLint
       # the update looks for the latest, such as "v1.4.0", whose manifest
       # this CrossLint reads. Nil when no tag is a version. The tag the
       # plugin is at already, when it is one of the tags of that version,
-      # or when every newer tag needs a newer CrossLint.
+      # or when every newer tag's minimum version is newer than this
+      # CrossLint.
       attr_reader newest: String?
 
       # The highest tag of each group of newer versions that aren't
@@ -106,8 +107,8 @@ module CrossLint
     # aren't compatible. A plugin whose ref is no version tag, a
     # prerelease tag or a commit SHA among them, or whose repository has
     # no such tag, stays as it is. Local and built-in plugins are left
-    # alone. A tag whose manifest needs a newer CrossLint, or whose line
-    # naming the oldest CrossLint this one can't read, is skipped, and
+    # alone. A tag whose manifest has a minimum version newer than this
+    # CrossLint, or whose line for it this one can't read, is skipped, and
     # the plugin moves to the newest tag below it that this CrossLint
     # reads, or stays. To learn that, it fetches each tag above the ref
     # that it would move to, the highest first, and stops at the first
@@ -119,11 +120,10 @@ module CrossLint
     class UpdatePlugins
       # A use case that reads the configuration and sets refs through
       # `configuration`, lists and fetches tags through `shared_plugins`,
-      # and reads the oldest CrossLint of each tag's manifest through
+      # and reads the minimum version of each tag's manifest through
       # `manifests`, for the CrossLint whose version is `crosslint`: a
-      # configuration that names a newer one as the oldest that reads it
-      # stops the update with a Mistake that names both, before any
-      # request.
+      # configuration whose minimum version is newer stops the update
+      # with a Mistake that names both, before any request.
       def initialize: (configuration: _Configuration, shared_plugins: _SharedPlugins, manifests: _PluginManifests, crosslint: Version) -> void
 
       # Updates the project whose root is `start` or the nearest folder

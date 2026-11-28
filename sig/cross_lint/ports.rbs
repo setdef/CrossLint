@@ -13,9 +13,9 @@ module CrossLint
     # that has a configuration, or nil when none does.
     def find_root: (String start) -> String?
 
-    # The oldest CrossLint that reads the configuration of the project
-    # whose root is `root`, which the configuration names on its first
-    # line, or nil when it names none. Reads that line alone, so that a
+    # The minimum version of the configuration of the project whose root
+    # is `root`, which the configuration has on its first line, or nil
+    # when it has none. Reads that line alone, so that a
     # configuration written for a newer CrossLint, with lines this one
     # can't read, still gives it. Raises Core::Mistake, naming the file and
     # the line, when that line names it twice, comes after another line, or
@@ -25,7 +25,7 @@ module CrossLint
 
     # The configuration of the project whose root is `root`. Raises
     # Core::Mistake, naming the file and the line, at a mistake in it, the
-    # line that names the oldest CrossLint among them, and when the
+    # line that has the minimum version among them, and when the
     # project has none. Reads that line as any other, and compares its
     # version with no CrossLint's: the caller asks `minimum` first.
     def read: (String root) -> Core::Configuration
@@ -60,17 +60,17 @@ module CrossLint
     # The manifest's file name in a plugin's folder, such as "plugin.kdl".
     def file: () -> String
 
-    # The oldest CrossLint that reads the manifest of the plugin in
-    # `folder`, a path relative to `root`, which the manifest names on its
-    # first line, or nil when it names none or the folder has no manifest.
+    # The minimum version of the manifest of the plugin in `folder`, a
+    # path relative to `root`, which the manifest has on its first line,
+    # or nil when it has none or the folder has no manifest.
     # Reads that line alone, as _Configuration#minimum does, and raises
     # Core::Mistake for that line as it does.
     def minimum: (String root, String folder) -> Core::MinimumVersion?
 
     # The manifest of the plugin in `folder`, a path relative to `root`,
     # or nil when the folder has none. Raises Core::Mistake, naming the
-    # file and the line, at a mistake in it, the line that names the
-    # oldest CrossLint among them. Compares that version with no
+    # file and the line, at a mistake in it, the line that has the
+    # minimum version among them. Compares that version with no
     # CrossLint's: the caller asks `minimum` first.
     def read: (String root, String folder) -> Core::Manifest?
   end

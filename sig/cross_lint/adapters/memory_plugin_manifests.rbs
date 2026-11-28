@@ -7,8 +7,8 @@ module CrossLint
       include _PluginManifests
 
       # A port that holds `folders`, by absolute path, and names `file`,
-      # and whose manifests name the oldest CrossLint that reads them in
-      # `minimums`, by absolute path, whatever a folder holds.
+      # and whose manifests have the minimum versions in `minimums`, by
+      # absolute path, whatever a folder holds.
       def initialize: (?Hash[String, Core::Manifest | Core::Mistake] folders, ?file: String,
                        ?minimums: Hash[String, Core::MinimumVersion]) -> void
 

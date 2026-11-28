@@ -32,7 +32,7 @@ A plugin's name is its folder's name, here `modules`. CrossLint names each viola
 
 ## `crosslint`
 
-In `crosslint min=VERSION`, `VERSION` is the oldest CrossLint that reads the plugin. Write the line as the manifest's first line, once, when the plugin uses something an older CrossLint doesn't have, such as a kind of line added in a later release. A plugin for CrossLint 1.2.0 or later starts:
+In `crosslint min=VERSION`, `VERSION` is the plugin's minimum version, the oldest CrossLint that reads it. Write the line as the manifest's first line, once, when the plugin uses something an older CrossLint doesn't have, such as a kind of line added in a later release. A plugin for CrossLint 1.2.0 or later starts:
 
 <!--
 SPDX-SnippetBegin
@@ -62,7 +62,7 @@ crosslint: .config/crosslint/modules/plugin.kdl:1: plugin modules needs CrossLin
 
 `VERSION` and the line are written as in [the configuration](configuration.md#crosslint): one to three numbers in a string, with a number left out read as 0, and no operator or pre-release part. A `crosslint` line after another line, a second one, and one with anything but `min=` stop CrossLint with exit status 2. Without the line, a CrossLint reads the plugin when it reads each of its other lines.
 
-For a shared plugin, `crosslint update` skips a tag whose `plugin.kdl` needs a newer CrossLint than the one that runs it, and moves the project to the newest tag below it that this CrossLint reads, so a project on an older CrossLint keeps getting the fixes a plugin's author releases for it.
+For a shared plugin, `crosslint update` skips a tag whose `plugin.kdl` has a minimum version newer than the CrossLint that runs it, and moves the project to the newest tag below it that this CrossLint reads, so a project on an older CrossLint keeps getting the fixes a plugin's author releases for it.
 
 ## `artifact`
 

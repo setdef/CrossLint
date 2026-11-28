@@ -1,8 +1,8 @@
 module CrossLint
   module Core
-    # The oldest CrossLint that reads a manifest or a configuration, as
-    # the file names it on its first line, and where: in KDL,
-    # `crosslint min="1.2"`. A CrossLint older than that stops before it
+    # The minimum version of a manifest or a configuration: the oldest
+    # CrossLint that reads it, as the file gives it on its first line, and
+    # where: in KDL, `crosslint min="1.2"`. A CrossLint older than that stops before it
     # reads any other line of the file, with a mistake that names both
     # versions.
     #
@@ -25,20 +25,20 @@ module CrossLint
       # The line of the file that names it.
       attr_reader line: Integer
 
-      # The minimum that `text` names, at `line` of `file`, or nil when
+      # The minimum version that `text` names, at `line` of `file`, or nil when
       # `text` isn't a bare version of one to three numbers
       # (Version.parse).
       def self.parse: (String text, file: String, line: Integer) -> MinimumVersion?
 
       # Whether `running`, the version of a CrossLint, reads the file: it
-      # is the minimum or later.
+      # is the minimum version or later.
       def met_by?: (Version running) -> bool
 
       # What the file needs, as a message says it: "needs CrossLint 1.2 or
       # later".
       def requirement: () -> String
 
-      # Nothing when `running` meets the minimum. Otherwise raises Mistake,
+      # Nothing when `running` meets the minimum version. Otherwise raises Mistake,
       # at the file's line, that says what needs which CrossLint, `of` such
       # as "plugin links" when it is given, names `running`, and says to
       # upgrade CrossLint.
