@@ -219,6 +219,14 @@ class NgNudgeMoveTest < Minitest::Test
     assert_equal [[RC, nil], [NG_DEBT, 3]], mistakes.all.map { |mistake| [mistake.file, mistake.line] }
   end
 
+  def test_says_under_debug_that_a_debt_file_it_cannot_read_is_there_without_how_many_entries_it_has
+    broken = Core::Mistake.new("has an entry with no rule", file: NG_DEBT, line: 3)
+    debug = Memory::MemoryDebugOutput.new
+    assert_raises(Core::Mistake) { world({}, debt_file: broken).move(debug:) }
+
+    assert_equal ["#{RC}: is there", "#{NG_DEBT}: is there", "#{CONFIG}: isn't there"], debug.written("read")
+  end
+
   def test_refuses_to_replace_a_configuration_unless_forced
     world = world({}, existing: true)
     mistake = assert_raises(Core::Mistake) { world.move }
