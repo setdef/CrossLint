@@ -12,6 +12,56 @@ module CrossLint
     # violation, and the result leaves out what the steps excuse and adds
     # what they report.
     class Check
+      # How a check reports: its --warnings mode, its verbosity, and whether
+      # it lists the artifacts that pass.
+      class Output < Data
+        # The --warnings mode, or nil for `:all`.
+        attr_reader warnings: (:all | :none | :error)?
+      
+        # The verbosity.
+        attr_reader verbosity: (:normal | :quiet | :silent)
+      
+        # Whether the check lists the artifacts that pass, as for --all.
+        attr_reader all: bool
+      
+        # An output with these fields.
+        def self.new: (warnings: (:all | :none | :error)?, verbosity: (:normal | :quiet | :silent), all: bool) -> instance
+      
+        # An output with these fields.
+        def initialize: (warnings: (:all | :none | :error)?, verbosity: (:normal | :quiet | :silent), all: bool) -> void
+      
+        # Whether warnings are shown: false under --warnings=none.
+        def warnings_shown?: () -> bool
+      
+        # Whether a warning fails the check, as under --warnings=error.
+        def warnings_fail?: () -> bool
+      
+        # Whether the verbosity is normal.
+        def normal?: () -> bool
+      
+        # Whether the verbosity is silent.
+        def silent?: () -> bool
+      
+        # Whether the check shows `violation`.
+        def shows?: (Violation violation) -> bool
+      
+        # Whether `violation` fails the check.
+        def fails?: (Violation violation) -> bool
+      
+        # The violations of `shown` the check reports: under --quiet, those
+        # that fail it.
+        def findings: (Array[Violation] shown) -> Array[Violation]
+      
+        # Whether the check lists the artifacts that pass.
+        def lists_passed?: () -> bool
+      
+        # Whether the check shows its notices about plugins.
+        def shows_notices?: () -> bool
+      
+        # Whether the check shows the notices its steps give.
+        def shows_step_notices?: () -> bool
+      end
+      
       # A use case that reads the project's files through `project_files`,
       # runs helpers on CrossLint's Ruby through `crosslint_ruby`,
       # and the other helpers through `helpers`, and runs each plugin's steps from `steps`, by
@@ -97,12 +147,11 @@ module CrossLint
                        Hash[String, String | true] flags) -> Array[StepResult]
 
       # The result: violations the steps didn't excuse and those they add,
-      # paid-off entries, notices, and passing artifacts, filtered by
-      # `warnings` and `verbosity`, the summary, `faults`, and what the
-      # steps wrote. A nil `warnings` is `:all`.
+      # paid-off entries, notices, and passing artifacts, as `output`
+      # reports them, the summary, `faults`, and what the steps wrote.
       def report: (Project project, Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
-                   Array[Violation] violations, Array[Fault] faults, Array[StepResult] steps, warnings: (:all | :none | :error)?,
-                   verbosity: (:normal | :quiet | :silent), all: bool, command: [String, String]?) -> CheckResult
+                   Array[Violation] violations, Array[Fault] faults, Array[StepResult] steps, Output output,
+                   [String, String]? command) -> CheckResult
 
       # A notice for each Ruby rule no policy runs and each artifact
       # declaration whose primary pattern matches no file.
@@ -122,10 +171,10 @@ module CrossLint
       # PLUGIN/ARTIFACT where two plugins' kinds share a name.
       def counts: (Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked) -> Array[[String, Integer]]
 
-      # The summary of the violations shown, with `hidden` true when
-      # --warnings=none hides warnings.
+      # The summary of the violations shown, with `warnings_shown` false
+      # when --warnings=none hides warnings.
       def summary: (Hash[String, Hash[String, Array[Artifact]]] kinds, Array[[String, String]] checked,
-                    Array[Violation] shown, bool hidden, Integer faults) -> Summary
+                    Array[Violation] shown, bool warnings_shown, Integer faults) -> Summary
 
       # `findings` in the order the report gives them.
       def sort: (Array[Violation | PaidOffEntry | Artifact] findings) -> Array[Violation | PaidOffEntry | Artifact]

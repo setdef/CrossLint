@@ -11,6 +11,31 @@ require_relative "step"
 module CrossLint
   module Core
     class Check
+      class Output < Data.define(:warnings, :verbosity, :all)
+        def warnings_shown? = warnings != :none
+
+        def warnings_fail? = warnings == :error
+
+        def normal? = verbosity == :normal
+
+        def silent? = verbosity == :silent
+
+        def shows?(violation) = warnings_shown? || violation.severity == :error
+
+        def fails?(violation) = violation.severity == :error || warnings_fail?
+
+        def findings(shown) = (verbosity == :quiet) ? shown.select { |violation| fails?(violation) } : shown
+
+        def lists_passed? = all && normal?
+
+        # Every notice is a warning, so --quiet reports one only when it
+        # fails the check.
+        def shows_notices? = warnings_shown? && (normal? || (verbosity == :quiet && warnings_fail?))
+
+        # A step's warnings never fail the check.
+        def shows_step_notices? = warnings_shown? && normal?
+      end
+
       def initialize(project_files:, crosslint_ruby:, helpers:, steps:, debug: nil)
         @project_files = project_files
         @crosslint_ruby = crosslint_ruby
@@ -20,8 +45,7 @@ module CrossLint
       end
 
       def call(project, warnings: nil, verbosity: nil, all: false, command: nil, flags: {}, started: nil)
-        warnings ||= project.configuration.warnings
-        verbosity ||= project.configuration.verbosity || :normal
+        output = Output.new(warnings: warnings || project.configuration.warnings, verbosity: verbosity || project.configuration.verbosity || :normal, all:)
         policies = enabled_policies(project)
         files = @project_files.files(project.root)
         @debug&.write("file") { files.sort.join("\n") }
@@ -35,7 +59,7 @@ module CrossLint
         end
         # Before any rule runs, since a rule that asks a helper to read a
         # language's files can keep a large project silent for a while.
-        started&.call(counts(kinds, checked_kinds(project, policies))) if verbosity == :normal
+        started&.call(counts(kinds, checked_kinds(project, policies))) if output.normal?
         helpers = @helpers.start(project.root, project.plugins)
         begin
           running = policies.reject { |plugin, _| stopped.any? { |fault| fault.plugin == plugin.name } }
@@ -49,7 +73,7 @@ module CrossLint
           helpers.stop
         end
         steps = run_steps(project, violations, faults, command, flags)
-        report(project, kinds, checked_kinds(project, policies), violations, faults, steps, warnings:, verbosity:, all:, command:)
+        report(project, kinds, checked_kinds(project, policies), violations, faults, steps, output, command)
       end
 
       private
@@ -172,27 +196,22 @@ module CrossLint
         end
       end
 
-      def report(project, kinds, checked, violations, faults, steps, warnings:, verbosity:, all:, command:)
-        hidden = warnings == :none
+      def report(project, kinds, checked, violations, faults, steps, output, command)
         excused = steps.flat_map(&:excused)
         left = violations.reject { |violation| excused.include?(violation) }
         added = steps.flat_map(&:violations).reject { |violation| project.configuration.off?(violation.plugin, violation.policy) }
-        shown = (left + added).select { |violation| !hidden || violation.severity == :error }
+        shown = (left + added).select { |violation| output.shows?(violation) }
         paid_off = steps.flat_map(&:paid_off)
         notices = notices(project, kinds)
-        fails = -> (violation) { violation.severity == :error || warnings == :error }
-        wrote = steps.flat_map(&:wrote)
         # A command is not a judgment of the check: it did what it was asked.
-        failed = command.nil? && (shown.any?(&fails) || !paid_off.empty? || (warnings == :error && !notices.empty?))
-        findings = (verbosity == :quiet) ? shown.select(&fails) : shown
-        findings += passed(kinds, checked, left) if all && verbosity == :normal
-        # Every notice is a warning, so --quiet reports one only when it
-        # fails the check. A step's warnings never fail it.
-        shows_notices = !hidden && (verbosity == :normal || (verbosity == :quiet && warnings == :error))
-        notices = notices.select { shows_notices } + steps.flat_map(&:notices).select { !hidden && verbosity == :normal }
-        summary = summary(kinds, checked, shown, hidden, faults.size).with(paid_off: paid_off.size, excused: excused.uniq.size, steps: steps.flat_map(&:summary))
-        CheckResult.new(notices:, findings: sort((findings + paid_off).reject { verbosity == :silent }), summary:, verbosity:, failed:,
-          faults:, wrote: wrote.reject { verbosity == :silent })
+        failed = command.nil? && (shown.any? { |violation| output.fails?(violation) } || !paid_off.empty? || (output.warnings_fail? && !notices.empty?))
+        findings = output.findings(shown)
+        findings += passed(kinds, checked, left) if output.lists_passed?
+        notices = notices.select { output.shows_notices? } + steps.flat_map(&:notices).select { output.shows_step_notices? }
+        summary = summary(kinds, checked, shown, output.warnings_shown?, faults.size)
+          .with(paid_off: paid_off.size, excused: excused.uniq.size, steps: steps.flat_map(&:summary))
+        CheckResult.new(notices:, findings: sort((findings + paid_off).reject { output.silent? }), summary:, verbosity: output.verbosity, failed:,
+          faults:, wrote: steps.flat_map(&:wrote).reject { output.silent? })
       end
 
       def notices(project, kinds)
@@ -233,9 +252,9 @@ Notice.new(file: plugin.manifest.file, line: optional.line,
         end
       end
 
-      def summary(kinds, checked, shown, hidden, faults)
+      def summary(kinds, checked, shown, warnings_shown, faults)
         Summary.new(kinds: counts(kinds, checked), faults:, errors: shown.count { |violation| violation.severity == :error },
-          warnings: shown.count { |violation| violation.severity == :warning }, warnings_shown: !hidden)
+          warnings: shown.count { |violation| violation.severity == :warning }, warnings_shown:)
       end
 
       def sort(findings)
