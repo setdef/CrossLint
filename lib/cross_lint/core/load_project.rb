@@ -19,6 +19,8 @@ module CrossLint
       # What a command of a plugin is called: lowercase letters, digits, and -.
       COMMAND = /\A[a-z0-9-]+\z/
 
+      PRIMARY_NAME = "piece %s has the name of the artifact's primary piece, which is always called \"primary\"; name the piece something else"
+
       # The names CrossLint keeps for commands it may add, as well as the
       # names of the commands it has: no plugin that adds commands has one,
       # so adding the command breaks no plugin.
@@ -365,6 +367,8 @@ module CrossLint
       def check_artifact(artifact, file)
         once(artifact.pieces, "piece", file)
         artifact.pieces.each do |piece|
+          raise Mistake.new(PRIMARY_NAME % piece.name.dump, file:, line: piece.line) if piece.name == Piece::PRIMARY
+
           extra = piece.pattern.placeholders - artifact.placeholders
           next if extra.empty?
 

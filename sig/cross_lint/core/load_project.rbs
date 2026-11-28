@@ -28,6 +28,10 @@ module CrossLint
       # What the name of a plugin's command is made of.
       COMMAND: Regexp
 
+      # What CrossLint says of a piece, whose name `%s` is quoted, that
+      # is named as the artifact's primary piece is.
+      PRIMARY_NAME: String
+
       # The names CrossLint keeps for commands it may add, which no plugin
       # that adds commands can have, besides the names of the commands it
       # has.
@@ -126,8 +130,9 @@ module CrossLint
       # agrees with itself and with the other plugins.
       def check_manifest: (Plugin plugin, Array[Plugin] plugins) -> void
 
-      # Checks that each of an artifact's pieces has its name once
-      # and only placeholders its primary pattern has.
+      # Checks that each of an artifact's pieces has its name once, is not
+      # named "primary", the name of the artifact's primary piece, and
+      # has only placeholders its primary pattern has.
       def check_artifact: (ArtifactDeclaration artifact, String file) -> void
 
       # Checks that no two of `declarations` have the same name.

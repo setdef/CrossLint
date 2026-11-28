@@ -71,6 +71,7 @@ module CrossLint
 
       # The artifact's primary piece, as a piece like the others: named
       # "primary", and existing, since CrossLint found the artifact there.
+      # `piece("primary")` gives the same piece.
       attr_reader primary: Piece
 
       # The primary piece's path, relative to the project's root, with `/`;
@@ -93,7 +94,9 @@ module CrossLint
       # A view of `artifact` that reads files with `read`.
       def initialize: (Core::Artifact artifact, ^(String path) -> String read) -> void
 
-      # The piece called `name`. Raises KeyError when the artifact's
+      # The piece called `name`: `primary` for "primary", which no
+      # declaration can name a piece, and otherwise the piece its
+      # declaration gives that name. Raises KeyError when the artifact's
       # declaration has none of that name.
       def piece: (String name) -> Piece
 

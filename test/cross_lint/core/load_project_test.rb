@@ -433,6 +433,22 @@ class LoadProjectTest < Minitest::Test
     assert_mistake "rules/tests/plugin.kdl", 4, %(piece "test" is declared twice; the first is on line 3), manifest:
   end
 
+  def test_stops_at_a_piece_named_primary_since_that_is_the_name_of_the_primary_piece
+    manifest = tests_manifest(artifacts: [artifact(pieces: [piece("test", line: 3), piece("primary", line: 4)])])
+
+    assert_mistake "rules/tests/plugin.kdl", 4,
+      %(piece "primary" has the name of the artifact's primary piece, which is always called "primary"; name the piece something else), manifest:
+  end
+
+  def test_stops_at_a_piece_named_primary_that_a_plugins_ruby_or_helper_declares_naming_the_artifacts_line
+    message = %(piece "primary" has the name of the artifact's primary piece, which is always called "primary"; name the piece something else)
+    ruby = declaring { |_| [artifact("ruby-file", primary: "lib/{path}.rb", pieces: {"primary" => "lib/{path}.rbi"})] }
+    answer = ->(_) { {"artifacts" => [{"name" => "ruby-file", "primary" => "lib/{path}.rb", "pieces" => {"primary" => "lib/{path}.rbi"}}]} }
+
+    assert_mistake "rules/tests/plugin.kdl", 4, message, manifest: declaring_manifest, ruby: ruby
+    assert_mistake "rules/tests/plugin.kdl", 4, message, manifest: helped_manifest, helpers: HelperPort.new({"tests/roles" => answer}, commands: ["node"])
+  end
+
   def test_stops_at_a_piece_with_a_placeholder_its_files_pattern_lacks
     manifest = tests_manifest(artifacts: [artifact(pieces: [piece("test", "test/{path}/{name}_test.rb", line: 3)])])
 

@@ -38,12 +38,14 @@ module CrossLint
         @line = artifact.line
         @key = artifact.key
         @match = artifact.match.freeze
-        @primary = Piece.new(Core::Piece.new(name: "primary", path: artifact.path, exists: true), read)
+        @primary = Piece.new(Core::Piece.new(name: Core::Piece::PRIMARY, path: artifact.path, exists: true), read)
         @pieces = artifact.pieces.map { |piece| Piece.new(piece, read) }
         @read = read
       end
 
       def piece(name)
+        return primary if name == Core::Piece::PRIMARY
+
         @pieces.find { |piece| piece.name == name } || raise(KeyError, "artifact #{role.dump} has no piece #{name.dump}")
       end
 

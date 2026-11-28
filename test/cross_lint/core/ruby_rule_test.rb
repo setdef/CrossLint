@@ -94,6 +94,20 @@ class RubyRuleTest < Minitest::Test
     assert_equal [["primary", "lib/x/a.rb", true, "# a\n", "lib/x/a.rb", "# a\n"], ["primary", "lib/x/a.rb", true, "def run\n", "lib/x/a.rb", "def run\n"]], seen
   end
 
+  def test_gives_the_primary_piece_for_piece_primary_as_for_primary
+    seen = []
+    rule = Class.new(CrossLint::Rule) do
+      define_method(:check) do |artifact|
+        piece = artifact.piece("primary")
+        seen << [piece.equal?(artifact.primary), piece.name, piece.path, piece.read]
+        []
+      end
+    end
+    check(code: {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}, files: {"lib/x/a.rb" => "# a\n"})
+
+    assert_equal [[true, "primary", "lib/x/a.rb", "# a\n"]], seen
+  end
+
   # For a rule that checks a path an artifact's text names, such as a
   # link's target, which no piece can give.
   def test_shows_a_rule_the_projects_files_frozen_from_initialize_on

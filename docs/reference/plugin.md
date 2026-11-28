@@ -38,7 +38,7 @@ A plugin's name is its folder's name, here `modules`. CrossLint names each viola
 | --- | --- |
 | `primary PATTERN` | The path pattern that finds each artifact's primary piece, relative to the project's root. With `regex=REGEX`, each match of [the regex](#regexes) in such a file is an artifact, such as each route in `config/routes.rb`. Required, once. |
 | `name PATTERN` | The artifact's name, from the placeholders of `primary` and the captures of its regex, such as `name "{path}"`. CrossLint calls the artifact by its name in every violation and debt entry, and writes it after the primary piece's path in a report. Optional, once; without it, an artifact's name is its primary piece's path. Two artifacts of one role with one name are a fault, since a debt entry for one would match the other too. |
-| `piece NAME PATTERN` | A piece called `NAME`, at the path `PATTERN` gives for each primary piece. With `regex=REGEX`, the piece is a part of that file: it exists when [the regex](#regexes) has a match there. Any number, each name once. |
+| `piece NAME PATTERN` | A piece called `NAME`, at the path `PATTERN` gives for each primary piece. With `regex=REGEX`, the piece is a part of that file: it exists when [the regex](#regexes) has a match there. Any number, each name once. `primary` is the name of the primary piece, so CrossLint stops with exit status 2 at a piece with that name. |
 
 A path pattern is a path with placeholders in braces. In `primary`, `{path}` matches a file name and the folders before it, if any, and `{name}` matches one segment of a path, with no `/`. In a piece's pattern, each placeholder stands for what it matched in `primary`. For `src/cart/total.js`, the pattern `src/{path}.js` matches with `{path}` as `cart/total`, so the piece `src/{path}.d.ts` is `src/cart/total.d.ts`; for `src/cart.js`, `{path}` is `cart`.
 
@@ -408,12 +408,12 @@ The artifact a rule gets has these methods. They give what a program's request h
 
 | Method | Returns |
 | --- | --- |
-| `primary` | The primary piece, like the pieces `piece(NAME)` gives, with `name`, `path`, `exist?`, and `read`. Its `name` is `"primary"`, and `exist?` is always true, since CrossLint found the artifact there. `artifact.path` and `artifact.read` give the same path and text. |
+| `primary` | The primary piece, like the pieces `piece(NAME)` gives, with `name`, `path`, `exist?`, and `read`. Its `name` is `"primary"`, and `exist?` is always true, since CrossLint found the artifact there. `artifact.path` and `artifact.read` give the same path and text, and `piece("primary")` gives this piece. |
 | `path` | The primary piece's path, relative to the project's root. |
 | `role` | The artifact's role, such as `module`. |
 | `match` | What each placeholder matched, and each capture of the primary's regex, by name: `artifact.match["path"]`. |
 | `read` | The primary piece's contents. |
-| `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`. For a piece with a regex, `exist?` says whether its file has a match, and `read` gives the whole file. |
+| `piece(NAME)` | The piece of that name, with `name`, `path`, `exist?`, and `read`; for `"primary"`, the primary piece. For a piece with a regex, `exist?` says whether its file has a match, and `read` gives the whole file. |
 
 A rule can also look beyond its artifact, for a path written in the artifact's text, such as a link's target, which no piece can give:
 
@@ -488,7 +488,7 @@ CrossLint asks the helper once per check, before any rule runs, with the plugin'
 | --- | --- |
 | `name` | The role, such as `module`. Required. |
 | `primary` | The path pattern that finds each artifact's primary piece, as in an `artifact` line's `primary`. Required. |
-| `pieces` | Each piece's name and the path pattern of its path. Optional; without it, the role has no pieces. |
+| `pieces` | Each piece's name and the path pattern of its path. Optional; without it, the role has no pieces. No piece is named `primary`, the name of the primary piece, and CrossLint stops with exit status 2 at one that is. |
 | `key` | A second path pattern, for the artifact's [key](plugin-glossary.md#declaring), which a debt entry can hold in place of the artifact's name. Optional. |
 | `optional` | With `true`, a `primary` pattern that matches nothing isn't reported, unless no artifact of the plugin matches a file. Optional; `false` without it. |
 | `dotfiles` | With `false`, a file isn't an artifact when a placeholder matched a file or folder whose name starts with `.`, as the Angular plugin skips them. Optional; `true` without it. |

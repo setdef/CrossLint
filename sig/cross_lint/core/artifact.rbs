@@ -4,6 +4,10 @@ module CrossLint
     # exists: a file or folder at the path, or, for a piece with a regex,
     # a match in the file there.
     class Piece < Data
+      # The name of every artifact's primary piece, which no piece an
+      # artifact declares can have.
+      PRIMARY: String
+
       # The piece's name, as its artifact declares it, such as "test".
       attr_reader name: String
 
