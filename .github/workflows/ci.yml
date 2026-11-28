@@ -3,7 +3,7 @@
 # packages the test fixtures lock (rake fixtures), a setup step that no
 # test task runs. On Linux bin/setup does all of it, and the macOS and
 # Windows jobs run its steps themselves, since they install fewer of
-# mise.toml's tools than it does. Then on Linux, the whole of rake check (rbs
+# mise.toml's tools than it does. Then on Linux, the whole of rake check (RuboCop, rbs
 # validate, the comment on every public part of sig/, Steep, the tests
 # with their coverage, the tests under RBS's runtime type checker, every
 # Ruby example in the documentation, CrossLint's own check of this

@@ -137,7 +137,7 @@ end
 # checker (test:rbs), since a call that breaks sig/ is otherwise found
 # only after the push.
 desc "Run every check CI's Linux job runs"
-task check: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :rubycritic, :reuse, :steep, :test, "test:rbs"]
+task check: ["usage:lint", "usage:reference", :doctest, :crosslint, :rubocop, "rbs:comments", "rbs:validate", :rubycritic, :reuse, :steep, :test, "test:rbs"]
 
 desc "Run every check, before a push"
 task gate: :check
