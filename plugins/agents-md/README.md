@@ -16,11 +16,11 @@ plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/agents-md"
 ```
 <!-- SPDX-SnippetEnd -->
 
-`TAG` is a tag of CrossLint that has this folder. The plugin takes no settings.
+`TAG` is a tag of CrossLint that has this folder. The plugin takes no settings. It runs on the Ruby CrossLint carries, so it needs nothing installed beside CrossLint, whatever the project's language.
 
 ## What it checks
 
-The plugin finds the `AGENTS.md` at the project's root as an `agents-md` artifact, and each `AGENTS.md` in a folder as a `nested-agents-md` artifact. Its policies apply to both:
+Each `AGENTS.md` is the primary piece of an artifact whose piece `claude` is the `CLAUDE.md` in its folder: the `AGENTS.md` at the project's root of an `agents-md` artifact, and each `AGENTS.md` in a folder of a `nested-agents-md` artifact. The plugin's policies apply to both:
 
 | Policy | Reports |
 | --- | --- |

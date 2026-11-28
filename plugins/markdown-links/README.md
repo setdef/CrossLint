@@ -1,6 +1,6 @@
 # markdown-links
 
-A shared plugin for CrossLint that checks that every relative link in a project's Markdown files resolves: its path points to a file or folder of the project, and its anchor, when it has one, to a heading or an HTML `id` or `name` in the Markdown file it points to. It reads Markdown in any project, whatever its language.
+A shared plugin for CrossLint that checks that every relative link in a project's Markdown files resolves: its path points to a file or folder of the project, and its anchor, when it has one, to a heading or an HTML `id` or `name` in the Markdown file it points to. It reads Markdown in any project, whatever its language, and runs on the Ruby CrossLint carries, so it needs nothing installed beside CrossLint.
 
 ## Listing it
 
@@ -20,7 +20,7 @@ plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/markdown-li
 
 ## What it checks
 
-Each file whose name ends in `.md` is a `markdown-file` artifact, and the policy `markdown-links/links-resolve` checks its links. A violation's message gives the link as written and the lines it is on, and its detail is the link as written, so a debt entry excuses that link wherever it is in the file.
+Each file whose name ends in `.md` is the primary piece, and the only piece, of a `markdown-file` artifact, and the policy `markdown-links/links-resolve` checks its links. A violation's message gives the link as written and the lines it is on, and its detail is the link as written, so a debt entry excuses that link wherever it is in the file.
 
 A link resolves as GitHub resolves it in a repository's Markdown:
 

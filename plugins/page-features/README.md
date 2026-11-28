@@ -19,7 +19,7 @@ plugin "https://github.com/setdef/CrossLint" ref="TAG" path="plugins/page-featur
 ```
 <!-- SPDX-SnippetEnd -->
 
-`TAG` is a tag of CrossLint that has this folder.
+`TAG` is a tag of CrossLint that has this folder. It runs on the Ruby CrossLint carries, so it needs nothing installed beside CrossLint, whatever the project's language.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
