@@ -9,7 +9,7 @@ class MemoryProjectFilesTest < Minitest::Test
 
   def project_files_port(listed:, ignored: [], linked_out: [])
     contents = (listed + ignored - linked_out).to_h { |path| [path, "#{path}\n"] }
-    CrossLint::Adapters::MemoryProjectFiles.new({project_root => listed}, ignored: {project_root => ignored}, contents: {project_root => contents})
+    CrossLint::Adapters::MemoryProjectFiles.new({ project_root => listed }, ignored: { project_root => ignored }, contents: { project_root => contents })
   end
 
   def project_root = "/memory/app"
@@ -25,6 +25,6 @@ class MemoryProjectFilesTest < Minitest::Test
   end
 
   def test_finds_a_listed_file_with_no_ignored_files_given
-    assert CrossLint::Adapters::MemoryProjectFiles.new({project_root => ["a.rb"]}).exist?(project_root, "a.rb")
+    assert CrossLint::Adapters::MemoryProjectFiles.new({ project_root => ["a.rb"] }).exist?(project_root, "a.rb")
   end
 end

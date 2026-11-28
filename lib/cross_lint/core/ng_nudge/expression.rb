@@ -66,7 +66,7 @@ module CrossLint
         WORD_SPANS = spans([0x30..0x39, 0x41..0x5a, 0x5f, 0x61..0x7a]).freeze
 
         # What each escape that stands for a set of characters holds.
-        SETS = {"d" => DIGIT_SPANS, "w" => WORD_SPANS, "s" => SPACE_SPANS, "S" => NOT_SPACE_SPANS}.freeze
+        SETS = { "d" => DIGIT_SPANS, "w" => WORD_SPANS, "s" => SPACE_SPANS, "S" => NOT_SPACE_SPANS }.freeze
 
         # What JavaScript's . is not.
         LINE_END = escapes([0x0a, 0x0d, 0x2028, 0x2029])
@@ -229,7 +229,7 @@ module CrossLint
         # above 7F as a byte, so both are written as \uHHHH.
         def hex(size)
           digits = @source[@at, size] #: String
-          refuse("has \\#{(size == 2) ? "x" : "u"} without #{size} hexadecimal digits after it") unless digits.match?(/\A\h{#{size}}\z/)
+          refuse("has \\#{(size == 2) ? 'x' : 'u'} without #{size} hexadecimal digits after it") unless digits.match?(/\A\h{#{size}}\z/)
           @at += size
           format('\u%04x', digits.hex)
         end

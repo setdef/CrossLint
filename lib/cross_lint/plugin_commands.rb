@@ -67,7 +67,7 @@ module CrossLint
 
     def missing(name, word, commands)
       guess = nearest(word, commands)
-      "#{scope(name)} has no command #{shown(word)}; " + (guess ? "did you mean #{guess}?" : "its commands are #{Core::Spelling.list(commands, "and")}")
+      "#{scope(name)} has no command #{shown(word)}; " + (guess ? "did you mean #{guess}?" : "its commands are #{Core::Spelling.list(commands, 'and')}")
     end
 
     # The nearest command of CrossLint's and the nearest of `others`, and

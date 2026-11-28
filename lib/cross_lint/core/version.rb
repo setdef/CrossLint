@@ -11,7 +11,7 @@ module CrossLint
         return unless text.match?(BARE)
 
         given = text.split(".").map(&:to_i)
-        new(numbers: given + [0] * (3 - given.size))
+        new(numbers: given + ([0] * (3 - given.size)))
       end
 
       def to_s = numbers.join(".")

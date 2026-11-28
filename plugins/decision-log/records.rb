@@ -7,7 +7,7 @@
 module DecisionLogRecords
   # A record is a Markdown file whose name starts with its number, as in
   # 0001-use-postgres.md or 20240131-use-postgres.md.
-  RECORD = /\A(\d+)[^\/]*\.md\z/
+  RECORD = %r{\A(\d+)[^/]*\.md\z}
 
   # A link with a scheme, such as https:, or one that starts with //,
   # leaves the repository.
@@ -39,5 +39,5 @@ module DecisionLogRecords
   end
 
   # The names, as in "a and b" or "a, b, and c".
-  def self.list(names) = (names.size == 2) ? names.join(" and ") : "#{names[0...-1].join(", ")}, and #{names.last}"
+  def self.list(names) = (names.size == 2) ? names.join(" and ") : "#{names[0...-1].join(', ')}, and #{names.last}"
 end

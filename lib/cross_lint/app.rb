@@ -14,7 +14,8 @@ module CrossLint
     def initialize(configuration: Adapters::KDLConfiguration.new, manifests: Adapters::KDLPluginManifests.new,
       project_files: Adapters::GitProjectFiles.new, crosslint_ruby: Adapters::FileCrossLintRuby.new, helpers: nil, shared_plugins: nil, plugins: PLUGINS,
       built_in: BUILT_IN, debt_files: Adapters::TSVDebtFiles.new, ng_nudge: Adapters::FileNgNudge.new, javascript: Adapters::NodeJavaScript.new,
-      reserved: nil, reserved_flags: nil, version: nil, err: $stderr, debug: false)
+      reserved: nil, reserved_flags: nil, version: nil, err: $stderr, debug: false
+    )
       @configuration = configuration
       @manifests = manifests
       @project_files = project_files
@@ -30,7 +31,7 @@ module CrossLint
       @reserved_flags = reserved_flags || self.class.global_flag_names(UsageSpec.load)
       @version = version || UsageSpec.load.version
       @crosslint = Core::Version.parse(@version) || raise(ArgumentError, "#{@version.dump} isn't a version of CrossLint, X.Y.Z")
-      @steps = {"track-debt" => Core::TrackDebt.new(debt_files:, debug: @debug)} #: Hash[String, Core::_Step]
+      @steps = { "track-debt" => Core::TrackDebt.new(debt_files:, debug: @debug) } #: Hash[String, Core::_Step]
     end
 
     # How each global flag of `spec`, with --help and --version, is
@@ -41,7 +42,7 @@ module CrossLint
 
     def load_project(start) = loader.call(start)
 
-    def check(start, **options) = check_project(load_project(start), **options)
+    def check(start, **) = check_project(load_project(start), **)
 
     def check_project(project, warnings: nil, verbosity: nil, all: false, command: nil, flags: {}, started: nil)
       Core::Check.new(project_files: @project_files, crosslint_ruby: @crosslint_ruby, helpers: @helpers, steps: @steps, debug: @debug)

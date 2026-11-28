@@ -8,7 +8,7 @@ class CommandLineTest < Minitest::Test
   def test_with_no_words_it_runs_no_command_with_the_defaults
     line = read
 
-    assert_equal [:run, nil, {"color" => "auto"}], [line.action, line.command, line.flags]
+    assert_equal [:run, nil, { "color" => "auto" }], [line.action, line.command, line.flags]
   end
 
   def test_names_a_command
@@ -18,26 +18,26 @@ class CommandLineTest < Minitest::Test
   end
 
   def test_reads_long_flags
-    assert_equal({"verbose" => true, "dry-run" => true}, read("--verbose", "run", "--dry-run").flags)
+    assert_equal({ "verbose" => true, "dry-run" => true }, read("--verbose", "run", "--dry-run").flags)
   end
 
   def test_reads_a_long_flag_value_after_an_equals_sign_or_in_the_next_word
-    assert_equal({"out" => "a=b"}, read("run", "--out=a=b").flags)
-    assert_equal({"out" => "x"}, read("run", "--out", "x").flags)
-    assert_equal({"out" => "--dry-run"}, read("run", "--out", "--dry-run").flags)
-    assert_equal({"out" => "x", "dry-run" => true}, read("run", "--out", "x", "-n").flags)
-    assert_equal({"out" => "x", "dry-run" => true}, read("run", "-o", "x", "-n").flags)
+    assert_equal({ "out" => "a=b" }, read("run", "--out=a=b").flags)
+    assert_equal({ "out" => "x" }, read("run", "--out", "x").flags)
+    assert_equal({ "out" => "--dry-run" }, read("run", "--out", "--dry-run").flags)
+    assert_equal({ "out" => "x", "dry-run" => true }, read("run", "--out", "x", "-n").flags)
+    assert_equal({ "out" => "x", "dry-run" => true }, read("run", "-o", "x", "-n").flags)
   end
 
   def test_reads_short_flags_alone_or_together
-    assert_equal({"verbose" => true, "dry-run" => true}, read("run", "-v", "-n").flags)
-    assert_equal({"verbose" => true, "dry-run" => true}, read("run", "-vn").flags)
+    assert_equal({ "verbose" => true, "dry-run" => true }, read("run", "-v", "-n").flags)
+    assert_equal({ "verbose" => true, "dry-run" => true }, read("run", "-vn").flags)
   end
 
   def test_reads_a_short_flag_value_in_the_same_word_or_the_next
-    assert_equal({"out" => "x"}, read("run", "-o", "x").flags)
-    assert_equal({"out" => "nv"}, read("run", "-onv").flags)
-    assert_equal({"dry-run" => true, "out" => "x"}, read("run", "-no", "x").flags)
+    assert_equal({ "out" => "x" }, read("run", "-o", "x").flags)
+    assert_equal({ "out" => "nv" }, read("run", "-onv").flags)
+    assert_equal({ "dry-run" => true, "out" => "x" }, read("run", "-no", "x").flags)
   end
 
   def test_gives_the_value_of_a_flag_that_takes_one
@@ -47,19 +47,23 @@ class CommandLineTest < Minitest::Test
   end
 
   def test_a_value_given_wins_over_the_default
-    assert_equal({"color" => "never"}, read("--color", "never").flags)
+    assert_equal({ "color" => "never" }, read("--color", "never").flags)
   end
 
   def test_tells_a_flag_given_from_one_with_only_its_default
-    assert_equal [false, true, true, false], [read.given?("color"), read("--color", "auto").given?("color"),
-      read("--verbose").given?("verbose"), read("--verbose").given?("auto")]
+    assert_equal [false, true, true, false], [
+      read.given?("color"),
+      read("--color", "auto").given?("color"),
+      read("--verbose").given?("verbose"),
+      read("--verbose").given?("auto"),
+]
   end
 
   def test_checks_a_value_against_the_choices
     assert_error "--color takes auto or never, not bad", "--color=bad"
     assert_error "--mode takes only, not other", "run", "--mode", "other"
     assert_error "--warnings takes all, none, or error, not some", "check", "--warnings=some", spec: shipped_spec
-    assert_equal({"mode" => "only"}, read("run", "--mode", "only").flags)
+    assert_equal({ "mode" => "only" }, read("run", "--mode", "only").flags)
   end
 
   def test_a_flag_that_takes_a_value_needs_one
@@ -82,8 +86,8 @@ class CommandLineTest < Minitest::Test
   end
 
   def test_help_and_version_are_no_flags_of_their_own
-    assert_equal({"color" => "auto"}, read("--help").flags)
-    assert_equal({"color" => "auto"}, read("-V").flags)
+    assert_equal({ "color" => "auto" }, read("--help").flags)
+    assert_equal({ "color" => "auto" }, read("-V").flags)
   end
 
   def test_takes_every_word_after_a_double_dash_as_an_argument
@@ -126,7 +130,7 @@ class CommandLineTest < Minitest::Test
   def test_keeps_the_words_that_are_no_command_of_the_program_for_the_plugins
     assert_equal [["debt", "update"], nil, :run], [read("debt", "update").words, read("debt", "update").command, read("debt", "update").action]
     assert_equal ["-"], read("-").words
-    assert_equal [["runn"], {"color" => "auto"}], [read("runn").words, read("runn").flags]
+    assert_equal [["runn"], { "color" => "auto" }], [read("runn").words, read("runn").flags]
     assert_empty read.words
     assert_empty read("run").words
   end
@@ -134,7 +138,7 @@ class CommandLineTest < Minitest::Test
   def test_reads_a_word_after_the_first_that_is_no_command_as_one_more_of_the_plugins
     assert_equal ["debt", "run", "stop"], read("debt", "run", "stop").words
     assert_equal ["debt", "update"], read("--verbose", "debt", "--color", "never", "update", "-v").words
-    assert_equal({"verbose" => true, "color" => "never"}, read("--verbose", "debt", "--color", "never", "update", "-v").flags)
+    assert_equal({ "verbose" => true, "color" => "never" }, read("--verbose", "debt", "--color", "never", "update", "-v").flags)
   end
 
   def test_knows_only_the_top_level_flags_after_the_words_of_a_plugin
@@ -173,13 +177,15 @@ class CommandLineTest < Minitest::Test
 
   def test_reads_the_flags_a_plugins_command_declares_once_it_has_the_plugins_name_and_the_commands
     asked = []
-    declared = [CrossLint::Core::CommandFlag.new(short: "s", long: "since", value: "rev", help: "H", line: 1),
-      CrossLint::Core::CommandFlag.new(short: "d", long: "dry", value: nil, help: "H", line: 2)]
-    plugin_flags = ->(words, project) { (asked << [words, project]) && declared }
-    line = ->(*words) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags:) }
+    declared = [
+      CrossLint::Core::CommandFlag.new(short: "s", long: "since", value: "rev", help: "H", line: 1),
+      CrossLint::Core::CommandFlag.new(short: "d", long: "dry", value: nil, help: "H", line: 2),
+]
+    plugin_flags = -> (words, project) { (asked << [words, project]) && declared }
+    line = -> (*words) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags:) }
 
-    assert_equal({"verbose" => true, "since" => "x", "dry" => true, "color" => "auto"}, line.call("debt", "update", "-v", "--since", "x", "-d").flags)
-    assert_equal({"since" => "y", "color" => "auto"}, line.call("debt", "update", "-sy").flags)
+    assert_equal({ "verbose" => true, "since" => "x", "dry" => true, "color" => "auto" }, line.call("debt", "update", "-v", "--since", "x", "-d").flags)
+    assert_equal({ "since" => "y", "color" => "auto" }, line.call("debt", "update", "-sy").flags)
     assert_equal [%w[debt update], nil], asked.first
     assert_equal %w[verbose color since dry help version], line.call("debt", "update").known_flags.map(&:long)
     asked.clear
@@ -191,7 +197,7 @@ class CommandLineTest < Minitest::Test
   def test_asks_for_no_plugins_flags_before_two_words_or_after_a_command_of_crosslints_own
     asked = []
     declared = [CrossLint::Core::CommandFlag.new(short: "z", long: "zed", value: nil, help: "H", line: 2)]
-    plugin_flags = ->(words, project) { (asked << [words, project]) && declared }
+    plugin_flags = -> (words, project) { (asked << [words, project]) && declared }
     ["--zed", "-z"].each do |flag|
       [[flag], ["debt", flag], ["help", "debt", "update", flag], ["run", flag]].each do |words|
         assert_raises(CrossLint::CommandLine::Error, words.inspect) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags:) }
@@ -203,18 +209,18 @@ class CommandLineTest < Minitest::Test
 
   def test_asks_for_a_plugins_flags_once_for_each_pair_of_words_and_with_the_project_given_after_them
     asked = []
-    plugin_flags = ->(words, project) { (asked << [words, project]) && [] }
+    plugin_flags = -> (words, project) { (asked << [words, project]) && [] }
     [["--quiet", "--no-color", "-C", "x", "--dry"], ["-qC", "y", "--dry", "--", "--zzz"], ["--dry", "--project=z"]].each do |after|
       assert_raises(CrossLint::CommandLine::Error) { CrossLint::CommandLine.new(shipped_spec, ["debt", "update", *after], plugin_flags:) }
     end
 
     assert_equal [[%w[debt update], "x"], [%w[debt update], "y"], [%w[debt update], "z"]], asked.uniq
-    assert_equal [], CrossLint::CommandLine.new(shipped_spec, ["debt", "update", "--quiet"], plugin_flags: ->(*) { raise "asked" }).flags.keys - ["quiet"]
+    assert_equal [], CrossLint::CommandLine.new(shipped_spec, ["debt", "update", "--quiet"], plugin_flags: -> (*) { raise "asked" }).flags.keys - ["quiet"]
   end
 
   def test_stops_at_a_flag_the_plugins_command_doesnt_declare_naming_the_nearest_spelling
     declared = [CrossLint::Core::CommandFlag.new(short: "d", long: "dry-run", value: nil, help: "H", line: 2)]
-    line = ->(*words) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags: ->(_words, _project) { declared }) }
+    line = -> (*words) { CrossLint::CommandLine.new(fixture_spec, words, plugin_flags: -> (_words, _project) { declared }) }
 
     error = assert_raises(CrossLint::CommandLine::Error) { line.call("debt", "update", "--dry-ran") }
 
@@ -234,7 +240,7 @@ class CommandLineTest < Minitest::Test
   def test_leaves_the_words_it_is_given_as_they_were
     words = ["run", "-o", "x"].freeze
 
-    assert_equal({"out" => "x"}, CrossLint::CommandLine.new(fixture_spec, words).flags)
+    assert_equal({ "out" => "x" }, CrossLint::CommandLine.new(fixture_spec, words).flags)
   end
 
   def test_the_help_and_version_flags

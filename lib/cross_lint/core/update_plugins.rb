@@ -30,9 +30,9 @@ module CrossLint
         elsif update.current? && update.skipped.any?
           "#{listing.shown}: stays at #{listing.ref}"
         elsif update.current?
-          "#{listing.shown}: is at its newest #{"compatible " if update.newer.any?}tag, #{listing.ref}"
+          "#{listing.shown}: is at its newest #{'compatible ' if update.newer.any?}tag, #{listing.ref}"
         else
-          "#{listing.shown}: #{dry_run ? "would move" : "moved"} from #{listing.ref} to #{update.newest}"
+          "#{listing.shown}: #{dry_run ? 'would move' : 'moved'} from #{listing.ref} to #{update.newest}"
         end
       end
 
@@ -40,7 +40,7 @@ module CrossLint
         return "" if update.skipped.empty?
 
         tags = update.skipped.map { |tag, reason| "#{tag}, which #{reason}" }
-        "; skipped #{tags.join(", and ")}, as this is CrossLint #{crosslint}"
+        "; skipped #{tags.join(', and ')}, as this is CrossLint #{crosslint}"
       end
 
       # Newer incompatible versions are named whether or not the plugin moved.
@@ -50,7 +50,7 @@ module CrossLint
         return "" if update.newer.empty?
 
         highest = update.newer.last
-        "; newer incompatible versions: #{update.newer.join(", ")}; crosslint update --latest moves to #{highest}, " \
+        "; newer incompatible versions: #{update.newer.join(', ')}; crosslint update --latest moves to #{highest}, " \
           "or, when #{highest} needs a newer CrossLint, to the newest tag below it that this CrossLint reads"
       end
     end

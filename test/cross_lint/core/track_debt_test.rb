@@ -32,10 +32,12 @@ class TrackDebtTest < Minitest::Test
     entries = [entry("tests/has-test", "lib/a.rb", detail: "test"), entry("tests/has-test", "lib/b.rb", line: 3), entry("tests/has-signature", "lib/c.rb", line: 4)]
     step([violation("lib/a.rb", detail: "test")], entries, disabled: ["tests/has-signature"], debug:)
 
-    assert_equal [%(#{FILE}:2, tests/has-test on lib/a.rb (test): matches 1 violation, accepted as debt),
+    assert_equal [
+      %(#{FILE}:2, tests/has-test on lib/a.rb (test): matches 1 violation, accepted as debt),
       "#{FILE}:3, tests/has-test on lib/b.rb: matches no violation, so it is paid off",
       "#{FILE}:4, tests/has-signature on lib/c.rb: left alone, since CrossLint doesn't check that policy: " \
-      "its plugin isn't listed or stopped at a fault, or it is off"], debug.written("debt")
+        "its plugin isn't listed or stopped at a fault, or it is off",
+], debug.written("debt")
   end
 
   def test_reports_an_entry_no_violation_matches_as_paid_off
@@ -53,8 +55,13 @@ class TrackDebtTest < Minitest::Test
   end
 
   def test_matches_by_plugin_policy_artifact_and_role
-    entries = [entry("tests/has-test", "lib/a.rb"), entry("other/has-test", "lib/b.rb"), entry("tests/has-signature", "lib/c.rb"),
-      entry("tests/has-test", "lib/d.rb.ruby-file"), entry("tests/has-test", "lib/e.rb.component")]
+    entries = [
+      entry("tests/has-test", "lib/a.rb"),
+      entry("other/has-test", "lib/b.rb"),
+      entry("tests/has-signature", "lib/c.rb"),
+      entry("tests/has-test", "lib/d.rb.ruby-file"),
+      entry("tests/has-test", "lib/e.rb.component"),
+]
     violations = %w[a b c d e].map { |name| violation("lib/#{name}.rb") }
     result = step(violations, entries, plugins: %w[tests other])
 
@@ -72,8 +79,11 @@ class TrackDebtTest < Minitest::Test
   # ng-nudge's debt file names an Angular artifact by its base path, which
   # the Angular plugin gives its artifacts as their key.
   def test_matches_an_entry_by_the_artifacts_key_alone_or_with_its_role
-    violations = [violation("src/app/a.component.ts", role: "component", key: "app/a"),
-      violation("src/app/b.component.ts", role: "component", key: "app/b"), violation("src/app/c.component.ts", role: "component", key: "app/c")]
+    violations = [
+      violation("src/app/a.component.ts", role: "component", key: "app/a"),
+      violation("src/app/b.component.ts", role: "component", key: "app/b"),
+      violation("src/app/c.component.ts", role: "component", key: "app/c"),
+]
     entries = [entry("tests/has-test", "app/a"), entry("tests/has-test", "app/b.component"), entry("tests/has-test", "app/c.service")]
     result = step(violations, entries)
 
@@ -100,8 +110,11 @@ class TrackDebtTest < Minitest::Test
 
   def test_matches_an_entry_with_a_detail_only_to_that_detail_and_one_without_only_to_none
     violations = [violation("lib/a.rb", detail: "name"), violation("lib/a.rb", detail: "size"), violation("lib/b.rb")]
-    result = step(violations, [entry("tests/has-test", "lib/a.rb", detail: "name"), entry("tests/has-test", "lib/b.rb", detail: "name"),
-      entry("tests/has-test", "lib/a.rb", line: 4)])
+    result = step(violations, [
+      entry("tests/has-test", "lib/a.rb", detail: "name"),
+      entry("tests/has-test", "lib/b.rb", detail: "name"),
+      entry("tests/has-test", "lib/a.rb", line: 4),
+])
 
     assert_equal [[violations.first], []], [result.excused, result.notices]
     assert_equal [3, 4], result.paid_off.map(&:line).sort
@@ -129,9 +142,13 @@ class TrackDebtTest < Minitest::Test
   # looked paid off and were deleted with their comments
   # (lib/rule/rule.js:39-42, lib/debt.js:45-49).
   def test_leaves_alone_an_entry_for_a_disabled_policy_an_unlisted_plugin_or_a_plugin_that_stopped
-    entries = [entry("tests/has-signature", "lib/a.rb", "off for now"), entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
-      entry("spec-exists", "app/card", "angular later", line: 4), entry("other/has-test", "lib/a.rb", "stopped", line: 5)]
-    options = {plugins: %w[tests other], disabled: ["tests/has-signature"], faulted: ["other"]}
+    entries = [
+      entry("tests/has-signature", "lib/a.rb", "off for now"),
+      entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
+      entry("spec-exists", "app/card", "angular later", line: 4),
+      entry("other/has-test", "lib/a.rb", "stopped", line: 5),
+]
+    options = { plugins: %w[tests other], disabled: ["tests/has-signature"], faulted: ["other"] }
     result = step([], entries, **options)
 
     assert_equal [[], [], []], [result.excused, result.paid_off, result.notices]
@@ -144,9 +161,13 @@ class TrackDebtTest < Minitest::Test
   # An entry for a disabled policy, or for a plugin the configuration
   # doesn't list, is neither paid off nor reported.
   def test_reports_no_entry_for_a_disabled_policy_an_unlisted_plugin_or_a_plugin_that_stopped_and_reports_the_others
-    entries = [entry("tests/has-signature", "lib/a.rb", "off for now"), entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
-      entry("spec-exists", "app/card", "angular later", line: 4), entry("other/has-test", "lib/a.rb", "stopped", line: 5),
-      entry("tests/has-test", "lib/b.rb", "listed", line: 6)]
+    entries = [
+      entry("tests/has-signature", "lib/a.rb", "off for now"),
+      entry("gone/has-test", "lib/a.rb", "elsewhere", line: 3),
+      entry("spec-exists", "app/card", "angular later", line: 4),
+      entry("other/has-test", "lib/a.rb", "stopped", line: 5),
+      entry("tests/has-test", "lib/b.rb", "listed", line: 6),
+]
     result = step([], entries, plugins: %w[tests other], settings: [setting("report-entries")], disabled: ["tests/has-signature"], faulted: ["other"])
 
     assert_equal [%w[6], [FILE]], [result.violations.map(&:detail), result.violations.map(&:artifact).uniq]
@@ -157,8 +178,10 @@ class TrackDebtTest < Minitest::Test
     result = step(violations, [entry("tests/has-test", "app/other"), entry("tests/has-test", "app/card", "both")])
 
     assert_equal violations, result.excused
-    assert_equal [Notice.new(file: FILE, line: 3, message: "the entry for tests/has-test on app/card matches the violations of 2 artifacts, " \
-      "app/card as component and app/card as service; crosslint debt update writes one entry for each")], result.notices
+    assert_equal [
+Notice.new(file: FILE, line: 3, message: "the entry for tests/has-test on app/card matches the violations of 2 artifacts, " \
+                                  "app/card as component and app/card as service; crosslint debt update writes one entry for each"),
+], result.notices
   end
 
   def test_rewrites_an_entry_two_artifacts_match_as_one_for_each_keyed_with_its_role
@@ -176,8 +199,10 @@ class TrackDebtTest < Minitest::Test
     result = step(violations, [entry("has-test", "app/card", "legacy"), entry("tests/has-test", "app/list", line: 3)])
 
     assert_equal violations, result.excused
-    assert_equal [Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it matches every " \
-      "violation of tests/has-test on it; crosslint debt update writes one entry for each, with its detail")], result.notices
+    assert_equal [
+Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it matches every " \
+                                  "violation of tests/has-test on it; crosslint debt update writes one entry for each, with its detail"),
+], result.notices
   end
 
   def test_matches_every_violation_of_a_built_in_rule_on_its_artifact_with_an_entry_that_has_no_detail_and_warns
@@ -185,8 +210,10 @@ class TrackDebtTest < Minitest::Test
     result = step(violations, [entry("tests/has-test", "app/card", "written before details")])
 
     assert_equal violations, result.excused
-    assert_equal [Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it matches every " \
-      "violation of tests/has-test on it; crosslint debt update writes one entry for each, with its detail")], result.notices
+    assert_equal [
+Notice.new(file: FILE, line: 2, message: "the entry for tests/has-test on app/card has no detail, so it matches every " \
+                                  "violation of tests/has-test on it; crosslint debt update writes one entry for each, with its detail"),
+], result.notices
     assert_empty result.paid_off
   end
 
@@ -255,32 +282,56 @@ class TrackDebtTest < Minitest::Test
   end
 
   def test_updates_by_keeping_matching_entries_in_place_dropping_paid_off_ones_and_adding_new_ones_in_order
-    violations = [violation("lib/z.rb"), violation("lib/b.rb", severity: :warning), violation("lib/a.rb", policy: "has-signature"),
-      violation("lib/b.rb"), violation("lib/m.rb", detail: "x")]
-    entries = [entry("tests/has-test", "lib/b.rb", "why"), entry("tests/has-test", "lib/gone.rb", "fixed", line: 3),
-      entry("tests/has-test", "lib/b.rb", "again", line: 4)]
+    violations = [
+      violation("lib/z.rb"),
+      violation("lib/b.rb", severity: :warning),
+      violation("lib/a.rb", policy: "has-signature"),
+      violation("lib/b.rb"),
+      violation("lib/m.rb", detail: "x"),
+]
+    entries = [
+      entry("tests/has-test", "lib/b.rb", "why"),
+      entry("tests/has-test", "lib/gone.rb", "fixed", line: 3),
+      entry("tests/has-test", "lib/b.rb", "again", line: 4),
+]
     result = step(violations, entries, update: true)
 
-    assert_equal [["tests/has-test", "lib/b.rb", "why", nil], ["tests/has-signature", "lib/a.rb", "", nil], ["tests/has-test", "lib/m.rb", "", "x"],
-      ["tests/has-test", "lib/z.rb", "", nil]], written.map { |each| [each.rule, each.artifact, each.comment, each.detail] }
+    assert_equal [
+      ["tests/has-test", "lib/b.rb", "why", nil],
+      ["tests/has-signature", "lib/a.rb", "", nil],
+      ["tests/has-test", "lib/m.rb", "", "x"],
+      ["tests/has-test", "lib/z.rb", "", nil],
+], written.map { |each| [each.rule, each.artifact, each.comment, each.detail] }
     assert_equal "src2", written.first.source
     assert_equal ["wrote #{FILE}: 3 entries added, 2 removed"], result.wrote
     assert_equal written.sort_by(&:artifact), step(violations.reverse, entries, update: true).then { written.sort_by(&:artifact) }
   end
 
   def test_a_dry_run_lists_what_an_update_would_add_and_remove_in_the_order_it_writes_them_and_writes_nothing
-    violations = [violation("lib/z.rb"), violation("lib/b.rb", severity: :warning), violation("lib/a.rb", policy: "has-signature"),
-      violation("lib/m.rb", detail: "x")]
-    entries = [entry("tests/has-test", "lib/b.rb", "why"), entry("tests/has-test", "lib/gone.rb", "fixed", line: 3),
-      entry("tests/has-test", "lib/old.rb", "also fixed", line: 4)]
+    violations = [
+      violation("lib/z.rb"),
+      violation("lib/b.rb", severity: :warning),
+      violation("lib/a.rb", policy: "has-signature"),
+      violation("lib/m.rb", detail: "x"),
+]
+    entries = [
+      entry("tests/has-test", "lib/b.rb", "why"),
+      entry("tests/has-test", "lib/gone.rb", "fixed", line: 3),
+      entry("tests/has-test", "lib/old.rb", "also fixed", line: 4),
+]
     dry = step(violations, entries, update: true, dry_run: true)
     before = written
     real = step(violations, entries, update: true)
 
     assert_equal entries, before
-    assert_equal ["would remove tests/has-test on lib/gone.rb, line 3", "would remove tests/has-test on lib/old.rb, line 4",
-      "would add tests/has-signature on lib/a.rb", "would add tests/has-test on lib/m.rb (x)", "would add tests/has-test on lib/z.rb",
-      "would write #{FILE}: 3 entries added, 2 removed"], dry.wrote
+    assert_equal [
+      "would remove tests/has-test on lib/gone.rb, line 3",
+      "would remove tests/has-test on lib/old.rb, line 4",
+      "would add tests/has-signature on lib/a.rb",
+      "would add tests/has-test on lib/m.rb (x)",
+      "would add tests/has-test on lib/z.rb",
+      "would write #{FILE}: 3 entries added, 2 removed",
+], dry.wrote
     assert_equal ["wrote #{FILE}: 3 entries added, 2 removed"], real.wrote
     assert_equal [dry.excused, dry.paid_off], [[violation("lib/b.rb", severity: :warning)], [paid_off_at(3), paid_off_at(4)]]
   end
@@ -290,15 +341,21 @@ class TrackDebtTest < Minitest::Test
 
     assert_equal [violation("lib/a/b.rb")], dry.excused
     assert_equal [], dry.paid_off
-    assert_equal ["would replace tests/has-test on lib/a/b.rb, line 2", "would add tests/has-test on lib/a/b.rb",
-      "would write #{FILE}: 0 entries added, 0 removed, 1 rewritten"], dry.wrote
+    assert_equal [
+      "would replace tests/has-test on lib/a/b.rb, line 2",
+      "would add tests/has-test on lib/a/b.rb",
+      "would write #{FILE}: 0 entries added, 0 removed, 1 rewritten",
+], dry.wrote
     assert_equal ["lib\\a\\b.rb"], written.map(&:artifact)
   end
 
   def test_a_dry_run_lists_the_entries_an_update_writes_that_the_file_didnt_have
     violations = [violation("lib/a/b.rb"), violation("lib/c.rb"), violation("lib/new.rb")]
-    entries = [entry("tests/has-test", "lib/c.rb", "same"), entry("tests/has-test", "lib\\a\\b.rb", "kept", line: 3),
-      entry("tests/has-test", "lib/gone.rb", "fixed", line: 4)]
+    entries = [
+      entry("tests/has-test", "lib/c.rb", "same"),
+      entry("tests/has-test", "lib\\a\\b.rb", "kept", line: 3),
+      entry("tests/has-test", "lib/gone.rb", "fixed", line: 4),
+]
     dry = step(violations, entries, update: true, dry_run: true)
     step(violations, entries, update: true)
     new_lines = written.reject { |each| each.source == "src2" }.map { |each| "would add tests/has-test on #{each.artifact}" }
@@ -311,27 +368,40 @@ class TrackDebtTest < Minitest::Test
 
   def test_a_dry_run_lists_an_entry_rewritten_for_a_plugin_it_doesnt_check
     entries = [entry("gone/has-test", "lib\\old\\a.rb", "elsewhere", line: 2), entry("tests/has-signature", "lib\\b.rb", "off", line: 3)]
-    options = {disabled: ["tests/has-signature"]}
+    options = { disabled: ["tests/has-signature"] }
     dry = step([], entries, update: true, dry_run: true, **options)
 
-    assert_equal ["would replace gone/has-test on lib/old/a.rb, line 2", "would add gone/has-test on lib/old/a.rb",
-      "would replace tests/has-signature on lib/b.rb, line 3", "would add tests/has-signature on lib/b.rb",
-      "would write #{FILE}: 0 entries added, 0 removed, 2 rewritten"], dry.wrote
+    assert_equal [
+      "would replace gone/has-test on lib/old/a.rb, line 2",
+      "would add gone/has-test on lib/old/a.rb",
+      "would replace tests/has-signature on lib/b.rb, line 3",
+      "would add tests/has-signature on lib/b.rb",
+      "would write #{FILE}: 0 entries added, 0 removed, 2 rewritten",
+], dry.wrote
   end
 
   def test_a_dry_run_lists_what_an_update_writes_for_an_entry_of_each_kind_it_rewrites
     violations = [violation("lib/a/b.rb"), violation("lib/c.rb", detail: "x"), violation("lib/d.rb", detail: "y"), violation("lib/new.rb")]
-    entries = [entry("tests/has-test", "lib\\a\\b.rb", "slashes", line: 2), entry("has-test", "lib/c.rb", "coarse", line: 3),
-      entry("gone/has-test", "lib\\z.rb", "unlisted", line: 4), entry("tests/has-test", "lib/d.rb", "kept", detail: "y", line: 5),
-      entry("tests/has-test", "lib/old.rb", "fixed", line: 6)]
+    entries = [
+      entry("tests/has-test", "lib\\a\\b.rb", "slashes", line: 2),
+      entry("has-test", "lib/c.rb", "coarse", line: 3),
+      entry("gone/has-test", "lib\\z.rb", "unlisted", line: 4),
+      entry("tests/has-test", "lib/d.rb", "kept", detail: "y", line: 5),
+      entry("tests/has-test", "lib/old.rb", "fixed", line: 6),
+]
     dry = step(violations, entries, update: true, dry_run: true)
     step(violations, entries, update: true)
     rewritten = written.reject { |each| each.source&.start_with?("src") }
 
-    assert_equal ["would replace tests/has-test on lib/a/b.rb, line 2", "would add tests/has-test on lib/a/b.rb",
-      "would replace has-test on lib/c.rb, line 3", "would add tests/has-test on lib/c.rb (x)",
-      "would replace gone/has-test on lib/z.rb, line 4", "would add gone/has-test on lib/z.rb",
-      "would remove tests/has-test on lib/old.rb, line 6"], dry.wrote.first(7)
+    assert_equal [
+      "would replace tests/has-test on lib/a/b.rb, line 2",
+      "would add tests/has-test on lib/a/b.rb",
+      "would replace has-test on lib/c.rb, line 3",
+      "would add tests/has-test on lib/c.rb (x)",
+      "would replace gone/has-test on lib/z.rb, line 4",
+      "would add gone/has-test on lib/z.rb",
+      "would remove tests/has-test on lib/old.rb, line 6",
+], dry.wrote.first(7)
     assert_equal rewritten.map { |each| "would add #{each.rule} on #{each.artifact}#{" (#{each.detail})" if each.detail}" },
       dry.wrote.grep(/\Awould add/)
     assert_equal ["would write #{FILE}: 1 entry added, 1 removed, 3 rewritten"], dry.wrote.last(1)
@@ -342,8 +412,12 @@ class TrackDebtTest < Minitest::Test
     violations = [violation("app/card", role: "service"), violation("app/card", role: "component")]
     dry = step(violations, [entry("tests/has-test", "app/card", "both")], update: true, dry_run: true)
 
-    assert_equal ["would replace tests/has-test on app/card, line 2", "would add tests/has-test on app/card.component",
-      "would add tests/has-test on app/card.service", "would write #{FILE}: 0 entries added, 0 removed, 1 rewritten"], dry.wrote
+    assert_equal [
+      "would replace tests/has-test on app/card, line 2",
+      "would add tests/has-test on app/card.component",
+      "would add tests/has-test on app/card.service",
+      "would write #{FILE}: 0 entries added, 0 removed, 1 rewritten",
+], dry.wrote
     assert_equal [entry("tests/has-test", "app/card", "both")], written
   end
 
@@ -400,19 +474,24 @@ class TrackDebtTest < Minitest::Test
     entries = [entry("tests/has-test", "lib/a.rb", "why"), entry("tests/has-test", "lib/b.rb", line: 3)]
     result = step([violation("lib/a.rb"), violation("lib/b.rb")], entries, settings: [setting("report-entries")])
 
-    assert_equal [debt_violation("line 2 lists tests/has-test on lib/a.rb as debt: why", :error, "2"),
-      debt_violation("line 3 lists tests/has-test on lib/b.rb as debt, with no comment", :error, "3")], result.violations
+    assert_equal [
+      debt_violation("line 2 lists tests/has-test on lib/a.rb as debt: why", :error, "2"),
+      debt_violation("line 3 lists tests/has-test on lib/b.rb as debt, with no comment", :error, "3"),
+], result.violations
     assert_equal [:warning, :warning], step([], entries, settings: [setting("report-entries")], severity: :warning).violations.map(&:severity)
   end
 
   def test_reports_an_entry_with_a_comment_at_the_severity_commented_gives
-    entries = [entry("tests/has-test", "lib/a.rb", "ticket 12"), entry("tests/has-test", "lib/b.rb", "someday", line: 3),
-      entry("tests/has-test", "lib/c.rb", line: 4)]
+    entries = [
+      entry("tests/has-test", "lib/a.rb", "ticket 12"),
+      entry("tests/has-test", "lib/b.rb", "someday", line: 3),
+      entry("tests/has-test", "lib/c.rb", line: 4),
+]
     severities = %w[warning none error].to_h do |commented|
       [commented, step([], entries, settings: [setting("report-entries", commented:)], severity: :warning).violations.map(&:severity)]
     end
 
-    assert_equal({"warning" => %i[warning warning warning], "none" => [:warning], "error" => %i[error error warning]}, severities)
+    assert_equal({ "warning" => %i[warning warning warning], "none" => [:warning], "error" => %i[error error warning] }, severities)
     matching = step([], entries, settings: [setting("report-entries", commented: "none", matching: "ticket \\d+")]).violations
 
     assert_equal [["3", :error], ["4", :error]], matching.map { |each| [each.detail, each.severity] }
@@ -481,7 +560,7 @@ class TrackDebtTest < Minitest::Test
       [setting("report-entries", commented: "warn")] => %(commented= takes "error", "warning", or "none", not "warn"),
       [setting("report-entries", commented: true)] => %(commented= takes "error", "warning", or "none", not true),
       [setting("report-entries", matching: 1)] => "matching= takes a regular expression, as a string",
-      [setting("report-entries", matching: "(")] => "matching= isn't a regular expression CrossLint reads: end pattern with unmatched parenthesis: /(/"
+      [setting("report-entries", matching: "(")] => "matching= isn't a regular expression CrossLint reads: end pattern with unmatched parenthesis: /(/",
     }.each do |settings, message|
       mistake = assert_raises(Mistake) { TrackDebt.settings(settings, CONFIG) }
 
@@ -510,8 +589,11 @@ class TrackDebtTest < Minitest::Test
   end
 
   def test_keys_a_new_entry_with_its_role_only_when_its_policy_has_another_artifact_with_that_key
-    violations = [violation("app/card", role: "component"), violation("app/card", role: "service", policy: "has-signature"),
-      violation("app/card", role: "service", plugin: "other")]
+    violations = [
+      violation("app/card", role: "component"),
+      violation("app/card", role: "service", policy: "has-signature"),
+      violation("app/card", role: "service", plugin: "other"),
+]
     step(violations, nil, update: true, plugins: %w[tests other])
 
     assert_equal ["app/card", "app/card", "app/card"], written.map(&:artifact)
@@ -538,7 +620,7 @@ class TrackDebtTest < Minitest::Test
   end
 
   def paid_off_at(line)
-    gone = {3 => "lib/gone.rb", 4 => "lib/old.rb"}.fetch(line)
+    gone = { 3 => "lib/gone.rb", 4 => "lib/old.rb" }.fetch(line)
     PaidOffEntry.new(plugin: "tests", policy: "has-test", artifact: gone, file: FILE, line:,
       message: "the debt entry at #{FILE}:#{line} is paid off, since no violation matches it; crosslint debt update removes it")
   end
@@ -565,16 +647,17 @@ class TrackDebtTest < Minitest::Test
   end
 
   def step(violations, entries, plugins: %w[tests], settings: [], disabled: [], faulted: [], update: false, command: nil, severity: nil, extra: [], dry_run: false,
-    debug: nil)
+    debug: nil
+  )
     @files.write(ROOT, FILE, DebtFile.new(file: FILE, entries:, header: nil)) if entries
     debt = plugin("debt", []).then { |found| found.with(listing: found.listing.with(name: "debt", settings:)) }
-    listed = {"tests" => %w[has-test has-signature], "other" => %w[has-test names-class]}.slice(*plugins).map { |name, owned| plugin(name, owned) }
+    listed = { "tests" => %w[has-test has-signature], "other" => %w[has-test names-class] }.slice(*plugins).map { |name, owned| plugin(name, owned) }
     policies = disabled.map { |name| PolicySetting.new(name:, enabled: false, severity: nil, line: 5) }
     policies << PolicySetting.new(name: "debt/has-debt", enabled: nil, severity:, line: 6) if severity
     policies.concat(extra)
     configuration = Configuration.new(file: CONFIG, plugins: [debt, *listed].map(&:listing), policies:, warnings: nil, verbosity: nil)
     project = Project.new(root: ROOT, configuration:, plugins: [debt, *listed])
     TrackDebt.new(debt_files: @files, debug:).call(StepInput.new(project:, plugin: debt, violations:, faulted:, command: update ? "update" : command,
-      flags: dry_run ? {"dry-run" => true} : {}))
+      flags: dry_run ? { "dry-run" => true } : {}))
   end
 end

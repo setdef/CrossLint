@@ -181,8 +181,12 @@ class TSVDebtFilesTest < Minitest::Test
   end
 
   def test_stops_at_an_entry_with_no_rule_or_no_artifact_naming_the_file_and_line
-    {"\ta\tc" => "has an entry with no rule", "r\t\tc" => "has an entry with no artifact", "" => "has an entry with no rule",
-     "r" => "has an entry with no artifact"}.each do |row, message|
+    {
+"\ta\tc" => "has an entry with no rule",
+"r\t\tc" => "has an entry with no artifact",
+"" => "has an entry with no rule",
+"r" => "has an entry with no artifact",
+}.each do |row, message|
       mistake = assert_raises(Core::Mistake) { file(%(Rule\tArtifact\tComment\n"x\ny"\ta\t\n#{row}\nr\ta\t\n)) }
 
       assert_equal ["debt.tsv:4", message], [mistake.location, mistake.message], row.dump
@@ -206,7 +210,7 @@ class TSVDebtFilesTest < Minitest::Test
   end
 
   def test_stops_at_a_quote_that_doesnt_end_or_has_text_after_it
-    {%(r\t"a\n) => "has a quote that doesn't end", %(r\t"a"b\tc\n) => "has text after a closing quote"}.each do |row, message|
+    { %(r\t"a\n) => "has a quote that doesn't end", %(r\t"a"b\tc\n) => "has text after a closing quote" }.each do |row, message|
       mistake = assert_raises(Core::Mistake) { file("Rule\tArtifact\tComment\n#{row}") }
 
       assert_equal ["debt.tsv:2", message], [mistake.location, mistake.message]

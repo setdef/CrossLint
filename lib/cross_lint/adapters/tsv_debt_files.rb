@@ -101,7 +101,7 @@ module CrossLint
         columns = record.first
         return columns if [COLUMNS, [*COLUMNS, DETAIL]].include?(columns)
 
-        raise Core::Mistake.new("has the columns #{columns.map(&:dump).join(", ")} in its header, " \
+        raise Core::Mistake.new("has the columns #{columns.map(&:dump).join(', ')} in its header, " \
           "where CrossLint reads \"Rule\", \"Artifact\", \"Comment\", and an optional \"Detail\"", file: path, line: 1)
       end
 

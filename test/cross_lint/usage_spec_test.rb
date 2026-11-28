@@ -24,7 +24,7 @@ class UsageSpecTest < Minitest::Test
       Spec::Flag.new(short: "v", long: "verbose", value: nil, help: "Say more", long_help: nil, choices: nil,
         default: nil, global: true),
       Spec::Flag.new(short: nil, long: "color", value: "when", help: "Color the output", long_help: nil,
-        choices: ["auto", "never"], default: "auto", global: false)
+        choices: ["auto", "never"], default: "auto", global: false),
     ], fixture_spec.flags
   end
 
@@ -42,7 +42,7 @@ class UsageSpecTest < Minitest::Test
         Spec::Flag.new(short: "o", long: "out", value: "file", help: "Write here",
           long_help: "Writes the output to this file", choices: nil, default: nil, global: false),
         Spec::Flag.new(short: nil, long: "mode", value: "mode", help: "Pick a mode", long_help: nil,
-          choices: ["only"], default: nil, global: false)
+          choices: ["only"], default: nil, global: false),
       ],
       examples: [Spec::Example.new(code: "tool run -n", header: "Try it", help: nil)]), run
     assert_equal Spec::Command.new(name: "stop", help: "Stop the thing", long_help: nil, arguments: [], flags: [], examples: []), stop
@@ -54,19 +54,29 @@ class UsageSpecTest < Minitest::Test
 
     assert_equal [
       Spec::Example.new(code: "tool run", header: "Run it", help: "Runs the thing once."),
-      Spec::Example.new(code: "tool stop", header: nil, help: nil)
+      Spec::Example.new(code: "tool stop", header: nil, help: nil),
     ], spec.examples
-    assert_equal [Spec::ExitCode.new(code: 0, meaning: "It worked."),
-      Spec::ExitCode.new(code: 64, meaning: "The command line has a mistake.")], spec.exit_codes
+    assert_equal [
+      Spec::ExitCode.new(code: 0, meaning: "It worked."),
+      Spec::ExitCode.new(code: 64, meaning: "The command line has a mistake."),
+], spec.exit_codes
   end
 
   def test_reads_plain_strings_and_integers
     spec = fixture_spec
     run = spec.commands.first
-    values = [spec.bin, run.name, run.flags.first.long, spec.examples.first.code, spec.exit_codes.first.meaning,
-      spec.flags.last.choices.first, spec.flags.last.default, spec.exit_codes.first.code]
+    values = [
+      spec.bin,
+      run.name,
+      run.flags.first.long,
+      spec.examples.first.code,
+      spec.exit_codes.first.meaning,
+      spec.flags.last.choices.first,
+      spec.flags.last.default,
+      spec.exit_codes.first.code,
+]
 
-    assert_equal [String] * 7 + [Integer], values.map(&:class)
+    assert_equal ([String] * 7) + [Integer], values.map(&:class)
   end
 
   def test_leaves_out_what_a_node_does_not_give
@@ -168,7 +178,7 @@ class UsageSpecTest < Minitest::Test
   end
 
   def test_gives_what_is_wrong_with_a_flags_names_to_the_one_who_asks_to_stop
-    stop = ->(message) { raise ArgumentError, "stopped: #{message}" }
+    stop = -> (message) { raise ArgumentError, "stopped: #{message}" }
 
     assert_equal ["n", "dry", "v"], Spec.flag_names("-n --dry <v>")
     assert_equal %(stopped: flag "-n" has no long name), assert_raises(ArgumentError) { Spec.flag_names("-n", failing: stop) }.message

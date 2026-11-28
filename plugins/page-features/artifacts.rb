@@ -5,7 +5,7 @@
 # placeholder of feature that page lacks would have no value for a page,
 # so it is a mistake here rather than a fault at the first page.
 class Artifacts < CrossLint::Artifacts
-  DEFAULTS = {"page" => "src/pages/{path}.tsx", "feature" => "features/{path}.feature"}.freeze
+  DEFAULTS = { "page" => "src/pages/{path}.tsx", "feature" => "features/{path}.feature" }.freeze
 
   def declare(settings)
     found = {}
@@ -19,7 +19,7 @@ class Artifacts < CrossLint::Artifacts
     lacking = feature.scan(/\{[^{}]*\}/).uniq - page.scan(/\{[^{}]*\}/)
     raise mistake("feature has #{lacking.first}, which page #{page.dump} doesn't, so a page gives it no value", found["feature"] || found["page"]) if lacking.any?
 
-    [artifact("page", primary: page, pieces: {"feature" => feature})]
+    [artifact("page", primary: page, pieces: { "feature" => feature })]
   end
 
   private

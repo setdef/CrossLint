@@ -3,7 +3,7 @@
 module CrossLint
   module Core
     class FetchError < StandardError
-      def self.scheme(url, schemes) = new("#{url} doesn't start with #{schemes.join(" or ")}")
+      def self.scheme(url, schemes) = new("#{url} doesn't start with #{schemes.join(' or ')}")
 
       def self.bad_ref(ref) = new("#{ref.dump} is neither a tag name nor a full 40-character commit SHA")
 

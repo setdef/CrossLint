@@ -51,7 +51,7 @@ class CheckResultTest < Minitest::Test
 
   def test_lists_the_violations_among_the_findings
     piece = Piece.new(name: "test", path: "test/a_test.rb", exists: true)
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, pieces: [piece])
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: { "path" => "a" }, pieces: [piece])
     violation = Violation.new(plugin: "tests", policy: "p", artifact: "lib/b.rb", role: "ruby-file", message: "m", severity: :error, detail: nil)
     result = CheckResult.new(notices: [], findings: [artifact, violation], summary: summary([]), verbosity: :normal, failed: true, faults: [])
 

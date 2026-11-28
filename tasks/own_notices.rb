@@ -18,7 +18,7 @@ module OwnNotices
     "Permission is hereby granted" => %w[MIT],
     "Permission to use, copy, modify" => %w[ISC 0BSD],
     "Redistribution and use in source" => %w[BSD-2-Clause BSD-3-Clause],
-    "Licensed under the Apache License" => %w[Apache-2.0]
+    "Licensed under the Apache License" => %w[Apache-2.0],
   }.freeze
 
   # The tag that gives a license as an SPDX expression, and the phrase

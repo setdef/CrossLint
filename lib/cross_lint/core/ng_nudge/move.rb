@@ -129,10 +129,10 @@ module CrossLint
         def settings(configuration)
           plugins = configuration.plugins.flat_map { |plugin| plugin.settings.flat_map { |each| setting_lines(each, "the #{plugin.name} plugin") } }
           policies = configuration.policies.map do |policy|
-            properties = {"enabled" => policy.enabled, "severity" => policy.severity&.to_s}.compact
+            properties = { "enabled" => policy.enabled, "severity" => policy.severity&.to_s }.compact
             ["set policy #{policy.name.dump}", *properties.map { |name, value| "#{name}=#{kdl(value)}" }].join(" ")
           end
-          modes = {"warnings" => configuration.warnings, "verbosity" => configuration.verbosity}.filter_map { |name, mode| "set #{name} #{mode.to_s.dump}" if mode }
+          modes = { "warnings" => configuration.warnings, "verbosity" => configuration.verbosity }.filter_map { |name, mode| "set #{name} #{mode.to_s.dump}" if mode }
           [*plugins, *policies, *modes]
         end
 
@@ -141,7 +141,7 @@ module CrossLint
         def setting_lines(setting, within)
           words = [setting.name, *setting.arguments.map { |each| kdl(each) }, *setting.properties.map { |name, value| "#{name}=#{kdl(value)}" }]
           inside = "#{setting.name} #{kdl(setting.arguments.first)} of #{within}"
-          ["set #{words.join(" ")} in #{within}", *setting.children.flat_map { |child| setting_lines(child, inside) }]
+          ["set #{words.join(' ')} in #{within}", *setting.children.flat_map { |child| setting_lines(child, inside) }]
         end
 
         # A value as KDL writes it: the only boolean the configuration
@@ -150,12 +150,12 @@ module CrossLint
 
         def moved(replaced, converted, moves, debt, replaces)
           plugins = converted.configuration.plugins.map(&:name)
-          lines = ["#{replaced ? "replace" : "write"} #{@configuration.file}, with the plugins #{plugins.join(" and ")}"]
+          lines = ["#{replaced ? 'replace' : 'write'} #{@configuration.file}, with the plugins #{plugins.join(' and ')}"]
           return lines unless moves
 
           entries = debt.entries.size
-          lines << "move #{DEBT_FILE} to #{TrackDebt::FILE}, byte for byte, with #{entries} #{(entries == 1) ? "entry" : "entries"}" \
-            "#{", and replace the debt file that is there" if replaces}"
+          lines << "move #{DEBT_FILE} to #{TrackDebt::FILE}, byte for byte, with #{entries} #{(entries == 1) ? 'entry' : 'entries'}" \
+            "#{', and replace the debt file that is there' if replaces}"
         end
 
         # ng-nudge compiles `withComment.matching` with JavaScript, which
@@ -170,8 +170,8 @@ module CrossLint
           entry, javascript = entries.zip(answers).reject { |each, answer| ruby.match?(each.comment) == answer }.first
           return unless entry
 
-          raise Mistake.new("#{matching.key}: JavaScript #{javascript ? "matches" : "doesn't match"} the comment #{entry.comment.dump} " \
-            "of line #{entry.line} of the debt file, and its translation, #{matching.translated.dump}, #{javascript ? "doesn't" : "does"}; " \
+          raise Mistake.new("#{matching.key}: JavaScript #{javascript ? 'matches' : "doesn't match"} the comment #{entry.comment.dump} " \
+            "of line #{entry.line} of the debt file, and its translation, #{matching.translated.dump}, #{javascript ? "doesn't" : 'does'}; " \
             "write the expression another way, or remove it", file: SETTINGS_FILE)
         rescue InvalidExpression => error
           raise Mistake.new("#{matching.key}: is #{matching.source.dump}, which JavaScript refuses: #{error.message}; write it another way, or remove it", file: SETTINGS_FILE)

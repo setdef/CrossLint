@@ -49,17 +49,17 @@ class TextReportTest < Minitest::Test
     findings = @out.string.lines(chomp: true).map do |line|
       path, rest = line.split(": ", 2)
       warning = rest.delete_prefix!("warning: ")
-      message, plugin, policy = rest.match(/\A(.*) \(([^\/]+)\/(.+)\)\z/).captures
+      message, plugin, policy = rest.match(%r{\A(.*) \(([^/]+)/(.+)\)\z}).captures
       [path, message, plugin, policy, warning ? :warning : :error]
     end
     paid_off, findings = findings.partition { |_, message| message == "is paid off" }
-    {findings:, notices:, faults:, paid_off: paid_off.map { |finding| finding.take(4) }, wrote:, summary: summary_line}
+    { findings:, notices:, faults:, paid_off: paid_off.map { |finding| finding.take(4) }, wrote:, summary: summary_line }
   end
 
   def test_writes_each_fault_after_the_findings_and_says_how_to_see_its_trace
     report_port.write(result_of([violation_of("lib/b.rb", "no test")], faults: [fault_of, fault_of(trace: [])]))
 
-    assert_equal ["fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom"] * 2 +
+    assert_equal (["fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom"] * 2) +
       ["run it again with --debug to see where each fault was raised", "checked 9 ruby-file artifacts: 1 error, 1 warning"], own_lines
   end
 
@@ -117,7 +117,7 @@ class TextReportTest < Minitest::Test
   end
 
   def test_writes_a_passing_artifact_with_its_role
-    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {"path" => "a"}, pieces: [])
+    artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: { "path" => "a" }, pieces: [])
     report_port.write(result_of([artifact]))
 
     assert_equal "lib/a.rb: ruby-file passes\n", @out.string
@@ -139,7 +139,7 @@ class TextReportTest < Minitest::Test
     report_port.write(result_of([route, passing]))
 
     assert_equal "config/routes.rb:2: get /cart: no action in app/controllers/carts_controller.rb (routes/has-action)\n" \
-                 "config/routes.rb:4: get /: route passes\n", @out.string
+      "config/routes.rb:4: get /: route passes\n", @out.string
   end
 
   def test_colors_only_the_message_by_its_severity
@@ -212,12 +212,12 @@ class JSONReportTest < Minitest::Test
   def report_port = CrossLint::Adapters::JSONReport.new(out: @out, err: @err, crosslint: "1.4.0")
 
   def reported
-    object = @out.string.empty? ? {"findings" => []} : JSON.parse(@out.string)
+    object = @out.string.empty? ? { "findings" => [] } : JSON.parse(@out.string)
     findings = object.fetch("findings").map do |finding|
       [finding.fetch("path"), finding.fetch("message"), finding.fetch("plugin"), finding.fetch("policy"), finding.fetch("severity").to_sym]
     end
     paid_off = object.fetch("paid_off", []).map { |each| [each.fetch("artifact"), each.fetch("message"), each.fetch("plugin"), each.fetch("policy")] }
-    {findings:, notices:, faults:, paid_off:, wrote:, summary: summary_line}
+    { findings:, notices:, faults:, paid_off:, wrote:, summary: summary_line }
   end
 
   def test_writes_one_object_with_its_keys_in_order
@@ -297,7 +297,7 @@ class MemoryReportTest < Minitest::Test
     faults = @port.results.flat_map(&:faults).map { |fault| [fault.plugin, fault.rule, fault.artifact, fault.message] }
     summary = results.find { |result| result.verbosity == :normal }&.summary&.line
     paid_off = results.flat_map(&:paid_off).map { |each| [each.artifact, each.message, each.plugin, each.policy] }
-    {findings:, notices:, faults:, paid_off:, wrote: results.flat_map(&:wrote), summary:}
+    { findings:, notices:, faults:, paid_off:, wrote: results.flat_map(&:wrote), summary: }
   end
 
   def test_holds_every_result_written_in_order

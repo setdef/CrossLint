@@ -68,6 +68,6 @@ class InitConfigurationTest < Minitest::Test
 
   def project(*plugins)
     listed = plugins.each_with_index.map { |name, index| Core::ListedPlugin.new(name:, ref: nil, settings: [], line: index + 1) }
-    CrossLint::Adapters::MemoryConfiguration.new({APP => Core::Configuration.new(file: FILE, plugins: listed, policies: [], warnings: nil, verbosity: nil)})
+    CrossLint::Adapters::MemoryConfiguration.new({ APP => Core::Configuration.new(file: FILE, plugins: listed, policies: [], warnings: nil, verbosity: nil) })
   end
 end

@@ -17,7 +17,7 @@ class IsolationTest < Minitest::Test
     origins = listed.lines.map { |line| line.split("\t", 2).first }.uniq - ["command line:"]
 
     assert_predicate status, :success?, error
-    assert_equal ["file:#{ENV.fetch("GIT_CONFIG_GLOBAL")}"], origins
+    assert_equal ["file:#{ENV.fetch('GIT_CONFIG_GLOBAL')}"], origins
     assert_equal File.join(SANDBOX, "gitconfig"), ENV.fetch("GIT_CONFIG_GLOBAL")
     assert_includes listed, "user.name=Test"
   end

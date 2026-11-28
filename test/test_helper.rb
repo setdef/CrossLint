@@ -79,7 +79,7 @@ module TestHelper
   end
 
   # The file URL of the folder `path`.
-  def file_url(path) = "file://#{"/" unless path.start_with?("/")}#{path}"
+  def file_url(path) = "file://#{'/' unless path.start_with?('/')}#{path}"
 
   # A Git repository in `folder` that has `files`, a hash of paths and
   # text, in one commit on the branch main, with `tags` on that commit.

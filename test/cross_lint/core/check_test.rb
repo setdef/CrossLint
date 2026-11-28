@@ -23,7 +23,7 @@ class CheckTest < Minitest::Test
     assert_equal [
       ["lib/invoices/currency.rb", "no test file at test/invoices/currency_test.rb"],
       ["lib/invoices/pdf.rb", "no test file at test/invoices/pdf_test.rb"],
-      ["lib/invoices/tax.rb", "no test file at test/invoices/tax_test.rb"]
+      ["lib/invoices/tax.rb", "no test file at test/invoices/tax_test.rb"],
     ], result.findings.map { |violation| [violation.artifact, violation.message] }
     assert_equal ["checked 9 ruby-file artifacts: 3 errors", true], [result.summary.line, result.failed]
   end
@@ -80,7 +80,7 @@ class CheckTest < Minitest::Test
       regex: Regex.new(source: '<style(?![^>]*\bscoped)[^>]*>'))
     vue = plugin("vue", artifacts: [ArtifactDeclaration.new(name: "vue-component", primary: PathPattern.new(source: "src/{path}.vue"), pieces: [style], line: 1)],
       policies: [policy("scoped-styles", rules: [rule("piece-absent", piece: "unscoped-style")], applies_to: "vue-component")])
-    contents = {"src/a.vue" => "<template/>\r\n<style>\n</style>\n<style>\n", "src/b.vue" => "<style scoped>\n</style>\n", "src/c.vue" => ""}
+    contents = { "src/a.vue" => "<template/>\r\n<style>\n</style>\n<style>\n", "src/b.vue" => "<style scoped>\n</style>\n", "src/c.vue" => "" }
 
     assert_equal [["src/a.vue", "unscoped-style at src/a.vue:2"]], check(project(vue), files: [], contents:).findings.map { [it.artifact, it.message] }
   end
@@ -89,14 +89,19 @@ class CheckTest < Minitest::Test
     action = PieceDeclaration.new(name: "action", pattern: PathPattern.new(source: "app/{name}_controller.rb"), line: 2,
       regex: Regex.new(source: 'def {name}\b'))
     routes = plugin("routes", artifacts: [ArtifactDeclaration.new(name: "page", primary: PathPattern.new(source: "pages/{name}.md"), pieces: [action], line: 1)],
-      policies: [policy("has-action", rules: [rule(piece: "action")], applies_to: "page"),
+      policies: [
+        policy("has-action", rules: [rule(piece: "action")], applies_to: "page"),
         policy("documented", rules: [rule("piece-absent", piece: "action")], applies_to: "page",
-          condition: Condition::PieceExists.new(piece: "action", line: 7))])
+          condition: Condition::PieceExists.new(piece: "action", line: 7)),
+])
     pages = %w[show index edit new].to_h { ["pages/#{it}.md", ""] }
     contents = pages.merge("app/show_controller.rb" => "def show_all\n", "app/index_controller.rb" => "def index\n", "app/edit_controller.rb/x" => "")
 
-    assert_equal [["pages/edit.md", "no action in app/edit_controller.rb, which isn't a file"],
-      ["pages/new.md", "no action in app/new_controller.rb, which isn't a file"], ["pages/show.md", "no action in app/show_controller.rb"]],
+    assert_equal [
+      ["pages/edit.md", "no action in app/edit_controller.rb, which isn't a file"],
+      ["pages/new.md", "no action in app/new_controller.rb, which isn't a file"],
+      ["pages/show.md", "no action in app/show_controller.rb"],
+],
       check(project(routes), files: [], contents:).findings.select { it.policy == "has-action" }.map { [it.artifact, it.message] }
     assert_equal [["pages/index.md", "action at app/index_controller.rb:1"]],
       check(project(routes), files: [], contents:).findings.reject { it.policy == "has-action" }.map { [it.artifact, it.message] }
@@ -109,9 +114,9 @@ class CheckTest < Minitest::Test
       policies: [policy("fast", rules: [rule(piece: "slow")], applies_to: "text")])
 
     assert_equal ["fault in plugin texts: artifact text ran past the 0.01-second time limit searching a.txt with the regex of piece \"slow\""],
-      check(project(plugin), files: [], contents: {"a.txt" => ("a" * 32) + "c"}).faults.map(&:line)
+      check(project(plugin), files: [], contents: { "a.txt" => ("a" * 32) + "c" }).faults.map(&:line)
     assert_equal ["fault in plugin texts: artifact text can't search a.txt with the regex of piece \"slow\", since it isn't UTF-8"],
-      check(project(plugin), files: [], contents: {"a.txt" => "caf\xE9".b.force_encoding(Encoding::UTF_8)}).faults.map(&:line)
+      check(project(plugin), files: [], contents: { "a.txt" => "caf\xE9".b.force_encoding(Encoding::UTF_8) }).faults.map(&:line)
   end
 
   ROUTE = %((?<verb>get|post) "(?<route>[^"]+)", to: "(?<controller>[^#"]+)#(?<action>\\w+)"(?<options>, as: \\w+)?)
@@ -124,21 +129,28 @@ class CheckTest < Minitest::Test
     spec = PieceDeclaration.new(name: "request-spec", pattern: PathPattern.new(source: "spec/requests/{controller}_spec.rb", captures: %w[controller]), line: 5)
     route = ArtifactDeclaration.new(name: "route", primary: PathPattern.new(source: "config/routes.rb"), pieces: [action, spec], line: 1,
       regex: Regex.new(source:, time_limit:), name_pattern: name && PathPattern.new(source: name, captures: %w[verb route]))
-    plugin("routes", artifacts: [route], policies: [policy("has-action", rules: [rule(piece: "action")], applies_to: "route"),
-      policy("has-spec", rules: [rule(piece: "request-spec", severity: :warning)], applies_to: "route")])
+    plugin("routes", artifacts: [route], policies: [
+      policy("has-action", rules: [rule(piece: "action")], applies_to: "route"),
+      policy("has-spec", rules: [rule(piece: "request-spec", severity: :warning)], applies_to: "route"),
+])
   end
 
   def test_finds_an_artifact_for_each_match_of_a_primarys_regex_named_by_its_captures_on_the_line_it_starts
-    contents = {"config/routes.rb" => ROUTES, "app/controllers/carts_controller.rb" => "class CartsController\n  def show\n  end\nend\n",
-                "spec/requests/carts_spec.rb" => ""}
+    contents = {
+"config/routes.rb" => ROUTES,
+"app/controllers/carts_controller.rb" => "class CartsController\n  def show\n  end\nend\n",
+"spec/requests/carts_spec.rb" => "",
+}
     result = check(project(routes_plugin), files: [], contents:, all: true)
 
-    assert_equal [["config/routes.rb", 1, "get /cart", "route passes"],
+    assert_equal [
+      ["config/routes.rb", 1, "get /cart", "route passes"],
       ["config/routes.rb", 2, "post /cart", "no action in app/controllers/carts_controller.rb"],
       ["config/routes.rb", 4, "get /", "no action in app/controllers/home_controller.rb, which isn't a file"],
-      ["config/routes.rb", 4, "get /", "no request-spec file at spec/requests/home_spec.rb"]],
+      ["config/routes.rb", 4, "get /", "no request-spec file at spec/requests/home_spec.rb"],
+],
       result.findings.map { it.is_a?(Violation) ? [it.path, it.line, it.artifact, it.message] : [it.path, it.line, it.name, "route passes"] }
-    assert_equal [{"verb" => "get", "route" => "/cart", "controller" => "carts", "action" => "show"}],
+    assert_equal [{ "verb" => "get", "route" => "/cart", "controller" => "carts", "action" => "show" }],
       result.findings.grep(Artifact).map(&:match)
   end
 
@@ -146,14 +158,16 @@ class CheckTest < Minitest::Test
     empty = routes_plugin(ROUTE.sub("[^#\"]+", "[^#\"]*"))
 
     assert_equal ["fault in plugin routes: artifact route captured nothing for {controller} at config/routes.rb:2"],
-      check(project(empty), files: [], contents: {"config/routes.rb" => %(get "/", to: "home#a"\nget "/cart", to: "#show"\n)}).faults.map(&:line)
-    assert_equal ["fault in plugin routes: artifact route has two artifacts named config/routes.rb, config/routes.rb:1 and config/routes.rb:2; " \
-                  "a name PATTERN tells them apart"],
-      check(project(routes_plugin(name: nil)), files: [], contents: {"config/routes.rb" => ROUTES}).faults.map(&:line)
+      check(project(empty), files: [], contents: { "config/routes.rb" => %(get "/", to: "home#a"\nget "/cart", to: "#show"\n) }).faults.map(&:line)
+    assert_equal [
+"fault in plugin routes: artifact route has two artifacts named config/routes.rb, config/routes.rb:1 and config/routes.rb:2; " \
+  "a name PATTERN tells them apart",
+],
+      check(project(routes_plugin(name: nil)), files: [], contents: { "config/routes.rb" => ROUTES }).faults.map(&:line)
   end
 
   def test_finds_no_piece_out_of_the_project_whatever_a_capture_holds
-    contents = {"config/routes.rb" => %(get "/", to: "../../../etc/passwd#x"\n)}
+    contents = { "config/routes.rb" => %(get "/", to: "../../../etc/passwd#x"\n) }
 
     assert_equal ["no action in app/controllers/../../../etc/passwd_controller.rb, which isn't a file"],
       check(project(routes_plugin), files: [], contents:).findings.select { it.policy == "has-action" }.map(&:message)
@@ -163,13 +177,13 @@ class CheckTest < Minitest::Test
     slow = routes_plugin('^(a+)+\1$', time_limit: 0.01)
 
     assert_equal ["fault in plugin routes: artifact route ran past the 0.01-second time limit searching config/routes.rb with the regex of its primary"],
-      check(project(slow), files: [], contents: {"config/routes.rb" => ("a" * 32) + "c"}).faults.map(&:line)
+      check(project(slow), files: [], contents: { "config/routes.rb" => ("a" * 32) + "c" }).faults.map(&:line)
   end
 
   def test_says_when_no_file_has_a_match_of_a_primarys_regex_and_finds_none_in_a_file_it_cant_read
     notice = %(no file that "config/routes.rb" matches has a match of its regex, the primary pattern of role "route")
 
-    assert_equal [notice], check(project(routes_plugin), files: [], contents: {"config/routes.rb" => "resources :carts\n"}).notices.map(&:message)
+    assert_equal [notice], check(project(routes_plugin), files: [], contents: { "config/routes.rb" => "resources :carts\n" }).notices.map(&:message)
     assert_equal [notice], check(project(routes_plugin), files: ["config/routes.rb"]).notices.map(&:message)
   end
 
@@ -195,16 +209,18 @@ class CheckTest < Minitest::Test
 
   def test_applies_a_policy_only_where_its_condition_holds
     files = ["lib/a.rb", "lib/b.rb", "lib/c.rb", "lib/d.rb", "sig/a.rbs", "sig/b.rbs", "doc/a.md", "doc/c.md"]
-    has = ->(name) { Condition::PieceExists.new(piece: name, line: 7) }
+    has = -> (name) { Condition::PieceExists.new(piece: name, line: 7) }
     cases = {
       has.call("signature") => ["lib/a.rb", "lib/b.rb"],
       Condition::Not.new(condition: has.call("signature"), line: 7) => ["lib/c.rb", "lib/d.rb"],
       Condition::All.new(conditions: [has.call("signature"), has.call("doc")], line: 7) => ["lib/a.rb"],
-      Condition::Any.new(conditions: [has.call("signature"), has.call("doc")], line: 7) => ["lib/a.rb", "lib/b.rb", "lib/c.rb"]
+      Condition::Any.new(conditions: [has.call("signature"), has.call("doc")], line: 7) => ["lib/a.rb", "lib/b.rb", "lib/c.rb"],
     }
     cases.each do |condition, expected|
-      plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb",
-        "signature" => "sig/{path}.rbs", "doc" => "doc/{path}.md")], policies: [policy("has-test", rules: [rule], condition:)])
+      plugin = plugin("tests", artifacts: [
+declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb",
+  "signature" => "sig/{path}.rbs", "doc" => "doc/{path}.md"),
+], policies: [policy("has-test", rules: [rule], condition:)])
 
       assert_equal expected, check(project(plugin), files:).findings.map(&:artifact), condition.inspect
     end
@@ -220,7 +236,7 @@ class CheckTest < Minitest::Test
 
   def test_gives_a_violation_the_severity_of_its_rule_its_policy_or_the_configuration
     warning = tests_plugin(rules: [rule(severity: :warning)])
-    severities = ->(plugin, settings = []) { check(project(plugin, policies: settings), files: ["lib/a.rb"]).findings.map(&:severity) }
+    severities = -> (plugin, settings = []) { check(project(plugin, policies: settings), files: ["lib/a.rb"]).findings.map(&:severity) }
 
     assert_equal [:error], severities.call(tests_plugin)
     assert_equal [:warning], severities.call(warning)
@@ -315,7 +331,7 @@ class CheckTest < Minitest::Test
   def test_lists_a_passing_artifact_with_its_pieces_and_match
     artifact = check(project(tests_plugin), files: ["lib/a/b.rb", "test/a/b_test.rb"], all: true).findings.first
 
-    assert_equal Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a/b.rb", match: {"path" => "a/b"},
+    assert_equal Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a/b.rb", match: { "path" => "a/b" },
       pieces: [Piece.new(name: "test", path: "test/a/b_test.rb", exists: true)]), artifact
   end
 
@@ -324,8 +340,14 @@ class CheckTest < Minitest::Test
       policies: [policy("has-spec", rules: [rule(piece: "spec")]), policy("a-spec", rules: [rule(piece: "spec")])])
     result = check(project(tests_plugin, other), files: ["lib/b.rb", "lib/a.rb"])
 
-    assert_equal [["lib/a.rb", "other", "a-spec"], ["lib/a.rb", "other", "has-spec"], ["lib/a.rb", "tests", "has-test"],
-      ["lib/b.rb", "other", "a-spec"], ["lib/b.rb", "other", "has-spec"], ["lib/b.rb", "tests", "has-test"]],
+    assert_equal [
+      ["lib/a.rb", "other", "a-spec"],
+      ["lib/a.rb", "other", "has-spec"],
+      ["lib/a.rb", "tests", "has-test"],
+      ["lib/b.rb", "other", "a-spec"],
+      ["lib/b.rb", "other", "has-spec"],
+      ["lib/b.rb", "tests", "has-test"],
+],
       result.findings.map { |violation| [violation.artifact, violation.plugin, violation.policy] }
     assert_equal "checked 2 tests/ruby-file and 2 other/ruby-file artifacts: 6 errors", result.summary.line
   end
@@ -361,8 +383,11 @@ class CheckTest < Minitest::Test
   end
 
   def test_applies_a_policy_with_no_applies_to_to_each_artifact_of_its_plugin_with_the_pieces_it_names
-    artifacts = [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"), declaration("rake-file", "{path}.rake"),
-      declaration("doc", "{path}.md", "test" => "test/{path}_test.md", "note" => "{path}.txt")]
+    artifacts = [
+      declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
+      declaration("rake-file", "{path}.rake"),
+      declaration("doc", "{path}.md", "test" => "test/{path}_test.md", "note" => "{path}.txt"),
+]
     has_note = policy("note", rules: [rule(piece: "test")], applies_to: nil, condition: Condition::PieceExists.new(piece: "note", line: 7))
     plugin = plugin("tests", artifacts:, policies: [policy("has-test", rules: [rule], applies_to: nil), has_note])
     result = check(project(plugin), files: ["lib/a.rb", "a.rake", "a.md", "a.txt"])
@@ -372,8 +397,10 @@ class CheckTest < Minitest::Test
   end
 
   def test_finds_a_file_two_artifacts_match_as_a_primary_file_of_each
-    plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
-      declaration("library", "lib/{name}.rb", "test" => "spec/{name}_spec.rb")],
+    plugin = plugin("tests", artifacts: [
+      declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
+      declaration("library", "lib/{name}.rb", "test" => "spec/{name}_spec.rb"),
+],
       policies: [policy("has-test", rules: [rule]), policy("has-spec", applies_to: "library", rules: [rule])])
     result = check(project(plugin), files: ["lib/a.rb", "lib/x/y.rb"])
 
@@ -383,41 +410,52 @@ class CheckTest < Minitest::Test
   end
 
   def test_counts_only_the_kinds_an_enabled_policy_applies_to
-    plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
-      declaration("doc", "doc/{path}.md")], policies: [policy("has-test", rules: [rule])])
+    plugin = plugin("tests", artifacts: [
+      declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
+      declaration("doc", "doc/{path}.md"),
+], policies: [policy("has-test", rules: [rule])])
 
     assert_equal "checked 1 ruby-file artifact: 1 error", check(project(plugin), files: ["lib/a.rb", "doc/a.md"]).summary.line
   end
 
   def test_warns_of_a_files_pattern_that_matches_no_file
-    plugin = plugin("tests", artifacts: [declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
-      declaration("doc", "docs/{path}.md", line: 9)], policies: [policy("has-test", rules: [rule])])
+    plugin = plugin("tests", artifacts: [
+      declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb"),
+      declaration("doc", "docs/{path}.md", line: 9),
+], policies: [policy("has-test", rules: [rule])])
     result = check(project(plugin), files: ["lib/a.rb", "test/a_test.rb"])
 
-    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 9,
-      message: %(no file matches "docs/{path}.md", the primary pattern of role "doc"))], result.notices
+    assert_equal [
+Notice.new(file: ".config/tests/plugin.kdl", line: 9,
+  message: %(no file matches "docs/{path}.md", the primary pattern of role "doc")),
+], result.notices
     refute result.failed
   end
 
   def test_warns_of_an_optional_artifact_that_matches_no_file_only_when_none_of_its_plugins_does
-    optional = ->(name, files, line) { declaration(name, files, "test" => "{path}.spec.ts").with(line:, optional: true) }
-    artifacts = [declaration("store", "src/{path}.store.ts", line: 4), optional.call("pipe", "src/{path}.pipe.ts", 2),
-      optional.call("component", "src/{path}.component.ts", 3)]
+    optional = -> (name, files, line) { declaration(name, files, "test" => "{path}.spec.ts").with(line:, optional: true) }
+    artifacts = [
+      declaration("store", "src/{path}.store.ts", line: 4),
+      optional.call("pipe", "src/{path}.pipe.ts", 2),
+      optional.call("component", "src/{path}.component.ts", 3),
+]
     plugin = plugin("tests", artifacts:, policies: [policy("p", rules: [rule], applies_to: "pipe")])
     some = check(project(plugin), files: ["src/a.component.ts"])
     none = check(project(plugin), files: ["app/a.component.ts"])
 
     assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 4, message: %(no file matches "src/{path}.store.ts", the primary pattern of role "store"))],
       some.notices
-    assert_equal [Notice.new(file: ".config/tests/plugin.kdl", line: 2,
-      message: %(no file matches the primary pattern of any role of plugin tests, such as "src/{path}.pipe.ts"))], none.notices
+    assert_equal [
+Notice.new(file: ".config/tests/plugin.kdl", line: 2,
+  message: %(no file matches the primary pattern of any role of plugin tests, such as "src/{path}.pipe.ts")),
+], none.notices
   end
 
   def test_finds_no_artifact_whose_match_has_a_name_that_starts_with_a_dot_when_its_declaration_leaves_dotfiles_out
     plain = declaration("ruby-file", "lib/{path}.rb", "test" => "test/{path}_test.rb")
     solid = plain.with(dotfiles: false)
     files = ["lib/a.rb", "lib/.b.rb", "lib/.c/d.rb", "lib/e/.f/g.rb", "lib/h/.i.rb", "lib/j.k.rb"]
-    found = ->(declaration) { check(project(plugin("tests", artifacts: [declaration], policies: [policy("has-test", rules: [rule])])), files:).findings.map(&:artifact) }
+    found = -> (declaration) { check(project(plugin("tests", artifacts: [declaration], policies: [policy("has-test", rules: [rule])])), files:).findings.map(&:artifact) }
 
     assert_equal files.sort, found.call(plain)
     assert_equal ["lib/a.rb", "lib/j.k.rb"], found.call(solid)
@@ -444,8 +482,12 @@ class CheckTest < Minitest::Test
   end
 
   def test_says_under_debug_where_a_primarys_regex_found_each_artifact_and_what_each_pieces_regex_found
-    contents = {"config/routes.rb" => ROUTES, "app/controllers/carts_controller.rb" => "class CartsController\n  def show\n  end\nend\n",
-                "app/controllers/home_controller.rb/x" => "", "spec/requests/carts_spec.rb" => ""}
+    contents = {
+"config/routes.rb" => ROUTES,
+"app/controllers/carts_controller.rb" => "class CartsController\n  def show\n  end\nend\n",
+"app/controllers/home_controller.rb/x" => "",
+"spec/requests/carts_spec.rb" => "",
+}
     debug = debugged(project(routes_plugin), files: ["config/routes.rb.bak"], contents:)
 
     assert_equal [%(routes/route: 3 artifacts, from primary "config/routes.rb" with regex #{ROUTE.dump})], debug.written("role")
@@ -455,12 +497,12 @@ class CheckTest < Minitest::Test
       %(routes/route config/routes.rb:2, named post /cart: piece "action" is missing, since app/controllers/carts_controller.rb has no match of its regex; ) +
         %(piece "request-spec" at spec/requests/carts_spec.rb exists),
       %(routes/route config/routes.rb:4, named get /: piece "action" is missing, since app/controllers/home_controller.rb isn't a file; ) +
-        %(piece "request-spec" at spec/requests/home_spec.rb is missing)
+        %(piece "request-spec" at spec/requests/home_spec.rb is missing),
     ], debug.written("artifact")
   end
 
   def test_says_under_debug_which_file_a_primarys_regex_has_no_match_in_or_cant_read
-    assert_includes debugged(project(routes_plugin), files: [], contents: {"config/routes.rb" => "resources :carts\n"}).written("role"),
+    assert_includes debugged(project(routes_plugin), files: [], contents: { "config/routes.rb" => "resources :carts\n" }).written("role"),
       "routes/route: config/routes.rb has no match of the primary's regex"
     assert_includes debugged(project(routes_plugin), files: ["config/routes.rb"]).written("role"), "routes/route: config/routes.rb isn't a file CrossLint can read"
   end
@@ -476,8 +518,10 @@ class CheckTest < Minitest::Test
     solid = declaration("ruby-file", "lib/{path}.rb").with(dotfiles: false)
     debug = debugged(project(plugin("tests", artifacts: [solid], policies: [])), files: ["lib/a.rb", "lib/.b.rb"])
 
-    assert_equal [%(tests/ruby-file: leaves out lib/.b.rb, since a placeholder matched a name that starts with "." and the role has dotfiles=#false),
-      %(tests/ruby-file: 1 artifact, from primary "lib/{path}.rb")], debug.written("role")
+    assert_equal [
+      %(tests/ruby-file: leaves out lib/.b.rb, since a placeholder matched a name that starts with "." and the role has dotfiles=#false),
+      %(tests/ruby-file: 1 artifact, from primary "lib/{path}.rb"),
+], debug.written("role")
     assert_equal ["tests/ruby-file lib/a.rb: no piece but its primary"], debug.written("artifact")
   end
 
@@ -492,7 +536,7 @@ class CheckTest < Minitest::Test
       "tests/has-test applies to tests/ruby-file: 1 artifact",
       "tests/has-test runs on lib/a.rb",
       "tests/unstubbed applies to tests/ruby-file: 1 artifact",
-      %(tests/unstubbed skips lib/a.rb, since its when fails: not { all { piece-exists "stub" (exists) any { piece-exists "stub" (exists) } } })
+      %(tests/unstubbed skips lib/a.rb, since its when fails: not { all { piece-exists "stub" (exists) any { piece-exists "stub" (exists) } } }),
     ], debug.written("policy")
   end
 
@@ -501,16 +545,21 @@ class CheckTest < Minitest::Test
     untested = Condition::Not.new(condition: Condition::PieceExists.new(piece: "test", line: 7), line: 7)
     plugin = plugin("tests", artifacts: [named], policies: [policy("has-test", rules: [rule], condition: untested)])
 
-    assert_equal ["tests/has-test applies to tests/ruby-file: 1 artifact",
-      %(tests/has-test runs on b class at lib/b.rb, since its when holds: not { piece-exists "test" (missing) })],
+    assert_equal [
+      "tests/has-test applies to tests/ruby-file: 1 artifact",
+      %(tests/has-test runs on b class at lib/b.rb, since its when holds: not { piece-exists "test" (missing) }),
+],
       debugged(project(plugin), files: ["lib/b.rb"]).written("policy")
   end
 
   def test_says_under_debug_which_policy_the_configuration_turns_off
     debug = debugged(project(mixed_plugin, policies: [setting("tests/has-signature", enabled: false)]), files: ["lib/a.rb"])
 
-    assert_equal ["tests/has-signature doesn't run, since it is off in .config/crosslint/config.kdl:4",
-      "tests/has-test applies to tests/ruby-file: 1 artifact", "tests/has-test runs on lib/a.rb"], debug.written("policy")
+    assert_equal [
+      "tests/has-signature doesn't run, since it is off in .config/crosslint/config.kdl:4",
+      "tests/has-test applies to tests/ruby-file: 1 artifact",
+      "tests/has-test runs on lib/a.rb",
+], debug.written("policy")
   end
 
   def test_says_under_debug_what_each_rule_found_on_each_artifact_with_its_severity_and_detail
@@ -520,7 +569,7 @@ class CheckTest < Minitest::Test
       %(piece-exists piece="test" of tests/has-test on lib/a.rb: no violation),
       %(piece-exists piece="test" of tests/has-test on lib/b.rb: warning: no test file at test/b_test.rb, with detail "test"),
       %(piece-exists piece="signature" of tests/has-signature on lib/a.rb: warning: no signature file at sig/a.rbs, with detail "signature"),
-      %(piece-exists piece="signature" of tests/has-signature on lib/b.rb: warning: no signature file at sig/b.rbs, with detail "signature")
+      %(piece-exists piece="signature" of tests/has-signature on lib/b.rb: warning: no signature file at sig/b.rbs, with detail "signature"),
     ], debug.written("rule")
   end
 
@@ -554,7 +603,7 @@ class CheckTest < Minitest::Test
     attr_reader :inputs
 
     def initialize(answer = nil, **result)
-      @answer = answer || ->(_) { CrossLint::Core::StepResult.new(excused: [], violations: [], paid_off: [], notices: [], wrote: [], summary: []).with(**result) }
+      @answer = answer || -> (_) { CrossLint::Core::StepResult.new(excused: [], violations: [], paid_off: [], notices: [], wrote: [], summary: []).with(**result) }
       @inputs = []
     end
 
@@ -584,7 +633,7 @@ class CheckTest < Minitest::Test
   def test_runs_each_step_on_every_violation_whatever_warnings_hides
     step = ScriptedStep.new
     files = ["lib/a.rb", "lib/b.rb"]
-    check(project(mixed_plugin, stepped), files:, warnings: :none, steps: {"track-debt" => step})
+    check(project(mixed_plugin, stepped), files:, warnings: :none, steps: { "track-debt" => step })
     input = step.inputs.fetch(0)
 
     assert_equal [4, "debt", [], nil], [input.violations.size, input.plugin.name, input.faulted, input.command]
@@ -592,12 +641,12 @@ class CheckTest < Minitest::Test
   end
 
   def test_leaves_out_what_a_step_excuses_and_reports_what_it_adds
-    excuse = ->(input) { StepResult.new(excused: input.violations.take(1), violations: [debt_violation(:warning)], paid_off: [], notices: [], wrote: [], summary: ["1 accepted as debt"]) }
-    result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/b.rb", "test/b_test.rb", "lib/c.rb"], steps: {"track-debt" => ScriptedStep.new(excuse)})
+    excuse = -> (input) { StepResult.new(excused: input.violations.take(1), violations: [debt_violation(:warning)], paid_off: [], notices: [], wrote: [], summary: ["1 accepted as debt"]) }
+    result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/b.rb", "test/b_test.rb", "lib/c.rb"], steps: { "track-debt" => ScriptedStep.new(excuse) })
 
     assert_equal [["debt.tsv", "line 2"], ["lib/c.rb", "no test file at test/c_test.rb"]], result.findings.map { |each| [each.artifact, each.message] }
     assert_equal ["checked 3 ruby-file artifacts: 1 error, 1 warning, 1 accepted as debt", true], [result.summary.line, result.failed]
-    excused = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/b.rb", "test/b_test.rb"], all: true, steps: {"track-debt" => ScriptedStep.new(excuse)})
+    excused = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/b.rb", "test/b_test.rb"], all: true, steps: { "track-debt" => ScriptedStep.new(excuse) })
 
     assert_equal [["lib/a.rb", Artifact], ["lib/b.rb", Artifact], ["debt.tsv", Violation]].sort, excused.findings.map { |each| [each.is_a?(Artifact) ? each.path : each.artifact, each.class] }.sort
     refute excused.failed
@@ -605,33 +654,38 @@ class CheckTest < Minitest::Test
 
   def test_drops_what_a_step_adds_of_a_policy_the_configuration_disables
     step = ScriptedStep.new(violations: [debt_violation])
-    result = check(project(stepped, policies: [setting("debt/has-debt", enabled: false)]), files: [], steps: {"track-debt" => step})
+    result = check(project(stepped, policies: [setting("debt/has-debt", enabled: false)]), files: [], steps: { "track-debt" => step })
 
     assert_equal [[], false], [result.findings, result.failed]
   end
 
   def test_fails_at_a_paid_off_entry_and_reports_it_among_the_findings_even_when_quiet
     step = ScriptedStep.new(paid_off: [paid_off("lib/b.rb")])
-    result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/c.rb"], verbosity: :quiet, steps: {"track-debt" => step})
+    result = check(project(tests_plugin, stepped), files: ["lib/a.rb", "lib/c.rb"], verbosity: :quiet, steps: { "track-debt" => step })
 
     assert_equal ["lib/a.rb", "lib/b.rb", "lib/c.rb"], result.findings.map(&:artifact)
     assert_equal [true, 1], [result.failed, result.summary.paid_off]
-    assert_empty check(project(stepped), files: [], verbosity: :silent, steps: {"track-debt" => step}).findings
+    assert_empty check(project(stepped), files: [], verbosity: :silent, steps: { "track-debt" => step }).findings
   end
 
   def test_orders_paid_off_entries_by_artifact_then_plugin_then_policy_then_message
-    entry = ->(artifact, plugin, policy, message) { PaidOffEntry.new(plugin:, policy:, artifact:, file: "debt.tsv", line: 2, message:) }
-    ordered = [entry.call("a", "p1", "x", "m1"), entry.call("a", "p1", "x", "m2"), entry.call("a", "p1", "y", "m1"),
-      entry.call("a", "p2", "x", "m1"), entry.call("b", "p1", "x", "m1")]
+    entry = -> (artifact, plugin, policy, message) { PaidOffEntry.new(plugin:, policy:, artifact:, file: "debt.tsv", line: 2, message:) }
+    ordered = [
+      entry.call("a", "p1", "x", "m1"),
+      entry.call("a", "p1", "x", "m2"),
+      entry.call("a", "p1", "y", "m1"),
+      entry.call("a", "p2", "x", "m1"),
+      entry.call("b", "p1", "x", "m1"),
+]
     step = ScriptedStep.new(paid_off: ordered.reverse)
 
-    assert_equal ordered, check(project(stepped), files: [], steps: {"track-debt" => step}).findings
+    assert_equal ordered, check(project(stepped), files: [], steps: { "track-debt" => step }).findings
   end
 
   def test_reports_a_steps_warnings_only_at_the_normal_verbosity_and_never_fails_on_them
     notice = Notice.new(file: "debt.tsv", line: 3, message: "coarse")
     step = ScriptedStep.new(notices: [notice])
-    results = [{}, {verbosity: :quiet}, {warnings: :none}, {warnings: :error}].map { |options| check(project(stepped), files: [], steps: {"track-debt" => step}, **options) }
+    results = [{}, { verbosity: :quiet }, { warnings: :none }, { warnings: :error }].map { |options| check(project(stepped), files: [], steps: { "track-debt" => step }, **options) }
 
     assert_equal [[notice], [], [], [notice]], results.map(&:notices)
     assert_equal [false] * 4, results.map(&:failed)
@@ -639,15 +693,15 @@ class CheckTest < Minitest::Test
 
   def test_passes_a_command_that_wrote_and_says_what_it_wrote_unless_silent
     step = ScriptedStep.new(wrote: ["wrote debt.tsv"], violations: [debt_violation], paid_off: [paid_off("lib/a.rb")])
-    result = check(project(stepped), files: [], command: ["debt", "update"], steps: {"track-debt" => step})
+    result = check(project(stepped), files: [], command: ["debt", "update"], steps: { "track-debt" => step })
 
     assert_equal [false, ["wrote debt.tsv"]], [result.failed, result.wrote]
-    assert_empty check(project(stepped), files: [], command: ["debt", "update"], verbosity: :silent, steps: {"track-debt" => step}).wrote
+    assert_empty check(project(stepped), files: [], command: ["debt", "update"], verbosity: :silent, steps: { "track-debt" => step }).wrote
   end
 
   def test_passes_a_command_whatever_the_check_found_and_fails_the_same_check_without_it
     step = ScriptedStep.new(paid_off: [paid_off("lib/a.rb")])
-    errors = ->(**options) { check(project(tests_plugin, stepped), files: ["lib/a.rb"], steps: {"track-debt" => step}, **options) }
+    errors = -> (**options) { check(project(tests_plugin, stepped), files: ["lib/a.rb"], steps: { "track-debt" => step }, **options) }
 
     assert_equal [true, false], [errors.call.failed, errors.call(command: ["debt", "update"]).failed]
     assert_equal [true, false], [errors.call(warnings: :error).failed, errors.call(warnings: :error, command: ["debt", "update"]).failed]
@@ -655,7 +709,7 @@ class CheckTest < Minitest::Test
 
   def test_tells_only_the_step_of_the_plugin_a_command_belongs_to_the_commands_name
     step = ScriptedStep.new
-    check(project(stepped(commands: ["update"]), stepped("other", commands: ["update"])), files: [], command: ["debt", "update"], steps: {"track-debt" => step})
+    check(project(stepped(commands: ["update"]), stepped("other", commands: ["update"])), files: [], command: ["debt", "update"], steps: { "track-debt" => step })
 
     assert_equal [["debt", "update"], ["other", nil]], step.inputs.map { |input| [input.plugin.name, input.command] }
     assert_equal [{}, {}], step.inputs.map(&:flags)
@@ -664,10 +718,10 @@ class CheckTest < Minitest::Test
   def test_tells_the_step_of_the_plugin_a_command_belongs_to_the_flags_given_and_no_other_step
     step = ScriptedStep.new
     check(project(stepped(commands: ["update"]), stepped("other", commands: ["update"])), files: [], command: ["debt", "update"],
-      flags: {"dry-run" => true}, steps: {"track-debt" => step})
-    check(project(stepped(commands: ["update"])), files: [], steps: {"track-debt" => step}, flags: {"dry-run" => true})
+      flags: { "dry-run" => true }, steps: { "track-debt" => step })
+    check(project(stepped(commands: ["update"])), files: [], steps: { "track-debt" => step }, flags: { "dry-run" => true })
 
-    assert_equal [{"dry-run" => true}, {}, {}], step.inputs.map(&:flags)
+    assert_equal [{ "dry-run" => true }, {}, {}], step.inputs.map(&:flags)
   end
 
   def test_runs_no_step_of_a_plugin_that_stopped_and_tells_the_others_which_stopped
@@ -675,15 +729,15 @@ class CheckTest < Minitest::Test
     broken = tests_plugin(rules: [rule("boom")], ruby: ["boom"]).then do |plugin|
       plugin.with(manifest: plugin.manifest.with(step_policies: [StepPolicy.new(name: "has-debt", line: 1)], steps: [StepDeclaration.new(name: "track-debt", line: 3)]))
     end
-    ruby = {"#{ROOT}/.config/tests/rules/boom.rb" => ->(_namespace) { raise "boom" }}
-    result = check(project(broken, stepped), files: ["lib/a.rb"], ruby:, steps: {"track-debt" => step})
+    ruby = { "#{ROOT}/.config/tests/rules/boom.rb" => -> (_namespace) { raise "boom" } }
+    result = check(project(broken, stepped), files: ["lib/a.rb"], ruby:, steps: { "track-debt" => step })
 
     assert_equal [["debt"], [["tests"]], ["tests"]], [step.inputs.map { |input| input.plugin.name }, step.inputs.map(&:faulted), result.faults.map(&:plugin)]
   end
 
   def test_fails_at_a_paid_off_entry_alone
     step = ScriptedStep.new(paid_off: [paid_off("lib/a.rb")], summary: ["0 accepted as debt"])
-    result = check(project(stepped, stepped("other")), files: [], steps: {"track-debt" => step})
+    result = check(project(stepped, stepped("other")), files: [], steps: { "track-debt" => step })
 
     assert_equal [true, ["0 accepted as debt", "0 accepted as debt"]], [result.failed, result.summary.steps]
   end
@@ -691,23 +745,23 @@ class CheckTest < Minitest::Test
   def test_drops_only_what_a_step_adds_of_the_policy_the_configuration_disables
     kept = debt_violation.with(policy: "kept")
     policies = [setting("debt/kept", severity: :error), setting("debt/has-debt", enabled: false), setting("other/kept", enabled: false)]
-    result = check(project(stepped, policies:), files: [], steps: {"track-debt" => ScriptedStep.new(violations: [debt_violation, kept])})
+    result = check(project(stepped, policies:), files: [], steps: { "track-debt" => ScriptedStep.new(violations: [debt_violation, kept]) })
 
     assert_equal [kept], result.findings
   end
 
   private
 
-  def check(project, files:, ignored: [], steps: {}, ruby: {}, contents: {}, debug: nil, **options)
-    port = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files + contents.keys}, ignored: {ROOT => ignored}, contents: {ROOT => contents})
+  def check(project, files:, ignored: [], steps: {}, ruby: {}, contents: {}, debug: nil, **)
+    port = CrossLint::Adapters::MemoryProjectFiles.new({ ROOT => files + contents.keys }, ignored: { ROOT => ignored }, contents: { ROOT => contents })
     Check.new(project_files: port, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(ruby), helpers: CrossLint::Adapters::MemoryHelpers.new, steps:,
-      debug:).call(project, **options)
+      debug:).call(project, **)
   end
 
   # What the check says under --debug, by topic.
-  def debugged(project, **options)
+  def debugged(project, **)
     debug = CrossLint::Adapters::MemoryDebugOutput.new
-    check(project, debug:, **options)
+    check(project, debug:, **)
     debug
   end
 
@@ -717,7 +771,7 @@ class CheckTest < Minitest::Test
   end
 
   def rule(name = "piece-exists", piece: "test", severity: nil, line: 6)
-    arguments = BuiltInRule.named(name) ? {"piece" => piece} : {}
+    arguments = BuiltInRule.named(name) ? { "piece" => piece } : {}
     PolicyRule.new(name:, arguments:, severity:, line:)
   end
 

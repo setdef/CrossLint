@@ -40,8 +40,12 @@ class NgNudgeDifferencesTest < Minitest::Test
   def test_says_each_file_only_node_glob_finds_and_then_each_file_only_crosslint_finds_in_the_order_of_their_paths
     lines = Differences.new(role: "store", src_dir: "src").lines(["b.ts", "a.ts", "both.ts"], ["z.ts", "both.ts", "y.ts"])
 
-    assert_equal ["node-glob finds src/a.ts as a store, and CrossLint doesn't", "node-glob finds src/b.ts as a store, and CrossLint doesn't",
-      "CrossLint finds src/y.ts as a store, and node-glob doesn't", "CrossLint finds src/z.ts as a store, and node-glob doesn't"], lines
+    assert_equal [
+      "node-glob finds src/a.ts as a store, and CrossLint doesn't",
+      "node-glob finds src/b.ts as a store, and CrossLint doesn't",
+      "CrossLint finds src/y.ts as a store, and node-glob doesn't",
+      "CrossLint finds src/z.ts as a store, and node-glob doesn't",
+], lines
   end
 
   def test_names_a_file_relative_to_the_projects_root_when_src_dir_is_empty

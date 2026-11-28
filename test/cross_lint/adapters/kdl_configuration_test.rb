@@ -25,7 +25,7 @@ class KDLConfigurationTest < Minitest::Test
   end
 
   def configuration_port(projects, broken: nil, minimum: {})
-    first = ->(project) { minimum.key?(project) ? %(crosslint min=#{minimum.fetch(project).dump}\n) : "" }
+    first = -> (project) { minimum.key?(project) ? %(crosslint min=#{minimum.fetch(project).dump}\n) : "" }
     projects.each { |project, plugins| write(@base, "#{project}/#{FILE}", first.call(project) + plugins.map { |name| "plugin #{name.dump}\n" }.join) }
     write(@base, "#{broken}/#{FILE}", %(#{first.call(broken)}plugin "one"\nplugn "two"\n)) if broken
     CrossLint::Adapters::KDLConfiguration.new
@@ -66,7 +66,7 @@ class KDLConfigurationTest < Minitest::Test
     assert_equal [["angular", nil, 1], ["debt", nil, 4], [".config/crosslint/modules", nil, 7]],
       configuration.plugins.map { |plugin| [plugin.name, plugin.ref, plugin.line] }
     assert_equal [setting("src-dir", ["src"], {}, 2)], angular.settings
-    assert_equal [setting("report-entries", [], {"commented" => "warning"}, 5)], debt.settings
+    assert_equal [setting("report-entries", [], { "commented" => "warning" }, 5)], debt.settings
     assert_empty modules.settings
     assert_equal [policy("angular/prefer-css-over-scss", nil, :error, 9), policy("modules/has-test", false, nil, 10)],
       configuration.policies
@@ -105,8 +105,10 @@ class KDLConfigurationTest < Minitest::Test
   def test_reads_settings_inside_settings
     plugin = read(%(plugin "angular" {\n  role "store" files="{path}.store.ts" {\n    expects "spec"\n  }\n}\n)).plugins.fetch(0)
 
-    assert_equal [CrossLint::Core::Setting.new(name: "role", arguments: ["store"], properties: {"files" => "{path}.store.ts"},
-      children: [setting("expects", ["spec"], {}, 3)], line: 2)], plugin.settings
+    assert_equal [
+CrossLint::Core::Setting.new(name: "role", arguments: ["store"], properties: { "files" => "{path}.store.ts" },
+  children: [setting("expects", ["spec"], {}, 3)], line: 2),
+], plugin.settings
   end
 
   def test_reads_each_mode
@@ -201,11 +203,11 @@ class KDLConfigurationTest < Minitest::Test
   def test_finds_no_root_from_a_folder_that_does_not_exist
     mistake = assert_raises(Mistake) { configuration_port({}).find_root(File.join(@base, "missing")) }
 
-    assert_equal ["", "no folder #{File.join(@base, "missing")}"], [mistake.location, mistake.message]
+    assert_equal ["", "no folder #{File.join(@base, 'missing')}"], [mistake.location, mistake.message]
   end
 
   def test_finds_the_root_from_a_relative_folder
-    configuration_port({"app" => ["one"]})
+    configuration_port({ "app" => ["one"] })
     Dir.chdir(folder("app/lib")) do
       assert_equal File.realpath(File.join(@base, "app")), File.realpath(CrossLint::Adapters::KDLConfiguration.new.find_root("."))
     end
@@ -228,7 +230,7 @@ class KDLConfigurationTest < Minitest::Test
   end
 
   def test_finds_the_nearest_folder_with_the_configuration
-    configuration_port({"app" => ["one"], "app/inner" => ["two"]})
+    configuration_port({ "app" => ["one"], "app/inner" => ["two"] })
 
     assert_equal File.join(@base, "app", "inner"), CrossLint::Adapters::KDLConfiguration.new.find_root(folder("app/inner/lib"))
   end
@@ -309,7 +311,7 @@ class KDLConfigurationTest < Minitest::Test
   def test_writes_nothing_when_no_plugin_is_given_a_ref
     path = write(@base, "project/#{FILE}", %(plugin "#{URL}" ref="v1"\n))
     inode = File.stat(path).ino
-    CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "project"), {["https://example.com/other", nil] => "v2"})
+    CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "project"), { ["https://example.com/other", nil] => "v2" })
 
     assert_equal [inode, [".config"]], [File.stat(path).ino, Dir.children(File.join(@base, "project"))]
   end
@@ -340,14 +342,18 @@ class KDLConfigurationTest < Minitest::Test
 
   def test_writes_the_configuration_as_kdl_with_a_blank_line_between_its_kinds
     core = CrossLint::Core
-    plugins = [core::ListedPlugin.new(name: URL, ref: "v1", settings: [], line: 0),
+    plugins = [
+      core::ListedPlugin.new(name: URL, ref: "v1", settings: [], line: 0),
       core::ListedPlugin.new(name: URL, ref: "v1", path: "plugins/a", settings: [], line: 0),
       core::ListedPlugin.new(name: "angular", ref: nil, line: 0, settings: [
-        core::Setting.new(name: "role", arguments: ["store"], properties: {"files" => "{path}.store.ts"}, line: 0,
-          children: [core::Setting.new(name: "expects", arguments: [], properties: {}, children: [], line: 0)])
-      ])]
-    policies = [core::PolicySetting.new(name: "angular/spec-exists", enabled: false, severity: :warning, line: 0),
-      core::PolicySetting.new(name: "angular/stub-exists", enabled: nil, severity: nil, line: 0)]
+        core::Setting.new(name: "role", arguments: ["store"], properties: { "files" => "{path}.store.ts" }, line: 0,
+          children: [core::Setting.new(name: "expects", arguments: [], properties: {}, children: [], line: 0)]),
+      ]),
+]
+    policies = [
+      core::PolicySetting.new(name: "angular/spec-exists", enabled: false, severity: :warning, line: 0),
+      core::PolicySetting.new(name: "angular/stub-exists", enabled: nil, severity: nil, line: 0),
+]
     CrossLint::Adapters::KDLConfiguration.new.write(folder("project"), core::Configuration.new(file: FILE, plugins:, policies:, warnings: :all, verbosity: nil))
 
     assert_equal <<~KDL, File.binread(File.join(@base, "project", FILE))
@@ -376,7 +382,7 @@ class KDLConfigurationTest < Minitest::Test
   end
 
   def test_writes_a_value_that_is_not_a_string_as_kdl_does
-    setting = CrossLint::Core::Setting.new(name: "limit", arguments: [nil, true], properties: {"on" => false}, children: [], line: 0)
+    setting = CrossLint::Core::Setting.new(name: "limit", arguments: [nil, true], properties: { "on" => false }, children: [], line: 0)
     plugin = CrossLint::Core::ListedPlugin.new(name: "a", ref: nil, settings: [setting], line: 0)
     CrossLint::Adapters::KDLConfiguration.new.write(folder("project"),
       CrossLint::Core::Configuration.new(file: FILE, plugins: [plugin], policies: [], warnings: nil, verbosity: nil))
@@ -447,7 +453,7 @@ class KDLConfigurationTest < Minitest::Test
   end
 
   def test_names_the_file_when_it_sets_a_ref_in_a_project_with_no_configuration
-    mistake = assert_raises(Mistake) { CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "nowhere"), {[URL, nil] => "v1"}) }
+    mistake = assert_raises(Mistake) { CrossLint::Adapters::KDLConfiguration.new.set_refs(File.join(@base, "nowhere"), { [URL, nil] => "v1" }) }
 
     assert_equal [FILE, "doesn't exist"], [mistake.file, mistake.message]
   end

@@ -11,6 +11,6 @@ class ClaudeMdImportsAgentsMd < CrossLint::Rule
     first = claude.read.delete_prefix("\uFEFF")[/\A[^\n]*/].rstrip
     return [] if first == IMPORT
 
-    [violation(artifact, "#{claude.path} starts with #{first.empty? ? "a blank line" : first.dump}; its first line should be #{IMPORT}")]
+    [violation(artifact, "#{claude.path} starts with #{first.empty? ? 'a blank line' : first.dump}; its first line should be #{IMPORT}")]
   end
 end

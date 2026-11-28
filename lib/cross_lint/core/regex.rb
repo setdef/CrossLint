@@ -22,7 +22,7 @@ module CrossLint
       REASONS = {
         "\\h" => "a hex digit and PCRE as a space or a tab; write [0-9a-fA-F] or [ \\t]",
         "\\H" => "anything but a hex digit and PCRE as anything but a space or a tab; write [^0-9a-fA-F] or [^ \\t]",
-        "\\v" => "a vertical tab and PCRE as any vertical space; write \\x0B or [\\n\\f]"
+        "\\v" => "a vertical tab and PCRE as any vertical space; write \\x0B or [\\n\\f]",
       }.freeze
 
       class Invalid < ArgumentError; end
@@ -51,9 +51,9 @@ module CrossLint
         return unknown(placeholder, known) if placeholder && !known.include?(placeholder)
 
         case token
-        when /\A\\[pP]\z/ then "#{token} with no braces, which Ruby reads as the letter #{token.delete_prefix("\\")} alone and PCRE as a Unicode property; write #{token}{L}"
+        when /\A\\[pP]\z/ then "#{token} with no braces, which Ruby reads as the letter #{token.delete_prefix('\\')} alone and PCRE as a Unicode property; write #{token}{L}"
         when /\A\\[A-Za-z]\z/ then escape(token)
-        when /\A\(\?[a-z]*m/ then "#{token.chomp(":").chomp(")")}, which Ruby reads as letting . match a newline and PCRE and JavaScript as letting ^ and $ " \
+        when /\A\(\?[a-z]*m/ then "#{token.chomp(':').chomp(')')}, which Ruby reads as letting . match a newline and PCRE and JavaScript as letting ^ and $ " \
           "match at each line; ^ and $ match at each line here, and [\\s\\S] matches any character"
         when /\A\{,(\d+)\}\z/ then "#{token}, which Ruby reads as {0,#{Regexp.last_match(1)}} and JavaScript as the text #{token}; write {0,#{Regexp.last_match(1)}}"
         when /\A\[:/ then "#{token}, which Ruby reads with every Unicode character and PCRE with ASCII alone; " \

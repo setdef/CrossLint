@@ -21,7 +21,7 @@ class CoreValuesTest < Minitest::Test
 
   def test_a_violation_and_a_rule_line_explain_themselves_with_their_detail_and_arguments_only_when_they_have_some
     violation = Violation.new(plugin: "tests", policy: "p", artifact: "a.md", role: "doc", message: "no title", severity: :error, detail: nil)
-    rules = [PolicyRule.new(name: "titled", arguments: {}, severity: nil, line: 1), PolicyRule.new(name: "piece-exists", arguments: {"piece" => "note"}, severity: nil, line: 2)]
+    rules = [PolicyRule.new(name: "titled", arguments: {}, severity: nil, line: 1), PolicyRule.new(name: "piece-exists", arguments: { "piece" => "note" }, severity: nil, line: 2)]
 
     assert_equal ["error: no title", %(warning: no title, with detail "title")], [violation, violation.with(severity: :warning, detail: "title")].map(&:explanation)
     assert_equal ["titled", %(piece-exists piece="note")], rules.map(&:explanation)
@@ -49,24 +49,24 @@ class CoreValuesTest < Minitest::Test
   end
 
   def test_a_policy_names_each_piece_its_condition_and_rules_name_once
-    exists = ->(name) { Condition::PieceExists.new(piece: name, line: 2) }
-    rule = ->(arguments) { PolicyRule.new(name: "r", arguments:, severity: nil, line: 3) }
+    exists = -> (name) { Condition::PieceExists.new(piece: name, line: 2) }
+    rule = -> (arguments) { PolicyRule.new(name: "r", arguments:, severity: nil, line: 3) }
     policy = Policy.new(name: "p", applies_to: nil, condition: Condition::All.new(conditions: [exists.call("stub"), exists.call("css")], line: 2),
-      rules: [rule.call({"piece" => "stub"}), rule.call({}), rule.call({"piece" => "spec"})], line: 1)
+      rules: [rule.call({ "piece" => "stub" }), rule.call({}), rule.call({ "piece" => "spec" })], line: 1)
 
     assert_equal %w[stub css spec], policy.pieces
-    assert_equal ["spec"], policy.with(condition: nil, rules: [rule.call({"piece" => "spec"})]).pieces
+    assert_equal ["spec"], policy.with(condition: nil, rules: [rule.call({ "piece" => "spec" })]).pieces
   end
 
   def test_a_plugin_applies_a_policy_to_what_its_applies_to_names_or_else_to_each_artifact_with_its_pieces
-    declaration = ->(name, *pieces) do
+    declaration = -> (name, *pieces) do
       ArtifactDeclaration.new(name:, primary: PathPattern.new(source: "{path}.#{name}"), line: 1,
         pieces: pieces.map { |piece| PieceDeclaration.new(name: piece, pattern: PathPattern.new(source: "{path}.#{piece}"), line: 2) })
     end
     manifest = Manifest.new(file: "plugin.kdl", artifacts: [declaration.call("a", "spec"), declaration.call("b"), declaration.call("c", "spec", "stub")],
       policies: [], rules: [], helpers: [])
     plugin = Plugin.new(name: "tests", folder: "/tests", listing: ListedPlugin.new(name: "./tests", ref: nil, settings: [], line: 1), manifest:)
-    rule = PolicyRule.new(name: "piece-exists", arguments: {"piece" => "spec"}, severity: nil, line: 3)
+    rule = PolicyRule.new(name: "piece-exists", arguments: { "piece" => "spec" }, severity: nil, line: 3)
     policy = Policy.new(name: "p", applies_to: nil, condition: nil, rules: [rule], line: 1)
 
     assert_equal [%w[tests a], %w[tests c]], plugin.targets(policy)

@@ -45,7 +45,7 @@ module Doctest
         found << Example.new(file:, line: open[:line], code: open[:code])
         open = nil
       elsif line.match?(/\A\s*```ruby\s*\z/)
-        open = {line: index + 2, code: +""}
+        open = { line: index + 2, code: +"" }
       end
     end
     raise Failure, "#{file}:#{open[:line] - 1}: a ruby block with no closing fence" if open

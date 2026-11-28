@@ -17,8 +17,14 @@ class PageFeaturesTest < Minitest::Test
   end
 
   def test_asks_for_a_feature_file_at_the_matching_path_of_each_page_by_default
-    %w[src/pages/home.tsx src/pages/admin/users.tsx src/pages/admin/roles.tsx features/home.feature features/admin/users.feature
-      src/components/button.tsx].each { write(@root, it, "") }
+    %w[
+      src/pages/home.tsx
+      src/pages/admin/users.tsx
+      src/pages/admin/roles.tsx
+      features/home.feature
+      features/admin/users.feature
+      src/components/button.tsx
+].each { write(@root, it, "") }
     result = check
 
     assert_equal [["src/pages/admin/roles.tsx", "page", "feature-exists", "no feature file at features/admin/roles.feature"]], findings(result)
@@ -26,8 +32,13 @@ class PageFeaturesTest < Minitest::Test
   end
 
   def test_finds_pages_and_their_features_where_the_settings_say
-    %w[web/src/screens/cart/CartScreen.tsx web/src/screens/cart/CartScreen.test.tsx web/src/screens/cart/useCart.ts
-      web/src/screens/profile/ProfileScreen.tsx specs/screens/cart/CartScreen.feature].each { write(@root, it, "") }
+    %w[
+      web/src/screens/cart/CartScreen.tsx
+      web/src/screens/cart/CartScreen.test.tsx
+      web/src/screens/cart/useCart.ts
+      web/src/screens/profile/ProfileScreen.tsx
+      specs/screens/cart/CartScreen.feature
+].each { write(@root, it, "") }
     result = check(%(page "./web/src/screens/{path}Screen.tsx"\n  feature "specs/screens/{path}Screen.feature"))
 
     assert_equal [["web/src/screens/profile/ProfileScreen.tsx", "page", "feature-exists", "no feature file at specs/screens/profile/ProfileScreen.feature"]],
@@ -36,8 +47,15 @@ class PageFeaturesTest < Minitest::Test
   end
 
   def test_takes_a_file_for_a_page_only_when_the_text_of_path_has_no_dot_in_its_last_segment
-    %w[src/pages/Home.tsx src/pages/Home.test.tsx src/pages/Home.stories.tsx src/pages/Home.spec.tsx src/pages/v1.2/About.tsx
-      src/pages/Other.page.tsx features/Home.feature].each { write(@root, it, "") }
+    %w[
+      src/pages/Home.tsx
+      src/pages/Home.test.tsx
+      src/pages/Home.stories.tsx
+      src/pages/Home.spec.tsx
+      src/pages/v1.2/About.tsx
+      src/pages/Other.page.tsx
+      features/Home.feature
+].each { write(@root, it, "") }
     result = check
 
     assert_equal [["src/pages/v1.2/About.tsx", "page", "feature-exists", "no feature file at features/v1.2/About.feature"]], findings(result)
@@ -48,8 +66,10 @@ class PageFeaturesTest < Minitest::Test
     %w[src/pages/Home.page.tsx src/pages/Home.test.page.tsx src/pages/v1.2/About.page.tsx src/pages/Home.tsx].each { write(@root, it, "") }
     result = check(%(page "src/pages/{path}.page.tsx"))
 
-    assert_equal [["src/pages/Home.page.tsx", "page", "feature-exists", "no feature file at features/Home.feature"],
-      ["src/pages/v1.2/About.page.tsx", "page", "feature-exists", "no feature file at features/v1.2/About.feature"]], findings(result)
+    assert_equal [
+      ["src/pages/Home.page.tsx", "page", "feature-exists", "no feature file at features/Home.feature"],
+      ["src/pages/v1.2/About.page.tsx", "page", "feature-exists", "no feature file at features/v1.2/About.feature"],
+], findings(result)
     assert_equal "checked 3 page artifacts: 2 errors", result.summary.line
   end
 
@@ -75,19 +95,21 @@ class PageFeaturesTest < Minitest::Test
 
   def test_refuses_a_setting_that_isnt_one_path_pattern_inside_the_project
     inside = "takes a path pattern inside the project, relative to its root, not"
-    {%(page "a/{path}.tsx"\n  page "b/{path}.tsx") => [3, "page is set twice; the first is on line 2"],
-     %(page "a" "b") => [2, %(page takes one path pattern and nothing else, as in page "src/pages/{path}.tsx")],
-     %(feature 1) => [2, %(feature takes one path pattern and nothing else, as in feature "features/{path}.feature")],
-     %(page "a" x=1) => [2, %(page takes one path pattern and nothing else, as in page "src/pages/{path}.tsx")],
-     %(page "a" { b; }) => [2, %(page takes one path pattern and nothing else, as in page "src/pages/{path}.tsx")],
-     %(page "") => [2, %(page #{inside} "")],
-     %(page "/src/{path}.tsx") => [2, %(page #{inside} "/src/{path}.tsx")],
-     %(page "C:/src/{path}.tsx") => [2, %(page #{inside} "C:/src/{path}.tsx")],
-     %(feature "../features/{path}.feature") => [2, %(feature #{inside} "../features/{path}.feature")],
-     %(page "src/{nam}.tsx") => [2, %(page takes a path pattern, and path pattern "src/{nam}.tsx" has unknown placeholder "{nam}", did you mean "{name}"?)],
-     %(page "src/{name}.tsx") => [2, %(feature has {path}, which page "src/{name}.tsx" doesn't, so a page gives it no value)],
-     %(page "src/{name}.tsx"\n  feature "f/{path}/{name}.feature") =>
-       [3, %(feature has {path}, which page "src/{name}.tsx" doesn't, so a page gives it no value)]}.each do |settings, (line, message)|
+    {
+%(page "a/{path}.tsx"\n  page "b/{path}.tsx") => [3, "page is set twice; the first is on line 2"],
+%(page "a" "b") => [2, %(page takes one path pattern and nothing else, as in page "src/pages/{path}.tsx")],
+%(feature 1) => [2, %(feature takes one path pattern and nothing else, as in feature "features/{path}.feature")],
+%(page "a" x=1) => [2, %(page takes one path pattern and nothing else, as in page "src/pages/{path}.tsx")],
+%(page "a" { b; }) => [2, %(page takes one path pattern and nothing else, as in page "src/pages/{path}.tsx")],
+%(page "") => [2, %(page #{inside} "")],
+%(page "/src/{path}.tsx") => [2, %(page #{inside} "/src/{path}.tsx")],
+%(page "C:/src/{path}.tsx") => [2, %(page #{inside} "C:/src/{path}.tsx")],
+%(feature "../features/{path}.feature") => [2, %(feature #{inside} "../features/{path}.feature")],
+%(page "src/{nam}.tsx") => [2, %(page takes a path pattern, and path pattern "src/{nam}.tsx" has unknown placeholder "{nam}", did you mean "{name}"?)],
+%(page "src/{name}.tsx") => [2, %(feature has {path}, which page "src/{name}.tsx" doesn't, so a page gives it no value)],
+%(page "src/{name}.tsx"\n  feature "f/{path}/{name}.feature") =>
+       [3, %(feature has {path}, which page "src/{name}.tsx" doesn't, so a page gives it no value)],
+}.each do |settings, (line, message)|
       mistake = assert_raises(CrossLint::Core::Mistake, settings) { check(settings) }
 
       assert_equal [".config/crosslint/config.kdl", line, message], [mistake.file, mistake.line, mistake.message], settings
@@ -100,8 +122,8 @@ class PageFeaturesTest < Minitest::Test
     block = settings ? " {\n  #{settings}\n}" : ""
     write(@root, ".config/crosslint/config.kdl", %(plugin "#{URL}" ref="v0.1.0" path="plugins/page-features"#{block}\n))
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
-    repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: {"v0.1.0" => ROOT}, branches: [], commits: {})
-    shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new({URL => repository}, err: StringIO.new)
+    repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: { "v0.1.0" => ROOT }, branches: [], commits: {})
+    shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new({ URL => repository }, err: StringIO.new)
     CrossLint::App.new(crosslint_ruby: LoadedPlugins::CrossLintRuby.new, shared_plugins:).check(@root)
   end
 

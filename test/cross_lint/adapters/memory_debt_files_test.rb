@@ -10,7 +10,7 @@ class MemoryDebtFilesMoveTest < Minitest::Test
 
   def test_moves_a_file_it_cannot_read_as_it_is
     mistake = CrossLint::Core::Mistake.new("has an entry with no rule", file: "old.tsv", line: 3)
-    port = CrossLint::Adapters::MemoryDebtFiles.new({File.join(ROOT, "old.tsv") => mistake})
+    port = CrossLint::Adapters::MemoryDebtFiles.new({ File.join(ROOT, "old.tsv") => mistake })
     port.move(ROOT, "old.tsv", "debt.tsv")
 
     assert_same mistake, assert_raises(CrossLint::Core::Mistake) { port.read(ROOT, "debt.tsv") }

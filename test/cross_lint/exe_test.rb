@@ -64,7 +64,7 @@ class ExeTest < Minitest::Test
   # the file's path, each written whole, in the page's order, and each
   # `$ crosslint check` runs where the page shows it.
   def test_runs_each_cookbook_recipe_as_it_shows_it
-    {"docs/cookbook/rails-routes.md" => [1, 1], "docs/cookbook/scoped-vue-styles.md" => [0, 0]}.each do |page, statuses|
+    { "docs/cookbook/rails-routes.md" => [1, 1], "docs/cookbook/scoped-vue-styles.md" => [0, 0] }.each do |page, statuses|
       Dir.mktmpdir("crosslint") do |project|
         Open3.capture3("git", "init", "-q", chdir: project)
         ran = File.read(File.join(ROOT, page)).scan(/^```\w+\n(.*?)^```$/m).flatten.filter_map do |block|
@@ -88,16 +88,19 @@ class ExeTest < Minitest::Test
       write(project, ".config/crosslint/modules/plugin.kdl", "#{plugin}\n#{rule}")
       write(project, code[/\A# (\S+)\n/, 1], code)
       write(project, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/modules"\n))
-      {"cart" => "export function add() {}\n", "cart/total" => "export function total() {}\nexport function tax() {}\n"}.each do |path, source|
+      { "cart" => "export function add() {}\n", "cart/total" => "export function total() {}\nexport function tax() {}\n" }.each do |path, source|
         write(project, "src/#{path}.js", source)
         write(project, "src/#{path}.d.ts", "export function add(): void\n")
         write(project, "test/#{path}.test.js", "")
       end
       Open3.capture3("git", "init", "-q", chdir: project)
 
-      assert_equal ["src/cart/total.js: src/cart/total.d.ts declares no function tax (modules/declaration-matches)\n" \
-        "src/cart/total.js: src/cart/total.d.ts declares no function total (modules/declaration-matches)\n",
-        "crosslint: checked 2 module artifacts: 2 errors\n", 1], crosslint("check", chdir: project)
+      assert_equal [
+        "src/cart/total.js: src/cart/total.d.ts declares no function tax (modules/declaration-matches)\n" \
+          "src/cart/total.js: src/cart/total.d.ts declares no function total (modules/declaration-matches)\n",
+        "crosslint: checked 2 module artifacts: 2 errors\n",
+        1,
+], crosslint("check", chdir: project)
     end
   end
 

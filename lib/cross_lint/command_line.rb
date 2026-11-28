@@ -193,7 +193,7 @@ module CrossLint
     def list(words)
       return words.join(" or ") if words.size < 3
 
-      "#{words.take(words.size - 1).join(", ")}, or #{words.last}"
+      "#{words.take(words.size - 1).join(', ')}, or #{words.last}"
     end
   end
 end

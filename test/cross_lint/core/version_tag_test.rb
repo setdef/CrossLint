@@ -28,7 +28,7 @@ class VersionTagTest < Minitest::Test
 
     assert_equal [false, false, true, true], [with_v == plain, with_v.eql?(plain), with_v == same, with_v.eql?(same)]
     assert_equal [with_v, plain], [with_v, plain, same].uniq
-    assert_equal [with_v, plain], {with_v => 1, plain => 2, same => 3}.keys
+    assert_equal [with_v, plain], { with_v => 1, plain => 2, same => 3 }.keys
     refute_equal with_v, "v1.2.0"
   end
 

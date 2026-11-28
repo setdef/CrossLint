@@ -40,8 +40,10 @@ class AngularPathsTest < Minitest::Test
     # The policies that read TypeScript are the fixture's tests'.
     reading = %(policy "angular/stub-matches-component" enabled=#false\npolicy "angular/interface-matches-component" enabled=#false\n)
 
-    assert_equal [["src/b/b.component.ts", "component", "interface-exists", "no interface file at src/b/b.component.i.d.ts"],
-      ["src/c/c.component.ts", "component", "stub-exists", "no stub file at src/c/c.component.stub.ts"]], findings(check(lines: reading))
+    assert_equal [
+      ["src/b/b.component.ts", "component", "interface-exists", "no interface file at src/b/b.component.i.d.ts"],
+      ["src/c/c.component.ts", "component", "stub-exists", "no stub file at src/c/c.component.stub.ts"],
+], findings(check(lines: reading))
   end
 
   # ng-nudge looked for stylesheets relative to the working directory, so
@@ -94,8 +96,16 @@ class AngularPathsTest < Minitest::Test
   # ng-nudge's node-glob patterns skip a file or a folder whose name
   # starts with a dot, below src-dir; src-dir itself can be one.
   def test_finds_no_artifact_in_a_folder_or_file_under_src_dir_whose_name_starts_with_a_dot
-    %w[src/.cache/a.pipe.ts src/app/.hidden/b.pipe.ts src/app/.c.pipe.ts src/.d/e/f.service.ts src/pages/.g-page.ts src/app/h.pipe.ts
-      .app/i.pipe.ts .app/.j/k.pipe.ts].each { |path| write(@root, path, "") }
+    %w[
+      src/.cache/a.pipe.ts
+      src/app/.hidden/b.pipe.ts
+      src/app/.c.pipe.ts
+      src/.d/e/f.service.ts
+      src/pages/.g-page.ts
+      src/app/h.pipe.ts
+      .app/i.pipe.ts
+      .app/.j/k.pipe.ts
+].each { |path| write(@root, path, "") }
     settings = %(role "page" files="pages/{name}-page.ts")
 
     assert_equal [["src/app/h.pipe.ts", "pipe", "spec-exists", "no spec file at src/app/h.pipe.spec.ts"]], findings(check(settings))
@@ -119,8 +129,10 @@ class AngularPathsTest < Minitest::Test
     write(@root, "src/c.guard.ts", "")
     result = check(%(role "service" {\n    expects\n  }\n  role "store" {\n    expects "spec"\n  }\n  role "guard" {\n    expects "spec"\n  }))
 
-    assert_equal [["src/b.store.ts", "store", "spec-exists", "no spec file at src/b.store.spec.ts"],
-      ["src/c.guard.ts", "guard", "spec-exists", "no spec file at src/c.guard.spec.ts"]].sort, findings(result)
+    assert_equal [
+      ["src/b.store.ts", "store", "spec-exists", "no spec file at src/b.store.spec.ts"],
+      ["src/c.guard.ts", "guard", "spec-exists", "no spec file at src/c.guard.spec.ts"],
+].sort, findings(result)
     refute_includes result.summary.line, "service"
   end
 
@@ -145,19 +157,25 @@ class AngularPathsTest < Minitest::Test
   # Only a component has a stub, an interface, stylesheets, and the
   # tsconfig as pieces.
   def test_declares_each_role_with_its_pattern_pieces_key_and_whether_a_project_may_have_none
-    component = {"spec" => "src/{path}.component.spec.ts", "stub" => "src/{path}.component.stub.ts", "interface" => "src/{path}.component.i.d.ts",
-                 "css" => "src/{path}.component.css", "scss" => "src/{path}.component.scss", "tsconfig" => "tsconfig.json"}
+    component = {
+"spec" => "src/{path}.component.spec.ts",
+"stub" => "src/{path}.component.stub.ts",
+"interface" => "src/{path}.component.i.d.ts",
+"css" => "src/{path}.component.css",
+"scss" => "src/{path}.component.scss",
+"tsconfig" => "tsconfig.json",
+}
     default = %w[component directive pipe service guard resolver interceptor].map do |role|
-      [role, "src/{path}.#{role}.ts", (role == "component") ? component : {"spec" => "src/{path}.#{role}.spec.ts"}, "{path}", true]
+      [role, "src/{path}.#{role}.ts", (role == "component") ? component : { "spec" => "src/{path}.#{role}.spec.ts" }, "{path}", true]
     end
     moved = component.transform_values { |pattern| pattern.sub("src/", "app/") }.merge("tsconfig" => "config/tsconfig.app.json")
 
     assert_equal default, declared(nil)
     assert_equal default.map { |role, *rest| (role == "service") ? [role, rest[0], {}, rest[2], rest[3]] : [role, *rest] }, declared(%(role "service" {\n    expects\n  }))
-    assert_equal default.map { |role, *rest| (role == "service") ? [role, "src/x/{name}.service.ts", {"spec" => "src/x/{name}.service.spec.ts"}, "x/{name}", false] : [role, *rest] },
+    assert_equal default.map { |role, *rest| (role == "service") ? [role, "src/x/{name}.service.ts", { "spec" => "src/x/{name}.service.spec.ts" }, "x/{name}", false] : [role, *rest] },
       declared(%(role "service" files="x/{name}.service.ts"))
     assert_equal default.map { |role, _, pieces, key, optional| [role, "app/{path}.#{role}.ts", (role == "component") ? moved : pieces.transform_values { it.sub("src/", "app/") }, key, optional] } +
-      [["store", "app/{path}.store.ts", {"spec" => "app/{path}.store.spec.ts"}, "{path}", false]],
+      [["store", "app/{path}.store.ts", { "spec" => "app/{path}.store.spec.ts" }, "{path}", false]],
       declared(%(src-dir "app"\n  tsconfig "config/tsconfig.app.json"\n  role "store"))
   end
 
@@ -190,9 +208,11 @@ class AngularPathsTest < Minitest::Test
 
     assert_empty result.violations
     assert_equal "checked 1 component, 1 pipe, and 1 service artifacts: 3 accepted as debt", result.summary.line
-    assert_equal [%(the entry for angular/spec-exists on app/foo/foo matches the violations of 2 artifacts, ) +
-      %(src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint debt update writes one entry for each),
-      %(the entry for angular/spec-exists on app/bar/bar has no detail, so it matches every violation of angular/spec-exists on it; crosslint debt update writes one entry for each, with its detail)],
+    assert_equal [
+      %(the entry for angular/spec-exists on app/foo/foo matches the violations of 2 artifacts, ) +
+        %(src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint debt update writes one entry for each),
+      %(the entry for angular/spec-exists on app/bar/bar has no detail, so it matches every violation of angular/spec-exists on it; crosslint debt update writes one entry for each, with its detail),
+],
       result.notices.map(&:message)
   end
 
@@ -251,7 +271,7 @@ class AngularPathsTest < Minitest::Test
       %(role "store" {\n    expects "spec" {\n      x\n    }\n  }) => [3, %(role "store" takes one thing in its block, expects PIECE ...)],
       %(role "store" {\n    bad\n    expects "spec"\n  }) => [3, %(role "store" takes one thing in its block, expects PIECE ...)],
       %(role "store" {\n    expects "spec"\n    bad\n    worse\n  }) => [4, %(role "store" takes one thing in its block, expects PIECE ...)],
-      %(srcDir "src") => [2, %(unknown setting "srcDir", did you mean "src-dir"?)]
+      %(srcDir "src") => [2, %(unknown setting "srcDir", did you mean "src-dir"?)],
     }.each do |settings, (line, message)|
       mistake = assert_raises(Core::Mistake, settings) { check(settings) }
 

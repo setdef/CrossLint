@@ -163,14 +163,14 @@ module NpmNotices
   end
 
   def bundled_entry(work, texts)
-    license_text = texts.empty? ? work.places.map { |place| "#{place.file}, in the notice at line #{place.line}" }.join("; ") : "#{texts.keys.map { |file| "#{work.folder}/#{file}" }.join(", ")}, below"
+    license_text = texts.empty? ? work.places.map { |place| "#{place.file}, in the notice at line #{place.line}" }.join("; ") : "#{texts.keys.map { |file| "#{work.folder}/#{file}" }.join(', ')}, below"
     <<~ENTRY
       #{work.work.name} (bundled work)
         Version: #{work.version || NO_VERSION}
         License: #{work.work.license}
-        Copyright: #{work.copyright || "not stated in the files that carry it"}
-        Bundled in: #{work.places.map(&:package).uniq.map { |package| "#{package.name} #{package.version}" }.join(", ")}
-        Ships as: code in #{work.places.map(&:file).join(", ")}
+        Copyright: #{work.copyright || 'not stated in the files that carry it'}
+        Bundled in: #{work.places.map(&:package).uniq.map { |package| "#{package.name} #{package.version}" }.join(', ')}
+        Ships as: code in #{work.places.map(&:file).join(', ')}
         Source: #{work.source}
         License text: #{license_text}
     ENTRY
@@ -187,7 +187,7 @@ module NpmNotices
     raise Failure, "#{package.folder} has no license file" if package.license_files.empty?
 
     "#{package.name} (npm package)\n  Version: #{package.version}\n  License: #{package.license}\n  Ships as: files under #{package.folder}\n" \
-      "  Source: #{source}\n  License text: #{package.license_files.join(", ")}\n"
+      "  Source: #{source}\n  License text: #{package.license_files.join(', ')}\n"
   end
 
   # The SBOM +document+ with the packages of each npm SBOM in
@@ -204,7 +204,7 @@ module NpmNotices
     npm = documents.values
     document.merge(
       "creationInfo" => document.fetch("creationInfo").merge("creators" => (document.dig("creationInfo", "creators") + npm.flat_map { |each| each.dig("creationInfo", "creators") }).uniq),
-      "documentNamespace" => "#{document.fetch("documentNamespace")}-npm-#{Digest::SHA256.hexdigest(JSON.generate([added, bundled]))[0, 16]}",
+      "documentNamespace" => "#{document.fetch('documentNamespace')}-npm-#{Digest::SHA256.hexdigest(JSON.generate([added, bundled]))[0, 16]}",
       "packages" => document.fetch("packages") + added + bundled,
       "relationships" => document.fetch("relationships") + npm.flat_map { |each| each.fetch("relationships") } + works.flat_map { |work| contains(work, added) }
     )
@@ -214,10 +214,18 @@ module NpmNotices
   # package that contains another, and a work no lockfile locks is a
   # package of its own.
   def bundled_package(work)
-    {"SPDXID" => work.spdx_id, "name" => work.work.name, "versionInfo" => work.version, "downloadLocation" => work.source, "filesAnalyzed" => false,
-     "licenseDeclared" => work.work.license, "licenseConcluded" => "NOASSERTION", "copyrightText" => work.copyright || "NOASSERTION",
-     "comment" => "Ships as: code in #{work.places.map(&:file).join(", ")}",
-     "externalRefs" => (work.work.release ? [{"referenceCategory" => "PACKAGE-MANAGER", "referenceType" => "purl", "referenceLocator" => "pkg:npm/#{work.work.release}@#{work.version}"}] : nil)}.compact
+    {
+"SPDXID" => work.spdx_id,
+"name" => work.work.name,
+"versionInfo" => work.version,
+"downloadLocation" => work.source,
+"filesAnalyzed" => false,
+"licenseDeclared" => work.work.license,
+"licenseConcluded" => "NOASSERTION",
+"copyrightText" => work.copyright || "NOASSERTION",
+"comment" => "Ships as: code in #{work.places.map(&:file).join(', ')}",
+"externalRefs" => (work.work.release ? [{ "referenceCategory" => "PACKAGE-MANAGER", "referenceType" => "purl", "referenceLocator" => "pkg:npm/#{work.work.release}@#{work.version}" }] : nil),
+}.compact
   end
 
   # The relationships from each package of +added+ that carries +work+ to it.
@@ -226,7 +234,7 @@ module NpmNotices
       carrier = added.find { |each| each["name"] == package.name && each["versionInfo"] == package.version }
       raise Failure, "#{SBOM} would have no package for #{package.name} #{package.version}, which carries #{work.work.name}" unless carrier
 
-      {"spdxElementId" => carrier["SPDXID"], "relationshipType" => "CONTAINS", "relatedSpdxElement" => work.spdx_id}
+      { "spdxElementId" => carrier["SPDXID"], "relationshipType" => "CONTAINS", "relatedSpdxElement" => work.spdx_id }
     end
   end
 
@@ -269,8 +277,12 @@ module NpmNotices
       carrier = packages.find { |each| each["name"] == package.name && each["versionInfo"] == package.version }
       carrier && relationships.include?([carrier["SPDXID"], "CONTAINS", work.spdx_id])
     end
-    [("#{NOTICES} lacks #{label}" unless listed), ("#{NOTICES} lacks the license text of #{label}" unless texted),
-      ("#{SBOM} lacks #{label}" unless found), ("#{SBOM} lacks the relationships that say each package carrying #{label} contains it" unless related)].compact
+    [
+      ("#{NOTICES} lacks #{label}" unless listed),
+      ("#{NOTICES} lacks the license text of #{label}" unless texted),
+      ("#{SBOM} lacks #{label}" unless found),
+      ("#{SBOM} lacks the relationships that say each package carrying #{label} contains it" unless related),
+].compact
   end
 end
 

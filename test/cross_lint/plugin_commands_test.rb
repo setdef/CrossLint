@@ -43,14 +43,14 @@ class PluginCommandsTest < Minitest::Test
   end
 
   def test_says_which_configuration_lacks_the_built_in_plugin_a_command_belongs_to
-    built_in = -> { {"debt" => %w[update prune], "angular" => []} }
+    built_in = -> { { "debt" => %w[update prune], "angular" => [] } }
 
-    assert_refused "debt update is a command of the debt plugin, which #{FILE} doesn't list", %w[debt update], plugins: [@plain], built_in: built_in
-    assert_refused "debt prune is a command of the debt plugin, which #{FILE} doesn't list", %w[debt prune], plugins: [], built_in: built_in
-    assert_refused "crosslint has no command debt, and the configuration lists no plugin of that name; crosslint --help lists the commands", %w[debt other],
-      plugins: [@plain], built_in: built_in
+    assert_refused("debt update is a command of the debt plugin, which #{FILE} doesn't list", %w[debt update], plugins: [@plain], built_in:)
+    assert_refused("debt prune is a command of the debt plugin, which #{FILE} doesn't list", %w[debt prune], plugins: [], built_in:)
+    assert_refused("crosslint has no command debt, and the configuration lists no plugin of that name; crosslint --help lists the commands", %w[debt other],
+      plugins: [@plain], built_in:)
     assert_refused "crosslint has no command debt, and the configuration lists no plugin of that name; crosslint --help lists the commands", %w[debt],
-      plugins: [@plain], built_in: built_in
+      plugins: [@plain], built_in:
   end
 
   def test_names_the_nearest_command_of_crosslint_and_the_nearest_plugin_of_the_project

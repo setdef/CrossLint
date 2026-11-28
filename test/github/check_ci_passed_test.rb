@@ -41,8 +41,11 @@ class CheckCiPassedTest < Minitest::Test
   def test_refuses_a_commit_whose_runs_are_going_failed_or_were_canceled
     status, _, err = run_script("in_progress \ncompleted failure\ncompleted cancelled\n")
 
-    assert_equal [1, "check-ci-passed.sh: CI has no run that completed with success for commit #{COMMIT}; " \
-      "found: status in_progress, conclusion none yet; status completed, conclusion failure; status completed, conclusion cancelled\n"], [status.exitstatus, err]
+    assert_equal [
+      1,
+      "check-ci-passed.sh: CI has no run that completed with success for commit #{COMMIT}; " \
+        "found: status in_progress, conclusion none yet; status completed, conclusion failure; status completed, conclusion cancelled\n",
+], [status.exitstatus, err]
   end
 
   def test_refuses_a_commit_whose_only_success_has_not_completed
@@ -60,8 +63,12 @@ class CheckCiPassedTest < Minitest::Test
   private
 
   def run_script(output, gh_status: 0)
-    env = {"PATH" => [@folder, ENV.fetch("PATH")].join(File::PATH_SEPARATOR), "FAKE_GH_OUTPUT" => output, "FAKE_GH_STATUS" => gh_status.to_s,
-           "FAKE_GH_CALL" => File.join(@folder, "call")}
+    env = {
+"PATH" => [@folder, ENV.fetch("PATH")].join(File::PATH_SEPARATOR),
+"FAKE_GH_OUTPUT" => output,
+"FAKE_GH_STATUS" => gh_status.to_s,
+"FAKE_GH_CALL" => File.join(@folder, "call"),
+}
     out, err, status = Open3.capture3(env, "bash", SCRIPT, COMMIT)
     [status, out, err]
   end

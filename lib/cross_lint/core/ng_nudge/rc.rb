@@ -48,7 +48,7 @@ module CrossLint
 
         CEILINGS = %w[none warning error].freeze
 
-        OPTIONS = {"warnings" => %w[all none error], "verbosity" => %w[normal quiet silent]}.freeze
+        OPTIONS = { "warnings" => %w[all none error], "verbosity" => %w[normal quiet silent] }.freeze
 
         ROLE = /\A[A-Za-z0-9_-]+\z/
 
@@ -122,7 +122,7 @@ module CrossLint
         # `known`, with the nearest spelling.
         def refuse_unknown(given, known, why, within: nil)
           (given.keys - known).each do |key|
-            problem([within, key].compact.join("."), "#{Spelling.unknown("key", key, known)}; #{why}, so remove it")
+            problem([within, key].compact.join("."), "#{Spelling.unknown('key', key, known)}; #{why}, so remove it")
           end
         end
 
@@ -224,7 +224,7 @@ module CrossLint
         def rules(data)
           given = attempt { object(data.fetch("rules", NONE), "rules") } || NONE
           known = RULES + [DEBT_RULE]
-          (given.keys - known).each { |unknown| problem("rules.#{unknown}", "#{Spelling.unknown("rule", unknown, known)}; ng-nudge has no other, so remove it") }
+          (given.keys - known).each { |unknown| problem("rules.#{unknown}", "#{Spelling.unknown('rule', unknown, known)}; ng-nudge has no other, so remove it") }
           report = nil #: Report?
           policies = given.filter_map do |name, rule|
             key = "rules.#{name}"
@@ -255,7 +255,7 @@ module CrossLint
           problem("#{key}.severity", "is #{JSON.generate(severity)}, and it takes \"error\" or \"warning\"") unless severity_ok
           return if !enabled_ok || !severity_ok || (enabled && severity.nil?)
 
-          PolicySetting.new(name: "#{(name == DEBT_RULE) ? "debt" : "angular"}/#{name}", enabled: (false unless enabled), severity: severity&.to_sym, line: LINE)
+          PolicySetting.new(name: "#{(name == DEBT_RULE) ? 'debt' : 'angular'}/#{name}", enabled: (false unless enabled), severity: severity&.to_sym, line: LINE)
         end
 
         # What withComment says, as report-entries: ng-nudge reads it as a

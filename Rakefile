@@ -65,7 +65,7 @@ Minitest::TestTask.create("test:rbs") do |task|
     'ENV["RBS_TEST_OPT"] = "-r digest -r fileutils -r json -r minitest -r open3 -r pathname -r securerandom -I sig"',
     'ENV["RBS_TEST_RAISE"] = "true"',
     'ENV["RBS_TEST_LOGLEVEL"] = "error"',
-    'require "rbs/test/setup"'
+    'require "rbs/test/setup"',
   ].join("; ")
 end
 
@@ -142,7 +142,7 @@ end
 # checker (test:rbs), since a call that breaks sig/ is otherwise found
 # only after the push.
 desc "Run every check CI's Linux job runs"
-task check: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :standard, :rubycritic, :reuse, :steep, :test, "test:rbs"]
+task check: ["usage:lint", "usage:reference", :doctest, :crosslint, "rbs:comments", "rbs:validate", :rubycritic, :reuse, :steep, :test, "test:rbs"]
 
 desc "Run every check, before a push"
 task gate: :check
@@ -153,7 +153,7 @@ task default: :check
 # doesn't carry Fledge, and the app leaves out the contributors' groups.
 FLEDGE_ENV = {
   "BUNDLE_GEMFILE" => File.expand_path("build/Gemfile", __dir__),
-  "BUNDLE_WITHOUT" => "development:test:check"
+  "BUNDLE_WITHOUT" => "development:test:check",
 }.freeze
 
 # The app carries the packages rake packages installs, so the build needs
@@ -185,11 +185,11 @@ task "build:check" do
   require_relative "lib/cross_lint"
   app = Dir["build/dist/*/crosslint{,.exe}"].first || abort("rake build:check: no app in build/dist; run rake build")
   spec = CrossLint::UsageSpec.load
-  expected = {"--version" => "#{spec.bin} #{spec.version}\n", "--help" => CrossLint::Help.new(spec).render}
+  expected = { "--version" => "#{spec.bin} #{spec.version}\n", "--help" => CrossLint::Help.new(spec).render }
   Dir.mktmpdir do |empty|
     Bundler.with_unbundled_env do
       expected.each do |flag, output|
-        actual = IO.popen({"PATH" => empty}, [File.expand_path(app), flag], err: %i[child out], &:read)
+        actual = IO.popen({ "PATH" => empty }, [File.expand_path(app), flag], err: %i[child out], &:read)
         abort "rake build:check: #{app} #{flag} exited with #{$?.exitstatus}:\n#{actual}" unless $?.success?
         abort "rake build:check: #{app} #{flag} printed:\n#{actual}" unless actual == output
 
@@ -240,8 +240,12 @@ task "build:check:shared", [:app] do |_, arguments|
   violation = "a.md: no note file at a.txt (signatures/has-note)"
   Dir.mktmpdir do |base|
     origin = File.join(base, "origin", "signatures")
-    files = {File.join(origin, "plugin.kdl") => plugin, File.join(base, "home", ".gitconfig") => %([url "file:///#{origin.delete_prefix("/")}"]\n\tinsteadOf = #{url}\n),
-             File.join(base, "project", ".config/crosslint/config.kdl") => %(plugin "#{url}" ref="v1.0.0"\n), File.join(base, "project", "a.md") => ""}
+    files = {
+File.join(origin, "plugin.kdl") => plugin,
+File.join(base, "home", ".gitconfig") => %([url "file:///#{origin.delete_prefix('/')}"]\n\tinsteadOf = #{url}\n),
+File.join(base, "project", ".config/crosslint/config.kdl") => %(plugin "#{url}" ref="v1.0.0"\n),
+File.join(base, "project", "a.md") => "",
+}
     files.each do |file, text|
       FileUtils.mkdir_p(File.dirname(file))
       File.binwrite(file, text)
@@ -254,7 +258,7 @@ task "build:check:shared", [:app] do |_, arguments|
       system("git", "init", "-q", chdir: File.join(base, "project")) || abort("rake build:check: git init failed")
       home = File.join(base, "home")
       cache = File.join(base, "cache")
-      env = {"PATH" => git, "HOME" => home, "USERPROFILE" => home, "XDG_CACHE_HOME" => cache, "LOCALAPPDATA" => cache}
+      env = { "PATH" => git, "HOME" => home, "USERPROFILE" => home, "XDG_CACHE_HOME" => cache, "LOCALAPPDATA" => cache }
       [[true, "fetches a shared plugin"], [false, "uses the copy of a shared plugin, with no fetch"]].each do |fetches, what|
         FileUtils.rm_rf(File.join(base, "origin")) unless fetches
         actual = IO.popen(env, [app, "check", "-C", File.join(base, "project")], err: %i[child out], &:read)
@@ -283,7 +287,7 @@ task "build:check:angular", [:app] do |_, arguments|
     "src/app/card/card.component.ts" => %(#{component}export class CardComponent {\n  title = input('');\n}\n),
     "src/app/card/card.component.stub.ts" => %(#{component}export class CardComponentStub {}\n),
     "src/app/card/card.component.i.d.ts" => %(export interface CardApi {\n  title: unknown;\n}\n),
-    "src/app/card/card.component.scss" => ""
+    "src/app/card/card.component.scss" => "",
   }
   finder = CrossLint::Adapters::ProcessHelpers.new
   path = %w[git node].map { |command| File.dirname(finder.find(command) || abort("rake build:check: no #{command} on the PATH")) }.uniq
@@ -294,7 +298,7 @@ task "build:check:angular", [:app] do |_, arguments|
     end
     Bundler.with_unbundled_env do
       system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
-      actual = IO.popen({"PATH" => path.join(File::PATH_SEPARATOR)}, [app, "check", "-C", project], err: %i[child out], &:read)
+      actual = IO.popen({ "PATH" => path.join(File::PATH_SEPARATOR) }, [app, "check", "-C", project], err: %i[child out], &:read)
       expected = "src/app/card/card.component.ts: warning: scss file exists at src/app/card/card.component.scss (angular/prefer-css-over-scss)\n" \
         "src/app/card/card.component.ts: no spec file at src/app/card/card.component.spec.ts (angular/spec-exists)\n" \
         "src/app/card/card.component.ts: stub missing input: title (angular/stub-matches-component)\n" \
@@ -319,7 +323,7 @@ task "build:check:debt", [:app] do |_, arguments|
     ".config/crosslint/docs/plugin.kdl" => %(artifact "doc" {\n  primary "{path}.md"\n  piece "note" "{path}.txt"\n}\n) +
       %(policy "has-note" {\n  applies-to "doc"\n  rule "piece-exists" piece="note"\n}\n),
     ".config/crosslint/debt.tsv" => "Rule\tArtifact\tComment\tDetail\r\ndocs/has-note\ta.md\tlater\tnote\r\n",
-    "a.md" => ""
+    "a.md" => "",
   }
   finder = CrossLint::Adapters::ProcessHelpers.new
   git = File.dirname(finder.find("git") || abort("rake build:check: no git on the PATH"))
@@ -330,7 +334,7 @@ task "build:check:debt", [:app] do |_, arguments|
     end
     Bundler.with_unbundled_env do
       system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
-      actual = IO.popen({"PATH" => git}, [app, "check", "-C", project], err: %i[child out], &:read)
+      actual = IO.popen({ "PATH" => git }, [app, "check", "-C", project], err: %i[child out], &:read)
       expected = "crosslint: checked 1 doc artifact: 1 accepted as debt\n"
       abort "rake build:check: #{app} check exited with #{$?.exitstatus}, not 0:\n#{actual}" unless $?.success?
       abort "rake build:check: #{app} check printed:\n#{actual}" unless actual == expected
@@ -340,13 +344,13 @@ task "build:check:debt", [:app] do |_, arguments|
       [
         [["check"], 1, "b.md: no note file at b.txt (docs/has-note)\ncrosslint: checked 2 doc artifacts: 1 error, 1 accepted as debt\n", "fails for a violation the debt file lacks"],
         [["debt", "update"], 0, "crosslint: wrote .config/crosslint/debt.tsv: 1 entry added, 0 removed\ncrosslint: checked 2 doc artifacts: 2 accepted as debt\n", "writes the debt file"],
-        [["check"], 0, "crosslint: checked 2 doc artifacts: 2 accepted as debt\n", "passes with the debt file it wrote"]
+        [["check"], 0, "crosslint: checked 2 doc artifacts: 2 accepted as debt\n", "passes with the debt file it wrote"],
       ].each do |words, status, output, what|
-        actual = IO.popen({"PATH" => git}, [app, *words, "-C", project], err: %i[child out], &:read)
-        abort "rake build:check: #{app} #{words.join(" ")} exited with #{$?.exitstatus}, not #{status}:\n#{actual}" unless $?.exitstatus == status
-        abort "rake build:check: #{app} #{words.join(" ")} printed:\n#{actual}" unless actual == output
+        actual = IO.popen({ "PATH" => git }, [app, *words, "-C", project], err: %i[child out], &:read)
+        abort "rake build:check: #{app} #{words.join(' ')} exited with #{$?.exitstatus}, not #{status}:\n#{actual}" unless $?.exitstatus == status
+        abort "rake build:check: #{app} #{words.join(' ')} printed:\n#{actual}" unless actual == output
 
-        puts "#{app} #{words.join(" ")}: #{what}"
+        puts "#{app} #{words.join(' ')}: #{what}"
       end
     end
   end
@@ -358,8 +362,8 @@ end
 # bundler/inline. PATH holds only the folders of Git and sh.
 task "build:check:plugins", [:app] do |_, arguments|
   app = File.expand_path(arguments.fetch(:app))
-  rule = ->(name, body) { %(class #{name} < CrossLint::Rule\n  def check(artifact)\n    #{body}\n  end\nend\n) }
-  plugin = ->(rule_name, extra = "") { %(artifact "doc" {\n  primary "{path}.md"\n}\nhelper "rule" command=(crosslint)"ruby" file="rule.rb"\nrule "#{rule_name}" helper="rule"\n#{extra}policy "p" {\n  applies-to "doc"\n  rule "#{rule_name}"\n}\n) }
+  rule = -> (name, body) { %(class #{name} < CrossLint::Rule\n  def check(artifact)\n    #{body}\n  end\nend\n) }
+  plugin = -> (rule_name, extra = "") { %(artifact "doc" {\n  primary "{path}.md"\n}\nhelper "rule" command=(crosslint)"ruby" file="rule.rb"\nrule "#{rule_name}" helper="rule"\n#{extra}policy "p" {\n  applies-to "doc"\n  rule "#{rule_name}"\n}\n) }
   files = {
     ".config/crosslint/config.kdl" => %w[asks gems inline].map { |name| %(plugin ".config/crosslint/#{name}"\n) }.join,
     ".config/crosslint/asks/plugin.kdl" => plugin.call("asks", %(helper "answers" command="sh" file="answers.sh"\n)),
@@ -369,7 +373,7 @@ task "build:check:plugins", [:app] do |_, arguments|
     ".config/crosslint/gems/rule.rb" => %(require "rainbow"\n) + rule.call("UsesGem", "[]"),
     ".config/crosslint/inline/plugin.kdl" => plugin.call("uses-inline"),
     ".config/crosslint/inline/rule.rb" => %(require "bundler/inline"\n) + rule.call("UsesInline", "[]"),
-    "a.md" => ""
+    "a.md" => "",
   }
   finder = CrossLint::Adapters::ProcessHelpers.new
   path = %w[git sh].map { |command| File.dirname(finder.find(command) || abort("rake build:check: no #{command} on the PATH")) }.uniq
@@ -377,7 +381,7 @@ task "build:check:plugins", [:app] do |_, arguments|
     "a.md: answered hi (asks/p)",
     "crosslint: fault in plugin gems: rule uses-gem requires rainbow, which is neither in Ruby's standard library nor in the plugin's folder, " \
       "and CrossLint can load no gem it wasn't built with",
-    "crosslint: fault in plugin inline: rule uses-inline requires bundler/inline, which CrossLint doesn't offer, since it would install gems into CrossLint's folder"
+    "crosslint: fault in plugin inline: rule uses-inline requires bundler/inline, which CrossLint doesn't offer, since it would install gems into CrossLint's folder",
   ]
   Dir.mktmpdir do |project|
     files.each do |file, text|
@@ -386,7 +390,7 @@ task "build:check:plugins", [:app] do |_, arguments|
     end
     Bundler.with_unbundled_env do
       system("git", "init", "-q", chdir: project) || abort("rake build:check: git init failed")
-      actual = IO.popen({"PATH" => path.join(File::PATH_SEPARATOR)}, [app, "check", "-C", project], err: %i[child out], &:read)
+      actual = IO.popen({ "PATH" => path.join(File::PATH_SEPARATOR) }, [app, "check", "-C", project], err: %i[child out], &:read)
       lines = actual.lines(chomp: true)
       abort "rake build:check: #{app} check exited with #{$?.exitstatus}, not 2:\n#{actual}" unless $?.exitstatus == 2
       abort "rake build:check: #{app} check printed:\n#{actual}" unless (expected - lines).empty?
@@ -411,14 +415,19 @@ task "build:check:environment", [:app] do |_, arguments|
       %(helper "dumper" command="sh" file="dumper.sh"\npolicy "p" {\n  applies-to "doc"\n  rule "dumps"\n}\n),
     ".config/crosslint/dumps/rule.rb" => %(class Dumps < CrossLint::Rule\n  def check(artifact)\n    helper("dumper").call("hi")\n    []\n  end\nend\n),
     ".config/crosslint/dumps/dumper.sh" => %(env > helper-env.txt\nread -r line\necho '{}'\n),
-    "a.md" => ""
+    "a.md" => "",
   }
   finder = CrossLint::Adapters::ProcessHelpers.new
   sh = finder.find("sh") || abort("rake build:check: no sh on the PATH")
   folders = [finder.find("git") || abort("rake build:check: no git on the PATH"), sh].map { |program| File.dirname(program) }.uniq
   # None of these values is a path, which MSYS2 would convert.
-  started = {"PATH" => folders.join(File::PATH_SEPARATOR), "RUBYOPT" => "-W0", "GEM_HOME" => "crosslint-check-gem-home",
-             "BUNDLE_GEMFILE" => "crosslint-check-gemfile", "CROSSLINT_CHECK" => "kept"}
+  started = {
+"PATH" => folders.join(File::PATH_SEPARATOR),
+"RUBYOPT" => "-W0",
+"GEM_HOME" => "crosslint-check-gem-home",
+"BUNDLE_GEMFILE" => "crosslint-check-gemfile",
+"CROSSLINT_CHECK" => "kept",
+}
   listed = lambda do |text|
     text.lines(chomp: true).filter_map { |line| line.split("=", 2) if line.include?("=") && !line.start_with?("!") }.to_h.except("PWD", "OLDPWD", "SHLVL", "_")
   end

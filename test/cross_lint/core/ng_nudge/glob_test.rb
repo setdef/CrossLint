@@ -26,7 +26,7 @@ class NgNudgeGlobTest < Minitest::Test
       "app/main.ts" => "app/main.ts",
       "*/main.ts" => "{name}/main.ts",
       "app/*.d.ts" => "app/{name}.d.ts",
-      "**/*.ts" => "{path}.ts"
+      "**/*.ts" => "{path}.ts",
     }.each { |pattern, converted| assert_equal converted, Glob.convert(pattern), pattern }
   end
 
@@ -38,7 +38,7 @@ class NgNudgeGlobTest < Minitest::Test
       "app/../lib/*.store.ts" => "lib/{name}.store.ts",
       "a/b/../../c.ts" => "c.ts",
       "a/b/../c.ts" => "a/c.ts",
-      "a/b/c/../../d/*.ts" => "a/d/{name}.ts"
+      "a/b/c/../../d/*.ts" => "a/d/{name}.ts",
     }.each { |pattern, converted| assert_equal converted, Glob.convert(pattern), pattern }
   end
 
@@ -67,8 +67,16 @@ class NgNudgeGlobTest < Minitest::Test
   end
 
   def test_refuses_the_wildcards_classes_extglobs_and_negations_a_path_pattern_does_not_have
-    {"?" => "app/?.ts", "[" => "app/[ab].ts", "]" => "app/a].ts", "(" => "app/@(a|b).ts", ")" => "app/a).ts", "!" => "!app/*.ts",
-     "\\" => "app\\a.ts", "*" => "app/a*b/*.ts"}.each do |found, pattern|
+    {
+"?" => "app/?.ts",
+"[" => "app/[ab].ts",
+"]" => "app/a].ts",
+"(" => "app/@(a|b).ts",
+")" => "app/a).ts",
+"!" => "!app/*.ts",
+"\\" => "app\\a.ts",
+"*" => "app/a*b/*.ts",
+}.each do |found, pattern|
       assert_refused "has #{found}, which CrossLint's path patterns don't have", pattern
     end
     assert_refused "has !, which CrossLint's path patterns don't have", "**/*.!(spec).ts"

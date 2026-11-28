@@ -8,7 +8,7 @@ module CrossLint
     class InitResult < Data.define(:file, :plugins, :replaced, :dry_run)
       def lines
         verbs = dry_run ? ["would write", "would replace"] : ["wrote", "replaced"]
-        ["#{verbs.fetch(replaced ? 1 : 0)} #{file}, with the recommended plugins: #{plugins.join(", ")}"]
+        ["#{verbs.fetch(replaced ? 1 : 0)} #{file}, with the recommended plugins: #{plugins.join(', ')}"]
       end
     end
 

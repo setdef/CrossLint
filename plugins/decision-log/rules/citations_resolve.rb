@@ -20,7 +20,7 @@ class CitationsResolve < CrossLint::Rule
     end
     cited.reject { numbers.include?(it[1]) }.group_by(&:first).map do |written, found|
       lines = found.map(&:last).uniq
-      violation(artifact, "#{(lines.size == 1) ? "line" : "lines"} #{lines.join(", ")}: #{written} matches no record in #{folder}", detail: written)
+      violation(artifact, "#{(lines.size == 1) ? 'line' : 'lines'} #{lines.join(', ')}: #{written} matches no record in #{folder}", detail: written)
     end
   end
 end

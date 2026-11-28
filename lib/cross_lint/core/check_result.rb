@@ -14,7 +14,7 @@ module CrossLint
       def self.count(kinds)
         found = kinds.reject { |_, count| count.zero? }
         each = (found.empty? ? kinds : found).map { |name, count| "#{count} #{name}" }
-        "#{each.empty? ? "0" : Spelling.list(each, "and")} #{(kinds.sum(&:last) == 1) ? "artifact" : "artifacts"}"
+        "#{each.empty? ? '0' : Spelling.list(each, 'and')} #{(kinds.sum(&:last) == 1) ? 'artifact' : 'artifacts'}"
       end
 
       def artifacts = kinds.sum(&:last)
@@ -24,9 +24,9 @@ module CrossLint
       private
 
       def found
-        counts = {"fault" => faults, "error" => errors, "warning" => warnings}.reject { |_, count| count.zero? }
-          .map { |word, count| "#{count} #{word}#{"s" unless count == 1}" }
-        counts << "#{paid_off} #{(paid_off == 1) ? "entry" : "entries"} paid off" unless paid_off.zero?
+        counts = { "fault" => faults, "error" => errors, "warning" => warnings }.reject { |_, count| count.zero? }
+          .map { |word, count| "#{count} #{word}#{'s' unless count == 1}" }
+        counts << "#{paid_off} #{(paid_off == 1) ? 'entry' : 'entries'} paid off" unless paid_off.zero?
         counts.concat(steps)
         return counts.join(", ") unless counts.empty?
 

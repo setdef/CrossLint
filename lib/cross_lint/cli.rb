@@ -9,7 +9,7 @@ module CrossLint
     NEXT_STEPS = "moved from ng-nudge; next, replace ng-nudge's dev dependency and each npx ng-nudge in your scripts and CI with crosslint check, " \
       "and run crosslint debt update once"
 
-    WARNINGS = {"all" => :all, "none" => :none, "error" => :error}.freeze
+    WARNINGS = { "all" => :all, "none" => :none, "error" => :error }.freeze
 
     def initialize(argv, out:, err:, env:, spec: nil, app: nil)
       @argv = argv
@@ -22,7 +22,7 @@ module CrossLint
 
     def run
       spec = @spec || UsageSpec.load
-      line = CommandLine.new(spec, @argv, plugin_flags: ->(words, project) { declared_flags(spec, words, project) })
+      line = CommandLine.new(spec, @argv, plugin_flags: -> (words, project) { declared_flags(spec, words, project) })
       command = line.command
       words = line.words
       running = line.action == :run
@@ -171,7 +171,7 @@ module CrossLint
     def check_project(app, line, project, command = nil, flags = {})
       # A plugin's command has flags of its own, which may be named as
       # check's are, so only a check reads check's.
-      own = ->(long) { command.nil? && line.flags.key?(long) }
+      own = -> (long) { command.nil? && line.flags.key?(long) }
       given = line.value("warnings") if command.nil? && line.given?("warnings")
       warnings = WARNINGS.fetch(given) if given
       verbosity = (:silent if line.flags.key?("silent")) || (:quiet if line.flags.key?("quiet")) #: (:quiet | :silent)?
@@ -179,7 +179,7 @@ module CrossLint
       # Steep reads a lambda's one argument, an array of pairs, as one pair,
       # so the argument goes untyped.
       result = app.check_project(project, warnings:, verbosity:, all: own.call("all"), command:, flags:,
-        started: ->(kinds) { report.start(_ = kinds) })
+        started: -> (kinds) { report.start(_ = kinds) })
       report.write(result)
       return 2 unless result.faults.empty?
 

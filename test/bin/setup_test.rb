@@ -39,7 +39,7 @@ class SetupTest < Minitest::Test
 
     assert_equal 0, status.exitstatus
     assert_equal ["mise trust -q mise.toml", "mise install", "mise exec -- bundle install", "mise exec -- bundle exec rake fixtures"], words
-    assert_match(/^bin\/setup: done$/, out)
+    assert_match(%r{^bin/setup: done$}, out)
   end
 
   def test_puts_the_gems_in_a_folder_under_home_unless_bundle_path_is_set
@@ -160,8 +160,16 @@ class SetupTest < Minitest::Test
   end
 
   def env(extra = {})
-    {"HOME" => @home, "PATH" => [@tools, ENV.fetch("PATH")].join(File::PATH_SEPARATOR), "FAKE_LOG" => @log, "CI" => nil,
-     "BUNDLE_PATH" => nil, "GIT_DIR" => nil, "GIT_INDEX_FILE" => nil, "GIT_WORK_TREE" => nil}.merge(extra)
+    {
+"HOME" => @home,
+"PATH" => [@tools, ENV.fetch("PATH")].join(File::PATH_SEPARATOR),
+"FAKE_LOG" => @log,
+"CI" => nil,
+"BUNDLE_PATH" => nil,
+"GIT_DIR" => nil,
+"GIT_INDEX_FILE" => nil,
+"GIT_WORK_TREE" => nil,
+}.merge(extra)
   end
 
   def calls
@@ -178,8 +186,8 @@ class SetupTest < Minitest::Test
     calls.map { |call| call[/\[BUNDLE_PATH=([^\]]*)\]/, 1].sub(%r{\A/([a-z])/}) { "#{$1.upcase}:/" } }.uniq
   end
 
-  def git(*arguments, extra: {})
-    out, err, status = Open3.capture3(env(extra), "git", *arguments, chdir: @clone)
+  def git(*, extra: {})
+    out, err, status = Open3.capture3(env(extra), "git", *, chdir: @clone)
     [out, err, status]
   end
 

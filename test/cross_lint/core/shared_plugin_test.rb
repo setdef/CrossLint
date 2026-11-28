@@ -10,21 +10,34 @@ class SharedPluginTest < Minitest::Test
   SharedPlugin = CrossLint::Core::SharedPlugin
 
   def test_names_a_plugin_for_the_last_part_of_its_repositorys_url
-    urls = ["https://github.com/OWNER/signatures", "https://github.com/OWNER/signatures.git", "https://github.com/OWNER/signatures/",
-      "https://github.com/OWNER/signatures.git//", "file:///tmp/a.b_c-d"]
+    urls = [
+      "https://github.com/OWNER/signatures",
+      "https://github.com/OWNER/signatures.git",
+      "https://github.com/OWNER/signatures/",
+      "https://github.com/OWNER/signatures.git//",
+      "file:///tmp/a.b_c-d",
+]
 
     assert_equal %w[signatures signatures signatures signatures a.b_c-d], urls.map { |url| SharedPlugin.plugin_name(url) }
   end
 
   def test_names_no_plugin_for_a_last_part_that_isnt_letters_digits_and_dot_underscore_dash
-    urls = ["https://example.com/OWNER/a b", "https://example.com/OWNER/café", "https://example.com/OWNER/a:b", "https://example.com/OWNER/..",
-      "https://example.com/OWNER/.", "https://example.com/OWNER/.git", "https://example.com/OWNER/a\nb", ""]
+    urls = [
+      "https://example.com/OWNER/a b",
+      "https://example.com/OWNER/café",
+      "https://example.com/OWNER/a:b",
+      "https://example.com/OWNER/..",
+      "https://example.com/OWNER/.",
+      "https://example.com/OWNER/.git",
+      "https://example.com/OWNER/a\nb",
+      "",
+]
 
     assert_equal [nil] * urls.size, urls.map { |url| SharedPlugin.plugin_name(url) }
   end
 
   def test_takes_a_tag_name_or_a_full_sha_as_a_ref
-    refs = ["v1.2.0", "1.2.0", "release/2026.1", "v1.0.0+build.5", "2.0.0-rc.1", "a" * 40, "A1" * 20, "a" * 39, "#{"a" * 41}g"]
+    refs = ["v1.2.0", "1.2.0", "release/2026.1", "v1.0.0+build.5", "2.0.0-rc.1", "a" * 40, "A1" * 20, "a" * 39, "#{'a' * 41}g"]
 
     assert_equal [true] * refs.size, refs.map { |ref| SharedPlugin.ref?(ref) }
   end
@@ -36,9 +49,9 @@ class SharedPluginTest < Minitest::Test
   end
 
   def test_knows_a_full_sha_from_a_tag_that_looks_like_one
-    assert_equal [true, true, false, false, false], ["a" * 40, "0123456789ABCDEFabcdef0123456789ABCDEFab", "a" * 39, "a" * 41, "#{"a" * 39}g"]
+    assert_equal [true, true, false, false, false], ["a" * 40, "0123456789ABCDEFabcdef0123456789ABCDEFab", "a" * 39, "a" * 41, "#{'a' * 39}g"]
       .map { |ref| SharedPlugin.sha?(ref) }
-    assert_equal [false], ["#{"a" * 40}\n"].map { |ref| SharedPlugin.sha?(ref) }
+    assert_equal [false], ["#{'a' * 40}\n"].map { |ref| SharedPlugin.sha?(ref) }
   end
 
   def test_knows_a_url_with_a_user_name_or_password_by_what_comes_before_the_first_slash_after_the_scheme
@@ -49,18 +62,41 @@ class SharedPluginTest < Minitest::Test
   end
 
   def test_knows_a_url_with_a_query_or_a_fragment_by_a_question_mark_or_a_hash_after_the_scheme
-    with = %w[https://example.com/o/r?token=X https://example.com/o/r#frag https://example.com/o/r?token=X#frag https://example.com?a=b https://example.com#a
-      https://example.com/o/r.git? https://example.com/o/r# HTTPS://example.com/o/r?t=1 http://example.com/o/r?t=1 file:///tmp/a?b]
-    without = %w[https://example.com/o/r https://example.com/o/r.git https://example.com:8080/o/r https://example.com/o/a@b https://example.com/o/a=b
-      https://example.com/o/a%3Fb ./a?b plugins/a#b debt]
+    with = %w[
+      https://example.com/o/r?token=X
+      https://example.com/o/r#frag
+      https://example.com/o/r?token=X#frag
+      https://example.com?a=b
+      https://example.com#a
+      https://example.com/o/r.git?
+      https://example.com/o/r#
+      HTTPS://example.com/o/r?t=1
+      http://example.com/o/r?t=1
+      file:///tmp/a?b
+]
+    without = %w[
+      https://example.com/o/r
+      https://example.com/o/r.git
+      https://example.com:8080/o/r
+      https://example.com/o/a@b
+      https://example.com/o/a=b
+      https://example.com/o/a%3Fb
+      ./a?b
+      plugins/a#b
+      debt
+]
 
     assert_equal [[true] * with.size, [false] * without.size], [with, without].map { |urls| urls.map { |url| SharedPlugin.query_or_fragment?(url) } }
   end
 
   def test_refuses_the_first_plugin_whose_name_is_a_url_with_a_query_or_a_fragment_and_no_other
-    listing = ->(name, line) { CrossLint::Core::ListedPlugin.new(name:, ref: "v1", settings: [], line:) }
-    plugins = [listing.call("https://example.com/o/ok", 1), listing.call("./a?b", 2), listing.call("https://example.com/o/r?token=SECRET", 3),
-      listing.call("https://example.com/o/r#SECRET", 4)]
+    listing = -> (name, line) { CrossLint::Core::ListedPlugin.new(name:, ref: "v1", settings: [], line:) }
+    plugins = [
+      listing.call("https://example.com/o/ok", 1),
+      listing.call("./a?b", 2),
+      listing.call("https://example.com/o/r?token=SECRET", 3),
+      listing.call("https://example.com/o/r#SECRET", 4),
+]
     configuration = CrossLint::Core::Configuration.new(file: "c.kdl", plugins:, policies: [], warnings: nil, verbosity: nil)
     mistake = assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_secrets(configuration) }
 
@@ -70,9 +106,14 @@ class SharedPluginTest < Minitest::Test
   end
 
   def test_refuses_the_first_plugin_whose_name_is_a_url_with_a_user_name_or_password_and_no_other
-    listing = ->(name, line, ref = nil) { CrossLint::Core::ListedPlugin.new(name:, ref:, settings: [], line:) }
-    plugins = [listing.call("./a@b", 1), listing.call("https://example.com/o/ok", 2, "v1"), listing.call("http://u:p@h/o", 3, "v1"),
-      listing.call("https://u:p@h/o/r", 4, "v1"), listing.call("https://v@h/o/r", 5, "v1")]
+    listing = -> (name, line, ref = nil) { CrossLint::Core::ListedPlugin.new(name:, ref:, settings: [], line:) }
+    plugins = [
+      listing.call("./a@b", 1),
+      listing.call("https://example.com/o/ok", 2, "v1"),
+      listing.call("http://u:p@h/o", 3, "v1"),
+      listing.call("https://u:p@h/o/r", 4, "v1"),
+      listing.call("https://v@h/o/r", 5, "v1"),
+]
     configuration = CrossLint::Core::Configuration.new(file: "c.kdl", plugins:, policies: [], warnings: nil, verbosity: nil)
     mistake = assert_raises(CrossLint::Core::Mistake) { SharedPlugin.refuse_secrets(configuration) }
 
@@ -106,7 +147,7 @@ class SharedPluginTest < Minitest::Test
       "../a" => "has \"..\"; write each folder's name, with a single / between them",
       "a/../b" => "has \"..\"; write each folder's name, with a single / between them",
       "a/b c" => "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name",
-      "a\nb" => "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name"
+      "a\nb" => "ends in a folder whose name has other characters than letters, digits, and . _ -; a plugin's name is its folder's name",
     }
 
     assert_equal problems.values, problems.keys.map { |path| SharedPlugin.path_problem(path) }
@@ -121,7 +162,7 @@ class SharedPluginTest < Minitest::Test
   end
 
   def test_a_listed_plugin_is_named_for_its_path_or_else_its_repository_and_has_no_path_unless_given_one
-    listing = ->(path) { CrossLint::Core::ListedPlugin.new(name: "https://example.com/o/repo.git", ref: "v1", path:, settings: [], line: 1) }
+    listing = -> (path) { CrossLint::Core::ListedPlugin.new(name: "https://example.com/o/repo.git", ref: "v1", path:, settings: [], line: 1) }
     bare = CrossLint::Core::ListedPlugin.new(name: "https://example.com/o/repo.git", ref: "v1", settings: [], line: 1)
 
     assert_equal %w[markdown-links x repo], [listing.call("plugins/markdown-links").plugin_name, listing.call("x").plugin_name, bare.plugin_name]
@@ -131,11 +172,19 @@ class SharedPluginTest < Minitest::Test
 
   def test_says_what_is_wrong_with_a_ref
     assert_equal "ext::x doesn't start with https:// or file://", CrossLint::Core::FetchError.scheme("ext::x", ["https://", "file://"]).message
-    errors = [CrossLint::Core::FetchError.bad_ref("a:b"), CrossLint::Core::FetchError.branch("main"), CrossLint::Core::FetchError.no_tag("v9"),
-      CrossLint::Core::FetchError.no_commit("abc")]
+    errors = [
+      CrossLint::Core::FetchError.bad_ref("a:b"),
+      CrossLint::Core::FetchError.branch("main"),
+      CrossLint::Core::FetchError.no_tag("v9"),
+      CrossLint::Core::FetchError.no_commit("abc"),
+]
 
-    assert_equal ['"a:b" is neither a tag name nor a full 40-character commit SHA', "main is a branch, and a ref is a tag or a full 40-character commit SHA",
-      "the repository has no tag v9, and a ref is a tag or a full 40-character commit SHA", "the repository has no commit abc"], errors.map(&:message)
+    assert_equal [
+      '"a:b" is neither a tag name nor a full 40-character commit SHA',
+      "main is a branch, and a ref is a tag or a full 40-character commit SHA",
+      "the repository has no tag v9, and a ref is a tag or a full 40-character commit SHA",
+      "the repository has no commit abc",
+], errors.map(&:message)
     assert(errors.all? { |error| error.is_a?(StandardError) })
   end
 end

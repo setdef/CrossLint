@@ -35,7 +35,7 @@ class KDLDocumentTest < Minitest::Test
   def test_reads_values_as_plain_ruby_values
     node = Document.new(%(n "s" 1 2.5 #true #false #null raw=#"r"# bare=word), "a.kdl").nodes.first
 
-    assert_equal [["s", 1, 2.5, true, false, nil], {"raw" => "r", "bare" => "word"}], [node.arguments, node.properties]
+    assert_equal [["s", 1, 2.5, true, false, nil], { "raw" => "r", "bare" => "word" }], [node.arguments, node.properties]
   end
 
   def test_names_the_file_and_line_of_a_syntax_error
@@ -52,12 +52,17 @@ class KDLDocumentTest < Minitest::Test
   end
 
   def test_reads_a_type_annotation_it_is_told_a_property_at_the_top_may_have
-    typed = {"helper" => {"command" => ["crosslint"]}}
+    typed = { "helper" => { "command" => ["crosslint"] } }
     helper = Document.new(%(helper command=(crosslint)"ruby" file="a.rb"), "a.kdl", typed:).nodes.first
 
     assert_equal [Document::Typed.new(type: "crosslint", value: "ruby"), "a.rb"], helper.properties.values_at("command", "file")
-    [%(helper command=(other)"ruby"), %(helper file=(crosslint)"a.rb"), %(other command=(crosslint)"ruby"), %(helper (crosslint)"x"),
-      %(a {\n  helper command=(crosslint)"ruby"\n}\n)].each do |source|
+    [
+      %(helper command=(other)"ruby"),
+      %(helper file=(crosslint)"a.rb"),
+      %(other command=(crosslint)"ruby"),
+      %(helper (crosslint)"x"),
+      %(a {\n  helper command=(crosslint)"ruby"\n}\n),
+].each do |source|
       assert_raises(Mistake, source) { Document.new(source, "a.kdl", typed:) }
     end
   end
@@ -96,7 +101,7 @@ class KDLDocumentTest < Minitest::Test
     document = Document.new(%(n a=1 { c; d; }), "a.kdl")
     node = document.nodes.first
 
-    assert_equal({"a" => 1}, document.properties(node, ["a"]))
+    assert_equal({ "a" => 1 }, document.properties(node, ["a"]))
     document.children(node, %w[c d e])
     assert_refuses %(unknown property "a"; n takes none), document, node, -> { document.properties(node, []) }
     assert_refuses %(unknown node "d"; expected "c"), document, node.children.last, -> { document.children(node, ["c"]) }
@@ -107,8 +112,13 @@ class KDLDocumentTest < Minitest::Test
     document = Document.new(%(n s="x" b=#false t=#true i=1 z=#null), "a.kdl")
     node = document.nodes.first
 
-    assert_equal ["x", nil, false, true, nil], [document.string_property(node, "s"), document.string_property(node, "none"),
-      document.boolean_property(node, "b"), document.boolean_property(node, "t"), document.boolean_property(node, "none")]
+    assert_equal ["x", nil, false, true, nil], [
+      document.string_property(node, "s"),
+      document.string_property(node, "none"),
+      document.boolean_property(node, "b"),
+      document.boolean_property(node, "t"),
+      document.boolean_property(node, "none"),
+]
     assert_refuses "i= takes a string, not 1", document, node, -> { document.string_property(node, "i") }
     assert_refuses "z= takes a string, not nil", document, node, -> { document.string_property(node, "z") }
     assert_refuses %(s= takes #true or #false, not "x"), document, node, -> { document.boolean_property(node, "s") }
@@ -172,7 +182,7 @@ class KDLDocumentTest < Minitest::Test
 
   def test_reads_the_minimum_version_from_the_lines_before_one_it_cant_parse
     found = Document.minimum(%(crosslint min="9"\nplugin "a"\nnew-syntax "a\n), "a.kdl")
-    typed = Document.minimum(%(crosslint min="9"\nhelper command=(crosslint)"node"\n), "a.kdl", typed: {"helper" => {"command" => ["crosslint"]}})
+    typed = Document.minimum(%(crosslint min="9"\nhelper command=(crosslint)"node"\n), "a.kdl", typed: { "helper" => { "command" => ["crosslint"] } })
 
     commented = Document.minimum(%(// for CrossLint 9\n\ncrosslint min="9"\nnew-syntax "a\n), "a.kdl")
 

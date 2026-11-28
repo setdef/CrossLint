@@ -21,7 +21,7 @@ class IndexListsRecords < CrossLint::Rule
     unlisted + linked.reject { records.key?(it.first) }.group_by(&:first).map do |path, found|
       lines = found.map(&:last).uniq
       name = File.basename(path)
-      violation(artifact, "#{(lines.size == 1) ? "line" : "lines"} #{lines.join(", ")}: links to #{name}, which isn't a record in #{folder}", detail: name)
+      violation(artifact, "#{(lines.size == 1) ? 'line' : 'lines'} #{lines.join(', ')}: links to #{name}, which isn't a record in #{folder}", detail: name)
     end
   end
 end

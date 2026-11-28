@@ -38,8 +38,20 @@ class NgNudgeExpressionTest < Minitest::Test
     assert_equal "[^#{SPACE}]", Expression.translate('\S')
     assert_equal "[#{SPACE}a]", Expression.translate('[\sa]')
     # Everything but white space, which holds the a, written once.
-    not_space = [0x00..0x08, 0x0e..0x1f, 0x21..0x9f, 0xa1..0x167f, 0x1681..0x1fff, 0x200b..0x2027, 0x202a..0x202e, 0x2030..0x205e, 0x2060..0x2fff,
-      0x3001..0xd7ff, 0xe000..0xfefe, 0xff00..0x10ffff]
+    not_space = [
+      0x00..0x08,
+      0x0e..0x1f,
+      0x21..0x9f,
+      0xa1..0x167f,
+      0x1681..0x1fff,
+      0x200b..0x2027,
+      0x202a..0x202e,
+      0x2030..0x205e,
+      0x2060..0x2fff,
+      0x3001..0xd7ff,
+      0xe000..0xfefe,
+      0xff00..0x10ffff,
+]
     assert_equal "[#{Expression.escapes(not_space)}]", Expression.translate('[a\S]')
     assert_equal "[^#{SPACE}x]", Expression.translate('[^\sx]')
   end
@@ -55,8 +67,8 @@ class NgNudgeExpressionTest < Minitest::Test
   def test_writes_a_code_given_by_x_or_u_as_the_character_with_that_code
     source = '\x41\xE9' + self.class.escaped("00E9") + "é"
 
-    assert_equal "#{self.class.escaped("0041", "00e9", "00e9")}é", Expression.translate(source)
-    assert_equal "[#{self.class.escaped("00ff")}]", Expression.translate('[\xff]')
+    assert_equal "#{self.class.escaped('0041', '00e9', '00e9')}é", Expression.translate(source)
+    assert_equal "[#{self.class.escaped('00ff')}]", Expression.translate('[\xff]')
   end
 
   def test_keeps_groups_lookarounds_and_named_groups
@@ -126,7 +138,7 @@ class NgNudgeExpressionTest < Minitest::Test
       '\k' => 'has \k that isn\'t followed by <name>',
       '(?<n>a)\k<m>' => 'has \k<m>, which names no group defined before it',
       "a)" => "has a ) that closes no group",
-      "(a))" => "has a ) that closes no group"
+      "(a))" => "has a ) that closes no group",
     }.each do |source, message|
       error = assert_raises(Expression::Unsupported, source) { Expression.translate(source) }
 
@@ -163,9 +175,13 @@ class NgNudgeExpressionTest < Minitest::Test
   end
 
   def test_refuses_a_named_backreference_that_names_no_group_defined_before_it_or_names_a_number
-    {'(a)\k<1>' => 'has \k<1>, which names no group defined before it', '(a)(?<n>b)\k<>' => 'has \k<>, which names no group defined before it',
-     '(?<n>a)\k<n' => 'has \k that isn\'t followed by <name>', '(?<n>a)\k' => 'has \k that isn\'t followed by <name>',
-     '(?<n>a)\kn>' => 'has \k that isn\'t followed by <name>'}.each do |source, message|
+    {
+'(a)\k<1>' => 'has \k<1>, which names no group defined before it',
+'(a)(?<n>b)\k<>' => 'has \k<>, which names no group defined before it',
+'(?<n>a)\k<n' => 'has \k that isn\'t followed by <name>',
+'(?<n>a)\k' => 'has \k that isn\'t followed by <name>',
+'(?<n>a)\kn>' => 'has \k that isn\'t followed by <name>',
+}.each do |source, message|
       error = assert_raises(Expression::Unsupported, source) { Expression.translate(source) }
 
       assert_equal message, error.message, source
@@ -208,7 +224,7 @@ class NgNudgeExpressionTest < Minitest::Test
       '[\s\S]' => [[" ", "a", "\n", *astral], []],
       '[^\S\d]' => [[" ", "\t", " "], %w[a 5 -]],
       '[^a\Sb]' => [[" ", "\n"], %w[a b c]],
-      "[a-c\\x62-\\x64]" => [%w[a b c d], %w[e]]
+      "[a-c\\x62-\\x64]" => [%w[a b c d], %w[e]],
     }.each do |source, (matching, other)|
       verbose = $VERBOSE
       $VERBOSE = true
@@ -229,14 +245,14 @@ class NgNudgeExpressionTest < Minitest::Test
   end
 
   def test_refuses_a_backreference_in_a_class_where_javascript_reads_characters
-    message = ->(char) { "has \\#{char} in a class, where JavaScript reads it as characters and a reference is meant outside one" }
+    message = -> (char) { "has \\#{char} in a class, where JavaScript reads it as characters and a reference is meant outside one" }
 
     assert_equal message.call("1"), assert_raises(Expression::Unsupported) { Expression.translate('(a)[\1]') }.message
     assert_equal message.call("k"), assert_raises(Expression::Unsupported) { Expression.translate('(?<n>a)[\k<n>]') }.message
   end
 
   def test_gives_the_code_points_no_span_has_leaving_out_the_surrogates
-    span = ->(first, last) { Expression::Span.new(first:, last:) }
+    span = -> (first, last) { Expression::Span.new(first:, last:) }
 
     assert_equal [span.call(0, 0x10), span.call(0x21, 0xd7ff), span.call(0xe000, 0x10ffff)],
       Expression.complement([span.call(0x11, 0x20)])
@@ -259,7 +275,7 @@ class NgNudgeExpressionTest < Minitest::Test
   def test_reads_the_names_of_groups_by_what_both_languages_allow
     assert_equal "(?<n_1>a)", Expression.translate("(?<n_1>a)")
     assert_equal "(?<n>a)", Expression.translate("(?<n>a)")
-    {"(?<1n>a)" => "1n", "(?<>a)" => "", "(?<n m>a)" => "n m", "(?<n$>a)" => "n$"}.each do |source, name|
+    { "(?<1n>a)" => "1n", "(?<>a)" => "", "(?<n m>a)" => "n m", "(?<n$>a)" => "n$" }.each do |source, name|
       error = assert_raises(Expression::Unsupported, source) { Expression.translate(source) }
 
       assert_equal "has a group name, #{name.dump}, that isn't letters, digits, and _ from a letter or _", error.message

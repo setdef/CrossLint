@@ -28,7 +28,8 @@ module CrossLint
       RESERVED = %w[version completion config plugin plugins list cache doctor explain fix self].freeze
 
       def initialize(configuration:, manifests:, crosslint_ruby:, shared_plugins:, helpers:, crosslint:, built_in: {}, steps: {}, reserved: [],
-        reserved_flags: [], debug: nil)
+        reserved_flags: [], debug: nil
+      )
         @debug = debug
         @configuration = configuration
         @crosslint = crosslint
@@ -95,8 +96,13 @@ module CrossLint
 
       # A setting as the helper that declares a plugin's artifacts is sent it.
       def self.described(setting)
-        {"name" => setting.name, "arguments" => setting.arguments, "properties" => setting.properties,
-         "children" => setting.children.map { |child| described(child) }, "line" => setting.line}
+        {
+"name" => setting.name,
+"arguments" => setting.arguments,
+"properties" => setting.properties,
+"children" => setting.children.map { |child| described(child) },
+"line" => setting.line,
+}
       end
 
       private
@@ -110,7 +116,7 @@ module CrossLint
 
       def plugin(root, configuration, index, loaded, fetching: true)
         listing = configuration.plugins.fetch(index)
-        fail_at = ->(message, line = listing.line) { raise Mistake.new(message, file: configuration.file, line:) }
+        fail_at = -> (message, line = listing.line) { raise Mistake.new(message, file: configuration.file, line:) }
         first = configuration.plugins.take(index).find { |other| other.name == listing.name && other.path == listing.path }
         fail_at.call("plugin #{listing.shown.dump} is listed twice; the first is on line #{first.line}") if first
 
@@ -214,7 +220,7 @@ module CrossLint
 
         running = @helpers.start(root, [plugin])
         answer = begin
-          input = {"settings" => plugin.listing.settings.map { |setting| LoadProject.described(setting) }}
+          input = { "settings" => plugin.listing.settings.map { |setting| LoadProject.described(setting) } }
           HelperExchange.said(@debug, "#{plugin.name}/#{name}", input) { running.call(plugin, name, input) }
         ensure
           running.stop
@@ -227,7 +233,7 @@ module CrossLint
       # The artifacts a helper's answer declares, or the mistake it found
       # in a setting, raised.
       def declared(answer, name, file, line)
-        raise PluginError, "helper #{name.dump} failed: #{answer.fetch("error")}" if answer.is_a?(Hash) && answer["error"].is_a?(String)
+        raise PluginError, "helper #{name.dump} failed: #{answer.fetch('error')}" if answer.is_a?(Hash) && answer["error"].is_a?(String)
 
         mistake = answer["mistake"] if answer.is_a?(Hash)
         if mistake.is_a?(Hash) && mistake["message"].is_a?(String) && mistake["line"].is_a?(Integer)
@@ -421,7 +427,7 @@ module CrossLint
           return unless plugin.targets(policy).empty? && !declared_by_helper?(plugin.manifest)
 
           named = policy.pieces.map(&:dump)
-          having = named.empty? ? "declares no artifact" : "has no artifact with #{Spelling.list(named, "and")}, the pieces it names"
+          having = named.empty? ? "declares no artifact" : "has no artifact with #{Spelling.list(named, 'and')}, the pieces it names"
           raise Mistake.new("policy #{policy.name.dump} has no applies-to, and plugin #{plugin.name} #{having}", file:, line: policy.line)
         end
 
@@ -433,7 +439,7 @@ module CrossLint
       def declared_by_helper?(manifest) = !!(manifest.artifacts_ruby || manifest.artifacts_helper)
 
       def target(plugin, applies_to, plugins)
-        fail_at = ->(message) { raise Mistake.new(message, file: plugin.manifest.file, line: applies_to.line) }
+        fail_at = -> (message) { raise Mistake.new(message, file: plugin.manifest.file, line: applies_to.line) }
         before, slash, after = applies_to.artifact.partition("/")
         owner_name, name = slash.empty? ? [plugin.name, before] : [before, after]
         owner = plugins.find { |listed| listed.name == owner_name }
@@ -444,7 +450,7 @@ module CrossLint
       end
 
       def check_rule(plugin, artifact, rule)
-        fail_at = ->(message) { raise Mistake.new(message, file: plugin.manifest.file, line: rule.line) }
+        fail_at = -> (message) { raise Mistake.new(message, file: plugin.manifest.file, line: rule.line) }
         built_in = BuiltInRule.named(rule.name)
         unless built_in
           declared = plugin.manifest.rules.map(&:name)
@@ -472,7 +478,7 @@ module CrossLint
 
       def check_policy_settings(configuration, plugins)
         configuration.policies.each_with_index do |setting, index|
-          fail_at = ->(message) { raise Mistake.new(message, file: configuration.file, line: setting.line) }
+          fail_at = -> (message) { raise Mistake.new(message, file: configuration.file, line: setting.line) }
           first = configuration.policies.take(index).find { |other| other.name == setting.name }
           fail_at.call("policy #{setting.name.dump} is set twice; the first is on line #{first.line}") if first
 

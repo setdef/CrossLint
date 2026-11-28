@@ -21,7 +21,7 @@ module CrossLint
       # on the PATH the user started CrossLint with and stays.
       # How two paths compare equal: Windows folds case. A table, not a
       # branch, since each system takes only its own.
-      COMPARING = {nil => :==}.fetch(File::ALT_SEPARATOR, :casecmp?)
+      COMPARING = { nil => :== }.fetch(File::ALT_SEPARATOR, :casecmp?)
 
       def self.app_folder
         bin = RbConfig::CONFIG.fetch("bindir")

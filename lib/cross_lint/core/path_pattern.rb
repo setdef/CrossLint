@@ -9,7 +9,7 @@ module CrossLint
 
       PLACEHOLDER = /\{([^{}]*)\}/
 
-      MATCHES = {"path" => "[^/]+(?:/[^/]+)*", "name" => "[^/]+"}.freeze
+      MATCHES = { "path" => "[^/]+(?:/[^/]+)*", "name" => "[^/]+" }.freeze
 
       class Invalid < ArgumentError; end
 
@@ -19,7 +19,7 @@ module CrossLint
 
         unknown = source.scan(PLACEHOLDER).flatten.find { |placeholder| !known.include?(placeholder) }
         if unknown
-          return "path pattern #{source.dump} has #{Spelling.unknown("placeholder", "{#{unknown}}", known.map { |each| "{#{each}}" })}"
+          return "path pattern #{source.dump} has #{Spelling.unknown('placeholder', "{#{unknown}}", known.map { |each| "{#{each}}" })}"
         end
 
         brace = source.gsub(PLACEHOLDER, "")[/[{}]/]

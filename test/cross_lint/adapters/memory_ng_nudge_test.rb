@@ -9,7 +9,7 @@ class MemoryNgNudgeTest < Minitest::Test
 
   def ng_nudge_root = File.expand_path("/app")
 
-  def ng_nudge_port(files) = CrossLint::Adapters::MemoryNgNudge.new({ng_nudge_root => files})
+  def ng_nudge_port(files) = CrossLint::Adapters::MemoryNgNudge.new({ ng_nudge_root => files })
 
   def test_holds_no_project_unless_it_is_given_some
     port = CrossLint::Adapters::MemoryNgNudge.new

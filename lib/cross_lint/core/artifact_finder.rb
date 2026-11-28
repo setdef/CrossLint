@@ -32,7 +32,7 @@ module CrossLint
       def said(plugin, declaration, found)
         say(plugin, declaration) do
           regex = " with regex #{declaration.regex.source.dump}" if declaration.regex
-          "#{Spelling.count(found.size, "artifact")}, from primary #{declaration.primary.source.dump}#{regex}"
+          "#{Spelling.count(found.size, 'artifact')}, from primary #{declaration.primary.source.dump}#{regex}"
         end
         @debug&.write("artifact") { found.map(&:explanation).join("\n") }
         found

@@ -15,7 +15,7 @@ class LinksResolve < CrossLint::Rule
 
   def initialize
     @files = project_files.to_h { [it, true] }
-    @folders = {"" => true}
+    @folders = { "" => true }
     project_files.each do |file|
       parts = file.split("/")
       (1...parts.size).each { |size| @folders[parts.take(size).join("/")] = true }
@@ -29,7 +29,7 @@ class LinksResolve < CrossLint::Rule
       next unless problem
 
       lines = found.map(&:last).uniq
-      violation(artifact, "#{(lines.size == 1) ? "line" : "lines"} #{lines.join(", ")}: #{written} #{problem}", detail: written)
+      violation(artifact, "#{(lines.size == 1) ? 'line' : 'lines'} #{lines.join(', ')}: #{written} #{problem}", detail: written)
     end
   end
 

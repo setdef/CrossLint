@@ -44,7 +44,8 @@ module CrossLint
       end
 
       def initialize(err:, cache: nil, schemes: SCHEMES, time_limit: TIME_LIMIT, git: "git", env: ENV, windows: ProcessHelpers::WINDOWS,
-        home: -> { Dir.home }, tree: ProcessHelpers::TREE, clock: Time)
+        home: -> { Dir.home }, tree: ProcessHelpers::TREE, clock: Time
+      )
         @err = err
         @cache = cache
         @schemes = schemes

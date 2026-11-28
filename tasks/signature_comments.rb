@@ -29,7 +29,7 @@ module SignatureComments
   end
 
   def walk(declaration, file, outer)
-    name = "#{outer}#{declaration.name.to_s.delete_prefix("::")}"
+    name = "#{outer}#{declaration.name.to_s.delete_prefix('::')}"
     found = [Found.new(file:, line: line(declaration), name:, commented: !declaration.comment.nil?)]
     return found unless declaration.respond_to?(:members)
 

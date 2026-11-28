@@ -78,7 +78,7 @@ module CrossLint
 
         @nodes = Parser.new(parse_types: false).parse(source).map { |node| convert(node) }
       rescue KDL::Error => error
-        raise Core::Mistake.new("isn't valid KDL: #{error.message.sub(/ \(\d+:\d+\)\z/, "")}", file:, line: error.line)
+        raise Core::Mistake.new("isn't valid KDL: #{error.message.sub(/ \(\d+:\d+\)\z/, '')}", file:, line: error.line)
       end
 
       def mistake(message, node) = Core::Mistake.new(message, file:, line: node.line)
@@ -120,7 +120,7 @@ module CrossLint
         values = node.arguments
         return values if values.size == count
 
-        raise mistake("#{node.name} has #{values.size} #{(values.size == 1) ? "argument" : "arguments"}; write it as #{usage}", node)
+        raise mistake("#{node.name} has #{values.size} #{(values.size == 1) ? 'argument' : 'arguments'}; write it as #{usage}", node)
       end
 
       def strings(node, usage, count)

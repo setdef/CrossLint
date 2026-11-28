@@ -41,7 +41,7 @@ class BundledWorksTest < Minitest::Test
 
     texts = quietly { BundledWorks.npm_release(release(integrity), npm: command) }
 
-    assert_equal({"LICENSE.txt" => "Apache\n", "NOTICE" => "A notice\n", "ThirdPartyNoticeText.txt" => "Third party\n"}, texts)
+    assert_equal({ "LICENSE.txt" => "Apache\n", "NOTICE" => "A notice\n", "ThirdPartyNoticeText.txt" => "Third party\n" }, texts)
   end
 
   def test_says_on_standard_error_what_it_fetches_and_for_how_long
@@ -62,7 +62,7 @@ class BundledWorksTest < Minitest::Test
 
   def test_refuses_a_tarball_whose_integrity_is_not_the_one_the_table_lists_and_names_the_work_the_version_and_both_values
     got = pack("LICENSE.txt" => "Apache\n")
-    listed = "sha512-#{"A" * 86}=="
+    listed = "sha512-#{'A' * 86}=="
 
     error = assert_raises(BundledWorks::Failure) { quietly { BundledWorks.npm_release(release(listed), npm: command) } }
 
@@ -82,7 +82,7 @@ class BundledWorksTest < Minitest::Test
   def test_checks_the_integrity_before_it_reads_a_file_of_the_tarball
     pack("README.md" => "No license file, which reading the tarball would refuse\n")
 
-    error = assert_raises(BundledWorks::Failure) { quietly { BundledWorks.npm_release(release("sha512-#{"A" * 86}=="), npm: command) } }
+    error = assert_raises(BundledWorks::Failure) { quietly { BundledWorks.npm_release(release("sha512-#{'A' * 86}=="), npm: command) } }
 
     assert_match(/\ATypeScript 6\.0\.2: the tarball that npm pack typescript@6\.0\.2 fetched has the integrity /, error.message)
   end
@@ -108,11 +108,11 @@ class BundledWorksTest < Minitest::Test
   def test_lists_the_integrity_of_each_version_of_typescript_that_the_build_has_read
     typescript = BundledWorks::WORKS.find { |work| work.name == "TypeScript" }
 
-    assert_equal({"6.0.2" => "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="}, typescript.integrity)
+    assert_equal({ "6.0.2" => "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ==" }, typescript.integrity)
   end
 
   def test_gives_the_release_of_a_found_work_the_integrity_the_table_lists_for_the_version_found
-    work = BundledWorks::Work.new(name: "Work", license: "MIT", carriers: [], version: nil, source: "", release: "work", integrity: {"1.0.0" => "sha512-listed"})
+    work = BundledWorks::Work.new(name: "Work", license: "MIT", carriers: [], version: nil, source: "", release: "work", integrity: { "1.0.0" => "sha512-listed" })
 
     assert_equal BundledWorks::Release.new(work: "Work", package: "work", version: "1.0.0", integrity: "sha512-listed"),
       BundledWorks::Found.new(work:, version: "1.0.0", copyright: nil, places: []).release

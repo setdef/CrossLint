@@ -71,7 +71,7 @@ module CrossLint
       end
 
       def run_plugins(project, policies, kinds, helpers, files)
-        read = ->(path) { @project_files.read(project.root, path) }
+        read = -> (path) { @project_files.read(project.root, path) }
         rules, faults = load_rules(policies, helpers, files, read)
         stopped = faults.map(&:plugin)
         violations = project.plugins.reject { |plugin| stopped.include?(plugin.name) }.flat_map do |plugin|
@@ -92,7 +92,7 @@ module CrossLint
           namespace = Module.new
           declarations = plugin.manifest.rules.to_h { |rule| [rule.name, rule] }
           names = owned.flat_map { |_, policy| policy.rules.map(&:name) }.uniq.reject { |name| BuiltInRule.named(name) }
-          call = ->(name, input) { call_helper(helpers, plugin, name, input) }
+          call = -> (name, input) { call_helper(helpers, plugin, name, input) }
           names.each do |name|
             declaration = declarations.fetch(name)
             loaded[[plugin.name, name]] = if declaration.helper
@@ -130,7 +130,7 @@ module CrossLint
         name = "#{plugin.name}/#{policy.name}"
         targets = plugin.targets(policy)
         artifacts = targets.flat_map { |owner, role| kinds.fetch(owner).fetch(role) }
-        @debug&.write("policy") { "#{name} applies to #{Spelling.list(targets.map { |kind| kind.join("/") }, "and")}: #{Spelling.count(artifacts.size, "artifact")}" }
+        @debug&.write("policy") { "#{name} applies to #{Spelling.list(targets.map { |kind| kind.join('/') }, 'and')}: #{Spelling.count(artifacts.size, 'artifact')}" }
         artifacts.flat_map do |artifact|
           next [] unless applies?(name, policy.condition, artifact)
 
@@ -151,8 +151,8 @@ module CrossLint
       def applies?(name, condition, artifact)
         holds = condition.nil? || condition.holds?(artifact)
         @debug&.write("policy") do
-          since = ", since its when #{holds ? "holds" : "fails"}: #{condition.explanation(artifact)}" if condition
-          "#{name} #{holds ? "runs on" : "skips"} #{artifact.reference}#{since}"
+          since = ", since its when #{holds ? 'holds' : 'fails'}: #{condition.explanation(artifact)}" if condition
+          "#{name} #{holds ? 'runs on' : 'skips'} #{artifact.reference}#{since}"
         end
         holds
       end
@@ -184,7 +184,7 @@ module CrossLint
         shown = (left + added).select { |violation| !hidden || violation.severity == :error }
         paid_off = steps.flat_map(&:paid_off)
         notices = notices(project, kinds)
-        fails = ->(violation) { violation.severity == :error || warnings == :error }
+        fails = -> (violation) { violation.severity == :error || warnings == :error }
         wrote = steps.flat_map(&:wrote)
         # A command is not a judgment of the check: it did what it was asked.
         failed = command.nil? && (shown.any?(&fails) || !paid_off.empty? || (warnings == :error && !notices.empty?))
@@ -217,8 +217,10 @@ module CrossLint
         empty = declarations.select { |declaration| found.fetch(declaration.name).empty? }
         optional = empty.find(&:optional)
         if optional && empty.size == declarations.size
-          return [Notice.new(file: plugin.manifest.file, line: optional.line,
-            message: "no file matches the primary pattern of any role of plugin #{plugin.name}, such as #{optional.primary.source.dump}")]
+          return [
+Notice.new(file: plugin.manifest.file, line: optional.line,
+  message: "no file matches the primary pattern of any role of plugin #{plugin.name}, such as #{optional.primary.source.dump}"),
+]
         end
 
         empty.reject(&:optional).map do |declaration|

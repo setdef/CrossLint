@@ -23,7 +23,7 @@ module CrossLint
         block("The commands of the #{name} plugin"),
         "Usage: #{@spec.bin} #{name} COMMAND [FLAGS]\n",
         section("Commands", commands.map { |command| [command.name, [command.help]] }),
-        section("Global flags", flag_rows(@spec.global_flags + extra_flags))
+        section("Global flags", flag_rows(@spec.global_flags + extra_flags)),
       ].join("\n")
     end
 
@@ -32,7 +32,7 @@ module CrossLint
         block(command.help),
         "Usage: #{@spec.bin} #{name} #{command.name} [FLAGS]\n",
         section("Flags", flag_rows(command.flags)),
-        section("Global flags", flag_rows(@spec.global_flags + extra_flags))
+        section("Global flags", flag_rows(@spec.global_flags + extra_flags)),
       ].compact.join("\n")
     end
 
@@ -40,7 +40,7 @@ module CrossLint
       [
         block(@spec.about),
         examples(@spec.examples.first(2)),
-        "Run #{@spec.bin} --help to list every command.\n"
+        "Run #{@spec.bin} --help to list every command.\n",
       ].join("\n")
     end
 
@@ -57,7 +57,7 @@ module CrossLint
         section("Flags", flag_rows(@spec.flags + extra_flags)),
         examples(@spec.examples),
         exit_codes,
-        after && block(after)
+        after && block(after),
       ]
     end
 
@@ -74,12 +74,12 @@ module CrossLint
     def command_sections(command)
       [
         block(command.long_help || command.help),
-        "Usage: #{[@spec.bin, command.name, "[FLAGS]", *command.arguments.map { |argument| "[#{argument.name}]" }].join(" ")}\n",
+        "Usage: #{[@spec.bin, command.name, '[FLAGS]', *command.arguments.map { |argument| "[#{argument.name}]" }].join(' ')}\n",
         section("Arguments", command.arguments.map { |argument| ["[#{argument.name}]", [argument.help]] }),
         section("Flags", flag_rows(command.flags)),
         section("Global flags", flag_rows(@spec.global_flags + extra_flags)),
         examples(command.examples),
-        exit_codes
+        exit_codes,
       ]
     end
 
@@ -91,7 +91,7 @@ module CrossLint
         names << "<#{flag.value}>" if flag.value
         lines = [flag.long_help || flag.help]
         choices = flag.choices
-        lines << "Choices: #{choices.join(", ")}" if choices
+        lines << "Choices: #{choices.join(', ')}" if choices
         lines << "Default: #{flag.default}" if flag.default
         [names.join(" "), lines]
       end
@@ -122,7 +122,7 @@ module CrossLint
       "#{heading}:\n#{entries.map { |entry| "#{entry}\n" }.join}"
     end
 
-    def block(text) = "#{wrap(text, "").join("\n")}\n"
+    def block(text) = "#{wrap(text, '').join("\n")}\n"
 
     def wrap(text, indent)
       text.split("\n").flat_map do |line|

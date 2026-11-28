@@ -41,7 +41,7 @@ module CrossLint
       def self.settings(settings, file)
         found = {} #: Hash[String, Setting]
         settings.each do |setting|
-          fail_at = ->(message) { raise Mistake.new(message, file:, line: setting.line) }
+          fail_at = -> (message) { raise Mistake.new(message, file:, line: setting.line) }
           first = found[setting.name]
           fail_at.call("#{setting.name} is set twice; the first is on line #{first.line}") if first
           fail_at.call("#{setting.name} takes no settings inside it") unless setting.children.empty?
@@ -62,7 +62,7 @@ module CrossLint
       end
 
       def self.report(setting, file)
-        fail_at = ->(message) { raise Mistake.new(message, file:, line: setting.line) }
+        fail_at = -> (message) { raise Mistake.new(message, file:, line: setting.line) }
         fail_at.call("report-entries takes no arguments, only commented= and matching=") unless setting.arguments.empty?
         unknown = setting.properties.keys - REPORT
         fail_at.call(Spelling.unknown("property", unknown.fetch(0), REPORT) + " for report-entries") unless unknown.empty?
@@ -141,7 +141,7 @@ module CrossLint
           elsif matched.empty?
             "matches no violation, so it is paid off"
           else
-            "matches #{Spelling.count(matched.size, "violation")}, accepted as debt"
+            "matches #{Spelling.count(matched.size, 'violation')}, accepted as debt"
           end
           "#{debt.file}:#{entry.line}, #{described(entry)}: #{found}"
         end
@@ -156,7 +156,7 @@ module CrossLint
         if slash.empty?
           owners = project.plugins.select { |plugin| plugin.manifest.policies.any? { |each| each.name == rule } }
           if owners.size > 1
-            raise Mistake.new("has an entry for #{rule.dump}, a policy of #{Spelling.list(owners.map(&:name), "and")}; " \
+            raise Mistake.new("has an entry for #{rule.dump}, a policy of #{Spelling.list(owners.map(&:name), 'and')}; " \
               "write it as PLUGIN/POLICY", file: debt.file, line: entry.line)
           end
           owner = owners.first
@@ -199,7 +199,7 @@ module CrossLint
         name = rule.join("/")
         if artifacts.size > 1
           "the entry for #{name} on #{entry.artifact} matches the violations of #{artifacts.size} artifacts, " \
-            "#{Spelling.list(artifacts.map { |artifact, role| "#{artifact} as #{role}" }, "and")}; " \
+            "#{Spelling.list(artifacts.map { |artifact, role| "#{artifact} as #{role}" }, 'and')}; " \
             "crosslint debt update writes one entry for each"
         elsif !matched.all? { |identity| identity.detail == entry.detail.to_s }
           "the entry for #{name} on #{entry.artifact} has no detail, so it matches every violation of #{name} on it; " \
@@ -251,11 +251,11 @@ module CrossLint
         added = (identities - covered).sort_by(&:deconstruct).map { |identity| fresh(identity, identities, "") }
         changes.concat(added.map { |entry| "add #{described(entry)}" })
         @debt_files.write(project.root, settings.file, debt.with(entries: written + added)) unless dry_run
-        counts = ["#{added.size} #{(added.size == 1) ? "entry" : "entries"} added", "#{removed} removed"]
+        counts = ["#{added.size} #{(added.size == 1) ? 'entry' : 'entries'} added", "#{removed} removed"]
         counts << "#{rewritten} rewritten" unless rewritten.zero?
-        return ["wrote #{debt.file}: #{counts.join(", ")}"] unless dry_run
+        return ["wrote #{debt.file}: #{counts.join(', ')}"] unless dry_run
 
-        changes.map { |change| "would #{change}" } + ["would write #{debt.file}: #{counts.join(", ")}"]
+        changes.map { |change| "would #{change}" } + ["would write #{debt.file}: #{counts.join(', ')}"]
       end
 
       # The lines that say an entry is written again as it now is.

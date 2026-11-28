@@ -7,26 +7,26 @@ module CrossLint
   module Testing
     module ConfigurationContract
       def test_finds_the_root_in_the_folder_it_starts_from
-        port = configuration_port({"app" => ["one"]})
+        port = configuration_port({ "app" => ["one"] })
 
         assert_equal folder("app"), port.find_root(folder("app"))
       end
 
       def test_finds_the_nearest_root_above_the_folder_it_starts_from
-        port = configuration_port({"app" => ["one"], "app/inner" => ["two"]})
+        port = configuration_port({ "app" => ["one"], "app/inner" => ["two"] })
 
         assert_equal folder("app/inner"), port.find_root(folder("app/inner/deep/er"))
         assert_equal folder("app"), port.find_root(folder("app/other"))
       end
 
       def test_finds_no_root_when_no_folder_above_has_a_configuration
-        root = configuration_port({"app" => ["one"]}).find_root(folder("elsewhere"))
+        root = configuration_port({ "app" => ["one"] }).find_root(folder("elsewhere"))
 
         assert_equal [root_outside], [root]
       end
 
       def test_reads_the_plugins_in_the_order_they_are_listed
-        port = configuration_port({"app" => ["one", ".config/two", "three"]})
+        port = configuration_port({ "app" => ["one", ".config/two", "three"] })
         configuration = port.read(folder("app"))
         lines = configuration.plugins.map(&:line)
 
@@ -43,8 +43,11 @@ module CrossLint
       def test_reads_the_ref_and_kind_of_each_plugin
         plugins = example_configuration.plugins
 
-        assert_equal [["https://github.com/OWNER/REPO", "v1.2.0", :shared], ["angular", nil, :built_in],
-          [".config/crosslint/signatures", nil, :local]], plugins.map { |plugin| [plugin.name, plugin.ref, plugin.kind] }
+        assert_equal [
+          ["https://github.com/OWNER/REPO", "v1.2.0", :shared],
+          ["angular", nil, :built_in],
+          [".config/crosslint/signatures", nil, :local],
+], plugins.map { |plugin| [plugin.name, plugin.ref, plugin.kind] }
       end
 
       def test_reads_the_settings_block_of_a_plugin
@@ -55,7 +58,7 @@ module CrossLint
 
         assert_equal [["src-dir", ["src"]], ["role", ["store"]], ["expects", ["spec"]]],
           [source, role, expects].map { |setting| [setting.name, setting.arguments] }
-        assert_equal({"files" => "{path}.store.ts"}, role.properties)
+        assert_equal({ "files" => "{path}.store.ts" }, role.properties)
         assert_empty source.properties
         assert_empty source.children
         assert_empty expects.properties
@@ -85,14 +88,14 @@ module CrossLint
       end
 
       def test_names_the_file_when_the_project_has_no_configuration
-        port = configuration_port({"app" => ["one"]})
+        port = configuration_port({ "app" => ["one"] })
         mistake = assert_raises(Core::Mistake) { port.read(folder("elsewhere")) }
 
         assert_equal port.file, mistake.file
       end
 
       def test_reads_the_minimum_version_of_a_configuration_before_its_other_lines
-        port = configuration_port({"app" => ["one"]}, minimum: {"app" => "1.2"})
+        port = configuration_port({ "app" => ["one"] }, minimum: { "app" => "1.2" })
         found = port.minimum(folder("app")) || raise(Minitest::Assertion, "app has no minimum version")
 
         assert_equal [port.file, "1.2", [1, 2, 0]], [found.file, found.text, found.version.numbers]
@@ -100,18 +103,18 @@ module CrossLint
       end
 
       def test_reads_no_minimum_version_from_a_configuration_that_has_none
-        assert_nil configuration_port({"app" => ["one"]}).minimum(folder("app"))
+        assert_nil configuration_port({ "app" => ["one"] }).minimum(folder("app"))
       end
 
       def test_reads_the_minimum_version_without_reading_the_other_lines
-        port = configuration_port({}, broken: "app", minimum: {"app" => "9"})
+        port = configuration_port({}, broken: "app", minimum: { "app" => "9" })
 
         assert_equal ["9"], [port.minimum(folder("app"))].compact.map(&:text)
         assert_raises(Core::Mistake) { port.read(folder("app")) }
       end
 
       def test_names_the_file_when_the_project_it_reads_the_minimum_version_of_has_no_configuration
-        port = configuration_port({"app" => ["one"]})
+        port = configuration_port({ "app" => ["one"] })
         mistake = assert_raises(Core::Mistake) { port.minimum(folder("elsewhere")) }
 
         assert_equal port.file, mistake.file
@@ -120,7 +123,7 @@ module CrossLint
       def test_sets_the_ref_of_a_plugin_and_changes_nothing_else
         port = example_configuration_port
         before = port.read(folder("example"))
-        port.set_refs(folder("example"), {["https://github.com/OWNER/REPO", nil] => "v1.3.0"})
+        port.set_refs(folder("example"), { ["https://github.com/OWNER/REPO", nil] => "v1.3.0" })
         after = port.read(folder("example"))
 
         assert_equal ["v1.3.0", nil, nil], after.plugins.map(&:ref)
@@ -131,20 +134,20 @@ module CrossLint
         port = example_configuration_port
         before = port.read(folder("example"))
         port.set_refs(folder("example"), {})
-        port.set_refs(folder("example"), {["https://github.com/OWNER/OTHER", nil] => "v2.0.0"})
+        port.set_refs(folder("example"), { ["https://github.com/OWNER/OTHER", nil] => "v2.0.0" })
 
         assert_equal before, port.read(folder("example"))
       end
 
       def test_names_the_file_when_the_project_it_sets_refs_in_has_no_configuration
-        port = configuration_port({"app" => ["one"]})
-        mistake = assert_raises(Core::Mistake) { port.set_refs(folder("elsewhere"), {["one", nil] => "v1.0.0"}) }
+        port = configuration_port({ "app" => ["one"] })
+        mistake = assert_raises(Core::Mistake) { port.set_refs(folder("elsewhere"), { ["one", nil] => "v1.0.0" }) }
 
         assert_equal port.file, mistake.file
       end
 
       def test_says_whether_a_project_has_a_configuration_in_the_folder_itself
-        port = configuration_port({"app" => ["one"]})
+        port = configuration_port({ "app" => ["one"] })
 
         assert port.exist?(folder("app"))
         refute port.exist?(folder("app/inner"))
@@ -163,7 +166,7 @@ module CrossLint
       end
 
       def test_replaces_the_configuration_it_has_whole
-        port = configuration_port({"app" => ["one", "two"]})
+        port = configuration_port({ "app" => ["one", "two"] })
         written = written_configuration(port.file).with(plugins: [], policies: [], warnings: nil, verbosity: nil)
         port.write(folder("app"), written)
 
@@ -171,7 +174,7 @@ module CrossLint
       end
 
       def test_writes_the_configuration_of_one_project_and_no_other
-        port = configuration_port({"app" => ["one"]})
+        port = configuration_port({ "app" => ["one"] })
         port.write(folder("other"), written_configuration(port.file))
 
         assert_equal ["one"], port.read(folder("app")).plugins.map(&:name)
@@ -184,21 +187,23 @@ module CrossLint
       # A configuration with every kind of line, and strings that need
       # escapes to be written.
       def written_configuration(file)
-        plugin = ->(name, ref, settings) { Core::ListedPlugin.new(name:, ref:, settings:, line: 0) }
-        setting = ->(name, arguments, properties, children) { Core::Setting.new(name:, arguments:, properties:, children:, line: 0) }
+        plugin = -> (name, ref, settings) { Core::ListedPlugin.new(name:, ref:, settings:, line: 0) }
+        setting = -> (name, arguments, properties, children) { Core::Setting.new(name:, arguments:, properties:, children:, line: 0) }
         angular = plugin.call("angular", nil, [
           setting.call("src-dir", ["a \"b\"\\c\td\ne\u0001f\u2028g é"], {}, []),
-          setting.call("role", ["store"], {"files" => "{path}.store.ts"}, [setting.call("expects", [], {}, [])])
+          setting.call("role", ["store"], { "files" => "{path}.store.ts" }, [setting.call("expects", [], {}, [])]),
         ])
-        debt = plugin.call("debt", nil, [setting.call("report-entries", [], {"commented" => "warning", "matching" => "^\\d+$"}, [])])
+        debt = plugin.call("debt", nil, [setting.call("report-entries", [], { "commented" => "warning", "matching" => "^\\d+$" }, [])])
         Core::Configuration.new(file:, plugins: [plugin.call("https://github.com/OWNER/REPO", "v1.2.0", []), angular, debt],
-          policies: [Core::PolicySetting.new(name: "angular/spec-exists", enabled: false, severity: :warning, line: 0),
-            Core::PolicySetting.new(name: "debt/has-debt", enabled: nil, severity: :error, line: 0)],
+          policies: [
+            Core::PolicySetting.new(name: "angular/spec-exists", enabled: false, severity: :warning, line: 0),
+            Core::PolicySetting.new(name: "debt/has-debt", enabled: nil, severity: :error, line: 0),
+],
           warnings: :none, verbosity: :quiet)
       end
 
       def without_lines(configuration)
-        settings = ->(each) { each.map { |setting| setting.with(line: 0, children: settings.call(setting.children)) } }
+        settings = -> (each) { each.map { |setting| setting.with(line: 0, children: settings.call(setting.children)) } }
         configuration.with(plugins: configuration.plugins.map { |plugin| plugin.with(line: 0, settings: settings.call(plugin.settings)) },
           policies: configuration.policies.map { |policy| policy.with(line: 0) })
       end
@@ -235,9 +240,12 @@ module CrossLint
         conditions = signatures_manifest.policies.map { |policy| without_lines(policy.condition) }
         not_test = Core::Condition::Not.new(condition: exists("test"), line: 0)
 
-        assert_equal [without_lines(nil), without_lines(not_test),
+        assert_equal [
+          without_lines(nil),
+          without_lines(not_test),
           without_lines(Core::Condition::All.new(conditions: [exists("signature"), exists("test")], line: 0)),
-          without_lines(Core::Condition::Any.new(conditions: [exists("signature"), not_test], line: 0))], conditions
+          without_lines(Core::Condition::Any.new(conditions: [exists("signature"), not_test], line: 0)),
+], conditions
       end
 
       def test_reads_the_severity_of_a_rule_line_when_it_has_one
@@ -268,7 +276,7 @@ module CrossLint
       end
 
       def test_reads_the_minimum_version_of_a_manifest_before_its_other_lines
-        port = manifests_port(example: ["plugins/signatures"], minimum: {"plugins/signatures" => "1.2"})
+        port = manifests_port(example: ["plugins/signatures"], minimum: { "plugins/signatures" => "1.2" })
         found = port.minimum(base, "plugins/signatures") || raise(Minitest::Assertion, "plugins/signatures has no minimum version")
 
         assert_equal ["plugins/signatures/#{port.file}", "1.2", [1, 2, 0]], [found.file, found.text, found.version.numbers]
@@ -282,7 +290,7 @@ module CrossLint
       end
 
       def test_reads_the_minimum_version_of_a_manifest_without_reading_the_other_lines
-        port = manifests_port(broken: ["plugins/broken"], minimum: {"plugins/broken" => "9"})
+        port = manifests_port(broken: ["plugins/broken"], minimum: { "plugins/broken" => "9" })
 
         assert_equal ["9"], [port.minimum(base, "plugins/broken")].compact.map(&:text)
         assert_raises(Core::Mistake) { port.read(base, "plugins/broken") }
@@ -352,14 +360,14 @@ module CrossLint
     module CrossLintRubyContract
       def test_puts_a_files_constants_in_the_namespace_it_is_given
         namespace = Module.new
-        crosslint_ruby_port({"tests/rules/a.rb" => "class NamesClass < CrossLint::Rule\nend\n"}).load(ruby_plugin("tests"), "rules/a.rb", 3, namespace)
+        crosslint_ruby_port({ "tests/rules/a.rb" => "class NamesClass < CrossLint::Rule\nend\n" }).load(ruby_plugin("tests"), "rules/a.rb", 3, namespace)
 
         assert_operator namespace.const_get(:NamesClass, false), :<, CrossLint::Rule
         refute Object.const_defined?(:NamesClass, false)
       end
 
       def test_keeps_two_plugins_classes_of_one_name_apart
-        files = {"one/a.rb" => "class Same < CrossLint::Rule\n  def name = 1\nend\n", "two/a.rb" => "class Same < CrossLint::Rule\n  def name = 2\nend\n"}
+        files = { "one/a.rb" => "class Same < CrossLint::Rule\n  def name = 1\nend\n", "two/a.rb" => "class Same < CrossLint::Rule\n  def name = 2\nend\n" }
         port = crosslint_ruby_port(files)
         found = %w[one two].map do |plugin|
           namespace = Module.new
@@ -377,7 +385,7 @@ module CrossLint
       end
 
       def test_raises_what_the_file_raises
-        port = crosslint_ruby_port({"tests/a.rb" => "raise ArgumentError, \"boom\"\n"})
+        port = crosslint_ruby_port({ "tests/a.rb" => "raise ArgumentError, \"boom\"\n" })
         error = assert_raises(ArgumentError) { port.load(ruby_plugin("tests"), "a.rb", 3, Module.new) }
 
         assert_equal "boom", error.message
@@ -395,10 +403,10 @@ module CrossLint
     module HelpersContract
       def test_answers_each_request_with_what_the_helper_answers
         running = helpers_port.start(helper_root, [helper_plugin])
-        answers = [[1, "two"], {"three" => nil}, "café"].map { |input| running.call(helper_plugin, "echo", input) }
+        answers = [[1, "two"], { "three" => nil }, "café"].map { |input| running.call(helper_plugin, "echo", input) }
         running.stop
 
-        assert_equal [{"echo" => [1, "two"]}, {"echo" => {"three" => nil}}, {"echo" => "café"}], answers
+        assert_equal [{ "echo" => [1, "two"] }, { "echo" => { "three" => nil } }, { "echo" => "café" }], answers
       end
 
       def test_says_what_a_failing_helper_did_and_wrote
@@ -517,8 +525,10 @@ module CrossLint
       end
 
       def test_reports_each_fault_even_when_silent
-        faults = [Core::Fault.new(plugin: "tests", rule: "names-class", artifact: "lib/a.rb", message: "raised RuntimeError: boom", trace: ["a.rb:1"]),
-          Core::Fault.new(plugin: "other", rule: "uses-gem", artifact: nil, message: "requires rainbow", trace: [])]
+        faults = [
+          Core::Fault.new(plugin: "tests", rule: "names-class", artifact: "lib/a.rb", message: "raised RuntimeError: boom", trace: ["a.rb:1"]),
+          Core::Fault.new(plugin: "other", rule: "uses-gem", artifact: nil, message: "requires rainbow", trace: []),
+]
         port = report_port
         port.write(result([], verbosity: :silent, faults:))
 
@@ -548,9 +558,11 @@ module CrossLint
 
       def test_reads_back_each_entry_it_wrote_in_order_with_its_line
         port = debt_files_port
-        entries = [Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/b.rb", comment: "a\ttab, a \"quote\",\r\nand lines"),
+        entries = [
+          Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/b.rb", comment: "a\ttab, a \"quote\",\r\nand lines"),
           Core::DebtEntry.fresh(rule: "has-test", artifact: "lib/a.rb", detail: "name\twith a tab"),
-          Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/caf\u00e9.rb", comment: "caf\u00e9")]
+          Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/caf\u00e9.rb", comment: "caf\u00e9"),
+]
         port.write(debt_root, "debt.tsv", Core::DebtFile.new(file: "debt.tsv", entries:, header: nil))
         read = port.read(debt_root, "debt.tsv")
 
@@ -608,8 +620,10 @@ module CrossLint
 
       def test_moves_a_file_with_every_entry_as_it_is_and_leaves_nothing_where_it_was
         port = debt_files_port
-        entries = [Core::DebtEntry.fresh(rule: "spec-exists", artifact: "app/card", comment: "later, \"quoted\"\twith a tab"),
-          Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/a.rb", detail: "name")]
+        entries = [
+          Core::DebtEntry.fresh(rule: "spec-exists", artifact: "app/card", comment: "later, \"quoted\"\twith a tab"),
+          Core::DebtEntry.fresh(rule: "tests/has-test", artifact: "lib/a.rb", detail: "name"),
+]
         port.write(debt_root, "old/debt.tsv", Core::DebtFile.new(file: "old/debt.tsv", entries:, header: nil))
         before = port.read(debt_root, "old/debt.tsv")
         port.move(debt_root, "old/debt.tsv", "new/folder/debt.tsv")
@@ -694,7 +708,7 @@ module CrossLint
       end
 
       def test_refuses_a_commit_the_repository_doesnt_have
-        sha = "0" * 39 + "1"
+        sha = ("0" * 39) + "1"
         error = assert_raises(Core::FetchError) { shared_plugins_port.fetch(repository_url, sha) }
 
         assert_includes error.message, sha
@@ -771,13 +785,13 @@ module CrossLint
     module NgNudgeContract
       def test_reads_the_text_of_rc_json_as_it_is
         text = "{\r\n  \"srcDir\": \"café\"\r\n}"
-        port = ng_nudge_port({".config/ng-nudge/rc.json" => text})
+        port = ng_nudge_port({ ".config/ng-nudge/rc.json" => text })
 
         assert_equal text, port.settings(ng_nudge_root)
       end
 
       def test_reads_no_text_when_there_is_no_rc_json
-        port = ng_nudge_port({".config/ng-nudge/debt.tsv" => "Rule\tArtifact\tComment\n"})
+        port = ng_nudge_port({ ".config/ng-nudge/debt.tsv" => "Rule\tArtifact\tComment\n" })
 
         assert_nil port.settings(ng_nudge_root)
         assert_nil port.settings(File.join(ng_nudge_root, "elsewhere"))
@@ -822,7 +836,7 @@ module CrossLint
 
         none = [] #: Array[String]
 
-        assert_equal({"**/*.a.ts" => ["app/x.a.ts"], "echo" => ["src", "true"], "none" => none}, found)
+        assert_equal({ "**/*.a.ts" => ["app/x.a.ts"], "echo" => ["src", "true"], "none" => none }, found)
       end
 
       def test_gives_no_files_when_no_folder_it_is_told_to_ask_has_a_glob

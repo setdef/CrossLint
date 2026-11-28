@@ -44,14 +44,14 @@ class NodeJavaScriptTest < Minitest::Test
     write(@root, "tool/node_modules/glob/index.js", FAKE_GLOB)
     found = javascript_port.glob(@root, "src", ["echo"], ["nothing", "tool", ""])
 
-    assert_equal({"echo" => ["src", "true"]}, found)
+    assert_equal({ "echo" => ["src", "true"] }, found)
   end
 
   def test_finds_a_glob_for_a_root_given_relative_to_the_current_folder
     glob_port(true)
     found = Dir.chdir(File.dirname(@root)) { javascript_port.glob(File.basename(@root), "src", ["echo"], [""]) }
 
-    assert_equal({"echo" => ["src", "true"]}, found)
+    assert_equal({ "echo" => ["src", "true"] }, found)
   end
 
   def test_says_what_glob_stopped_with
@@ -71,13 +71,13 @@ class NodeJavaScriptTest < Minitest::Test
   def test_gives_the_message_node_gives_for_an_expression_it_does_not_accept
     error = assert_raises(CrossLint::Core::InvalidExpression) { javascript_port.matches("(", ["a"]) }
 
-    assert_match(/\AInvalid regular expression: \/\(\/.*: Unterminated group\z/, error.message)
+    assert_match(%r{\AInvalid regular expression: /\(/.*: Unterminated group\z}, error.message)
   end
 
   def test_gives_the_message_node_gives_for_a_quantifier_on_an_anchor_though_no_text_is_tested
     error = assert_raises(CrossLint::Core::InvalidExpression) { javascript_port.matches("^*", []) }
 
-    assert_match(/\AInvalid regular expression: \/\^\*\/.*: Nothing to repeat\z/, error.message)
+    assert_match(%r{\AInvalid regular expression: /\^\*/.*: Nothing to repeat\z}, error.message)
   end
 
   def test_does_not_call_a_failure_of_node_an_invalid_expression
@@ -134,7 +134,7 @@ class NodeJavaScriptTest < Minitest::Test
 
   def test_ends_an_expression_that_never_finishes_matching
     port = CrossLint::Adapters::NodeJavaScript.new(limit: 1)
-    error = assert_raises(JavaScriptError) { port.matches("^(a+)+$", ["#{"a" * 60}b"]) }
+    error = assert_raises(JavaScriptError) { port.matches("^(a+)+$", ["#{'a' * 60}b"]) }
 
     assert_equal "node didn't answer within 1s", error.message
   end

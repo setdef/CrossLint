@@ -25,8 +25,23 @@ class MarkdownLinksTest < Minitest::Test
   end
 
   def test_takes_a_link_to_a_file_or_folder_from_the_files_folder_or_from_the_root
-    links = ["guide.md", "./guide.md", "../README.md", "/README.md", "/docs", "../docs/", "..", "/", "my%20file.md", "<my file.md>",
-      "guide.md?plain=1", "guide.md \"Title\"", "guide.md 'Title'", "guide.md (Title)", "../lib/tool.rb"]
+    links = [
+      "guide.md",
+      "./guide.md",
+      "../README.md",
+      "/README.md",
+      "/docs",
+      "../docs/",
+      "..",
+      "/",
+      "my%20file.md",
+      "<my file.md>",
+      "guide.md?plain=1",
+      "guide.md \"Title\"",
+      "guide.md 'Title'",
+      "guide.md (Title)",
+      "../lib/tool.rb",
+]
 
     assert_equal [], findings(check("docs/index.md" => links.map { "[a](#{it})\n" }.join))
   end
@@ -34,18 +49,25 @@ class MarkdownLinksTest < Minitest::Test
   def test_reports_a_link_to_nothing_outside_the_project_or_to_a_name_that_differs_in_case
     text = "[a](missing.md)\n[b](../../up.md)\n![c](Guide.md)\n[d](../coverage/index.html)\n"
 
-    assert_equal [["docs/index.md", "line 1: missing.md points to docs/missing.md, which isn't a file or folder of the project", "missing.md"],
+    assert_equal [
+      ["docs/index.md", "line 1: missing.md points to docs/missing.md, which isn't a file or folder of the project", "missing.md"],
       ["docs/index.md", "line 2: ../../up.md points outside the project", "../../up.md"],
       ["docs/index.md", "line 3: Guide.md points to docs/Guide.md, which isn't a file or folder of the project", "Guide.md"],
-      ["docs/index.md", "line 4: ../coverage/index.html points to coverage/index.html, which isn't a file or folder of the project",
-        "../coverage/index.html"]], findings(check("docs/index.md" => text))
+      [
+        "docs/index.md",
+        "line 4: ../coverage/index.html points to coverage/index.html, which isn't a file or folder of the project",
+        "../coverage/index.html",
+],
+], findings(check("docs/index.md" => text))
   end
 
   def test_reports_each_destination_once_with_every_line_it_is_on
     text = "[a](gone.md) and [b](gone.md)\n\n[c](gone.md)\n[d](lost.md)\n"
 
-    assert_equal [["index.md", "line 4: lost.md points to lost.md, which isn't a file or folder of the project", "lost.md"],
-      ["index.md", "lines 1, 3: gone.md points to gone.md, which isn't a file or folder of the project", "gone.md"]],
+    assert_equal [
+      ["index.md", "line 4: lost.md points to lost.md, which isn't a file or folder of the project", "lost.md"],
+      ["index.md", "lines 1, 3: gone.md points to gone.md, which isn't a file or folder of the project", "gone.md"],
+],
       findings(check("index.md" => text))
   end
 
@@ -104,15 +126,19 @@ class MarkdownLinksTest < Minitest::Test
     text = "[a](guide.md#usage) [b](guide.md#guide) [c](guide.md#setup) [d](#here) [e](#gone) [f](../lib/tool.rb#L3) [g](/docs#x)\n" \
       "[h](guide.md) [i](guide.md#) [j](#%C3%A9t%C3%A9)\n\n## Here\n<a name=\"été\"></a>\n"
 
-    assert_equal [["docs/index.md", %(line 1: #gone points to docs/index.md, which has no heading or anchor "gone"), "#gone"],
-      ["docs/index.md", %(line 1: guide.md#setup points to docs/guide.md, which has no heading or anchor "setup"), "guide.md#setup"]], findings(check("docs/index.md" => text))
+    assert_equal [
+      ["docs/index.md", %(line 1: #gone points to docs/index.md, which has no heading or anchor "gone"), "#gone"],
+      ["docs/index.md", %(line 1: guide.md#setup points to docs/guide.md, which has no heading or anchor "setup"), "guide.md#setup"],
+], findings(check("docs/index.md" => text))
   end
 
   def test_checks_no_anchor_of_a_link_to_a_markdown_files_source
     text = "[a](guide.md?plain=1#L3) [b](guide.md?x=1&plain=1#L3-L5) [c](guide.md?plain=0#L3) [d](guide.md?plain=10#L3)\n"
 
-    assert_equal [["docs/index.md", %(line 1: guide.md?plain=0#L3 points to docs/guide.md, which has no heading or anchor "L3"), "guide.md?plain=0#L3"],
-      ["docs/index.md", %(line 1: guide.md?plain=10#L3 points to docs/guide.md, which has no heading or anchor "L3"), "guide.md?plain=10#L3"]],
+    assert_equal [
+      ["docs/index.md", %(line 1: guide.md?plain=0#L3 points to docs/guide.md, which has no heading or anchor "L3"), "guide.md?plain=0#L3"],
+      ["docs/index.md", %(line 1: guide.md?plain=10#L3 points to docs/guide.md, which has no heading or anchor "L3"), "guide.md?plain=10#L3"],
+],
       findings(check("docs/index.md" => text))
   end
 
@@ -136,8 +162,10 @@ class MarkdownLinksTest < Minitest::Test
     names = %w[the-files-setting bold-and-emphasis-with-snake_case a-link-and--and-html usage usage-1 usage-2 third-café-12--more]
     links = (names + %w[custom other not-a-heading escaped-star]).map { "[x](a.md##{it})" }.join(" ")
 
-    assert_equal [%(a.md#escaped-star points to a.md, which has no heading or anchor "escaped-star"),
-      %(a.md#not-a-heading points to a.md, which has no heading or anchor "not-a-heading")],
+    assert_equal [
+      %(a.md#escaped-star points to a.md, which has no heading or anchor "escaped-star"),
+      %(a.md#not-a-heading points to a.md, which has no heading or anchor "not-a-heading"),
+],
       findings(check("index.md" => links, "a.md" => headings)).map { it[1].delete_prefix("line 1: ") }.sort
   end
 
@@ -159,8 +187,11 @@ class MarkdownLinksTest < Minitest::Test
     MARKDOWN
     anchors = %w[item quote table paragraph].map { "[x](a.md##{it})" }.join(" ")
 
-    assert_equal [%(a.md#item points to a.md, which has no heading or anchor "item"), %(a.md#quote points to a.md, which has no heading or anchor "quote"),
-      %(a.md#table points to a.md, which has no heading or anchor "table")], findings(check("index.md" => anchors, "a.md" => text)).map { it[1].delete_prefix("line 1: ") }.sort
+    assert_equal [
+      %(a.md#item points to a.md, which has no heading or anchor "item"),
+      %(a.md#quote points to a.md, which has no heading or anchor "quote"),
+      %(a.md#table points to a.md, which has no heading or anchor "table"),
+], findings(check("index.md" => anchors, "a.md" => text)).map { it[1].delete_prefix("line 1: ") }.sort
   end
 
   def test_checks_no_anchor_of_a_folder_named_like_a_markdown_file
@@ -175,8 +206,8 @@ class MarkdownLinksTest < Minitest::Test
     files.each { |path, text| write(@root, path, text) }
     write(@root, ".config/crosslint/config.kdl", LISTED)
     Open3.capture3("git", "init", "-q", chdir: @root) unless File.directory?(File.join(@root, ".git"))
-    repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: {"v0.1.0" => ROOT}, branches: [], commits: {})
-    shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new({URL => repository}, err: StringIO.new)
+    repository = CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: { "v0.1.0" => ROOT }, branches: [], commits: {})
+    shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new({ URL => repository }, err: StringIO.new)
     CrossLint::App.new(crosslint_ruby: LoadedPlugins::CrossLintRuby.new, shared_plugins:).check(@root).tap { assert_empty it.faults.map(&:message) }
   end
 

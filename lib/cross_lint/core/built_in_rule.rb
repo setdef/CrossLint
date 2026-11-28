@@ -7,7 +7,7 @@ module CrossLint
     class BuiltInRule < Data.define(:name, :arguments, :severity)
       ALL = [
         new(name: "piece-exists", arguments: ["piece"], severity: :error),
-        new(name: "piece-absent", arguments: ["piece"], severity: :error)
+        new(name: "piece-absent", arguments: ["piece"], severity: :error),
       ].freeze
 
       def self.named(name) = ALL.find { |rule| rule.name == name }

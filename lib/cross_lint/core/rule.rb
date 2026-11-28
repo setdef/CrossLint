@@ -56,7 +56,7 @@ module CrossLint
       raise Core::PluginError, "has no check method"
     end
 
-    def helper(name) = ->(input) { @crosslint_helpers.call(name, input) }
+    def helper(name) = -> (input) { @crosslint_helpers.call(name, input) }
 
     def project_files = @crosslint_files
 
@@ -83,7 +83,7 @@ module CrossLint
 
       depth = 0
       path.split("/").all? do |part|
-        depth += {"" => 0, "." => 0, ".." => -1}.fetch(part, 1)
+        depth += { "" => 0, "." => 0, ".." => -1 }.fetch(part, 1)
         depth >= 0
       end
     end

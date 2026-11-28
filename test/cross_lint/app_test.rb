@@ -35,7 +35,7 @@ class AppTest < Minitest::Test
     write(@base, ".config/crosslint/tests/plugin.kdl", MANIFEST.sub("{path}.md", "lib/{path}.md"))
     write(@base, "lib/a.md", "")
     Open3.capture3("git", "init", "-q", chdir: @base)
-    dry = App.new.check(@base, command: ["debt", "update"], flags: {"dry-run" => true})
+    dry = App.new.check(@base, command: ["debt", "update"], flags: { "dry-run" => true })
 
     assert_equal ["would add tests/p on lib/a.md (c)", "would write .config/crosslint/debt.tsv: 1 entry added, 0 removed"], dry.wrote
     refute_path_exists File.join(@base, ".config/crosslint/debt.tsv")
@@ -140,8 +140,8 @@ class AppTest < Minitest::Test
     write(@base, "plugins/debt/plugin.kdl", %(step "track-debt"\npolicy "has-debt"\ncommand "update" help="Updates"\ncommand "prune" help="Prunes"\n))
     write(@base, "plugins/other/plugin.kdl", MANIFEST)
 
-    assert_equal({"debt" => %w[update prune], "other" => []}, App.new(plugins: File.join(@base, "plugins"), built_in: %w[debt other]).built_in_commands)
-    assert_equal({"debt" => ["update"], "angular" => []}, App.new.built_in_commands.slice("debt", "angular"))
+    assert_equal({ "debt" => %w[update prune], "other" => [] }, App.new(plugins: File.join(@base, "plugins"), built_in: %w[debt other]).built_in_commands)
+    assert_equal({ "debt" => ["update"], "angular" => [] }, App.new.built_in_commands.slice("debt", "angular"))
   end
 
   def test_refuses_a_plugin_that_adds_commands_and_is_named_for_a_command_of_the_usage_spec_it_is_given_or_the_shipped_one
@@ -228,7 +228,7 @@ class AppTest < Minitest::Test
     write(@base, "a.md", "")
     Open3.capture3("git", "init", "-q", chdir: @base)
     started = []
-    App.new.check(@base, started: ->(kinds) { started << kinds })
+    App.new.check(@base, started: -> (kinds) { started << kinds })
 
     assert_equal [[["a", 1]]], started
   end
@@ -278,7 +278,7 @@ class AppTest < Minitest::Test
     assert_empty err.string
     assert_equal ["hi"], App.new(err:, debug: true).check(@base).violations.map(&:message)
     assert_equal ["crosslint: debug: helper r/h wrote to standard error: said\n"], err.string.lines.grep(/ said$/)
-    assert_output(nil, /^crosslint: debug: helper r\/h wrote to standard error: said$/) { App.new(debug: true).check(@base) }
+    assert_output(nil, %r{^crosslint: debug: helper r/h wrote to standard error: said$}) { App.new(debug: true).check(@base) }
   end
 
   def test_runs_a_shared_plugin_fetched_from_a_repository_and_fetches_it_once
@@ -304,8 +304,11 @@ class AppTest < Minitest::Test
       schemes: ["file://"]))
     mistake = assert_raises(Mistake) { app.check(@base) }
 
-    assert_equal [".config/crosslint/config.kdl:1", "couldn't fetch shared plugin shared-docs from #{url} at main: main is a branch, " \
-      "and a ref is a tag or a full 40-character commit SHA"], [mistake.location, mistake.message]
+    assert_equal [
+      ".config/crosslint/config.kdl:1",
+      "couldn't fetch shared plugin shared-docs from #{url} at main: main is a branch, " \
+        "and a ref is a tag or a full 40-character commit SHA",
+], [mistake.location, mistake.message]
   end
 
   def test_moves_a_shared_plugin_to_its_newest_tag_in_the_configuration_file_and_nothing_else
@@ -320,8 +323,12 @@ class AppTest < Minitest::Test
     assert_equal ["#{url}: moved from v1.0.0 to v1.2.0"], app.update(@base).lines
     assert_equal text.sub("v1.0.0", "v1.2.0"), File.binread(path)
     assert_equal ["#{url}: is at its newest tag, v1.2.0"], app.update(@base).lines
-    assert_equal ["crosslint: listing the tags of #{url}", "crosslint: fetching #{url} at v1.2.0", "crosslint: listing the tags of #{url}",
-      "crosslint: listing the tags of #{url}"], err.string.lines(chomp: true)
+    assert_equal [
+      "crosslint: listing the tags of #{url}",
+      "crosslint: fetching #{url} at v1.2.0",
+      "crosslint: listing the tags of #{url}",
+      "crosslint: listing the tags of #{url}",
+], err.string.lines(chomp: true)
   end
 
   def test_moves_a_shared_plugin_to_the_newest_tag_whose_manifest_this_crosslint_reads
@@ -352,13 +359,13 @@ class AppTest < Minitest::Test
   def test_moves_a_project_from_ng_nudge_through_the_ports_it_is_given
     configuration = CrossLint::Adapters::MemoryConfiguration.new
     debt = Core::DebtFile.new(file: ".config/ng-nudge/debt.tsv", entries: [], header: "Rule\tArtifact\tComment\n")
-    debt_files = CrossLint::Adapters::MemoryDebtFiles.new({"/app/.config/ng-nudge/debt.tsv" => debt})
-    ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({"/app" => {".config/ng-nudge/rc.json" => "{}"}})
-    javascript = CrossLint::Adapters::MemoryJavaScript.new({}, globs: {"**/*.pipe.ts" => ["a.pipe.ts"]})
-    project_files = CrossLint::Adapters::MemoryProjectFiles.new({"/app" => []})
+    debt_files = CrossLint::Adapters::MemoryDebtFiles.new({ "/app/.config/ng-nudge/debt.tsv" => debt })
+    ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({ "/app" => { ".config/ng-nudge/rc.json" => "{}" } })
+    javascript = CrossLint::Adapters::MemoryJavaScript.new({}, globs: { "**/*.pipe.ts" => ["a.pipe.ts"] })
+    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ "/app" => [] })
     app = App.new(configuration:, debt_files:, ng_nudge:, javascript:, project_files:)
     seen = []
-    dry = app.move_from_ng_nudge("/app", dry_run: true, planned: ->(changes, _notes) { seen << changes })
+    dry = app.move_from_ng_nudge("/app", dry_run: true, planned: -> (changes, _notes) { seen << changes })
 
     assert_equal [dry.changes, true, false], [seen.first, dry.dry_run, configuration.exist?("/app")]
     assert_equal ["node-glob finds src/a.pipe.ts as a pipe, and CrossLint doesn't", Core::NgNudge::Move::WHY], dry.notes
@@ -402,8 +409,8 @@ class AppTest < Minitest::Test
   end
 
   def test_loads_ruby_rules_through_the_port_it_is_given
-    rule = ->(namespace) { namespace.const_set(:SaysHi, Class.new(CrossLint::Rule) { define_method(:check) { |artifact| [violation(artifact, "hi")] } }) }
-    app = memory_app(ruby: {File.expand_path("/app/local/hi.rb") => rule})
+    rule = -> (namespace) { namespace.const_set(:SaysHi, Class.new(CrossLint::Rule) { define_method(:check) { |artifact| [violation(artifact, "hi")] } }) }
+    app = memory_app(ruby: { File.expand_path("/app/local/hi.rb") => rule })
 
     assert_equal ["hi", "no c file at a.txt"], app.check("/app").violations.map(&:message)
   end
@@ -411,7 +418,7 @@ class AppTest < Minitest::Test
   def test_shows_each_faults_trace_only_with_debug
     fault = CrossLint::Core::Fault.new(plugin: "p", rule: "r", artifact: nil, message: "raised RuntimeError: boom", trace: ["hi.rb:1"])
     result = memory_app.check("/app").with(faults: [fault])
-    lines = [{}, {debug: true}, {json: true}, {json: true, debug: true}].map do |options|
+    lines = [{}, { debug: true }, { json: true }, { json: true, debug: true }].map do |options|
       err = StringIO.new
       App.new.report(out: StringIO.new, err:, **options).write(result)
       err.string.lines.grep(/hi\.rb:1/).size
@@ -422,7 +429,7 @@ class AppTest < Minitest::Test
 
   def test_reads_through_the_ports_it_is_given
     configuration = CrossLint::Core::Configuration.new(file: "crosslint.json", plugins: [], policies: [], warnings: nil, verbosity: nil)
-    app = App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}, file: "crosslint.json"),
+    app = App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({ "/app" => configuration }, file: "crosslint.json"),
       manifests: CrossLint::Adapters::MemoryPluginManifests.new)
     mistake = assert_raises(Mistake) { app.load_project("/app") }
 
@@ -434,7 +441,7 @@ class AppTest < Minitest::Test
   # A repository of a plugin called shared-docs, with these tags, on the
   # branch main, in the test's base. Its file URL.
   def shared_repository(tags: ["v1.0.0"])
-    repository_at(File.join(@base, "origin", "shared-docs"), {"plugin.kdl" => MANIFEST}, tags:)
+    repository_at(File.join(@base, "origin", "shared-docs"), { "plugin.kdl" => MANIFEST }, tags:)
   end
 
   # A project at /app whose plugin, local, warns of each a.md with no
@@ -446,13 +453,13 @@ class AppTest < Minitest::Test
     artifact = core::ArtifactDeclaration.new(name: "a", primary: core::PathPattern.new(source: "{path}.md"), line: 1,
       pieces: [core::PieceDeclaration.new(name: "c", pattern: core::PathPattern.new(source: "{path}.txt"), line: 2)])
     policy = core::Policy.new(name: "p", applies_to: core::AppliesTo.new(artifact: "a", line: 2), condition: nil, line: 1,
-      rules: [core::PolicyRule.new(name: "piece-exists", arguments: {"piece" => "c"}, severity: :warning, line: 3)] +
+      rules: [core::PolicyRule.new(name: "piece-exists", arguments: { "piece" => "c" }, severity: :warning, line: 3)] +
         (ruby ? [core::PolicyRule.new(name: "says-hi", arguments: {}, severity: nil, line: 4)] : []))
     rules = ruby ? [core::RuleDeclaration.new(name: "says-hi", ruby: "hi.rb", line: 5)] : []
     manifest = core::Manifest.new(file: "local/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
-    App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"/app" => configuration}),
-      manifests: CrossLint::Adapters::MemoryPluginManifests.new({File.expand_path("/app/local") => manifest}),
-      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"/app" => files}), crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(ruby || {}),
+    App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({ "/app" => configuration }),
+      manifests: CrossLint::Adapters::MemoryPluginManifests.new({ File.expand_path("/app/local") => manifest }),
+      project_files: CrossLint::Adapters::MemoryProjectFiles.new({ "/app" => files }), crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(ruby || {}),
       helpers:, plugins: @base)
   end
 end

@@ -17,7 +17,7 @@ module CrossLint
       # The one type annotation a manifest reads: a helper's command=,
       # written (crosslint)"ruby", runs the helper on CrossLint's
       # Ruby, where no project command could ever be found.
-      TYPED = {"helper" => {"command" => ["crosslint"]}}.freeze
+      TYPED = { "helper" => { "command" => ["crosslint"] } }.freeze
 
       # What a helper's command=(crosslint) may name: the runtimes
       # CrossLint carries.
@@ -237,9 +237,9 @@ module CrossLint
         raise document.mistake("artifacts has no helper=, the helper that declares them", first) unless helper
 
         ruby = carried.find { |each| each.name == helper }&.file
-        return {artifacts_ruby: Core::ArtifactsRuby.new(ruby:, line: first.line)} if ruby
+        return { artifacts_ruby: Core::ArtifactsRuby.new(ruby:, line: first.line) } if ruby
 
-        {artifacts_helper: Core::ArtifactsHelper.new(helper:, line: first.line)}
+        { artifacts_helper: Core::ArtifactsHelper.new(helper:, line: first.line) }
       end
 
       def command(document, node)
@@ -262,7 +262,7 @@ module CrossLint
         help = document.string_property(node, "help")
         raise document.mistake("flag #{words.dump} has no help=, its line in --help", node) if help.nil? || help.empty?
 
-        short, long, value = UsageSpec.flag_names(words, failing: ->(message) { raise document.mistake(message, node) })
+        short, long, value = UsageSpec.flag_names(words, failing: -> (message) { raise document.mistake(message, node) })
         Core::CommandFlag.new(short:, long:, value:, help:, line: node.line)
       end
 
@@ -291,7 +291,7 @@ module CrossLint
 
       def carried(document, node, name, given, file)
         unless CARRIED.include?(given.value)
-          raise document.mistake("command=(crosslint) names a runtime CrossLint runs on, and #{CARRIED.map(&:dump).join(" and ")} is the only one; " \
+          raise document.mistake("command=(crosslint) names a runtime CrossLint runs on, and #{CARRIED.map(&:dump).join(' and ')} is the only one; " \
             "#{given.value.inspect} isn't", node)
         end
 

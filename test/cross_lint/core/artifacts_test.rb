@@ -16,7 +16,7 @@ class ArtifactsTest < Minitest::Test
   end
 
   def test_declares_an_artifact_on_the_line_that_names_its_file
-    declared = @declarer.artifact("component", primary: "src/{path}.component.ts", pieces: {"spec" => "src/{path}.component.spec.ts"},
+    declared = @declarer.artifact("component", primary: "src/{path}.component.ts", pieces: { "spec" => "src/{path}.component.spec.ts" },
       key: "{path}", optional: true, dotfiles: false)
 
     assert_equal ArtifactDeclaration.new(name: "component", primary: PathPattern.new(source: "src/{path}.component.ts"), line: 4,
@@ -47,12 +47,12 @@ class ArtifactsTest < Minitest::Test
         %(declared artifact "doc" with a path pattern "{pth}.md" has unknown placeholder "{pth}", did you mean "{path}"?),
       -> { @declarer.artifact("doc", primary: "{path}.md", key: "") } => %(declared artifact "doc" with a path pattern "" is empty),
       -> { @declarer.artifact("doc", primary: "{path}.md", pieces: "a") } => %(declared artifact "doc" with pieces "a", which is no hash),
-      -> { @declarer.artifact("doc", primary: "{path}.md", pieces: {a: "b"}) } =>
+      -> { @declarer.artifact("doc", primary: "{path}.md", pieces: { a: "b" }) } =>
         %(declared artifact "doc" with a piece named :a, which is no string),
-      -> { @declarer.artifact("doc", primary: "{path}.md", pieces: {"a" => nil}) } => %(declared artifact "doc" with the pattern nil, which is no string),
+      -> { @declarer.artifact("doc", primary: "{path}.md", pieces: { "a" => nil }) } => %(declared artifact "doc" with the pattern nil, which is no string),
       -> { @declarer.artifact("doc", primary: "{path}.md", optional: "yes") } => %(declared artifact "doc" with optional: "yes", which is neither true nor false),
       -> { @declarer.artifact("doc", primary: "{path}.md", dotfiles: nil) } => %(declared artifact "doc" with dotfiles: nil, which is neither true nor false),
-      -> { @declarer.declare([]) } => "has no declare method"
+      -> { @declarer.declare([]) } => "has no declare method",
     }.each do |call, message|
       assert_equal message, assert_raises(PluginError, &call).message
     end
@@ -74,7 +74,7 @@ class ArtifactsTest < Minitest::Test
     declarer = subclass.allocate
     declarer.instance_variable_set(:@crosslint_line, 4)
 
-    declared = declarer.artifact("doc", primary: "{path}.md", pieces: {"note" => "{path}.txt"}, key: "{path}")
+    declared = declarer.artifact("doc", primary: "{path}.md", pieces: { "note" => "{path}.txt" }, key: "{path}")
 
     assert_equal [PathPattern.new(source: "{path}.md"), PathPattern.new(source: "{path}.txt"), PathPattern.new(source: "{path}")],
       [declared.primary, declared.pieces.first.pattern, declared.key]

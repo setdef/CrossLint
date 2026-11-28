@@ -33,8 +33,10 @@ class AngularFixtureTest < Minitest::Test
     # outputFromObservable(), and aliases (lib/artifact/api.js:52-88).
     *%w[input:caption input:noInit input:open input:size input:tip output:changes output:openChange].flat_map do |member|
       kind, name = member.split(":")
-      ["src/app/card/card.component.ts: interface missing #{kind}: #{name} (angular/interface-matches-component)",
-        "src/app/card/card.component.ts: stub missing #{kind}: #{name} (angular/stub-matches-component)"]
+      [
+        "src/app/card/card.component.ts: interface missing #{kind}: #{name} (angular/interface-matches-component)",
+        "src/app/card/card.component.ts: stub missing #{kind}: #{name} (angular/stub-matches-component)",
+]
     end,
     # Both.
     "src/app/directives/highlight.directive.ts: no spec file at src/app/directives/highlight.directive.spec.ts (angular/spec-exists)",
@@ -50,7 +52,7 @@ class AngularFixtureTest < Minitest::Test
     # expects, which turned ng-nudge's checks of the role off (lib/artifact/artifact.js:80-82).
     "src/app/stores/cart.store.ts: no spec file at src/app/stores/cart.store.spec.ts (angular/spec-exists)",
     # Both.
-    "src/app/tab/tab.component.ts: no interface file at src/app/tab/tab.component.i.d.ts (angular/interface-exists)"
+    "src/app/tab/tab.component.ts: no interface file at src/app/tab/tab.component.i.d.ts (angular/interface-exists)",
   ].sort.freeze
 
   def test_reports_what_ng_nudge_reports_and_what_its_defects_hid
@@ -62,8 +64,12 @@ class AngularFixtureTest < Minitest::Test
     # The detail of a missing member, which tells a debt entry which one it excuses.
     members = %w[input\ caption input\ noInit input\ open input\ size input\ tip output\ changes output\ openChange]
     assert_equal (members * 2).sort, result.violations.select { |violation| violation.message.match?(/ missing (in|out)put: /) }.map(&:detail).sort
-    assert_equal ["checked 12 component, 1 directive, 1 pipe, 2 service, 1 guard, 1 resolver, 1 interceptor, and 1 store artifacts: " \
-      "23 errors, 1 warning, 3 accepted as debt", true, []], [result.summary.line, result.failed, result.faults]
+    assert_equal [
+      "checked 12 component, 1 directive, 1 pipe, 2 service, 1 guard, 1 resolver, 1 interceptor, and 1 store artifacts: " \
+        "23 errors, 1 warning, 3 accepted as debt",
+      true,
+      [],
+], [result.summary.line, result.failed, result.faults]
   end
 
   # ng-nudge's debt file names an artifact by its base path, relative to
@@ -76,10 +82,12 @@ class AngularFixtureTest < Minitest::Test
 
     assert_empty result.violations.map(&:artifact).grep(%r{/(foo|pipes)/})
     assert_equal ["3 accepted as debt"], result.summary.steps
-    assert_equal [".config/crosslint/debt.tsv:2: the entry for angular/spec-exists on app/foo/foo matches the violations of 2 artifacts, " \
-      "src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint debt update writes one entry for each",
+    assert_equal [
+      ".config/crosslint/debt.tsv:2: the entry for angular/spec-exists on app/foo/foo matches the violations of 2 artifacts, " \
+        "src/app/foo/foo.component.ts as component and src/app/foo/foo.service.ts as service; crosslint debt update writes one entry for each",
       ".config/crosslint/debt.tsv:3: the entry for angular/spec-exists on app/pipes/currency has no detail, so it matches every violation of " \
-      "angular/spec-exists on it; crosslint debt update writes one entry for each, with its detail"],
+        "angular/spec-exists on it; crosslint debt update writes one entry for each, with its detail",
+],
       result.notices.map { |notice| "#{notice.file}:#{notice.line}: #{notice.message}" }
   end
 
@@ -87,7 +95,7 @@ class AngularFixtureTest < Minitest::Test
   # plugin and the command.
   def test_stops_with_2_naming_the_plugin_and_node_when_node_isnt_on_the_path
     packages_installed
-    without_node = app(helpers: CrossLint::Adapters::ProcessHelpers.new(env: {"PATH" => ""}))
+    without_node = app(helpers: CrossLint::Adapters::ProcessHelpers.new(env: { "PATH" => "" }))
     err = StringIO.new
     status = CrossLint::CLI.new(["check", "-C", FIXTURE], out: StringIO.new, err:, env: {}, app: without_node).run
 
@@ -122,7 +130,7 @@ class AngularFixtureTest < Minitest::Test
 
   private
 
-  def app(**options) = CrossLint::App.new(crosslint_ruby: LoadedPlugins::CrossLintRuby.new, **options)
+  def app(**) = CrossLint::App.new(crosslint_ruby: LoadedPlugins::CrossLintRuby.new, **)
 
   # Installing the plugin's own packages is a setup step, npm ci in
   # plugins/angular, which no test runs.

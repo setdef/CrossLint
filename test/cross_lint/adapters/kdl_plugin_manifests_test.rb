@@ -76,7 +76,7 @@ class KDLPluginManifestsTest < Minitest::Test
   attr_reader :base
 
   def manifests_port(example: [], broken: [], minimum: {})
-    first = ->(folder) { minimum.key?(folder) ? %(crosslint min=#{minimum.fetch(folder).dump}\n) : "" }
+    first = -> (folder) { minimum.key?(folder) ? %(crosslint min=#{minimum.fetch(folder).dump}\n) : "" }
     example.each { |folder| write(@base, File.join(folder, "plugin.kdl"), first.call(folder) + CONTRACT_EXAMPLE) }
     broken.each { |folder| write(@base, File.join(folder, "plugin.kdl"), %(#{first.call(folder)}artifact "a" {\n  file "b"\n}\n)) }
     CrossLint::Adapters::KDLPluginManifests.new
@@ -85,8 +85,14 @@ class KDLPluginManifestsTest < Minitest::Test
   def test_reads_every_example_in_the_plugin_reference
     page = "docs/reference/plugin.md"
     first, regexes, methods, helpers, helped, ruby_rule, steps, artifacts = [
-      /policy "has-declaration"/, /piece "exports"/, /^artifact "function"/, /^helper "types"/, /^rule "declares-every-export" helper="declarations"/,
-      /^rule "declares-every-export" helper="exports"/, /^step "track-debt"/, /^artifacts helper=/
+      /policy "has-declaration"/,
+      /piece "exports"/,
+      /^artifact "function"/,
+      /^helper "types"/,
+      /^rule "declares-every-export" helper="declarations"/,
+      /^rule "declares-every-export" helper="exports"/,
+      /^step "track-debt"/,
+      /^artifacts helper=/,
     ].map { |containing| read(doc_block(page, "kdl", containing)) }
     doc_blocks(page, "kdl").each { |text| read(text) }
 
@@ -97,8 +103,10 @@ class KDLPluginManifestsTest < Minitest::Test
     assert_equal [["declares-every-export", "rules/declares_every_export.rb", 2]],
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
     assert_equal Condition::PieceExists.new(piece: "declaration", line: 6), ruby_rule.policies.first.condition
-    assert_equal [HelperDeclaration.new(name: "declarations", command: "node", file: "rules/declarations.mjs", line: 1),
-      HelperDeclaration.new(name: "types", command: "uv", arguments: ["run"], file: "rules/types.py", line: 2)], helpers.helpers
+    assert_equal [
+      HelperDeclaration.new(name: "declarations", command: "node", file: "rules/declarations.mjs", line: 1),
+      HelperDeclaration.new(name: "types", command: "uv", arguments: ["run"], file: "rules/types.py", line: 2),
+], helpers.helpers
     assert_equal [[RuleDeclaration.new(name: "declares-every-export", helper: "declarations", line: 2)], ["declarations"]], [helped.rules, helped.helpers.map(&:name)]
     assert_equal [ArtifactsHelper.new(helper: "artifacts", line: 4), ["artifacts"]], [artifacts.artifacts_helper, artifacts.helpers.map(&:name)]
     assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update"]],
@@ -109,11 +117,11 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_the_plugins_in_the_readme_and_the_tutorial
-    {"README.md" => ["migration", "db/migrations/{name}.up.sql"], "docs/getting-started.md" => ["catalog", "locales/en/{path}.json"]}.each do |page, expected|
+    { "README.md" => ["migration", "db/migrations/{name}.up.sql"], "docs/getting-started.md" => ["catalog", "locales/en/{path}.json"] }.each do |page, expected|
       manifest = read(doc_block(page, "kdl", /^artifact "#{expected.first}"/))
 
       assert_equal [expected], manifest.artifacts.map { |artifact| [artifact.name, artifact.primary.source] }, page
-      assert_equal manifest.artifacts.first.pieces.map { |piece| [{"piece" => piece.name}] }, manifest.policies.map { |policy| policy.rules.map(&:arguments) }, page
+      assert_equal manifest.artifacts.first.pieces.map { |piece| [{ "piece" => piece.name }] }, manifest.policies.map { |policy| policy.rules.map(&:arguments) }, page
     end
   end
 
@@ -136,8 +144,10 @@ class KDLPluginManifestsTest < Minitest::Test
       }
     KDL
     stub = Condition::PieceExists.new(piece: "stub", line: 10)
-    any = Condition::Any.new(conditions: [Condition::PieceExists.new(piece: "interface", line: 11),
-      Condition::PieceExists.new(piece: "stub", line: 11)], line: 11)
+    any = Condition::Any.new(conditions: [
+      Condition::PieceExists.new(piece: "interface", line: 11),
+      Condition::PieceExists.new(piece: "stub", line: 11),
+], line: 11)
 
     assert_equal Condition::Not.new(condition: Condition::All.new(conditions: [stub, any], line: 9), line: 8),
       manifest.policies.first.condition
@@ -148,8 +158,15 @@ class KDLPluginManifestsTest < Minitest::Test
     artifact = manifest.artifacts.first
     policy = manifest.policies.first
 
-    assert_equal [1, 3, 6, 7, 8, 12, 13], [artifact.line, artifact.pieces.first.line, policy.line, policy.applies_to.line,
-      policy.rules.first.line, manifest.rules.first.line, manifest.helpers.first.line]
+    assert_equal [1, 3, 6, 7, 8, 12, 13], [
+      artifact.line,
+      artifact.pieces.first.line,
+      policy.line,
+      policy.applies_to.line,
+      policy.rules.first.line,
+      manifest.rules.first.line,
+      manifest.helpers.first.line,
+]
   end
 
   def test_reads_the_example_of_the_minimum_version_in_the_plugin_reference
@@ -303,7 +320,7 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_a_policy_rule_with_no_severity
-    assert_equal [["r", {"style" => "strict"}, nil]],
+    assert_equal [["r", { "style" => "strict" }, nil]],
       read(%(policy "p" { applies-to "a"; rule "r" style="strict"; })).policies.first.rules.map { |rule| [rule.name, rule.arguments, rule.severity] }
   end
 
@@ -376,13 +393,15 @@ class KDLPluginManifestsTest < Minitest::Test
   def test_reads_the_flags_a_command_declares_in_the_usage_specs_syntax
     manifest = read(%(step "s"\ncommand "update" help="Rewrite it" {\n  flag "-n --dry-run" help="Write nothing"\n  flag "--since <rev>" help="From a revision"\n}\n))
 
-    assert_equal [CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "Write nothing", line: 3),
-      CommandFlag.new(short: nil, long: "since", value: "rev", help: "From a revision", line: 4)], manifest.commands.first.flags
+    assert_equal [
+      CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "Write nothing", line: 3),
+      CommandFlag.new(short: nil, long: "since", value: "rev", help: "From a revision", line: 4),
+], manifest.commands.first.flags
     assert_empty read(%(command "update" help="Rewrite it" {\n}\n)).commands.first.flags
   end
 
   def test_refuses_a_flag_of_a_command_written_wrong
-    inside = ->(flag) { %(command "update" help="Help" {\n  #{flag}\n}\n) }
+    inside = -> (flag) { %(command "update" help="Help" {\n  #{flag}\n}\n) }
 
     assert_refuses 2, %(flag "-n --dry-run" has no help=, its line in --help), inside.call(%(flag "-n --dry-run"))
     assert_refuses 2, %(flag "-n --dry-run" has no help=, its line in --help), inside.call(%(flag "-n --dry-run" help=""))
@@ -436,7 +455,7 @@ class KDLPluginManifestsTest < Minitest::Test
       %(policy "p" { applies-to; }) => "applies-to has 0 arguments; write it as applies-to ARTIFACT",
       %(policy "p" { applies-to "a"; rule; }) => "rule has 0 arguments; write it as rule RULE",
       %(policy "p" { applies-to "a"; when piece-exists; rule "r"; }) =>
-        "piece-exists has 0 arguments; write it as piece-exists PIECE"
+        "piece-exists has 0 arguments; write it as piece-exists PIECE",
     }.each { |text, message| assert_refuses 1, message, text }
   end
 

@@ -45,13 +45,13 @@ class DoctestTest < Minitest::Test
   end
 
   def test_skips_an_example_that_uses_a_part_not_built_yet
-    stub_const_pending({"CrossLint::NotYet" => "#99"}) do
+    stub_const_pending({ "CrossLint::NotYet" => "#99" }) do
       assert_equal "uses CrossLint::NotYet, which #99 builds", Doctest.run(example("CrossLint::NotYet.new\n"))
     end
   end
 
   def test_fails_once_a_pending_part_exists
-    stub_const_pending({"CrossLint::CLI" => "#99"}) do
+    stub_const_pending({ "CrossLint::CLI" => "#99" }) do
       error = assert_raises(Doctest::Failure) { Doctest.run(example("CrossLint::CLI\n")) }
 
       assert_equal "a.md:10: CrossLint::CLI exists, so remove it from Doctest::PENDING", error.message

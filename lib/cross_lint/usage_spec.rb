@@ -32,7 +32,7 @@ module CrossLint
     # <value>. A flag that is written wrong goes to `failing` with what is
     # wrong, which raises Error unless it is given another way to stop; it
     # must raise.
-    def self.flag_names(words, failing: ->(message) { raise Error, message })
+    def self.flag_names(words, failing: -> (message) { raise Error, message })
       names = words.split.to_h do |word|
         case word
         when /\A-([A-Za-z0-9])\z/ then [:short, $1]

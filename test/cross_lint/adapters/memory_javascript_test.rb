@@ -10,15 +10,15 @@ class MemoryJavaScriptTest < Minitest::Test
 
   def javascript_port
     CrossLint::Adapters::MemoryJavaScript.new({
-      "b" => ->(text) { text.include?("b") },
-      "^a" => ->(text) { text.start_with?("a") },
-      "é" => ->(text) { text.include?("é") },
-      "(" => CrossLint::Core::InvalidExpression.new("Invalid regular expression: /(/: Unterminated group")
+      "b" => -> (text) { text.include?("b") },
+      "^a" => -> (text) { text.start_with?("a") },
+      "é" => -> (text) { text.include?("é") },
+      "(" => CrossLint::Core::InvalidExpression.new("Invalid regular expression: /(/: Unterminated group"),
     })
   end
 
   def glob_port(installed)
-    CrossLint::Adapters::MemoryJavaScript.new({}, globs: ({"**/*.a.ts" => ["app/x.a.ts"], "echo" => ["src", "true"]} if installed))
+    CrossLint::Adapters::MemoryJavaScript.new({}, globs: ({ "**/*.a.ts" => ["app/x.a.ts"], "echo" => ["src", "true"] } if installed))
   end
 
   def glob_root = "/app"

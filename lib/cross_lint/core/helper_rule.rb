@@ -17,8 +17,8 @@ module CrossLint
       def severity = :error
 
       def results(artifact, _arguments, _read)
-        answer = @call.call(@helper, {"rule" => @name, "artifact" => HelperRule.described(artifact)})
-        raise PluginError, "failed in helper #{@helper.dump}: #{answer.fetch("error")}" if answer.is_a?(Hash) && answer["error"].is_a?(String)
+        answer = @call.call(@helper, { "rule" => @name, "artifact" => HelperRule.described(artifact) })
+        raise PluginError, "failed in helper #{@helper.dump}: #{answer.fetch('error')}" if answer.is_a?(Hash) && answer["error"].is_a?(String)
 
         found = answer.is_a?(Hash) && answer["violations"]
         raise PluginError, %(got an answer from helper #{@helper.dump} that isn't {"violations": [...]}) unless found.is_a?(Array)
@@ -29,8 +29,15 @@ module CrossLint
       end
 
       def self.described(artifact)
-        {"path" => artifact.path, "name" => artifact.name, "role" => artifact.role, "line" => artifact.line, "match" => artifact.match,
-         "key" => artifact.key, "pieces" => artifact.pieces.to_h { |piece| [piece.name, {"path" => piece.path, "exists" => piece.exists}] }}
+        {
+"path" => artifact.path,
+"name" => artifact.name,
+"role" => artifact.role,
+"line" => artifact.line,
+"match" => artifact.match,
+"key" => artifact.key,
+"pieces" => artifact.pieces.to_h { |piece| [piece.name, { "path" => piece.path, "exists" => piece.exists }] },
+}
       end
 
       private

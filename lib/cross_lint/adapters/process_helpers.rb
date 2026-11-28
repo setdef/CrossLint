@@ -18,7 +18,7 @@ module CrossLint
       WINDOWS = RbConfig::CONFIG.fetch("host_os").match?(/mswin|mingw/)
 
       # A table, not a branch, since each system runs only its own.
-      TREE = {true => JobObject, false => ProcessGroup}.fetch(WINDOWS)
+      TREE = { true => JobObject, false => ProcessGroup }.fetch(WINDOWS)
 
       attr_reader :time_limit, :stop_limit
 
@@ -175,7 +175,7 @@ module CrossLint
         def parse(line)
           JSON.parse(line)
         rescue JSON::ParserError
-          fail!("answered with a line that isn't JSON: #{format("%.80s", line.chomp).dump}")
+          fail!("answered with a line that isn't JSON: #{format('%.80s', line.chomp).dump}")
         end
 
         # Ends what the helper left running, and the helper itself if it

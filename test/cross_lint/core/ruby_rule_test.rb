@@ -30,15 +30,17 @@ class RubyRuleTest < Minitest::Test
   RUBY
 
   def test_reports_what_a_ruby_rule_finds_as_violations_of_its_policy
-    result = check(files: {"lib/a.rb" => "", "sig/a.rbs" => "class A\n", "lib/b.rb" => "", "sig/b.rbs" => "class C\n", "lib/c.rb" => ""})
+    result = check(files: { "lib/a.rb" => "", "sig/a.rbs" => "class A\n", "lib/b.rb" => "", "sig/b.rbs" => "class C\n", "lib/c.rb" => "" })
 
-    assert_equal [Violation.new(plugin: "tests", policy: "names-match", artifact: "lib/b.rb", role: "ruby-file", message: "sig/b.rbs names no class",
-      severity: :error, detail: "b")], result.findings
+    assert_equal [
+Violation.new(plugin: "tests", policy: "names-match", artifact: "lib/b.rb", role: "ruby-file", message: "sig/b.rbs names no class",
+  severity: :error, detail: "b"),
+], result.findings
     assert_equal [[], true, "checked 3 ruby-file artifacts: 1 error"], [result.faults, result.failed, result.summary.line]
   end
 
   def test_gives_a_ruby_rule_the_severity_its_rule_line_and_the_configuration_give
-    files = {"lib/b.rb" => "", "sig/b.rbs" => ""}
+    files = { "lib/b.rb" => "", "sig/b.rbs" => "" }
 
     assert_equal [:warning], check(files:, severity: :warning).findings.map(&:severity)
     assert_equal [:error], check(files:, severity: :warning, override: :error).findings.map(&:severity)
@@ -54,10 +56,10 @@ class RubyRuleTest < Minitest::Test
         []
       end
     end
-    check(code: {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }},
-      files: {"lib/x/a.rb" => "# a\n", "sig/x/a.rbs" => "class A\n"})
+    check(code: { "names_class.rb" => -> (namespace) { namespace.const_set(:NamesClass, rule) } },
+      files: { "lib/x/a.rb" => "# a\n", "sig/x/a.rbs" => "class A\n" })
 
-    assert_equal [["lib/x/a.rb", "ruby-file", {"path" => "x/a"}, true, "# a\n"], ["signature", "sig/x/a.rbs", true, "class A\n"]], seen
+    assert_equal [["lib/x/a.rb", "ruby-file", { "path" => "x/a" }, true, "# a\n"], ["signature", "sig/x/a.rbs", true, "class A\n"]], seen
   end
 
   def test_shows_a_rule_the_artifacts_name_line_and_key
@@ -68,11 +70,11 @@ class RubyRuleTest < Minitest::Test
         []
       end
     end
-    code = {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}
+    code = { "names_class.rb" => -> (namespace) { namespace.const_set(:NamesClass, rule) } }
     function = ruby_file.with(regex: Regex.new(source: 'def (?<function>\w+)'), key: PathPattern.new(source: "{path}"),
       name_pattern: PathPattern.new(source: "{path}:{function}", captures: %w[function]))
-    check(code:, files: {"lib/x/a.rb" => "# a\ndef run\nend\n"})
-    check(code:, files: {"lib/x/a.rb" => "# a\ndef run\nend\n"}, artifact: function)
+    check(code:, files: { "lib/x/a.rb" => "# a\ndef run\nend\n" })
+    check(code:, files: { "lib/x/a.rb" => "# a\ndef run\nend\n" }, artifact: function)
 
     assert_equal [["lib/x/a.rb", nil, nil], ["x/a:run", 2, "x/a"]], seen
   end
@@ -86,10 +88,10 @@ class RubyRuleTest < Minitest::Test
         []
       end
     end
-    code = {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}
+    code = { "names_class.rb" => -> (namespace) { namespace.const_set(:NamesClass, rule) } }
     function = ruby_file.with(regex: Regex.new(source: 'def (?<function>\w+)'))
-    check(code:, files: {"lib/x/a.rb" => "# a\n"})
-    check(code:, files: {"lib/x/a.rb" => "def run\n"}, artifact: function)
+    check(code:, files: { "lib/x/a.rb" => "# a\n" })
+    check(code:, files: { "lib/x/a.rb" => "def run\n" }, artifact: function)
 
     assert_equal [["primary", "lib/x/a.rb", true, "# a\n", "lib/x/a.rb", "# a\n"], ["primary", "lib/x/a.rb", true, "def run\n", "lib/x/a.rb", "def run\n"]], seen
   end
@@ -103,7 +105,7 @@ class RubyRuleTest < Minitest::Test
         []
       end
     end
-    check(code: {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}, files: {"lib/x/a.rb" => "# a\n"})
+    check(code: { "names_class.rb" => -> (namespace) { namespace.const_set(:NamesClass, rule) } }, files: { "lib/x/a.rb" => "# a\n" })
 
     assert_equal [[true, "primary", "lib/x/a.rb", "# a\n"]], seen
   end
@@ -119,8 +121,8 @@ class RubyRuleTest < Minitest::Test
         []
       end
     end
-    files = {"lib/a.rb" => "", "docs/b.md" => "", "lib/c.rb" => ""}
-    check(code: {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}, files:)
+    files = { "lib/a.rb" => "", "docs/b.md" => "", "lib/c.rb" => "" }
+    check(code: { "names_class.rb" => -> (namespace) { namespace.const_set(:NamesClass, rule) } }, files:)
 
     assert_equal [files.keys] * 3, seen
     assert_equal [true, true], [seen.first.frozen?, seen.first.all?(&:frozen?)]
@@ -133,11 +135,11 @@ class RubyRuleTest < Minitest::Test
       define_method(:initialize) { seen << read("docs/b.md") }
       define_method(:check) do |artifact|
         seen << read("docs/b.md")
-        read("docs/#{artifact.match["path"]}.md")
+        read("docs/#{artifact.match['path']}.md")
       end
     end
-    files = {"lib/a.rb" => "", "docs/b.md" => "# B\n"}
-    result = check(code: {"names_class.rb" => ->(namespace) { namespace.const_set(:NamesClass, rule) }}, files:)
+    files = { "lib/a.rb" => "", "docs/b.md" => "# B\n" }
+    result = check(code: { "names_class.rb" => -> (namespace) { namespace.const_set(:NamesClass, rule) } }, files:)
 
     assert_equal ["# B\n"] * 2, seen
     assert_equal ["raised Errno::ENOENT: No such file or directory - docs/a.md"], result.faults.map(&:message)
@@ -145,7 +147,7 @@ class RubyRuleTest < Minitest::Test
 
   def test_reads_no_file_outside_the_project
     asked = []
-    rule = CrossLint::Core::RubyRule.make(Class.new(CrossLint::Rule), ->(_name, input) { input }, [], ->(path) { (asked << path).last })
+    rule = CrossLint::Core::RubyRule.make(Class.new(CrossLint::Rule), -> (_name, input) { input }, [], -> (path) { (asked << path).last })
     outside = ["../a.md", "/etc/hosts", "docs/../../a.md", "a/../..", ".."]
     inside = ["a.md", "./a.md", "docs/../a.md", "docs//a.md", "docs/../docs/../a.md", "a/.."]
 
@@ -166,29 +168,29 @@ class RubyRuleTest < Minitest::Test
       end
     RUBY
 
-    assert_equal ["artifact 1", "artifact 2"], check(code: {"names_class.rb" => counting}, files: {"lib/a.rb" => "", "lib/b.rb" => ""}).findings.map(&:message)
+    assert_equal ["artifact 1", "artifact 2"], check(code: { "names_class.rb" => counting }, files: { "lib/a.rb" => "", "lib/b.rb" => "" }).findings.map(&:message)
   end
 
   def test_loads_each_rule_once_and_only_for_an_enabled_policy
     loads = []
-    code = {"names_class.rb" => ->(namespace) { loads << namespace.module_eval(NAMES_CLASS) }}
-    check(code:, files: {"lib/a.rb" => ""}, policies: 2)
+    code = { "names_class.rb" => -> (namespace) { loads << namespace.module_eval(NAMES_CLASS) } }
+    check(code:, files: { "lib/a.rb" => "" }, policies: 2)
 
     assert_equal 1, loads.size
-    check(code:, files: {"lib/a.rb" => ""}, override: nil, enabled: false)
+    check(code:, files: { "lib/a.rb" => "" }, override: nil, enabled: false)
 
     assert_equal 1, loads.size
   end
 
   def test_stops_at_a_rule_file_the_plugin_lacks_before_it_checks
-    mistake = assert_raises(Mistake) { check(code: {}, files: {"lib/a.rb" => ""}) }
+    mistake = assert_raises(Mistake) { check(code: {}, files: { "lib/a.rb" => "" }) }
 
     assert_equal [".config/tests/plugin.kdl:3", %(no file "rules/names_class.rb" in the plugin's folder)], [mistake.location, mistake.message]
   end
 
   def test_stops_only_the_plugin_whose_rule_raises
     raising = "class NamesClass < CrossLint::Rule\n  def check(artifact) = raise(\"boom on \#{artifact.path}\")\nend\n"
-    result = check(code: {"names_class.rb" => raising}, files: {"lib/a.rb" => "", "lib/b.rb" => ""}, others: true)
+    result = check(code: { "names_class.rb" => raising }, files: { "lib/a.rb" => "", "lib/b.rb" => "" }, others: true)
     fault = result.faults.fetch(0)
 
     assert_equal [["tests", "names-class", "lib/a.rb", "raised RuntimeError: boom on lib/a.rb"]],
@@ -198,7 +200,7 @@ class RubyRuleTest < Minitest::Test
   end
 
   def test_stops_a_plugin_whose_rule_fails_to_load_and_runs_none_of_its_policies
-    result = check(code: {"names_class.rb" => "raise ArgumentError, 'no'\n"}, files: {"lib/a.rb" => ""}, others: true)
+    result = check(code: { "names_class.rb" => "raise ArgumentError, 'no'\n" }, files: { "lib/a.rb" => "" }, others: true)
 
     assert_equal [["tests", "names-class", nil, "raised ArgumentError: no"]], result.faults.map { |each| [each.plugin, each.rule, each.artifact, each.message] }
     assert_equal ["other"], result.findings.map(&:plugin)
@@ -210,15 +212,15 @@ class RubyRuleTest < Minitest::Test
       "NamesClass = 3\n" => "defines no class NamesClass in rules/names_class.rb",
       "class NamesClass\nend\n" => "has a class NamesClass that doesn't inherit from CrossLint::Rule",
       "class NamesClass < CrossLint::Rule\nend\n" => "has no check method",
-      "class NamesClass < CrossLint::Rule\n  def initialize(x) = super()\nend\n" => "raised ArgumentError: wrong number of arguments (given 0, expected 1)"
+      "class NamesClass < CrossLint::Rule\n  def initialize(x) = super()\nend\n" => "raised ArgumentError: wrong number of arguments (given 0, expected 1)",
     }.each do |source, message|
-      assert_equal [message], check(code: {"names_class.rb" => source}, files: {"lib/a.rb" => ""}).faults.map(&:message), source
+      assert_equal [message], check(code: { "names_class.rb" => source }, files: { "lib/a.rb" => "" }).faults.map(&:message), source
     end
   end
 
   def test_finds_no_class_for_a_rule_name_no_class_can_have
     assert_equal ["defines no class 9lives in rules/9lives.rb"],
-      check(name: "9lives", code: {"9lives.rb" => ""}, files: {"lib/a.rb" => ""}).faults.map(&:message)
+      check(name: "9lives", code: { "9lives.rb" => "" }, files: { "lib/a.rb" => "" }).faults.map(&:message)
   end
 
   def test_says_what_is_wrong_with_what_a_rule_returns
@@ -230,18 +232,18 @@ class RubyRuleTest < Minitest::Test
       %([violation(artifact, "no", detail: :x)]) => "made a violation whose detail is :x, which is no string",
       %([violation(artifact.path, "no")]) => %(made a violation of "lib/a.rb", which is no artifact it was given),
       %(@last.then { |last| @last = artifact; last ? [violation(last, "no")] : [] }) => "returned a violation of lib/a.rb, which isn't the artifact it checked",
-      %(artifact.piece("stub")) => %(raised KeyError: artifact "ruby-file" has no piece "stub")
+      %(artifact.piece("stub")) => %(raised KeyError: artifact "ruby-file" has no piece "stub"),
     }.each do |body, message|
       source = "class NamesClass < CrossLint::Rule\n  def check(artifact)\n    #{body}\n  end\nend\n"
 
-      assert_equal [message], check(code: {"names_class.rb" => source}, files: {"lib/a.rb" => "", "lib/b.rb" => ""}).faults.map(&:message), body
+      assert_equal [message], check(code: { "names_class.rb" => source }, files: { "lib/a.rb" => "", "lib/b.rb" => "" }).faults.map(&:message), body
     end
   end
 
   def test_stops_a_rule_that_exits_rather_than_ending_the_check
     source = "class NamesClass < CrossLint::Rule\n  def check(artifact) = exit(0)\nend\n"
     faults = begin
-      check(code: {"names_class.rb" => source}, files: {"lib/a.rb" => ""}).faults
+      check(code: { "names_class.rb" => source }, files: { "lib/a.rb" => "" }).faults
     rescue SystemExit
       # A test process that exits with 0 reads as one that passed.
       flunk "the rule's exit ended the check"
@@ -253,8 +255,8 @@ class RubyRuleTest < Minitest::Test
   def test_stops_a_rule_that_recurses_without_end_in_its_plugin_not_the_check
     recurses = "class NamesClass < CrossLint::Rule\n  def check(artifact) = check(artifact)\nend\n"
     at_load = "def self.forever = forever\nforever\n"
-    ran = check(code: {"names_class.rb" => recurses}, files: {"lib/a.rb" => ""}, others: true)
-    loading = check(code: {"names_class.rb" => at_load}, files: {"lib/a.rb" => ""})
+    ran = check(code: { "names_class.rb" => recurses }, files: { "lib/a.rb" => "" }, others: true)
+    loading = check(code: { "names_class.rb" => at_load }, files: { "lib/a.rb" => "" })
 
     assert_equal [["tests", "rule names-class on lib/a.rb raised SystemStackError: stack level too deep"]],
       ran.faults.map { |fault| [fault.plugin, fault.line.delete_prefix("fault in plugin tests: ")] }
@@ -265,7 +267,7 @@ class RubyRuleTest < Minitest::Test
   def test_gives_a_rule_a_minute_on_each_artifact_unless_told_otherwise
     assert_equal 60, RubyRule::TIME_LIMIT
     tests = plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []))
-    rule = RubyRule.make(Class.new(CrossLint::Rule), ->(_name, _input) {}, [], ->(_path) { "" })
+    rule = RubyRule.make(Class.new(CrossLint::Rule), -> (_name, _input) {}, [], -> (_path) { "" })
 
     assert_equal 60, RubyRule.new(plugin: tests, name: "n", rule:).instance_variable_get(:@time_limit)
   end
@@ -277,8 +279,8 @@ class RubyRuleTest < Minitest::Test
     artifact = Artifact.new(plugin: "tests", role: "ruby-file", path: "lib/a.rb", match: {}, pieces: [])
     tests = plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []))
     faults = rules.map do |rule_class|
-      rule = RubyRule.new(plugin: tests, name: "slow", rule: RubyRule.make(rule_class, ->(_name, _input) {}, [], ->(_path) { "" }), time_limit: 0.2)
-      assert_raises(RubyRule::Stopped) { rule.results(artifact, {}, ->(_) { "" }) }.fault
+      rule = RubyRule.new(plugin: tests, name: "slow", rule: RubyRule.make(rule_class, -> (_name, _input) {}, [], -> (_path) { "" }), time_limit: 0.2)
+      assert_raises(RubyRule::Stopped) { rule.results(artifact, {}, -> (_) { "" }) }.fault
     end
 
     assert_equal ["fault in plugin tests: rule slow on lib/a.rb didn't finish within 0.2 seconds, so CrossLint stopped it"] * 2, faults.map(&:line)
@@ -287,16 +289,16 @@ class RubyRuleTest < Minitest::Test
   def test_names_the_gem_a_rule_requires_that_crosslint_wasnt_built_with
     message = "requires crosslint_no_such_gem, which is neither in Ruby's standard library nor in the plugin's folder, " \
       "and CrossLint can load no gem it wasn't built with"
-    at_load = check(code: {"names_class.rb" => %(require "crosslint_no_such_gem"\n)}, files: {"lib/a.rb" => ""})
-    later = check(code: {"names_class.rb" => %(class NamesClass < CrossLint::Rule\n  def check(_) = require("crosslint_no_such_gem")\nend\n)},
-      files: {"lib/a.rb" => ""})
+    at_load = check(code: { "names_class.rb" => %(require "crosslint_no_such_gem"\n) }, files: { "lib/a.rb" => "" })
+    later = check(code: { "names_class.rb" => %(class NamesClass < CrossLint::Rule\n  def check(_) = require("crosslint_no_such_gem")\nend\n) },
+      files: { "lib/a.rb" => "" })
 
     assert_equal [[message, nil], [message, "lib/a.rb"]], [at_load, later].map { |result| result.faults.map { |fault| [fault.message, fault.artifact] }.first }
   end
 
   def test_refuses_bundler_inline
     assert_equal ["requires bundler/inline, which CrossLint doesn't offer, since it would install gems into CrossLint's folder"],
-      check(code: {"names_class.rb" => %(require "bundler/inline"\n)}, files: {"lib/a.rb" => ""}).faults.map(&:message)
+      check(code: { "names_class.rb" => %(require "bundler/inline"\n) }, files: { "lib/a.rb" => "" }).faults.map(&:message)
   end
 
   def test_says_which_file_of_the_plugin_a_require_couldnt_find
@@ -309,8 +311,12 @@ class RubyRuleTest < Minitest::Test
 
     elsewhere = File.expand_path("/q/names.rb")
 
-    assert_equal ["requires helpers/names.rb, which doesn't exist", "requires #{elsewhere}, which doesn't exist",
-      "requires ./names, which doesn't exist", "raised LoadError: cannot load such file"],
+    assert_equal [
+      "requires helpers/names.rb, which doesn't exist",
+      "requires #{elsewhere}, which doesn't exist",
+      "requires ./names, which doesn't exist",
+      "raised LoadError: cannot load such file",
+],
       ["#{ROOT}/.config/tests/helpers/names.rb", elsewhere, "./names", nil].map(&describe)
   end
 
@@ -323,21 +329,23 @@ class RubyRuleTest < Minitest::Test
   def test_writes_a_fault_as_one_line
     fault = Fault.new(plugin: "tests", rule: "names-class", artifact: "lib/a.rb", message: "raised RuntimeError: boom", trace: [])
 
-    assert_equal ["fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom",
-      "fault in plugin tests: rule names-class requires rainbow"], [fault.line, fault.with(artifact: nil, message: "requires rainbow").line]
+    assert_equal [
+      "fault in plugin tests: rule names-class on lib/a.rb raised RuntimeError: boom",
+      "fault in plugin tests: rule names-class requires rainbow",
+], [fault.line, fault.with(artifact: nil, message: "requires rainbow").line]
     assert_equal [fault, fault.line], RubyRule::Stopped.new(fault).then { |stopped| [stopped.fault, stopped.message] }
   end
 
   def test_finds_no_class_outside_the_plugins_namespace
     assert_equal ["defines no class String in rules/string.rb"],
-      check(name: "string", code: {"string.rb" => ""}, files: {"lib/a.rb" => ""}).faults.map(&:message)
+      check(name: "string", code: { "string.rb" => "" }, files: { "lib/a.rb" => "" }).faults.map(&:message)
     assert_equal ["has a class NamesClass that doesn't inherit from CrossLint::Rule"],
-      check(code: {"names_class.rb" => "NamesClass = CrossLint::Rule\n"}, files: {"lib/a.rb" => ""}).faults.map(&:message)
+      check(code: { "names_class.rb" => "NamesClass = CrossLint::Rule\n" }, files: { "lib/a.rb" => "" }).faults.map(&:message)
   end
 
   def test_reports_the_fault_of_each_plugin_that_stops
     raising = "class NamesClass < CrossLint::Rule\n  def check(artifact) = raise(\"boom\")\nend\n"
-    result = check(code: {"names_class.rb" => raising}, files: {"lib/a.rb" => ""}, others: raising)
+    result = check(code: { "names_class.rb" => raising }, files: { "lib/a.rb" => "" }, others: raising)
 
     assert_equal [%w[tests names-class], %w[other names-class]], result.faults.map { |fault| [fault.plugin, fault.rule] }
     assert_equal "checked 1 ruby-file artifact: 2 faults", result.summary.line
@@ -357,49 +365,49 @@ class RubyRuleTest < Minitest::Test
 
   def test_calls_its_plugins_helper_from_a_ruby_rule_even_in_initialize
     seen = []
-    members = ->(input) { seen << input and ["a", "b"] }
-    result = check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => members})
+    members = -> (input) { seen << input and ["a", "b"] }
+    result = check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "" }, helpers: { "members" => members })
 
-    assert_equal [[{"path" => "lib/x.rb"}], [["no a", "a"], ["no b", "b"]]], [seen, result.findings.map { |violation| [violation.message, violation.detail] }]
+    assert_equal [[{ "path" => "lib/x.rb" }], [["no a", "a"], ["no b", "b"]]], [seen, result.findings.map { |violation| [violation.message, violation.detail] }]
   end
 
   # The line saying what CrossLint will check comes before any helper
   # starts or any rule runs, so before any TypeScript is read.
   def test_says_what_it_will_check_before_any_helper_starts_or_any_rule_runs
     events = []
-    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { (events << :asked) && [] }}, commands: ["node"])
+    port = CrossLint::Adapters::MemoryHelpers.new({ "tests/members" => -> (_) { (events << :asked) && [] } }, commands: ["node"])
     port.define_singleton_method(:start) { |root, plugins| (events << :helpers) && super(root, plugins) }
-    started = ->(kinds) { events << kinds }
-    check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => "", "lib/y.rb" => ""}, helpers: {"members" => nil}, running: port, started:)
+    started = -> (kinds) { events << kinds }
+    check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "", "lib/y.rb" => "" }, helpers: { "members" => nil }, running: port, started:)
 
     assert_equal [[["ruby-file", 2]], :helpers, :asked, :asked], events
     events.clear
     %i[quiet silent].each do |verbosity|
-      check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port, started:, verbosity:)
+      check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "" }, helpers: { "members" => nil }, running: port, started:, verbosity:)
     end
 
     assert_equal [:helpers, :asked, :helpers, :asked], events
   end
 
   def test_stops_a_plugin_whose_rule_calls_a_helper_that_fails_or_that_it_doesnt_declare
-    failing = ->(_) { raise PluginError, "called helper members, which exited with status 1 before it answered" }
+    failing = -> (_) { raise PluginError, "called helper members, which exited with status 1 before it answered" }
 
     assert_equal ["called helper members, which exited with status 1 before it answered"],
-      check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => failing}).faults.map(&:message)
+      check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "" }, helpers: { "members" => failing }).faults.map(&:message)
     assert_equal [%(called helper "members", which plugin tests doesn't declare)] * 2,
-      [{}, {"others" => ->(_) { [] }}].flat_map { |helpers| check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers:).faults.map(&:message) }
+      [{}, { "others" => -> (_) { [] } }].flat_map { |helpers| check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "" }, helpers:).faults.map(&:message) }
   end
 
   def test_starts_helpers_before_any_rule_and_stops_them_after_every_rule
-    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { [] }}, commands: ["node"])
+    port = CrossLint::Adapters::MemoryHelpers.new({ "tests/members" => -> (_) { [] } }, commands: ["node"])
     started = []
     port.define_singleton_method(:start) { |root, plugins| super(root, plugins).tap { |running| started << running } }
-    check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port)
-    assert_raises(Mistake) { check(code: {}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port) }
+    check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "" }, helpers: { "members" => nil }, running: port)
+    assert_raises(Mistake) { check(code: {}, files: { "lib/x.rb" => "" }, helpers: { "members" => nil }, running: port) }
 
     assert_equal [[true, ROOT], [true, ROOT]], started.map { |running| [running.stopped, running.root] }
     mistake = assert_raises(Mistake) do
-      check(code: {"names_class.rb" => "raise 'never loaded'"}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil},
+      check(code: { "names_class.rb" => "raise 'never loaded'" }, files: { "lib/x.rb" => "" }, helpers: { "members" => nil },
         running: CrossLint::Adapters::MemoryHelpers.new)
     end
 
@@ -407,7 +415,7 @@ class RubyRuleTest < Minitest::Test
   end
 
   def test_ends_every_helper_at_once_on_ctrl_c_before_waiting_for_any_to_stop
-    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { raise Interrupt }}, commands: ["node"])
+    port = CrossLint::Adapters::MemoryHelpers.new({ "tests/members" => -> (_) { raise Interrupt } }, commands: ["node"])
     events = []
     port.define_singleton_method(:start) do |root, plugins|
       super(root, plugins).tap do |running|
@@ -416,17 +424,17 @@ class RubyRuleTest < Minitest::Test
       end
     end
 
-    assert_raises(Interrupt) { check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port) }
+    assert_raises(Interrupt) { check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "" }, helpers: { "members" => nil }, running: port) }
     assert_equal [:kill, :stop], events
   end
 
   def test_ends_no_helper_at_once_unless_ctrl_c_comes
-    port = CrossLint::Adapters::MemoryHelpers.new({"tests/members" => ->(_) { [] }}, commands: ["node"])
+    port = CrossLint::Adapters::MemoryHelpers.new({ "tests/members" => -> (_) { [] } }, commands: ["node"])
     events = []
     port.define_singleton_method(:start) do |root, plugins|
       super(root, plugins).tap { |running| running.define_singleton_method(:kill) { events << :kill and super() } }
     end
-    check(code: {"names_class.rb" => ASKS}, files: {"lib/x.rb" => ""}, helpers: {"members" => nil}, running: port)
+    check(code: { "names_class.rb" => ASKS }, files: { "lib/x.rb" => "" }, helpers: { "members" => nil }, running: port)
 
     assert_empty events
   end
@@ -444,20 +452,21 @@ class RubyRuleTest < Minitest::Test
   # signature, or, when `others` is Ruby source, runs it as a rule
   # "names-class" of its own. The plugin "tests" declares a helper of
   # each name in `helpers`, which answers with its proc, run on "node".
-  def check(files:, code: {"names_class.rb" => NAMES_CLASS}, name: "names-class", severity: nil, override: nil, enabled: nil, policies: 1,
+  def check(files:, code: { "names_class.rb" => NAMES_CLASS }, name: "names-class", severity: nil, override: nil, enabled: nil, policies: 1,
     others: false, artifact: ruby_file, helpers: {}, running: CrossLint::Adapters::MemoryHelpers.new(helpers.transform_keys { |helper| "tests/#{helper}" }, commands: ["node"]),
-    **options)
+    **
+  )
     if others.is_a?(String)
       source = others
       code = code.merge("../../other/rules/names_class.rb" => source)
     end
     rule = PolicyRule.new(name:, arguments: {}, severity:, line: 7)
     policies = (1..policies).map { |index| Policy.new(name: "names-match#{index if index > 1}", applies_to: AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, rules: [rule], line: 5) }
-    declaration = RuleDeclaration.new(name:, ruby: "rules/#{name.tr("-", "_")}.rb", line: 3)
+    declaration = RuleDeclaration.new(name:, ruby: "rules/#{name.tr('-', '_')}.rb", line: 3)
     declared = helpers.keys.map { |helper| HelperDeclaration.new(name: helper, command: "node", file: "#{helper}.mjs", line: 9) }
     plugins = [plugin("tests", Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies:, rules: [declaration], helpers: declared))]
     if others
-      everything = source ? rule.with(name: "names-class") : PolicyRule.new(name: "piece-exists", arguments: {"piece" => "signature"}, severity: nil, line: 3)
+      everything = source ? rule.with(name: "names-class") : PolicyRule.new(name: "piece-exists", arguments: { "piece" => "signature" }, severity: nil, line: 3)
       plugins << plugin("other", Manifest.new(file: ".config/other/plugin.kdl", artifacts: [],
         policies: [Policy.new(name: "all", applies_to: AppliesTo.new(artifact: "tests/ruby-file", line: 2), condition: nil, rules: [everything], line: 1)],
         rules: source ? [RuleDeclaration.new(name: "names-class", ruby: "rules/names_class.rb", line: 3)] : [], helpers: []))
@@ -465,13 +474,13 @@ class RubyRuleTest < Minitest::Test
     settings = [PolicySetting.new(name: "tests/names-match", enabled:, severity: override, line: 4)]
     configuration = Configuration.new(file: ".config/crosslint/config.kdl", plugins: plugins.map(&:listing), policies: settings, warnings: nil, verbosity: nil)
     # Unfrozen, as Git's list is.
-    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ROOT => files.keys.map(&:dup)}, contents: {ROOT => files})
+    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ ROOT => files.keys.map(&:dup) }, contents: { ROOT => files })
     loaded = code.to_h do |file, text|
       path = File.expand_path(file, RULES)
-      [path, text.is_a?(String) ? ->(namespace) { namespace.module_eval(text, path, 1) } : text]
+      [path, text.is_a?(String) ? -> (namespace) { namespace.module_eval(text, path, 1) } : text]
     end
     Check.new(project_files:, crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new(loaded), helpers: running, steps: {})
-      .call(Project.new(root: ROOT, configuration:, plugins:), **options)
+      .call(Project.new(root: ROOT, configuration:, plugins:), **)
   end
 
   def ruby_file

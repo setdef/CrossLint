@@ -59,8 +59,12 @@ class VersionTagsTest < Minitest::Test
 
   def test_never_moves_to_a_lower_version_than_the_one_the_project_has
     assert_equal %w[v2.0.0 2.1.0 v1.10.0 v1.2.0],
-      [tags("v1.9.0", "v1.10.0").newest(keep: tag("v2.0.0")), tags("v1.9.0").newest(keep: tag("2.1.0")),
-        tags("v1.9.0", "v1.10.0").newest(keep: tag("v1.1.0")), tags("v1.2.0").newest(keep: tag("v1.2.0"))].map(&:text)
+      [
+        tags("v1.9.0", "v1.10.0").newest(keep: tag("v2.0.0")),
+        tags("v1.9.0").newest(keep: tag("2.1.0")),
+        tags("v1.9.0", "v1.10.0").newest(keep: tag("v1.1.0")),
+        tags("v1.2.0").newest(keep: tag("v1.2.0")),
+].map(&:text)
     assert_nil tags("latest").newest(keep: tag("v9.0.0"))
   end
 

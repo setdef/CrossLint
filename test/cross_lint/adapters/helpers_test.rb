@@ -7,8 +7,10 @@ require "test_helper"
 module HelpersTestHelper
   def helper_plugin(command: nil)
     command ||= "sh"
-    helpers = [CrossLint::Core::HelperDeclaration.new(name: "echo", command:, file: "echo.sh", line: 4),
-      CrossLint::Core::HelperDeclaration.new(name: "fails", command:, file: "fails.sh", line: 5)]
+    helpers = [
+      CrossLint::Core::HelperDeclaration.new(name: "echo", command:, file: "echo.sh", line: 4),
+      CrossLint::Core::HelperDeclaration.new(name: "fails", command:, file: "fails.sh", line: 5),
+]
     manifest = CrossLint::Core::Manifest.new(file: "tests/plugin.kdl", artifacts: [], policies: [], rules: [], helpers:)
     CrossLint::Core::Plugin.new(name: "tests", folder: File.join(helper_root, "tests"), manifest:,
       listing: CrossLint::Core::ListedPlugin.new(name: "./tests", ref: nil, settings: [], line: 1))
@@ -48,7 +50,7 @@ class ProcessHelpersTest < Minitest::Test
     # Exits only once the test lets it, after its input has closed, and
     # gives up if the test is over and its folder gone.
     "finishes.sh" => "while read -r line; do echo '{}'; done\necho eof > finishing.txt\n" \
-      "while [ -f finishing.txt ] && [ ! -f proceed.txt ]; do sleep 0.05; done\necho bye > finished.txt\n"
+      "while [ -f finishing.txt ] && [ ! -f proceed.txt ]; do sleep 0.05; done\necho bye > finished.txt\n",
   }.freeze
 
   # The longest any test waits for an event, in seconds. A test that waits
@@ -80,7 +82,7 @@ class ProcessHelpersTest < Minitest::Test
     quietly { Encoding.default_external = Encoding::US_ASCII }
     running = start("echo")
 
-    assert_equal({"echo" => "café"}, running.call(plugin_of("echo"), "echo", "café"))
+    assert_equal({ "echo" => "café" }, running.call(plugin_of("echo"), "echo", "café"))
     running.stop
   ensure
     quietly { Encoding.default_external = external }
@@ -107,7 +109,7 @@ class ProcessHelpersTest < Minitest::Test
 
   def test_ends_a_helper_that_reads_nothing_however_much_it_is_asked
     running = start("hangs", time_limit: 0.5)
-    error = Timeout.timeout(EVENT_LIMIT) { assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("hangs"), "hangs", {"big" => "x" * 1_000_000}) } }
+    error = Timeout.timeout(EVENT_LIMIT) { assert_raises(CrossLint::Core::PluginError) { running.call(plugin_of("hangs"), "hangs", { "big" => "x" * 1_000_000 }) } }
 
     assert_equal "called helper hangs, which didn't answer within 0.5 seconds, so CrossLint ended it and everything it started", error.message
   end
@@ -175,7 +177,7 @@ class ProcessHelpersTest < Minitest::Test
     plugin = helper_plugin.then { |given| given.with(manifest: given.manifest.with(helpers: [helper])) }
     running = helpers_port.start(helper_root, [plugin])
 
-    assert_equal({"wrapped" => File.join(@base, "tests", "echo.sh")}, running.call(plugin, "echo", 1))
+    assert_equal({ "wrapped" => File.join(@base, "tests", "echo.sh") }, running.call(plugin, "echo", 1))
   ensure
     running&.stop
   end
@@ -203,7 +205,7 @@ class ProcessHelpersTest < Minitest::Test
   end
 
   def test_fails_a_helper_that_exits_before_it_reads
-    error = assert_raises(CrossLint::Core::PluginError) { start("quits").call(plugin_of("quits"), "quits", {"big" => "x" * 100_000}) }
+    error = assert_raises(CrossLint::Core::PluginError) { start("quits").call(plugin_of("quits"), "quits", { "big" => "x" * 100_000 }) }
 
     assert_equal "called helper quits, which exited with status 0 before it answered", error.message
   end
@@ -397,7 +399,7 @@ class ProcessHelpersTest < Minitest::Test
   def test_finds_a_command_on_the_path_the_launcher_saved
     write(@base, "saved/tool.exe", "")
     File.chmod(0o755, File.join(@base, "saved/tool.exe"))
-    env = {"PATH" => File.join(@base, "other"), "BUNDLER_ORIG_PATH" => File.join(@base, "saved")}
+    env = { "PATH" => File.join(@base, "other"), "BUNDLER_ORIG_PATH" => File.join(@base, "saved") }
 
     assert_equal File.join(@base, "saved/tool.exe"), CrossLint::Adapters::ProcessHelpers.new(env:).find("tool.exe")
   end
@@ -431,7 +433,7 @@ class ProcessHelpersTest < Minitest::Test
     bare = write(@base, "bin/tool.exe", "")
     cmd = write(@base, "bin/tool.exe.CMD", "")
     [bare, cmd].each { |file| File.chmod(0o755, file) }
-    find = ->(pathext) { port_finding([File.join(@base, "bin")], pathext:).find("tool.exe") }
+    find = -> (pathext) { port_finding([File.join(@base, "bin")], pathext:).find("tool.exe") }
 
     assert_equal [cmd, bare, bare], [find.call(".EXE;;.CMD"), find.call(nil), find.call(".BAT")]
   end
@@ -467,13 +469,13 @@ class ProcessHelpersTest < Minitest::Test
 
   # The helper `name` started, saying what it writes to standard error
   # on `err` as debug output when `debug` is true.
-  def start(name, err: StringIO.new, debug: false, **options)
-    CrossLint::Adapters::ProcessHelpers.new(debug: (CrossLint::Adapters::TextDebugOutput.new(err) if debug), **options).start(@base, [plugin_of(name)])
+  def start(name, err: StringIO.new, debug: false, **)
+    CrossLint::Adapters::ProcessHelpers.new(debug: (CrossLint::Adapters::TextDebugOutput.new(err) if debug), **).start(@base, [plugin_of(name)])
   end
 
   # A port whose PATH is `folders`, and whose PATHEXT is `pathext`.
   def port_finding(folders, pathext: nil)
-    env = {"PATH" => folders.join(File::PATH_SEPARATOR), "PATHEXT" => pathext}.compact
+    env = { "PATH" => folders.join(File::PATH_SEPARATOR), "PATHEXT" => pathext }.compact
     CrossLint::Adapters::ProcessHelpers.new(env:)
   end
 
@@ -546,9 +548,9 @@ class MemoryHelpersTest < Minitest::Test
   include CrossLint::Testing::HelpersContract
   include HelpersTestHelper
 
-  FAILS = ->(_) { raise CrossLint::Core::PluginError, "called helper fails, which exited with status 3 before it answered, and wrote:\nnope" }
+  FAILS = -> (_) { raise CrossLint::Core::PluginError, "called helper fails, which exited with status 3 before it answered, and wrote:\nnope" }
 
-  def helpers_port = CrossLint::Adapters::MemoryHelpers.new({"tests/echo" => ->(input) { {"echo" => input} }, "tests/fails" => FAILS}, commands: ["sh"])
+  def helpers_port = CrossLint::Adapters::MemoryHelpers.new({ "tests/echo" => -> (input) { { "echo" => input } }, "tests/fails" => FAILS }, commands: ["sh"])
 
   def helper_root = "/memory/app"
 

@@ -19,8 +19,10 @@ class MemorySharedPluginsTest < Minitest::Test
 
   def setup
     @err = StringIO.new
-    @repositories = {URL => Repository.new(tags: CrossLint::Testing::SharedPluginsContract::TAGS.to_h { |tag| [tag, "/cache/#{tag}/signatures"] },
-      branches: ["main"], commits: {SHA => "/cache/#{SHA}/signatures"})}
+    @repositories = {
+URL => Repository.new(tags: CrossLint::Testing::SharedPluginsContract::TAGS.to_h { |tag| [tag, "/cache/#{tag}/signatures"] },
+  branches: ["main"], commits: { SHA => "/cache/#{SHA}/signatures" }),
+}
   end
 
   def shared_plugins_port = CrossLint::Adapters::MemorySharedPlugins.new(@repositories, err: @err)
@@ -97,7 +99,7 @@ module Origin
 
     def git(folder, *arguments)
       out, status = Open3.capture2e("git", *arguments, chdir: folder)
-      raise "git #{arguments.join(" ")} failed: #{out}" unless status.success?
+      raise "git #{arguments.join(' ')} failed: #{out}" unless status.success?
 
       out
     end
@@ -321,7 +323,7 @@ class GitSharedPluginsTest < Minitest::Test
 
   def test_leaves_nothing_in_the_cache_when_a_fetch_fails
     assert_raises(Core::FetchError) { port.fetch(repository_url, "main") }
-    assert_raises(Core::FetchError) { port.fetch(repository_url, "0" * 39 + "1") }
+    assert_raises(Core::FetchError) { port.fetch(repository_url, ("0" * 39) + "1") }
 
     assert_empty Dir.children(File.join(@base, "cache", "plugins"))
   end
@@ -334,8 +336,11 @@ class GitSharedPluginsTest < Minitest::Test
     assert_equal ["ls-remote", repository_url, "refs/tags/v1.0.0", "refs/heads/v1.0.0"], commands.first
     assert(repository.all? { |argv| argv[0] == "--git-dir" && argv[2] == "--work-tree" && argv[4, SETTINGS.size] == SETTINGS })
     assert_equal [File.join(File.dirname(repository.first.fetch(1)), "files", "signatures")], repository.map { |argv| argv.fetch(3) }.uniq
-    assert_equal [["init", "-q"], ["fetch", "-q", "--depth", "1", "--no-tags", repository_url, "refs/tags/v1.0.0"],
-      ["checkout", "-q", "--detach", "FETCH_HEAD"]], repository.map { |argv| argv.drop(4 + SETTINGS.size) }
+    assert_equal [
+      ["init", "-q"],
+      ["fetch", "-q", "--depth", "1", "--no-tags", repository_url, "refs/tags/v1.0.0"],
+      ["checkout", "-q", "--detach", "FETCH_HEAD"],
+], repository.map { |argv| argv.drop(4 + SETTINGS.size) }
   end
 
   def test_asks_git_for_no_tags_when_the_ref_is_a_commit
@@ -375,8 +380,14 @@ class GitSharedPluginsTest < Minitest::Test
       "GIT_DIR" => File.join(@base, "elsewhere"), "GIT_TERMINAL_PROMPT" => "1", "GIT_INDEX_FILE" => File.join(@base, "index"))
     port(git: fake("logs.rb", LOGS)).tags(repository_url)
 
-    assert_equal [{"HTTPS_PROXY" => "http://secure.invalid:3128", "HTTP_PROXY" => "http://plain.invalid:3128", "NO_PROXY" => "internal.invalid",
-                   "GIT_TERMINAL_PROMPT" => "0"}], logged.map { |entry| entry.fetch("env") }
+    assert_equal [
+{
+"HTTPS_PROXY" => "http://secure.invalid:3128",
+"HTTP_PROXY" => "http://plain.invalid:3128",
+"NO_PROXY" => "internal.invalid",
+"GIT_TERMINAL_PROMPT" => "0",
+},
+], logged.map { |entry| entry.fetch("env") }
   ensure
     names.zip(before) { |name, value| ENV[name] = value }
   end
@@ -428,7 +439,7 @@ class GitSharedPluginsTest < Minitest::Test
   def test_removes_the_folder_of_a_fetch_that_was_killed_an_hour_ago_and_no_other
     plugins = File.join(@base, "cache", "plugins")
     now = Time.at(1_800_000_000)
-    ages = {".fetching-old" => 3601, ".fetching-hour" => 3600, ".fetching-recent" => 3599, "other-old" => 7200}
+    ages = { ".fetching-old" => 3601, ".fetching-hour" => 3600, ".fetching-recent" => 3599, "other-old" => 7200 }
     ages.each do |name, age|
       FileUtils.mkdir_p(File.join(plugins, name, "files"))
       File.utime(now - age, now - age, File.join(plugins, name))
@@ -463,7 +474,7 @@ class GitSharedPluginsTest < Minitest::Test
   def test_stops_when_it_cant_save_the_copy
     error = denying_renames { assert_raises(Core::FetchError) { port.fetch(repository_url, "v1.0.0") } }
 
-    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(@base, "cache", "plugins"))}: Permission denied/, error.message)
+    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(@base, 'cache', 'plugins'))}: Permission denied/, error.message)
     assert_empty Dir.children(File.join(@base, "cache", "plugins"))
   end
 
@@ -471,7 +482,7 @@ class GitSharedPluginsTest < Minitest::Test
     blocked = write(@base, "blocked", "a file")
     error = assert_raises(Core::FetchError) { port(cache: blocked).fetch(repository_url, "v1.0.0") }
 
-    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(blocked, "plugins"))}: \S.*#{Regexp.escape(blocked)}/, error.message)
+    assert_match(/\Acouldn't write in #{Regexp.escape(File.join(blocked, 'plugins'))}: \S.*#{Regexp.escape(blocked)}/, error.message)
   end
 
   def test_ends_git_and_everything_it_started_at_the_time_limit
@@ -656,28 +667,32 @@ class GitSharedPluginsTest < Minitest::Test
   def test_keeps_its_cache_in_xdg_cache_home_or_dot_cache_in_the_home_folder
     xdg = File.expand_path("/xdg/cache")
     home = -> { File.expand_path("/home/me") }
-    cache = ->(env, where = home) { Adapters::GitSharedPlugins.cache_folder(env, windows: false, home: where) }
+    cache = -> (env, where = home) { Adapters::GitSharedPlugins.cache_folder(env, windows: false, home: where) }
     dot_cache = File.join(home.call, ".cache", "crosslint")
 
     assert_equal [File.join(xdg, "crosslint"), dot_cache, dot_cache, dot_cache],
-      [cache.call({"XDG_CACHE_HOME" => xdg}, -> { raise "no home needed" }), cache.call({}), cache.call({"XDG_CACHE_HOME" => ""}),
-        cache.call({"XDG_CACHE_HOME" => "relative/cache"})]
+      [
+        cache.call({ "XDG_CACHE_HOME" => xdg }, -> { raise "no home needed" }),
+        cache.call({}),
+        cache.call({ "XDG_CACHE_HOME" => "" }),
+        cache.call({ "XDG_CACHE_HOME" => "relative/cache" }),
+]
   end
 
   def test_keeps_its_cache_in_local_app_data_on_windows
     local = File.expand_path("/local")
     home = -> { File.expand_path("/home/me") }
-    cache = ->(env, where = home) { Adapters::GitSharedPlugins.cache_folder(env, windows: true, home: where) }
+    cache = -> (env, where = home) { Adapters::GitSharedPlugins.cache_folder(env, windows: true, home: where) }
     fallback = File.join(home.call, "AppData", "Local", "crosslint", "cache")
 
     assert_equal [File.join(local, "crosslint", "cache"), fallback, fallback],
-      [cache.call({"LOCALAPPDATA" => local}, -> { raise "no home needed" }), cache.call({}), cache.call({"LOCALAPPDATA" => ""})]
+      [cache.call({ "LOCALAPPDATA" => local }, -> { raise "no home needed" }), cache.call({}), cache.call({ "LOCALAPPDATA" => "" })]
   end
 
   def test_keeps_what_it_fetches_in_plugins_in_the_cache_of_the_user_unless_it_is_given_a_folder
     base = File.expand_path("/xdg/cache")
-    unix = Adapters::GitSharedPlugins.new(err: @err, env: {"XDG_CACHE_HOME" => base}, windows: false)
-    windows = Adapters::GitSharedPlugins.new(err: @err, env: {"LOCALAPPDATA" => base}, windows: true)
+    unix = Adapters::GitSharedPlugins.new(err: @err, env: { "XDG_CACHE_HOME" => base }, windows: false)
+    windows = Adapters::GitSharedPlugins.new(err: @err, env: { "LOCALAPPDATA" => base }, windows: true)
     url = "https://example.com/OWNER/signatures"
 
     assert_equal [File.join(base, "crosslint", "plugins"), File.join(base, "crosslint", "cache", "plugins")],
@@ -706,7 +721,7 @@ class GitSharedPluginsTest < Minitest::Test
   end
 
   def test_keeps_its_cache_where_this_system_keeps_one_unless_it_is_told_otherwise
-    env = {"XDG_CACHE_HOME" => File.expand_path("/xdg/cache"), "LOCALAPPDATA" => File.expand_path("/local")}
+    env = { "XDG_CACHE_HOME" => File.expand_path("/xdg/cache"), "LOCALAPPDATA" => File.expand_path("/local") }
     url = "https://example.com/OWNER/signatures"
     caches = [true, false].map do |windows|
       as_windows(windows) { File.dirname(Adapters::GitSharedPlugins.new(err: @err, env:).folder(url, "v1.0.0"), 2) }
@@ -719,7 +734,7 @@ class GitSharedPluginsTest < Minitest::Test
     saved = fake("saved.rb", "puts \"abc\\trefs/tags/\#{ENV.fetch(\"CROSSLINT_SAVED\")}-\#{ENV.fetch(\"BUNDLER_ORIG_CROSSLINT_SAVED\", \"none\")}\"\n")
     ENV["CROSSLINT_SAVED"] = "after"
 
-    assert_equal ["before-none"], port(git: saved, env: {"BUNDLER_ORIG_CROSSLINT_SAVED" => "before"}).tags(repository_url)
+    assert_equal ["before-none"], port(git: saved, env: { "BUNDLER_ORIG_CROSSLINT_SAVED" => "before" }).tags(repository_url)
   ensure
     ENV.delete("CROSSLINT_SAVED")
   end
@@ -745,21 +760,21 @@ class GitSharedPluginsTest < Minitest::Test
   end
 
   def test_unsets_each_git_variable_and_no_other
-    assert_equal({"GIT_DIR" => nil, "GIT_INDEX_FILE" => nil}, Adapters::GitEnvironment.cleared({"GIT_DIR" => "x", "PATH" => "y", "GIT_INDEX_FILE" => "z", "XGIT_A" => "b"}))
+    assert_equal({ "GIT_DIR" => nil, "GIT_INDEX_FILE" => nil }, Adapters::GitEnvironment.cleared({ "GIT_DIR" => "x", "PATH" => "y", "GIT_INDEX_FILE" => "z", "XGIT_A" => "b" }))
     assert_equal ENV.keys.grep(/\AGIT_/).sort, Adapters::GitEnvironment.cleared.keys.sort
   end
 
   def test_unsets_a_git_variable_whatever_its_case_on_windows_and_only_there
-    env = {"Git_Dir" => "x", "git_index_file" => "y", "PATH" => "p", "XGIT_A" => "b", "GIT_WORK_TREE" => "z"}
+    env = { "Git_Dir" => "x", "git_index_file" => "y", "PATH" => "p", "XGIT_A" => "b", "GIT_WORK_TREE" => "z" }
 
-    assert_equal({"Git_Dir" => nil, "git_index_file" => nil, "GIT_WORK_TREE" => nil}, Adapters::GitEnvironment.cleared(env, windows: true))
-    assert_equal({"GIT_WORK_TREE" => nil}, Adapters::GitEnvironment.cleared(env, windows: false))
+    assert_equal({ "Git_Dir" => nil, "git_index_file" => nil, "GIT_WORK_TREE" => nil }, Adapters::GitEnvironment.cleared(env, windows: true))
+    assert_equal({ "GIT_WORK_TREE" => nil }, Adapters::GitEnvironment.cleared(env, windows: false))
   end
 
   def test_unsets_a_git_variable_in_any_case_when_this_is_windows_and_only_then_unless_it_is_told_otherwise
-    env = {"Git_Dir" => "x", "GIT_WORK_TREE" => "z"}
+    env = { "Git_Dir" => "x", "GIT_WORK_TREE" => "z" }
 
-    assert_equal [{"Git_Dir" => nil, "GIT_WORK_TREE" => nil}, {"GIT_WORK_TREE" => nil}],
+    assert_equal [{ "Git_Dir" => nil, "GIT_WORK_TREE" => nil }, { "GIT_WORK_TREE" => nil }],
       [as_windows(true) { Adapters::GitEnvironment.cleared(env) }, as_windows(false) { Adapters::GitEnvironment.cleared(env) }]
   end
 
@@ -786,11 +801,11 @@ class GitSharedPluginsTest < Minitest::Test
   # writes to the test's `said`. A String as the first argument names
   # another cache, beside the first.
   def port(name = nil, **options)
-    options = {cache: File.join(@base, name || "cache"), schemes: ["https://", "file://"], err: @err}.merge(options)
+    options = { cache: File.join(@base, name || "cache"), schemes: ["https://", "file://"], err: @err }.merge(options)
     Adapters::GitSharedPlugins.new(**options)
   end
 
-  def git(folder, *arguments) = Origin.git(folder, *arguments)
+  def git(folder, *) = Origin.git(folder, *)
 
   def commit(message)
     git(@origin, "add", "-A")
@@ -822,7 +837,7 @@ class GitSharedPluginsTest < Minitest::Test
   def logging
     log = File.join(@base, "fakes", "log.jsonl")
     FileUtils.mkdir_p(File.dirname(log))
-    StringIO.new.tap { |err| err.define_singleton_method(:puts) { |line| File.write(log, "#{JSON.generate({"said" => line})}\n", mode: "a") } }
+    StringIO.new.tap { |err| err.define_singleton_method(:puts) { |line| File.write(log, "#{JSON.generate({ 'said' => line })}\n", mode: "a") } }
   end
 
   # A tree class that holds nothing: it pushes the pipes and waiter of each

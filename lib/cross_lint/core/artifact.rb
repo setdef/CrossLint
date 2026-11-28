@@ -10,10 +10,10 @@ module CrossLint
       def exist? = exists
 
       def explanation
-        return %(piece #{name.dump} at #{[path, line].compact.join(":")} exists) if exists
+        return %(piece #{name.dump} at #{[path, line].compact.join(':')} exists) if exists
         return %(piece #{name.dump} at #{path} is missing) if readable.nil?
 
-        %(piece #{name.dump} is missing, since #{path} #{readable ? "has no match of its regex" : "isn't a file"})
+        %(piece #{name.dump} is missing, since #{path} #{readable ? 'has no match of its regex' : "isn't a file"})
       end
     end
 
@@ -27,7 +27,7 @@ module CrossLint
       def explanation
         named = ", named #{name}" unless name == path
         keyed = ", with key #{key}" if key
-        "#{plugin}/#{role} #{location}#{named}#{keyed}: #{pieces.empty? ? "no piece but its primary" : pieces.map(&:explanation).join("; ")}"
+        "#{plugin}/#{role} #{location}#{named}#{keyed}: #{pieces.empty? ? 'no piece but its primary' : pieces.map(&:explanation).join('; ')}"
       end
 
       def piece(name)

@@ -127,10 +127,10 @@ class CLITest < Minitest::Test
   end
 
   def test_shows_where_a_bug_stopped_it_when_debug_is_set
-    _, err, = run_cli(spec: BrokenSpec.new(RuntimeError.new("boom")), env: {"DEBUG" => "1"})
+    _, err, = run_cli(spec: BrokenSpec.new(RuntimeError.new("boom")), env: { "DEBUG" => "1" })
 
     assert_match(/\Acrosslint:   from /, err.lines[2])
-    _, err, = run_cli(spec: BrokenSpec.new(RuntimeError.new("boom")), env: {"DEBUG" => ""})
+    _, err, = run_cli(spec: BrokenSpec.new(RuntimeError.new("boom")), env: { "DEBUG" => "" })
 
     assert_equal "crosslint: run it again with --debug to see where it stopped\n", err.lines[2]
   end
@@ -142,16 +142,19 @@ class CLITest < Minitest::Test
   end
 
   def test_check_prints_each_violation_and_the_summary_and_exits_with_1
-    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n",
-      "crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], check("check", app: app)
+    assert_equal [
+      "lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n",
+      "crosslint: checked 2 ruby-file artifacts: 1 error\n",
+      1,
+], check("check", app:)
   end
 
   # On a terminal, the first line comes before CrossLint reads any project
   # file beyond its configuration, or starts a helper, so a large project
   # never sits silent while a rule reads its files.
   def test_check_says_what_it_is_checking_first_when_standard_error_is_a_terminal
-    assert_equal "crosslint: checking 2 ruby-file artifacts\ncrosslint: checked 2 ruby-file artifacts: 1 error\n", check("check", app: app, err_tty: true)[1]
-    assert_equal "", check("check", "--quiet", app: app, err_tty: true)[1]
+    assert_equal "crosslint: checking 2 ruby-file artifacts\ncrosslint: checked 2 ruby-file artifacts: 1 error\n", check("check", app:, err_tty: true)[1]
+    assert_equal "", check("check", "--quiet", app:, err_tty: true)[1]
   end
 
   def test_check_exits_with_0_when_every_check_passes
@@ -162,23 +165,26 @@ class CLITest < Minitest::Test
   def test_check_finds_the_project_from_the_project_flag
     summary = "crosslint: checked 2 ruby-file artifacts: 1 error\n"
 
-    assert_equal summary, check("check", "-C", "#{WORK}/app/lib", app: app)[1]
-    assert_equal summary, check("check", "--project", "#{WORK}/app", app: app)[1]
-    assert_match(/\Acrosslint: no \.config\/crosslint\/config\.kdl in .*elsewhere or any folder above it/,
-      check("check", "-C", "#{TOP}elsewhere", app: app)[1])
+    assert_equal summary, check("check", "-C", "#{WORK}/app/lib", app:)[1]
+    assert_equal summary, check("check", "--project", "#{WORK}/app", app:)[1]
+    assert_match(%r{\Acrosslint: no \.config/crosslint/config\.kdl in .*elsewhere or any folder above it},
+      check("check", "-C", "#{TOP}elsewhere", app:)[1])
   end
 
   def test_check_writes_a_path_in_a_message_as_it_is
-    message = check("check", "-C", "#{TOP}elsewhere/café", app: app)[1]
+    message = check("check", "-C", "#{TOP}elsewhere/café", app:)[1]
 
-    assert_match(/\Acrosslint: no \.config\/crosslint\/config\.kdl in .*elsewhere\/café or any folder above it/, message)
+    assert_match(%r{\Acrosslint: no \.config/crosslint/config\.kdl in .*elsewhere/café or any folder above it}, message)
   end
 
   def test_check_takes_warnings_from_the_flag_over_the_configuration
     warned = app(severity: :warning)
 
-    assert_equal ["lib/b.rb: warning: no test file at test/b_test.rb (tests/has-test)\n",
-      "crosslint: checked 2 ruby-file artifacts: 1 warning\n", 0], check("check", app: warned)
+    assert_equal [
+      "lib/b.rb: warning: no test file at test/b_test.rb (tests/has-test)\n",
+      "crosslint: checked 2 ruby-file artifacts: 1 warning\n",
+      0,
+], check("check", app: warned)
     assert_equal 1, check("check", "--warnings=error", app: warned)[2]
     assert_equal ["", "crosslint: checked 2 ruby-file artifacts: no errors\n", 0], check("check", "--warnings", "none", app: warned)
     assert_equal 1, check("check", app: app(severity: :warning, warnings: :error))[2]
@@ -186,19 +192,19 @@ class CLITest < Minitest::Test
   end
 
   def test_check_prints_only_what_fails_with_quiet
-    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", "-q", app: app)
+    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", "-q", app:)
     assert_equal ["", "", 0], check("check", "--quiet", app: app(severity: :warning))
     assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", app: app(verbosity: :quiet))
   end
 
   def test_check_prints_nothing_with_silent
-    assert_equal ["", "", 1], check("check", "-s", app: app)
-    assert_equal ["", "", 1], check("check", "--silent", "--quiet", app: app)
+    assert_equal ["", "", 1], check("check", "-s", app:)
+    assert_equal ["", "", 1], check("check", "--silent", "--quiet", app:)
     assert_equal ["", "", 1], check("check", app: app(verbosity: :silent))
   end
 
   def test_check_lists_no_passing_artifact_with_all_and_quiet
-    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", "--all", "--quiet", app: app)
+    assert_equal ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "", 1], check("check", "--all", "--quiet", app:)
     assert_equal ["", "", 0], check("check", "--all", "-q", app: app(files: ["lib/a.rb", "test/a_test.rb"]))
   end
 
@@ -211,24 +217,35 @@ class CLITest < Minitest::Test
 
   def test_check_lists_passing_artifacts_with_all
     assert_equal "lib/a.rb: ruby-file passes\nlib/b.rb: no test file at test/b_test.rb (tests/has-test)\n",
-      check("check", "-a", app: app)[0]
-    assert_equal check("check", "-a", app: app), check("check", "--all", app: app)
+      check("check", "-a", app:)[0]
+    assert_equal check("check", "-a", app:), check("check", "--all", app:)
   end
 
   def test_check_prints_json_with_json
-    out, err, status = check("check", "--json", app: app)
+    out, err, status = check("check", "--json", app:)
 
-    assert_equal [{"path" => "lib/b.rb", "message" => "no test file at test/b_test.rb", "plugin" => "tests", "policy" => "has-test",
-                   "artifact" => "lib/b.rb", "role" => "ruby-file", "severity" => "error", "detail" => "test", "line" => nil}], JSON.parse(out).fetch("findings")
+    assert_equal [
+{
+"path" => "lib/b.rb",
+"message" => "no test file at test/b_test.rb",
+"plugin" => "tests",
+"policy" => "has-test",
+"artifact" => "lib/b.rb",
+"role" => "ruby-file",
+"severity" => "error",
+"detail" => "test",
+"line" => nil,
+},
+], JSON.parse(out).fetch("findings")
     assert_equal ["crosslint_version", CrossLint::UsageSpec.load.version], JSON.parse(out).first
     assert_equal ["crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], [err, status]
   end
 
   def test_check_takes_only_the_flags_the_usage_spec_gives_it
     assert_equal ["", "crosslint: crosslint check has no flag --update-debt; crosslint check --help lists them\n", 2],
-      check("check", "--update-debt", app: app)
-    assert_equal ["", "crosslint: crosslint check has no flag --upate; crosslint check --help lists them\n", 2], check("check", "--upate", app: app)
-    assert_equal 1, check("check", "--warnings=error", "--all", "--json", "--quiet", app: app)[2]
+      check("check", "--update-debt", app:)
+    assert_equal ["", "crosslint: crosslint check has no flag --upate; crosslint check --help lists them\n", 2], check("check", "--upate", app:)
+    assert_equal 1, check("check", "--warnings=error", "--all", "--json", "--quiet", app:)[2]
   end
 
   def test_a_plugins_command_runs_the_check_and_tells_the_plugins_step_its_name
@@ -262,8 +279,12 @@ class CLITest < Minitest::Test
 
   def test_a_plugins_command_takes_the_flags_it_declares_and_tells_its_step
     project = app(debt: true)
-    expected = ["lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n", "crosslint: would add tests/has-test on lib/b.rb (test)\ncrosslint: would write .config/crosslint/debt.tsv: 1 entry added, 0 removed\n" \
-      "crosslint: checked 2 ruby-file artifacts: 1 error\n", 0]
+    expected = [
+      "lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n",
+      "crosslint: would add tests/has-test on lib/b.rb (test)\ncrosslint: would write .config/crosslint/debt.tsv: 1 entry added, 0 removed\n" \
+        "crosslint: checked 2 ruby-file artifacts: 1 error\n",
+      0,
+]
 
     assert_equal expected, check("debt", "update", "--dry-run", app: project)
     assert_equal expected, check("debt", "update", "-n", app: project)
@@ -301,7 +322,7 @@ class CLITest < Minitest::Test
 
   def test_a_flag_of_a_plugin_that_isnt_listed_stops_as_one_of_no_command_does_and_one_of_a_project_that_cant_be_read_with_its_mistake
     assert_equal ["", "crosslint: crosslint debt update has no flag --dry-run; crosslint debt update --help lists them\n", 2],
-      check("debt", "update", "--dry-run", app: app)
+      check("debt", "update", "--dry-run", app:)
     broken = app(broken: CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl"))
 
     assert_equal ["", "crosslint: .config/crosslint/config.kdl: lists nothing\n", 2], check("debt", "update", "--dry-run", app: broken)
@@ -312,7 +333,7 @@ class CLITest < Minitest::Test
     out, err, status = check("debt", "update", "--dry-run", app: app(debt: true, debt_flags: [flag]))
 
     assert_equal ["", 2], [out, status]
-    assert_match(/\Acrosslint: debt\/plugin\.kdl:9: plugin debt in .* gives command "update" the flag -q, which is a global flag of CrossLint; name the flag another way\n\z/, err)
+    assert_match(%r{\Acrosslint: debt/plugin\.kdl:9: plugin debt in .* gives command "update" the flag -q, which is a global flag of CrossLint; name the flag another way\n\z}, err)
   end
 
   def test_a_plugins_command_help_shows_its_flags_as_a_command_of_crosslints_own_does
@@ -325,7 +346,7 @@ class CLITest < Minitest::Test
 
   def test_a_plugins_command_stops_with_2_naming_what_is_missing
     assert_equal ["", "crosslint: debt update is a command of the debt plugin, which .config/crosslint/config.kdl doesn't list\n", 2],
-      check("debt", "update", app: app)
+      check("debt", "update", app:)
     assert_equal ["", "crosslint: crosslint debt has no command updat; did you mean update?\n", 2], check("debt", "updat", app: app(debt: true))
     assert_equal ["", "crosslint: crosslint has no command chekc, and the configuration lists no plugin of that name; did you mean check?\n", 2],
       check("chekc", "now", app: app(debt: true))
@@ -333,7 +354,7 @@ class CLITest < Minitest::Test
 
   def test_a_word_that_is_a_flags_name_stops_with_2_and_names_the_flag
     assert_equal ["", "crosslint: crosslint has no command version, and the configuration lists no plugin of that name; did you mean --version?\n", 2],
-      check("version", app: app)
+      check("version", app:)
     assert_equal ["", "crosslint: crosslint has no command quiet, and the configuration lists no plugin of that name; did you mean --quiet?\n", 2],
       check("quiet", app: app(debt: true))
   end
@@ -384,7 +405,7 @@ class CLITest < Minitest::Test
     assert_equal [["", 0], true], [[err, status], out.include?("\nPlugin commands:\n  debt update  Rewrite the debt file to list the current violations\n\nFlags:\n")]
     assert_equal [out, "", 0], helping("help", app: app(debt: true))
     assert_equal [out, "", 0], helping("-h", app: app(debt: true))
-    refute_includes helping("--help", app: app)[0], "Plugin commands"
+    refute_includes helping("--help", app:)[0], "Plugin commands"
   end
 
   def test_help_of_a_command_of_crosslint_reads_no_project
@@ -464,10 +485,10 @@ class CLITest < Minitest::Test
   def test_help_for_a_word_that_names_no_plugin_or_command_stops_with_2
     assert_equal ["", "crosslint: crosslint debt has no command updat; did you mean update?\n", 2], helping("debt", "updat", "--help", app: app(debt: true))
     assert_equal ["", "crosslint: debt update is a command of the debt plugin, which .config/crosslint/config.kdl doesn't list\n", 2],
-      helping("help", "debt", "update", app: app)
+      helping("help", "debt", "update", app:)
     assert_equal ["", "crosslint: crosslint has no command zzzzzz, and the configuration lists no plugin of that name; crosslint --help lists the commands\n", 2],
-      helping("help", "zzzzzz", app: app)
-    assert_equal ["", "crosslint: tests is a plugin the configuration lists, and it adds no commands\n", 2], helping("help", "tests", app: app)
+      helping("help", "zzzzzz", app:)
+    assert_equal ["", "crosslint: tests is a plugin the configuration lists, and it adds no commands\n", 2], helping("help", "tests", app:)
   end
 
   def test_help_for_a_plugin_that_cant_be_read_prints_the_programs_help_unless_the_word_is_a_typo_of_a_command
@@ -527,16 +548,16 @@ class CLITest < Minitest::Test
     red = "lib/b.rb: \e[31mno test file at test/b_test.rb\e[0m (tests/has-test)\n"
     plain = "lib/b.rb: no test file at test/b_test.rb (tests/has-test)\n"
 
-    assert_equal plain, check("check", app: app)[0]
-    assert_equal red, check("check", app: app, tty: true)[0]
-    assert_equal red, check("check", app: app, env: {"FORCE_COLOR" => "1"})[0]
-    assert_equal plain, check("check", app: app, env: {"FORCE_COLOR" => ""})[0]
-    assert_equal plain, check("check", "--no-color", app: app, tty: true, env: {"FORCE_COLOR" => "1"})[0]
-    assert_equal plain, check("check", app: app, tty: true, env: {"NO_COLOR" => "1", "FORCE_COLOR" => "1"})[0]
-    assert_equal red, check("check", app: app, tty: true, env: {"NO_COLOR" => ""})[0]
-    assert_equal plain, check("check", app: app, tty: true, env: {"TERM" => "dumb", "FORCE_COLOR" => "1"})[0]
-    assert_equal red, check("check", app: app, tty: true, env: {"TERM" => "xterm"})[0]
-    refute_includes check("check", "--json", app: app, tty: true)[0], "\e["
+    assert_equal plain, check("check", app:)[0]
+    assert_equal red, check("check", app:, tty: true)[0]
+    assert_equal red, check("check", app:, env: { "FORCE_COLOR" => "1" })[0]
+    assert_equal plain, check("check", app:, env: { "FORCE_COLOR" => "" })[0]
+    assert_equal plain, check("check", "--no-color", app:, tty: true, env: { "FORCE_COLOR" => "1" })[0]
+    assert_equal plain, check("check", app:, tty: true, env: { "NO_COLOR" => "1", "FORCE_COLOR" => "1" })[0]
+    assert_equal red, check("check", app:, tty: true, env: { "NO_COLOR" => "" })[0]
+    assert_equal plain, check("check", app:, tty: true, env: { "TERM" => "dumb", "FORCE_COLOR" => "1" })[0]
+    assert_equal red, check("check", app:, tty: true, env: { "TERM" => "xterm" })[0]
+    refute_includes check("check", "--json", app:, tty: true)[0], "\e["
   end
 
   def test_check_warns_of_each_ruby_rule_no_policy_runs
@@ -557,7 +578,7 @@ class CLITest < Minitest::Test
       # repository in a folder above.
       write(folder, "app/.git", "gitdir: nowhere\n")
       FileUtils.mkdir_p(File.join(folder, "app/lib"))
-      outside = ->(root) { "crosslint: #{root} isn't in a Git working tree, and CrossLint lists a project's files with Git; run git init in the project's root\n" }
+      outside = -> (root) { "crosslint: #{root} isn't in a Git working tree, and CrossLint lists a project's files with Git; run git init in the project's root\n" }
 
       Dir.chdir(File.join(folder, "app/lib")) { assert_equal ["", outside.call(File.dirname(Dir.pwd)), 2], check("check") }
       Dir.chdir(folder) { assert_equal ["", outside.call(File.join(Dir.pwd, "app")), 2], check("check", "-C", "app/lib") }
@@ -567,8 +588,12 @@ class CLITest < Minitest::Test
   def test_check_reports_a_fault_and_exits_with_2
     fault = "crosslint: fault in plugin tests: rule raises on lib/a.rb raised RuntimeError: boom\n"
 
-    assert_equal ["", "#{fault}crosslint: run it again with --debug to see where each fault was raised\n" \
-      "crosslint: checked 2 ruby-file artifacts: 1 fault\n", 2], check("check", app: app(raises: true))
+    assert_equal [
+      "",
+      "#{fault}crosslint: run it again with --debug to see where each fault was raised\n" \
+        "crosslint: checked 2 ruby-file artifacts: 1 fault\n",
+      2,
+], check("check", app: app(raises: true))
     assert_equal ["", fault, 2], check("check", "--silent", app: app(raises: true))
     debugged = check("check", "--debug", app: app(raises: true))[1].lines
 
@@ -600,7 +625,7 @@ class CLITest < Minitest::Test
       Open3.capture3("git", "init", "-q", chdir: project)
       plain_out, plain_err, = check("check", "-C", project, "--json")
 
-      [check("check", "-C", project, "--json", "--debug"), check("check", "-C", project, "--json", env: {"DEBUG" => "1"})].each do |out, err, status|
+      [check("check", "-C", project, "--json", "--debug"), check("check", "-C", project, "--json", env: { "DEBUG" => "1" })].each do |out, err, status|
         assert_equal [plain_out, 1], [out, status]
         assert_equal plain_err, err.lines.grep_v(/\Acrosslint: debug: /).join
         assert_includes err.lines, "crosslint: debug: file a.md\n"
@@ -620,7 +645,7 @@ class CLITest < Minitest::Test
         assert_includes check("check", "-C", project, *flags)[1].lines, "crosslint: debug: file a.md\n", flags.inspect
       end
       %w[--silent --quiet].each do |flag|
-        assert_includes check("check", "-C", project, flag, env: {"DEBUG" => "1"})[1].lines, "crosslint: debug: file a.md\n", flag
+        assert_includes check("check", "-C", project, flag, env: { "DEBUG" => "1" })[1].lines, "crosslint: debug: file a.md\n", flag
       end
     end
   end
@@ -684,8 +709,12 @@ class CLITest < Minitest::Test
     tags = %w[v1.0.0 v1.2.0 v2.0.0]
     app, configuration = update_app(one: tags)
 
-    assert_equal ["", "crosslint: #{ONE}: moved from v1.0.0 to v1.2.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0, or, when v2.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads\n" \
-      "crosslint: #{TWO}: is at its newest tag, v3.0.0\n", 0], update("update", app:)
+    assert_equal [
+      "",
+      "crosslint: #{ONE}: moved from v1.0.0 to v1.2.0; newer incompatible versions: v2.0.0; crosslint update --latest moves to v2.0.0, or, when v2.0.0 needs a newer CrossLint, to the newest tag below it that this CrossLint reads\n" \
+        "crosslint: #{TWO}: is at its newest tag, v3.0.0\n",
+      0,
+], update("update", app:)
     assert_equal "v1.2.0", configuration.read("#{WORK}/app").plugins.first.ref
 
     app, configuration = update_app(one: tags)
@@ -761,11 +790,14 @@ class CLITest < Minitest::Test
   end
 
   def test_init_from_ng_nudge_says_each_change_before_it_makes_it_and_what_to_do_next
-    app, configuration, debt_files = ng_nudge_app({"srcDir" => "./app/"})
-    lines = ["crosslint: will write .config/crosslint/config.kdl, with the plugins angular and debt\n",
+    app, configuration, debt_files = ng_nudge_app({ "srcDir" => "./app/" })
+    lines = [
+      "crosslint: will write .config/crosslint/config.kdl, with the plugins angular and debt\n",
       "crosslint: will move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 0 entries\n",
       %(crosslint: will convert srcDir "./app/" to src-dir "app"\n),
-      %(crosslint: will set src-dir "app" in the angular plugin\n), "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n"]
+      %(crosslint: will set src-dir "app" in the angular plugin\n),
+      "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n",
+]
 
     assert_equal ["", lines.join, 0], init("init", "--from-ng-nudge", app:)
     assert_equal [%w[angular debt], false], [configuration.read("#{WORK}/app").plugins.map(&:name), debt_files.exist?("#{WORK}/app", ".config/ng-nudge/debt.tsv")]
@@ -774,14 +806,18 @@ class CLITest < Minitest::Test
   end
 
   def test_init_from_ng_nudge_says_each_file_node_glob_and_crosslint_find_differently_after_the_changes_and_before_what_to_do_next
-    app, = ng_nudge_app({}, globs: {"**/*.pipe.ts" => %w[a.pipe.ts]}, files: %w[src/b.pipe.ts])
+    app, = ng_nudge_app({}, globs: { "**/*.pipe.ts" => %w[a.pipe.ts] }, files: %w[src/b.pipe.ts])
     err = init("init", "--from-ng-nudge", app:)[1]
 
-    assert_equal ["crosslint: will write .config/crosslint/config.kdl, with the plugins angular and debt\n",
+    assert_equal [
+      "crosslint: will write .config/crosslint/config.kdl, with the plugins angular and debt\n",
       "crosslint: will move .config/ng-nudge/debt.tsv to .config/crosslint/debt.tsv, byte for byte, with 0 entries\n",
-      "crosslint: node-glob finds src/a.pipe.ts as a pipe, and CrossLint doesn't\n", "crosslint: CrossLint finds src/b.pipe.ts as a pipe, and node-glob doesn't\n",
-      "crosslint: #{CrossLint::Core::NgNudge::Move::WHY}\n", "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n"], err.lines
-    assert_equal "", init("init", "--from-ng-nudge", "--silent", app: ng_nudge_app({}, globs: {"**/*.pipe.ts" => %w[a.pipe.ts]}).first)[1]
+      "crosslint: node-glob finds src/a.pipe.ts as a pipe, and CrossLint doesn't\n",
+      "crosslint: CrossLint finds src/b.pipe.ts as a pipe, and node-glob doesn't\n",
+      "crosslint: #{CrossLint::Core::NgNudge::Move::WHY}\n",
+      "crosslint: #{CrossLint::CLI::NEXT_STEPS}\n",
+], err.lines
+    assert_equal "", init("init", "--from-ng-nudge", "--silent", app: ng_nudge_app({}, globs: { "**/*.pipe.ts" => %w[a.pipe.ts] }).first)[1]
   end
 
   def test_init_from_ng_nudge_moves_a_project_and_says_the_differences_with_a_glob_the_project_has_and_git
@@ -837,26 +873,40 @@ class CLITest < Minitest::Test
   end
 
   def test_init_from_ng_nudge_names_the_key_it_cannot_carry_and_exits_with_2
-    app, configuration, = ng_nudge_app({"rules" => {"has-debt" => {"withComment" => 3}}})
+    app, configuration, = ng_nudge_app({ "rules" => { "has-debt" => { "withComment" => 3 } } })
 
-    assert_equal ["", "crosslint: .config/ng-nudge/rc.json: rules.has-debt.withComment: is 3, and it takes true, false, \"none\", \"warning\", \"error\", " \
-      "or an object with maxSeverity and matching\n", 2], init("init", "--from-ng-nudge", app:)
+    assert_equal [
+      "",
+      "crosslint: .config/ng-nudge/rc.json: rules.has-debt.withComment: is 3, and it takes true, false, \"none\", \"warning\", \"error\", " \
+        "or an object with maxSeverity and matching\n",
+      2,
+], init("init", "--from-ng-nudge", app:)
     refute configuration.exist?("#{WORK}/app")
   end
 
   def test_init_from_ng_nudge_says_every_problem_on_a_line_of_its_own_and_exits_with_2
-    app, configuration, = ng_nudge_app({"srcDir" => "../x", "options" => {"verbosity" => "loud"}})
+    app, configuration, = ng_nudge_app({ "srcDir" => "../x", "options" => { "verbosity" => "loud" } })
 
-    assert_equal ["", "crosslint: .config/ng-nudge/rc.json: srcDir: is \"../x\", which is outside the project; write a path inside it, relative to the project's root\n" \
-      "crosslint: .config/ng-nudge/rc.json: options.verbosity: is \"loud\", and it takes \"normal\", \"quiet\", or \"silent\"\n", 2], init("init", "--from-ng-nudge", app:)
+    assert_equal [
+      "",
+      "crosslint: .config/ng-nudge/rc.json: srcDir: is \"../x\", which is outside the project; write a path inside it, relative to the project's root\n" \
+        "crosslint: .config/ng-nudge/rc.json: options.verbosity: is \"loud\", and it takes \"normal\", \"quiet\", or \"silent\"\n",
+      2,
+], init("init", "--from-ng-nudge", app:)
     refute configuration.exist?("#{WORK}/app")
   end
 
   def test_init_from_ng_nudge_moves_a_project_with_the_real_files_and_node
     Dir.mktmpdir do |project|
-      rc = {"srcDir" => "./app/", "artifacts" => {"store" => {"pattern" => "**/*.store.ts", "expects" => ["spec"]}},
-            "rules" => {"has-debt" => {"severity" => "warning", "withComment" => {"maxSeverity" => "warning", "matching" => "^ticket-\\d+\\b"}},
-                        "prefer-css-over-scss" => {"enabled" => false}}, "options" => {"verbosity" => "quiet"}}
+      rc = {
+"srcDir" => "./app/",
+"artifacts" => { "store" => { "pattern" => "**/*.store.ts", "expects" => ["spec"] } },
+"rules" => {
+"has-debt" => { "severity" => "warning", "withComment" => { "maxSeverity" => "warning", "matching" => "^ticket-\\d+\\b" } },
+"prefer-css-over-scss" => { "enabled" => false },
+},
+"options" => { "verbosity" => "quiet" },
+}
       debt = "Rule\tArtifact\tComment\r\nspec-exists\tapp/card\tticket-12 later\r\nstub-exists\tapp/list\t\r\n"
       File.binwrite(File.join(project, ".config/ng-nudge/rc.json").tap { |path| FileUtils.mkdir_p(File.dirname(path)) }, JSON.generate(rc))
       File.binwrite(File.join(project, ".config/ng-nudge/debt.tsv"), debt)
@@ -889,14 +939,14 @@ class CLITest < Minitest::Test
 
   def test_init_from_ng_nudge_refuses_a_matching_when_node_is_not_there_and_changes_nothing
     Dir.mktmpdir do |project|
-      rc = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "none", "matching" => "^TODO"}}}}
+      rc = { "rules" => { "has-debt" => { "withComment" => { "maxSeverity" => "none", "matching" => "^TODO" } } } }
       write(project, ".config/ng-nudge/rc.json", JSON.generate(rc))
       write(project, ".config/ng-nudge/debt.tsv", "Rule\tArtifact\tComment\nspec-exists\tapp/card\tTODO\n")
       app = CrossLint::App.new(javascript: CrossLint::Adapters::NodeJavaScript.new(command: "crosslint-no-such-node"))
       out, err, status = run_cli("init", "--from-ng-nudge", "-C", project, spec: shipped_spec, app:)
 
       assert_equal ["", 2], [out, status]
-      assert_match(/\Acrosslint: \.config\/ng-nudge\/rc\.json: rules\.has-debt\.withComment\.matching: CrossLint tests the expression, "\^TODO", with JavaScript on each comment of the debt file, and couldn't run crosslint-no-such-node/, err)
+      assert_match(%r{\Acrosslint: \.config/ng-nudge/rc\.json: rules\.has-debt\.withComment\.matching: CrossLint tests the expression, "\^TODO", with JavaScript on each comment of the debt file, and couldn't run crosslint-no-such-node}, err)
       refute File.exist?(File.join(project, ".config/crosslint"))
       assert File.exist?(File.join(project, ".config/ng-nudge/debt.tsv"))
     end
@@ -905,13 +955,13 @@ class CLITest < Minitest::Test
   def test_init_from_ng_nudge_refuses_a_matching_node_rejects_and_says_what_node_said_and_changes_nothing
     ["^*", "\\b+", "${2}"].each do |expression|
       Dir.mktmpdir do |project|
-        rc = {"rules" => {"has-debt" => {"withComment" => {"maxSeverity" => "none", "matching" => expression}}}}
+        rc = { "rules" => { "has-debt" => { "withComment" => { "maxSeverity" => "none", "matching" => expression } } } }
         write(project, ".config/ng-nudge/rc.json", JSON.generate(rc))
         write(project, ".config/ng-nudge/debt.tsv", "Rule\tArtifact\tComment\n")
         out, err, status = run_cli("init", "--from-ng-nudge", "-C", project, spec: shipped_spec)
 
         assert_equal ["", 2], [out, status]
-        assert_match(/\Acrosslint: \.config\/ng-nudge\/rc\.json: rules\.has-debt\.withComment\.matching: is #{Regexp.escape(expression.dump)}, which JavaScript refuses: Invalid regular expression: .*: Nothing to repeat; write it another way, or remove it\n\z/, err)
+        assert_match(%r{\Acrosslint: \.config/ng-nudge/rc\.json: rules\.has-debt\.withComment\.matching: is #{Regexp.escape(expression.dump)}, which JavaScript refuses: Invalid regular expression: .*: Nothing to repeat; write it another way, or remove it\n\z}, err)
         refute File.exist?(File.join(project, ".config/crosslint"))
         assert File.exist?(File.join(project, ".config/ng-nudge/debt.tsv"))
       end
@@ -927,7 +977,7 @@ class CLITest < Minitest::Test
   def test_update_builds_the_app_it_needs_and_works_from_the_current_folder_unless_it_is_told_otherwise
     Dir.mktmpdir do |base|
       url = "https://example.test/#{SecureRandom.hex(8)}/signatures"
-      origin = repository_at(File.join(base, "origin", "signatures"), {"plugin.kdl" => ""}, tags: %w[v1.0.0 v1.2.0])
+      origin = repository_at(File.join(base, "origin", "signatures"), { "plugin.kdl" => "" }, tags: %w[v1.0.0 v1.2.0])
       config = write(base, "project/.config/crosslint/config.kdl", %(plugin "#{url}" ref="v1.0.0"\n))
       out, err, status = rewriting(url, origin) { Dir.chdir(File.join(base, "project")) { run_cli("update", spec: shipped_spec) } }
 
@@ -956,10 +1006,12 @@ class CLITest < Minitest::Test
   def update_app(missing: false, one: %w[v1.0.0 v1.2.0])
     core = CrossLint::Core
     plugins = [core::ListedPlugin.new(name: ONE, ref: "v1.0.0", settings: [], line: 1), core::ListedPlugin.new(name: TWO, ref: "v3.0.0", settings: [], line: 2)]
-    configuration = CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => core::Configuration.new(file: ".config/crosslint/config.kdl", plugins:,
-      policies: [], warnings: nil, verbosity: nil)})
-    tags = ->(names) { CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: names.to_h { |name| [name, "/cache/#{name}"] }, branches: [], commits: {}) }
-    repositories = {ONE => tags.call(one)}
+    configuration = CrossLint::Adapters::MemoryConfiguration.new({
+"#{WORK}/app" => core::Configuration.new(file: ".config/crosslint/config.kdl", plugins:,
+  policies: [], warnings: nil, verbosity: nil),
+})
+    tags = -> (names) { CrossLint::Adapters::MemorySharedPlugins::Repository.new(tags: names.to_h { |name| [name, "/cache/#{name}"] }, branches: [], commits: {}) }
+    repositories = { ONE => tags.call(one) }
     repositories[TWO] = tags.call(%w[v3.0.0]) unless missing
     shared_plugins = CrossLint::Adapters::MemorySharedPlugins.new(repositories, err: StringIO.new)
     [CrossLint::App.new(configuration:, shared_plugins:), configuration]
@@ -974,10 +1026,10 @@ class CLITest < Minitest::Test
     configuration = CrossLint::Adapters::MemoryConfiguration.new
     configuration.write(root, core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: [], policies: [], warnings: nil, verbosity: nil)) if existing
     debt = core::DebtFile.new(file: ".config/ng-nudge/debt.tsv", entries: [], header: "Rule\tArtifact\tComment\n")
-    debt_files = CrossLint::Adapters::MemoryDebtFiles.new({File.join(root, ".config/ng-nudge/debt.tsv") => debt})
-    ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({root => {".config/ng-nudge/rc.json" => JSON.generate(rc)}})
-    javascript = CrossLint::Adapters::MemoryJavaScript.new({}, globs: globs)
-    project_files = CrossLint::Adapters::MemoryProjectFiles.new({root => files})
+    debt_files = CrossLint::Adapters::MemoryDebtFiles.new({ File.join(root, ".config/ng-nudge/debt.tsv") => debt })
+    ng_nudge = CrossLint::Adapters::MemoryNgNudge.new({ root => { ".config/ng-nudge/rc.json" => JSON.generate(rc) } })
+    javascript = CrossLint::Adapters::MemoryJavaScript.new({}, globs:)
+    project_files = CrossLint::Adapters::MemoryProjectFiles.new({ root => files })
     [CrossLint::App.new(configuration:, debt_files:, ng_nudge:, javascript:, project_files:), configuration, debt_files]
   end
 
@@ -1026,15 +1078,17 @@ class CLITest < Minitest::Test
     step = core::StepDeclaration.new(name: "track-debt", line: 1)
     update = core::CommandDeclaration.new(name: "update", help: "Rewrite the debt file to list the current violations", line: 2,
       flags: flags || [core::CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "List the entries update would add and remove, and write nothing", line: 3)])
-    {File.join(CrossLint::App::PLUGINS, "debt") => core::Manifest.new(file: "debt/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [],
-      step_policies: [core::StepPolicy.new(name: "has-debt", line: 3)], steps: [step], commands: [update]),
-     File.join(CrossLint::App::PLUGINS, "angular") => core::Manifest.new(file: "angular/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [])}
+    {
+File.join(CrossLint::App::PLUGINS, "debt") => core::Manifest.new(file: "debt/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: [],
+  step_policies: [core::StepPolicy.new(name: "has-debt", line: 3)], steps: [step], commands: [update]),
+File.join(CrossLint::App::PLUGINS, "angular") => core::Manifest.new(file: "angular/plugin.kdl", artifacts: [], policies: [], rules: [], helpers: []),
+}
   end
 
   # A rule that raises.
   RAISES_SOURCE = "class Raises < CrossLint::Rule; def check(_) = raise('boom'); end"
 
-  RAISES = ->(namespace) { namespace.module_eval(RAISES_SOURCE, "raises.rb", 1) }
+  RAISES = -> (namespace) { namespace.module_eval(RAISES_SOURCE, "raises.rb", 1) }
 
   # A project with the plugin tests: every lib/{path}.rb has a test at
   # test/{path}_test.rb, and only lib/a.rb has one.
@@ -1042,7 +1096,8 @@ class CLITest < Minitest::Test
   # With debt, the project also lists the built-in debt plugin, and with
   # shared, a shared plugin that isn't fetched.
   def app(files: ["lib/a.rb", "lib/b.rb", "test/a_test.rb"], severity: nil, unused: false, warnings: nil, verbosity: nil, broken: nil, raises: false,
-    debt: false, shared: false, fetch_log: StringIO.new, debt_flags: nil)
+    debt: false, shared: false, fetch_log: StringIO.new, debt_flags: nil
+  )
     core = CrossLint::Core
     listed = [core::ListedPlugin.new(name: "./.config/tests", ref: nil, settings: [], line: 1)]
     listed.unshift(core::ListedPlugin.new(name: "debt", ref: nil, settings: [], line: 2)) if debt
@@ -1052,15 +1107,15 @@ class CLITest < Minitest::Test
     artifact = core::ArtifactDeclaration.new(name: "ruby-file", primary: core::PathPattern.new(source: "lib/{path}.rb"), line: 1,
       pieces: [core::PieceDeclaration.new(name: "test", pattern: core::PathPattern.new(source: "test/{path}_test.rb"), line: 2)])
     policy = core::Policy.new(name: "has-test", applies_to: core::AppliesTo.new(artifact: "ruby-file", line: 6), condition: nil, line: 5,
-      rules: [core::PolicyRule.new(name: "piece-exists", arguments: {"piece" => "test"}, severity:, line: 7)] +
+      rules: [core::PolicyRule.new(name: "piece-exists", arguments: { "piece" => "test" }, severity:, line: 7)] +
         (raises ? [core::PolicyRule.new(name: "raises", arguments: {}, severity: nil, line: 8)] : []))
     manifest = core::Manifest.new(file: ".config/tests/plugin.kdl", artifacts: [artifact], policies: [policy], rules:, helpers: [])
     configuration = core::Configuration.new(file: ".config/crosslint/config.kdl", plugins: listed, policies: [], warnings:, verbosity:)
-    CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({"#{WORK}/app" => broken || configuration}),
-      manifests: CrossLint::Adapters::MemoryPluginManifests.new({"#{WORK}/app/.config/tests" => manifest}.merge(built_in_manifests(debt_flags))),
+    CrossLint::App.new(configuration: CrossLint::Adapters::MemoryConfiguration.new({ "#{WORK}/app" => broken || configuration }),
+      manifests: CrossLint::Adapters::MemoryPluginManifests.new({ "#{WORK}/app/.config/tests" => manifest }.merge(built_in_manifests(debt_flags))),
       debt_files: CrossLint::Adapters::MemoryDebtFiles.new,
       shared_plugins: CrossLint::Adapters::MemorySharedPlugins.new({}, err: fetch_log),
-      project_files: CrossLint::Adapters::MemoryProjectFiles.new({"#{WORK}/app" => files}),
-      crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new({"#{WORK}/app/.config/tests/raises.rb" => RAISES}))
+      project_files: CrossLint::Adapters::MemoryProjectFiles.new({ "#{WORK}/app" => files }),
+      crosslint_ruby: CrossLint::Adapters::MemoryCrossLintRuby.new({ "#{WORK}/app/.config/tests/raises.rb" => RAISES }))
   end
 end

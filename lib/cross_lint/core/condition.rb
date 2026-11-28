@@ -8,7 +8,7 @@ module CrossLint
 
         def holds?(artifact) = artifact.piece(piece).exist?
 
-        def explanation(artifact) = %(piece-exists #{piece.dump} (#{holds?(artifact) ? "exists" : "missing"}))
+        def explanation(artifact) = %(piece-exists #{piece.dump} (#{holds?(artifact) ? 'exists' : 'missing'}))
       end
 
       class Not < Data.define(:condition, :line)
@@ -24,7 +24,7 @@ module CrossLint
 
         def holds?(artifact) = conditions.all? { |condition| condition.holds?(artifact) }
 
-        def explanation(artifact) = "all { #{conditions.map { |condition| condition.explanation(artifact) }.join(" ")} }"
+        def explanation(artifact) = "all { #{conditions.map { |condition| condition.explanation(artifact) }.join(' ')} }"
       end
 
       class Any < Data.define(:conditions, :line)
@@ -32,7 +32,7 @@ module CrossLint
 
         def holds?(artifact) = conditions.any? { |condition| condition.holds?(artifact) }
 
-        def explanation(artifact) = "any { #{conditions.map { |condition| condition.explanation(artifact) }.join(" ")} }"
+        def explanation(artifact) = "any { #{conditions.map { |condition| condition.explanation(artifact) }.join(' ')} }"
       end
     end
   end

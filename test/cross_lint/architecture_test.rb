@@ -9,7 +9,7 @@ require "rbconfig"
 class ArchitectureTest < Minitest::Test
   def test_the_core_loads_with_nothing_outside_rubys_standard_library
     script = 'require "cross_lint/core"; puts $LOADED_FEATURES'
-    out, err, status = Open3.capture3({"RUBYOPT" => nil}, RbConfig.ruby, "--disable-gems", "-I", File.join(ROOT, "lib"), "-e", script)
+    out, err, status = Open3.capture3({ "RUBYOPT" => nil }, RbConfig.ruby, "--disable-gems", "-I", File.join(ROOT, "lib"), "-e", script)
 
     assert_predicate status, :success?, err
     core = File.join(ROOT, "lib", "cross_lint", "core")

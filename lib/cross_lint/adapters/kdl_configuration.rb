@@ -28,7 +28,7 @@ module CrossLint
       # and writes any other as \u{HEX}.
       ESCAPED = /[\\"\p{Cc}\p{Zl}\p{Zp}]/
 
-      ESCAPES = {"\\" => "\\\\", "\"" => "\\\"", "\n" => "\\n", "\r" => "\\r", "\t" => "\\t"}.freeze
+      ESCAPES = { "\\" => "\\\\", "\"" => "\\\"", "\n" => "\\n", "\r" => "\\r", "\t" => "\\t" }.freeze
 
       def file = FILE
 
@@ -106,7 +106,7 @@ module CrossLint
       # policy lines, then its modes, a blank line between the kinds.
       def render(configuration)
         plugins = configuration.plugins.map do |listed|
-          properties = {"ref" => listed.ref, "path" => listed.path}.compact
+          properties = { "ref" => listed.ref, "path" => listed.path }.compact
           node("plugin", [listed.name], properties, listed.settings, 0)
         end
         policies = configuration.policies.map do |policy|
@@ -115,7 +115,7 @@ module CrossLint
           properties["severity"] = policy.severity.to_s if policy.severity
           node("policy", [policy.name], properties, [], 0)
         end
-        modes = {"warnings" => configuration.warnings, "verbosity" => configuration.verbosity}.filter_map do |name, mode|
+        modes = { "warnings" => configuration.warnings, "verbosity" => configuration.verbosity }.filter_map do |name, mode|
           node(name, [mode.to_s], {}, [], 0) if mode
         end
         [plugins, policies, modes].reject(&:empty?).map(&:join).join("\n")
@@ -132,7 +132,7 @@ module CrossLint
 
       def value(each)
         case each
-        when String then %("#{each.gsub(ESCAPED) { |char| ESCAPES.fetch(char) { format("\\u{%x}", char.ord) } }}")
+        when String then %("#{each.gsub(ESCAPED) { |char| ESCAPES.fetch(char) { format('\\u{%x}', char.ord) } }}")
         when true then "#true"
         when false then "#false"
         when nil then "#null"

@@ -63,7 +63,7 @@ module BundledWorks
     def folder = [work.name.downcase.gsub(/[^a-z0-9.]+/, "-"), version].compact.join("-")
 
     # The SPDX id of the work's package in the bill of materials.
-    def spdx_id = "SPDXRef-Package-bundled-#{[work.name, version].compact.join("-").gsub(/[^A-Za-z0-9.-]+/, "-")}"
+    def spdx_id = "SPDXRef-Package-bundled-#{[work.name, version].compact.join('-').gsub(/[^A-Za-z0-9.-]+/, '-')}"
   end
 
   # What a work's release gives: the license texts and notices at the top
@@ -75,21 +75,21 @@ module BundledWorks
   WORKS = [
     Work.new(
       name: "TypeScript", license: "Apache-2.0", release: "typescript",
-      integrity: {"6.0.2" => "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="},
+      integrity: { "6.0.2" => "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ==" },
       version: /^var version = "([^"]+)"/, source: "https://registry.npmjs.org/typescript/-/typescript-%<version>s.tgz",
       carriers: [
         Carrier.new("@ts-morph/common", "dist/typescript.js", /Licensed under the Apache License, Version 2\.0/),
         Carrier.new("@ts-morph/common", "lib/typescript.d.ts", /Licensed under the Apache License, Version 2\.0/),
         # The library files that TypeScript ships, lib.es5.d.ts among them,
         # which ts-morph keeps in this file as strings.
-        Carrier.new("@ts-morph/common", "dist/ts-morph-common.js", /fileName: "lib\.es5\.d\.ts"/)
+        Carrier.new("@ts-morph/common", "dist/ts-morph-common.js", /fileName: "lib\.es5\.d\.ts"/),
       ]
     ),
     Work.new(
       name: "tslib", license: "0BSD", release: nil, integrity: nil, version: nil, source: "https://github.com/microsoft/tslib",
       carriers: [
-        Carrier.new("ts-morph", "dist/ts-morph.js", /Permission to use, copy, modify, and\/or distribute this software for any/),
-        Carrier.new("@ts-morph/common", "dist/ts-morph-common.js", /Permission to use, copy, modify, and\/or distribute this software for any/)
+        Carrier.new("ts-morph", "dist/ts-morph.js", %r{Permission to use, copy, modify, and/or distribute this software for any}),
+        Carrier.new("@ts-morph/common", "dist/ts-morph-common.js", %r{Permission to use, copy, modify, and/or distribute this software for any}),
       ]
     ),
     Work.new(
@@ -97,9 +97,9 @@ module BundledWorks
       carriers: [
         Carrier.new("path-browserify", "index.js", /Copyright Joyent, Inc\. and other Node contributors/),
         Carrier.new("path-browserify", "test/test-path.js", /Copyright Joyent, Inc\. and other Node contributors/),
-        Carrier.new("path-browserify", "test/test-path-parse-format.js", /Copyright Joyent, Inc\. and other Node contributors/)
+        Carrier.new("path-browserify", "test/test-path-parse-format.js", /Copyright Joyent, Inc\. and other Node contributors/),
       ]
-    )
+    ),
   ].freeze
 
   SOURCE = /\.(js|cjs|mjs|ts|cts|mts)\z/
@@ -185,7 +185,7 @@ module BundledWorks
     return if got == release.integrity
 
     raise Failure, "#{release.work} #{release.version}: the tarball that npm pack #{release.package}@#{release.version} fetched has the integrity #{got}, " \
-      "and tasks/bundled_works.rb lists #{release.integrity || "none"} for it. " \
+      "and tasks/bundled_works.rb lists #{release.integrity || 'none'} for it. " \
       "If #{release.version} is a new version, look at what its tarball ships, and then list its integrity in the table."
   end
 
@@ -197,9 +197,9 @@ module BundledWorks
       unless thread.join(seconds)
         Process.kill("KILL", thread.pid)
         thread.join
-        raise Failure, "#{command.join(" ")} took more than #{seconds} seconds"
+        raise Failure, "#{command.join(' ')} took more than #{seconds} seconds"
       end
-      raise Failure, "#{command.join(" ")} failed:\n#{readers.last.value}" unless thread.value.success?
+      raise Failure, "#{command.join(' ')} failed:\n#{readers.last.value}" unless thread.value.success?
     end
   end
 

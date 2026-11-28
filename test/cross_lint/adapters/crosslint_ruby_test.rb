@@ -23,8 +23,10 @@ class FileCrossLintRubyTest < Minitest::Test
   def plugin_base = @base
 
   def test_runs_a_file_that_requires_another_in_the_plugins_folder
-    port = crosslint_ruby_port({"tests/rules/a.rb" => %(require_relative "../lib/names"\nclass A < CrossLint::Rule\n  NAME = CrossLintRubyTestNames.call\nend\n),
-                             "tests/lib/names.rb" => "CrossLintRubyTestNames = -> { \"a\" }\n"})
+    port = crosslint_ruby_port({
+"tests/rules/a.rb" => %(require_relative "../lib/names"\nclass A < CrossLint::Rule\n  NAME = CrossLintRubyTestNames.call\nend\n),
+"tests/lib/names.rb" => "CrossLintRubyTestNames = -> { \"a\" }\n",
+})
     namespace = Module.new
     port.load(ruby_plugin("tests"), "rules/a.rb", 3, namespace)
 
@@ -32,7 +34,7 @@ class FileCrossLintRubyTest < Minitest::Test
   end
 
   def test_raises_the_load_error_of_a_gem_crosslint_wasnt_built_with
-    port = crosslint_ruby_port({"tests/a.rb" => %(require "crosslint_no_such_gem"\n)})
+    port = crosslint_ruby_port({ "tests/a.rb" => %(require "crosslint_no_such_gem"\n) })
     error = assert_raises(LoadError) { port.load(ruby_plugin("tests"), "a.rb", 3, Module.new) }
 
     assert_equal "crosslint_no_such_gem", error.path
@@ -52,7 +54,7 @@ class MemoryCrossLintRubyTest < Minitest::Test
 
   def crosslint_ruby_port(files)
     CrossLint::Adapters::MemoryCrossLintRuby.new(files.to_h do |path, source|
-      [File.join(plugin_base, path), ->(namespace) { namespace.module_eval(source, File.join(plugin_base, path), 1) }]
+      [File.join(plugin_base, path), -> (namespace) { namespace.module_eval(source, File.join(plugin_base, path), 1) }]
     end)
   end
 
@@ -62,7 +64,7 @@ class MemoryCrossLintRubyTest < Minitest::Test
   # starts with a slash, so a path the port is given must be expanded as
   # the path it looks up is. A path with .. is the same on every system.
   def test_finds_a_file_given_by_a_path_that_is_not_expanded
-    files = {File.join(plugin_base, "extra", "..", "a.rb") => ->(namespace) { namespace.const_set(:A, 1) }}
+    files = { File.join(plugin_base, "extra", "..", "a.rb") => -> (namespace) { namespace.const_set(:A, 1) } }
     namespace = Module.new
     CrossLint::Adapters::MemoryCrossLintRuby.new(files).load(ruby_plugin("tests"), "../a.rb", 1, namespace)
 

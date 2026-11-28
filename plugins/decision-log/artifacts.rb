@@ -14,8 +14,10 @@ class Artifacts < CrossLint::Artifacts
     end
     folder = path(found["folder"], "docs/decisions")
     index = path(found["index"], "#{folder}/README.md")
-    [artifact("index", primary: index, pieces: {"folder" => folder}),
-      artifact("document", primary: "{path}.md", pieces: {"folder" => folder})]
+    [
+      artifact("index", primary: index, pieces: { "folder" => folder }),
+      artifact("document", primary: "{path}.md", pieces: { "folder" => folder }),
+]
   end
 
   private

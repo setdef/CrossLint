@@ -40,7 +40,7 @@ module CrossLint
       end
 
       def matches(source, texts)
-        answer = ask(@script, JSON.generate({"source" => source, "texts" => texts}))
+        answer = ask(@script, JSON.generate({ "source" => source, "texts" => texts }))
         error = answer["error"]
         raise Core::InvalidExpression, error if error
 
@@ -48,7 +48,7 @@ module CrossLint
       end
 
       def glob(root, cwd, patterns, packages)
-        answer = ask(@glob_script, JSON.generate({"root" => File.expand_path(root), "cwd" => cwd, "patterns" => patterns, "packages" => packages}))
+        answer = ask(@glob_script, JSON.generate({ "root" => File.expand_path(root), "cwd" => cwd, "patterns" => patterns, "packages" => packages }))
         error = answer["error"]
         raise Core::JavaScriptError, error if error
 

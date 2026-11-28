@@ -18,7 +18,7 @@ class NpmNoticesTest < Minitest::Test
   BSD_HEADER = "/******\nCopyright (c) Microsoft Corporation.\n\nPermission to use, copy, modify, and/or distribute this software for any\npurpose with or without fee is hereby granted.\n***** */\n"
   # The license files at the top of typescript@6.0.2, as npm pack gives them.
   TYPESCRIPT_INTEGRITY = "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="
-  RELEASE = {"LICENSE.txt" => "Apache License\nVersion 2.0, January 2004\n", "ThirdPartyNoticeText.txt" => "Third party notices\n"}.freeze
+  RELEASE = { "LICENSE.txt" => "Apache License\nVersion 2.0, January 2004\n", "ThirdPartyNoticeText.txt" => "Third party notices\n" }.freeze
 
   def setup
     @app = Dir.mktmpdir("npm-notices")
@@ -64,8 +64,8 @@ class NpmNoticesTest < Minitest::Test
   end
 
   def test_reads_the_license_of_an_old_package_from_its_object_or_its_list
-    install("old", "1.0.0", manifest: {"license" => {"type" => "ISC"}})
-    install("older", "1.0.0", manifest: {"licenses" => [{"type" => "MIT"}, {"type" => "Apache-2.0"}]})
+    install("old", "1.0.0", manifest: { "license" => { "type" => "ISC" } })
+    install("older", "1.0.0", manifest: { "licenses" => [{ "type" => "MIT" }, { "type" => "Apache-2.0" }] })
     install("none", "1.0.0", manifest: {})
 
     assert_equal [["none", nil], ["old", "ISC"], ["older", "MIT OR Apache-2.0"]],
@@ -114,9 +114,11 @@ class NpmNoticesTest < Minitest::Test
 
     added = JSON.parse(File.binread(File.join(@app, "notices/sbom.spdx.json")))["packages"].drop(1)
 
-    assert_equal [["example-plugin", "Ships as: files under #{PLUGIN}"],
+    assert_equal [
+      ["example-plugin", "Ships as: files under #{PLUGIN}"],
       ["@ts-morph/common", "Ships as: files under #{PLUGIN}/node_modules/@ts-morph/common"],
-      ["ts-morph", "Ships as: files under #{PLUGIN}/node_modules/ts-morph"]], added.map { |package| package.values_at("name", "comment") }
+      ["ts-morph", "Ships as: files under #{PLUGIN}/node_modules/ts-morph"],
+], added.map { |package| package.values_at("name", "comment") }
   end
 
   def test_keeps_the_runtimes_packages_and_relationships_and_adds_the_lockfiles
@@ -124,12 +126,19 @@ class NpmNoticesTest < Minitest::Test
 
     sbom = JSON.parse(File.binread(File.join(@app, "notices/sbom.spdx.json")))
 
-    assert_equal [%w[SPDXRef-Package-runtime SPDXRef-Package-example-plugin SPDXRef-Package-ts-morph.common-0.29.1 SPDXRef-Package-ts-morph-28.0.0],
-      [["SPDXRef-DOCUMENT", "DESCRIBES", "SPDXRef-Package-runtime"], ["SPDXRef-DOCUMENT", "DESCRIBES", "SPDXRef-Package-example-plugin"],
+    assert_equal [
+      %w[SPDXRef-Package-runtime SPDXRef-Package-example-plugin SPDXRef-Package-ts-morph.common-0.29.1 SPDXRef-Package-ts-morph-28.0.0],
+      [
+        ["SPDXRef-DOCUMENT", "DESCRIBES", "SPDXRef-Package-runtime"],
+        ["SPDXRef-DOCUMENT", "DESCRIBES", "SPDXRef-Package-example-plugin"],
         ["SPDXRef-Package-ts-morph.common-0.29.1", "DEPENDENCY_OF", "SPDXRef-Package-example-plugin"],
-        ["SPDXRef-Package-ts-morph-28.0.0", "DEPENDENCY_OF", "SPDXRef-Package-example-plugin"]]],
-      [sbom["packages"].map { |package| package["SPDXID"] },
-        sbom["relationships"].map { |each| each.values_at("spdxElementId", "relationshipType", "relatedSpdxElement") }]
+        ["SPDXRef-Package-ts-morph-28.0.0", "DEPENDENCY_OF", "SPDXRef-Package-example-plugin"],
+],
+],
+      [
+        sbom["packages"].map { |package| package["SPDXID"] },
+        sbom["relationships"].map { |each| each.values_at("spdxElementId", "relationshipType", "relatedSpdxElement") },
+]
   end
 
   def test_names_npm_as_a_creator_of_the_sbom_and_gives_the_changed_document_a_namespace_of_its_own
@@ -145,7 +154,7 @@ class NpmNoticesTest < Minitest::Test
   def test_changes_nothing_in_an_app_with_no_node_modules
     FileUtils.rm_rf(File.join(@app, PLUGIN, "node_modules"))
 
-    NpmNotices.add(@app, sbom: ->(*) { flunk "asked for an SBOM" })
+    NpmNotices.add(@app, sbom: -> (*) { flunk "asked for an SBOM" })
 
     assert_equal NOTICES, File.binread(File.join(@app, "notices/NOTICES.txt"))
   end
@@ -211,7 +220,7 @@ class NpmNoticesTest < Minitest::Test
   end
 
   def test_refuses_a_package_id_the_sbom_has_already
-    write(@app, "notices/sbom.spdx.json", JSON.pretty_generate(runtime_sbom.merge("packages" => [{"SPDXID" => "SPDXRef-Package-ts-morph-28.0.0"}])))
+    write(@app, "notices/sbom.spdx.json", JSON.pretty_generate(runtime_sbom.merge("packages" => [{ "SPDXID" => "SPDXRef-Package-ts-morph-28.0.0" }])))
 
     error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: sbom_of("@ts-morph/common" => "0.29.1", "ts-morph" => "28.0.0")) }
 
@@ -219,8 +228,12 @@ class NpmNoticesTest < Minitest::Test
   end
 
   def test_finds_every_package_missing_from_the_notices_and_the_sbom_of_an_app_nothing_was_added_to
-    assert_equal ["notices/NOTICES.txt lacks @ts-morph/common 0.29.1 (MIT)", "notices/sbom.spdx.json lacks @ts-morph/common 0.29.1 (MIT)",
-      "notices/NOTICES.txt lacks ts-morph 28.0.0 (MIT)", "notices/sbom.spdx.json lacks ts-morph 28.0.0 (MIT)"], NpmNotices.problems(@app)
+    assert_equal [
+      "notices/NOTICES.txt lacks @ts-morph/common 0.29.1 (MIT)",
+      "notices/sbom.spdx.json lacks @ts-morph/common 0.29.1 (MIT)",
+      "notices/NOTICES.txt lacks ts-morph 28.0.0 (MIT)",
+      "notices/sbom.spdx.json lacks ts-morph 28.0.0 (MIT)",
+], NpmNotices.problems(@app)
   end
 
   def test_finds_no_package_missing_once_the_packages_were_added
@@ -250,7 +263,7 @@ class NpmNoticesTest < Minitest::Test
     bundle_typescript
     asked = []
 
-    NpmNotices.add(@app, sbom: locked, release: ->(release) {
+    NpmNotices.add(@app, sbom: locked, release: -> (release) {
       asked << release
       RELEASE
     })
@@ -276,7 +289,7 @@ class NpmNoticesTest < Minitest::Test
     bundle_typescript("6.0.3")
     asked = []
 
-    NpmNotices.add(@app, sbom: locked, release: ->(release) {
+    NpmNotices.add(@app, sbom: locked, release: -> (release) {
       asked << release.integrity
       RELEASE
     })
@@ -287,7 +300,7 @@ class NpmNoticesTest < Minitest::Test
   def test_stops_at_a_tarball_of_a_bundled_work_that_fails_its_integrity_check_and_writes_nothing
     bundle_typescript
 
-    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked, release: ->(_) { raise NpmNotices::Failure, "TypeScript 6.0.2: the tarball differs" }) }
+    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked, release: -> (_) { raise NpmNotices::Failure, "TypeScript 6.0.2: the tarball differs" }) }
 
     assert_equal "TypeScript 6.0.2: the tarball differs", error.message
     assert_equal NOTICES, File.binread(File.join(@app, "notices/NOTICES.txt"))
@@ -297,7 +310,7 @@ class NpmNoticesTest < Minitest::Test
   def test_passes_on_the_notice_file_that_the_release_of_a_bundled_work_has
     bundle_typescript
 
-    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE.merge("NOTICE.txt" => "Notice of the work\n") })
+    NpmNotices.add(@app, sbom: locked, release: -> (*) { RELEASE.merge("NOTICE.txt" => "Notice of the work\n") })
 
     notices = File.binread(File.join(@app, "notices/NOTICES.txt"))
 
@@ -308,15 +321,22 @@ class NpmNoticesTest < Minitest::Test
   def test_adds_a_bundled_work_to_the_sbom_as_a_package_that_the_package_carrying_it_contains
     bundle_typescript
 
-    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE })
+    NpmNotices.add(@app, sbom: locked, release: -> (*) { RELEASE })
 
     sbom = JSON.parse(File.binread(File.join(@app, "notices/sbom.spdx.json")))
 
-    assert_equal({"SPDXID" => "SPDXRef-Package-bundled-TypeScript-6.0.2", "name" => "TypeScript", "versionInfo" => "6.0.2",
-                  "downloadLocation" => "https://registry.npmjs.org/typescript/-/typescript-6.0.2.tgz", "filesAnalyzed" => false, "licenseDeclared" => "Apache-2.0",
-                  "licenseConcluded" => "NOASSERTION", "copyrightText" => "Copyright (c) Microsoft Corporation. All rights reserved.",
-                  "comment" => "Ships as: code in #{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js",
-                  "externalRefs" => [{"referenceCategory" => "PACKAGE-MANAGER", "referenceType" => "purl", "referenceLocator" => "pkg:npm/typescript@6.0.2"}]},
+    assert_equal({
+"SPDXID" => "SPDXRef-Package-bundled-TypeScript-6.0.2",
+"name" => "TypeScript",
+"versionInfo" => "6.0.2",
+"downloadLocation" => "https://registry.npmjs.org/typescript/-/typescript-6.0.2.tgz",
+"filesAnalyzed" => false,
+"licenseDeclared" => "Apache-2.0",
+"licenseConcluded" => "NOASSERTION",
+"copyrightText" => "Copyright (c) Microsoft Corporation. All rights reserved.",
+"comment" => "Ships as: code in #{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js",
+"externalRefs" => [{ "referenceCategory" => "PACKAGE-MANAGER", "referenceType" => "purl", "referenceLocator" => "pkg:npm/typescript@6.0.2" }],
+},
       sbom["packages"].last)
     assert_equal ["SPDXRef-Package-ts-morph.common-0.29.1", "CONTAINS", "SPDXRef-Package-bundled-TypeScript-6.0.2"], sbom["relationships"].last.values_at("spdxElementId", "relationshipType", "relatedSpdxElement")
   end
@@ -325,7 +345,7 @@ class NpmNoticesTest < Minitest::Test
     install("path-browserify", "1.0.1", license: "MIT")
     write(@app, "#{PLUGIN}/node_modules/path-browserify/index.js", "// 'path' module extracted from Node.js v8.11.1 (only the posix part)\n\n// Copyright Joyent, Inc. and other Node contributors.\n//\n// Permission is hereby granted\n")
 
-    NpmNotices.add(@app, sbom: sbom_of("@ts-morph/common" => "0.29.1", "ts-morph" => "28.0.0", "path-browserify" => "1.0.1"), release: ->(*) { flunk "asked for a release" })
+    NpmNotices.add(@app, sbom: sbom_of("@ts-morph/common" => "0.29.1", "ts-morph" => "28.0.0", "path-browserify" => "1.0.1"), release: -> (*) { flunk "asked for a release" })
 
     assert_includes File.binread(File.join(@app, "notices/NOTICES.txt")), <<~ENTRY
       Node.js (bundled work)
@@ -342,7 +362,7 @@ class NpmNoticesTest < Minitest::Test
   def test_gives_a_work_that_says_no_version_a_package_without_one_and_a_relationship_from_each_package_that_carries_it
     bundle_tslib
 
-    NpmNotices.add(@app, sbom: locked, release: ->(*) { flunk "asked for a release" })
+    NpmNotices.add(@app, sbom: locked, release: -> (*) { flunk "asked for a release" })
 
     sbom = JSON.parse(File.binread(File.join(@app, "notices/sbom.spdx.json")))
     work = sbom["packages"].find { |package| package["name"] == "tslib" }
@@ -356,7 +376,7 @@ class NpmNoticesTest < Minitest::Test
   def test_refuses_a_bundled_work_whose_version_no_file_says
     write(@app, "#{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js", "#{APACHE_HEADER}var ts = {};\n")
 
-    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE }) }
+    error = assert_raises(NpmNotices::Failure) { NpmNotices.add(@app, sbom: locked, release: -> (*) { RELEASE }) }
 
     assert_equal "#{PLUGIN}/node_modules/@ts-morph/common/dist/typescript.js holds TypeScript, and no file that holds it says which version", error.message
   end
@@ -411,16 +431,19 @@ class NpmNoticesTest < Minitest::Test
   def test_finds_every_part_of_a_bundled_work_that_the_notices_and_the_sbom_lack
     bundle_typescript
 
-    assert_equal ["notices/NOTICES.txt lacks TypeScript 6.0.2 (Apache-2.0)", "notices/NOTICES.txt lacks the license text of TypeScript 6.0.2 (Apache-2.0)",
+    assert_equal [
+      "notices/NOTICES.txt lacks TypeScript 6.0.2 (Apache-2.0)",
+      "notices/NOTICES.txt lacks the license text of TypeScript 6.0.2 (Apache-2.0)",
       "notices/sbom.spdx.json lacks TypeScript 6.0.2 (Apache-2.0)",
-      "notices/sbom.spdx.json lacks the relationships that say each package carrying TypeScript 6.0.2 (Apache-2.0) contains it"], NpmNotices.problems(@app).grep(/TypeScript/)
+      "notices/sbom.spdx.json lacks the relationships that say each package carrying TypeScript 6.0.2 (Apache-2.0) contains it",
+], NpmNotices.problems(@app).grep(/TypeScript/)
   end
 
   def test_finds_no_bundled_work_missing_once_it_was_added
     bundle_typescript
     bundle_tslib
 
-    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE })
+    NpmNotices.add(@app, sbom: locked, release: -> (*) { RELEASE })
 
     assert_empty NpmNotices.problems(@app)
   end
@@ -436,7 +459,7 @@ class NpmNoticesTest < Minitest::Test
 
   def test_finds_the_license_text_of_a_bundled_work_gone_from_the_notices
     bundle_typescript
-    NpmNotices.add(@app, sbom: locked, release: ->(*) { RELEASE })
+    NpmNotices.add(@app, sbom: locked, release: -> (*) { RELEASE })
     notices = File.join(@app, "notices/NOTICES.txt")
     File.binwrite(notices, File.binread(notices).sub("=== typescript-6.0.2/LICENSE.txt", "=== typescript-6.0.2/README.txt"))
 
@@ -462,11 +485,11 @@ class NpmNoticesTest < Minitest::Test
   def test_asks_npm_for_the_sbom_of_a_lockfile_without_reaching_a_registry_or_the_packages_of_development
     folder = File.join(@app, "locked")
     write(folder, "package.json", JSON.generate("name" => "locked", "version" => "1.0.0", "license" => "MIT",
-      "dependencies" => {"left-pad" => "1.3.0"}, "devDependencies" => {"dev-only" => "2.0.0"}))
+      "dependencies" => { "left-pad" => "1.3.0" }, "devDependencies" => { "dev-only" => "2.0.0" }))
     write(folder, "package-lock.json", JSON.generate("name" => "locked", "version" => "1.0.0", "lockfileVersion" => 3, "requires" => true, "packages" => {
-      "" => {"name" => "locked", "version" => "1.0.0", "license" => "MIT", "dependencies" => {"left-pad" => "1.3.0"}, "devDependencies" => {"dev-only" => "2.0.0"}},
-      "node_modules/left-pad" => {"version" => "1.3.0", "resolved" => "https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz", "integrity" => "sha512-#{"A" * 86}==", "license" => "WTFPL"},
-      "node_modules/dev-only" => {"version" => "2.0.0", "resolved" => "https://registry.npmjs.org/dev-only/-/dev-only-2.0.0.tgz", "integrity" => "sha512-#{"B" * 86}==", "dev" => true, "license" => "ISC"}
+      "" => { "name" => "locked", "version" => "1.0.0", "license" => "MIT", "dependencies" => { "left-pad" => "1.3.0" }, "devDependencies" => { "dev-only" => "2.0.0" } },
+      "node_modules/left-pad" => { "version" => "1.3.0", "resolved" => "https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz", "integrity" => "sha512-#{'A' * 86}==", "license" => "WTFPL" },
+      "node_modules/dev-only" => { "version" => "2.0.0", "resolved" => "https://registry.npmjs.org/dev-only/-/dev-only-2.0.0.tgz", "integrity" => "sha512-#{'B' * 86}==", "dev" => true, "license" => "ISC" },
     }))
 
     document = NpmNotices.npm_sbom(folder)
@@ -506,30 +529,47 @@ class NpmNoticesTest < Minitest::Test
     end
   end
 
-  def install(name, version, license: "MIT", manifest: {"license" => license}, at: "#{PLUGIN}/node_modules")
+  def install(name, version, license: "MIT", manifest: { "license" => license }, at: "#{PLUGIN}/node_modules")
     folder = "#{at}/#{name}"
-    write(@app, "#{folder}/package.json", JSON.generate({"name" => name, "version" => version}.merge(manifest)))
+    write(@app, "#{folder}/package.json", JSON.generate({ "name" => name, "version" => version }.merge(manifest)))
     write(@app, "#{folder}/LICENSE", "The #{license} License\n")
   end
 
   def runtime_sbom
-    {"spdxVersion" => "SPDX-2.3", "SPDXID" => "SPDXRef-DOCUMENT", "name" => "runtime", "documentNamespace" => "https://example.test/spdx/runtime",
-     "creationInfo" => {"created" => "2026-11-22T09:13:41Z", "creators" => ["Tool: fledge-license-audit-0.17.0"]},
-     "packages" => [{"SPDXID" => "SPDXRef-Package-runtime", "name" => "runtime"}],
-     "relationships" => [{"spdxElementId" => "SPDXRef-DOCUMENT", "relationshipType" => "DESCRIBES", "relatedSpdxElement" => "SPDXRef-Package-runtime"}]}
+    {
+"spdxVersion" => "SPDX-2.3",
+"SPDXID" => "SPDXRef-DOCUMENT",
+"name" => "runtime",
+"documentNamespace" => "https://example.test/spdx/runtime",
+"creationInfo" => { "created" => "2026-11-22T09:13:41Z", "creators" => ["Tool: fledge-license-audit-0.17.0"] },
+"packages" => [{ "SPDXID" => "SPDXRef-Package-runtime", "name" => "runtime" }],
+"relationships" => [{ "spdxElementId" => "SPDXRef-DOCUMENT", "relationshipType" => "DESCRIBES", "relatedSpdxElement" => "SPDXRef-Package-runtime" }],
+}
   end
 
   # What npm sbom answers for a lockfile that locks +locked+, a name and a
   # version for each package, under the plugin's own package.
   def sbom_of(locked)
-    root = {"name" => "example-plugin", "SPDXID" => "SPDXRef-Package-example-plugin", "versionInfo" => "0.2.0", "packageFileName" => ""}
+    root = { "name" => "example-plugin", "SPDXID" => "SPDXRef-Package-example-plugin", "versionInfo" => "0.2.0", "packageFileName" => "" }
     packages = locked.map do |name, version|
-      {"name" => name, "SPDXID" => "SPDXRef-Package-#{name.delete_prefix("@").tr("/", ".")}-#{version}", "versionInfo" => version, "packageFileName" => "node_modules/#{name}",
-       "downloadLocation" => "https://registry.npmjs.org/#{name}/-/#{name.split("/").last}-#{version}.tgz", "licenseDeclared" => "MIT"}
+      {
+"name" => name,
+"SPDXID" => "SPDXRef-Package-#{name.delete_prefix('@').tr('/', '.')}-#{version}",
+"versionInfo" => version,
+"packageFileName" => "node_modules/#{name}",
+"downloadLocation" => "https://registry.npmjs.org/#{name}/-/#{name.split('/').last}-#{version}.tgz",
+"licenseDeclared" => "MIT",
+}
     end
-    document = {"creationInfo" => {"creators" => ["Tool: npm/cli-11.20.0"]}, "documentDescribes" => [root["SPDXID"]], "packages" => [root, *packages],
-                "relationships" => [{"spdxElementId" => "SPDXRef-DOCUMENT", "relatedSpdxElement" => root["SPDXID"], "relationshipType" => "DESCRIBES"},
-                  *packages.map { |package| {"spdxElementId" => package["SPDXID"], "relatedSpdxElement" => root["SPDXID"], "relationshipType" => "DEPENDENCY_OF"} }]}
-    ->(_folder) { document }
+    document = {
+"creationInfo" => { "creators" => ["Tool: npm/cli-11.20.0"] },
+"documentDescribes" => [root["SPDXID"]],
+"packages" => [root, *packages],
+"relationships" => [
+  { "spdxElementId" => "SPDXRef-DOCUMENT", "relatedSpdxElement" => root["SPDXID"], "relationshipType" => "DESCRIBES" },
+  *packages.map { |package| { "spdxElementId" => package["SPDXID"], "relatedSpdxElement" => root["SPDXID"], "relationshipType" => "DEPENDENCY_OF" } },
+],
+}
+    -> (_folder) { document }
   end
 end

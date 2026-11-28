@@ -7,7 +7,7 @@ module CrossLint
     class TextReport
       PREFIX = "crosslint: "
 
-      COLORS = {error: "\e[31m", warning: "\e[33m"}.freeze
+      COLORS = { error: "\e[31m", warning: "\e[33m" }.freeze
 
       RESET = "\e[0m"
 

@@ -8,7 +8,7 @@ module CrossLint
       FOLDER = ".config/ng-nudge"
 
       # The folder of each kind of extension, and what ng-nudge reads in it.
-      SUFFIXES = {"artifacts" => ".artifact.js", "policies" => ".policy.js", "rules" => ".rule.js"}.freeze
+      SUFFIXES = { "artifacts" => ".artifact.js", "policies" => ".policy.js", "rules" => ".rule.js" }.freeze
 
       def settings(root)
         path = File.join(root, Core::NgNudge::SETTINGS_FILE)

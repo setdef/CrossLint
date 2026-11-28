@@ -13,12 +13,14 @@ class RegexTest < Minitest::Test
     routes = %(get "/cart", to: "carts#show"\n\npost "/cart", to: "carts#create"\n)
 
     assert_equal %w[verb route controller action], Regex.new(source: ROUTE).captures
-    assert_equal [[{"verb" => "get", "route" => "/cart", "controller" => "carts", "action" => "show"}, 1],
-      [{"verb" => "post", "route" => "/cart", "controller" => "carts", "action" => "create"}, 3]], Regex.new(source: ROUTE).matches(routes, {})
+    assert_equal [
+      [{ "verb" => "get", "route" => "/cart", "controller" => "carts", "action" => "show" }, 1],
+      [{ "verb" => "post", "route" => "/cart", "controller" => "carts", "action" => "create" }, 3],
+], Regex.new(source: ROUTE).matches(routes, {})
   end
 
   def test_gives_a_capture_that_took_no_part_in_a_match_as_nil
-    assert_equal [[{"a" => nil, "b" => "x"}, 1]], Regex.new(source: "(?<a>y)?(?<b>x)").matches("x", {})
+    assert_equal [[{ "a" => nil, "b" => "x" }, 1]], Regex.new(source: "(?<a>y)?(?<b>x)").matches("x", {})
   end
 
   def test_gives_the_line_of_the_first_match_or_nil
@@ -30,7 +32,7 @@ class RegexTest < Minitest::Test
   def test_puts_in_each_placeholders_value_as_literal_text
     regex = Regex.new(source: 'def {action}\b')
 
-    assert_equal [1, nil], [regex.first_line("  def show.all\n", {"action" => "show.all"}), regex.first_line("  def showXall\n", {"action" => "show.all"})]
+    assert_equal [1, nil], [regex.first_line("  def show.all\n", { "action" => "show.all" }), regex.first_line("  def showXall\n", { "action" => "show.all" })]
     assert_equal 1, Regex.new(source: "^x{2}$").first_line("xx", {})
     assert_equal ["action"], regex.placeholders
   end
@@ -62,7 +64,7 @@ class RegexTest < Minitest::Test
       ['\pL', []] => 'regex "\\\\pL" has \\p with no braces, which Ruby reads as the letter p alone and PCRE as a Unicode property; write \\p{L}',
       ["x{,3}", []] => 'regex "x{,3}" has {,3}, which Ruby reads as {0,3} and JavaScript as the text {,3}; write {0,3}',
       ["[[:alpha:]]", []] => 'regex "[[:alpha:]]" has [:alpha:], which Ruby reads with every Unicode character and PCRE with ASCII alone; ' \
-        'write a property, such as \\p{Alpha}, or the ASCII characters, such as [A-Za-z]'
+        'write a property, such as \\p{Alpha}, or the ASCII characters, such as [A-Za-z]',
     }.each do |(source, known), message|
       problem = Regex.problem(source, known)
 
