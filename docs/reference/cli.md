@@ -77,9 +77,9 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
   - "crosslint_version": the version of the CrossLint that wrote the object, such as "1.0.0". Its major version is the version of the form of the object, since CrossLint's versions follow Semantic Versioning.
   - "findings": an array with one object for each violation, with these keys, in this order. "path" is the path of the artifact's primary piece. "message", "plugin", and "policy" are strings. "artifact" is the artifact's name, which is its primary piece's path unless its declaration has a name pattern. "role" is the artifact's kind. "severity" is "error" or "warning". "detail" is a string, or null when the rule gives none. "line" is the number of the line of the primary piece's file that the artifact was found on, or null for an artifact whose primary piece is a whole file. Every value but "detail" and "line" is a string. A violation the debt plugin adds when its report-entries setting is on, for an entry in the debt file, has the debt file as "artifact" and "path", "debt-file" as "role", the entry's line number as a string in "detail", and null as "line".
   - "paid_off": an array with one object for each paid-off entry. "file" is the debt file, and "line" is the entry's line in it, a number. "plugin", "policy", "artifact", and "message" are strings.
-  - "summary": an object of four numbers: "artifacts", the artifacts checked, passing ones included; "errors"; "warnings"; and "paid_off".
+  - "summary": an object of five numbers: "artifacts", the artifacts checked, passing ones included; "errors"; "warnings"; "paid_off"; and "debt", the violations the check accepted as debt, which the summary line calls "accepted as debt". It is 0 when the project lists no debt plugin.
 
-  A passing artifact is never in "findings", with or without --all. With --quiet, CrossLint leaves each warning that doesn't fail the check out of "findings", and "summary" still counts it. With --warnings=none, CrossLint leaves the warnings out of both. With --silent, CrossLint prints no object, so read the exit status.
+  A passing artifact is never in "findings", with or without --all. With --quiet, CrossLint leaves each warning that doesn't fail the check out of "findings", and "summary" still counts it. With --warnings=none, CrossLint leaves the warnings out of both. "debt" counts every violation accepted as debt, warnings included, whatever --quiet and --warnings=none leave out, so "errors", "warnings", and "debt" all 0 mean a project with no violations, and "debt" above 0 with "errors" and "warnings" 0 means one whose every violation is debt. With --silent, CrossLint prints no object, so read the exit status.
 
   A minor release may add keys, so a script should ignore keys it doesn't know.
 
@@ -105,7 +105,8 @@ A plugin's step can excuse violations, as the debt plugin does for those its deb
           "artifacts": 1,
           "errors": 1,
           "warnings": 0,
-          "paid_off": 0
+          "paid_off": 0,
+          "debt": 0
         }
       }
 

@@ -652,6 +652,17 @@ Notice.new(file: ".config/tests/plugin.kdl", line: 2,
     refute excused.failed
   end
 
+  def test_counts_each_violation_a_step_excuses_whatever_quiet_or_hiding_warnings_leaves_out
+    excuse = -> (input) { StepResult.new(excused: input.violations, violations: [], paid_off: [], notices: [], wrote: [], summary: []) }
+    files = ["lib/a.rb", "lib/b.rb"]
+    counted = [{}, { verbosity: :quiet }, { warnings: :none }, { verbosity: :silent }].map do |options|
+      check(project(mixed_plugin, stepped), files:, steps: { "track-debt" => ScriptedStep.new(excuse) }, **options).summary.excused
+    end
+
+    assert_equal [4, 4, 4, 4], counted
+    assert_equal 0, check(project(mixed_plugin, stepped), files:, steps: { "track-debt" => ScriptedStep.new }).summary.excused
+  end
+
   def test_drops_what_a_step_adds_of_a_policy_the_configuration_disables
     step = ScriptedStep.new(violations: [debt_violation])
     result = check(project(stepped, policies: [setting("debt/has-debt", enabled: false)]), files: [], steps: { "track-debt" => step })

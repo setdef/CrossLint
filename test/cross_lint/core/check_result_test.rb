@@ -30,7 +30,8 @@ class CheckResultTest < Minitest::Test
     assert_equal "checked 2 a artifacts: 1 error, 1 entry paid off, 2 accepted as debt",
       summary([["a", 2]], errors: 1).with(paid_off: 1, steps: ["2 accepted as debt"]).line
     assert_equal "checked 2 a artifacts: 2 entries paid off", summary([["a", 2]]).with(paid_off: 2).line
-    assert_equal [0, []], summary([]).then { |found| [found.paid_off, found.steps] }
+    assert_equal [0, 0, []], summary([]).then { |found| [found.paid_off, found.excused, found.steps] }
+    assert_equal 3, summary([]).with(excused: 3).excused
   end
 
   def test_lists_the_paid_off_entries_among_the_findings

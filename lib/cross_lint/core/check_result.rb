@@ -6,8 +6,8 @@ module CrossLint
   module Core
     class Notice < Data.define(:file, :line, :message); end
 
-    class Summary < Data.define(:kinds, :faults, :errors, :warnings, :warnings_shown, :paid_off, :steps)
-      def initialize(paid_off: 0, steps: [], **counts) = super
+    class Summary < Data.define(:kinds, :faults, :errors, :warnings, :warnings_shown, :paid_off, :excused, :steps)
+      def initialize(paid_off: 0, excused: 0, steps: [], **counts) = super
 
       # A kind with no artifact is left out when another has some, so a
       # plugin with many kinds that a project may lack reads short.

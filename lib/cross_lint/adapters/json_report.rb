@@ -46,7 +46,7 @@ module CrossLint
 "message" => paid_off.message,
 }
           end,
-          "summary" => { "artifacts" => summary.artifacts, "errors" => summary.errors, "warnings" => summary.warnings, "paid_off" => summary.paid_off },
+          "summary" => { "artifacts" => summary.artifacts, "errors" => summary.errors, "warnings" => summary.warnings, "paid_off" => summary.paid_off, "debt" => summary.excused },
         }, ascii_only: true)
       end
     end

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `crosslint check --json` adds `debt` to its `summary`: the number of violations the check accepted as debt, which the summary line calls "accepted as debt". A script can tell a project with no violations from one whose every violation is debt. `--quiet` and `--warnings=none` don't change it, and it is 0 when the project lists no debt plugin.
+
 ## [0.3.0] - 2026-11-28
 
 ### Added

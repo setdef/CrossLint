@@ -226,7 +226,7 @@ class JSONReportTest < Minitest::Test
     assert_equal "#{<<~JSON.delete("\n")}\n", @out.string
       {"crosslint_version":"1.4.0","findings":[{"path":"lib/a.rb","message":"no test","plugin":"tests","policy":"has-test","artifact":"lib/a.rb","role":"ruby-file","severity":"error","detail":null,"line":null},
       {"path":"lib/b.rb","message":"x","plugin":"tests","policy":"has-test","artifact":"lib/b.rb","role":"ruby-file","severity":"warning","detail":"y","line":null}],
-      "paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}
+      "paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0,"debt":0}}
     JSON
     assert_equal "crosslint: checked 9 ruby-file artifacts: 1 error, 1 warning\n", @err.string
   end
@@ -244,13 +244,20 @@ class JSONReportTest < Minitest::Test
     report_port.write(result_of([paid_off]))
 
     assert_equal %({"crosslint_version":"1.4.0","findings":[],"paid_off":[{"file":"debt.tsv","line":2,"plugin":"tests","policy":"has-test","artifact":"lib/a.rb",) +
-      %("message":"is paid off"}],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}\n), @out.string
+      %("message":"is paid off"}],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0,"debt":0}}\n), @out.string
+  end
+
+  def test_writes_how_many_violations_the_check_excused_as_debt
+    summary = Summary.new(kinds: [["ruby-file", 9]], faults: 0, errors: 0, warnings: 0, warnings_shown: true, excused: 3, steps: ["3 accepted as debt"])
+    report_port.write(CheckResult.new(notices: [], findings: [], summary:, verbosity: :normal, failed: false, faults: []))
+
+    assert_equal({ "artifacts" => 9, "errors" => 0, "warnings" => 0, "paid_off" => 0, "debt" => 3 }, JSON.parse(@out.string).fetch("summary"))
   end
 
   def test_writes_the_object_with_no_summary_line_when_quiet
     report_port.write(result_of([], verbosity: :quiet))
 
-    assert_equal [%({"crosslint_version":"1.4.0","findings":[],"paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0}}\n), ""], [@out.string, @err.string]
+    assert_equal [%({"crosslint_version":"1.4.0","findings":[],"paid_off":[],"summary":{"artifacts":9,"errors":1,"warnings":1,"paid_off":0,"debt":0}}\n), ""], [@out.string, @err.string]
   end
 
   def test_leaves_passing_artifacts_out

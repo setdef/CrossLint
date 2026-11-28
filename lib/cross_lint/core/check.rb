@@ -194,7 +194,7 @@ module CrossLint
         # fails the check. A step's warnings never fail it.
         shows_notices = !hidden && (verbosity == :normal || (verbosity == :quiet && warnings == :error))
         notices = notices.select { shows_notices } + steps.flat_map(&:notices).select { !hidden && verbosity == :normal }
-        summary = summary(kinds, checked, shown, hidden, faults.size).with(paid_off: paid_off.size, steps: steps.flat_map(&:summary))
+        summary = summary(kinds, checked, shown, hidden, faults.size).with(paid_off: paid_off.size, excused: excused.uniq.size, steps: steps.flat_map(&:summary))
         CheckResult.new(notices:, findings: sort((findings + paid_off).reject { verbosity == :silent }), summary:, verbosity:, failed:,
           faults:, wrote: wrote.reject { verbosity == :silent })
       end

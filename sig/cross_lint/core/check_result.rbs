@@ -54,18 +54,23 @@ module CrossLint
       # How many paid-off entries the steps report.
       attr_reader paid_off: Integer
 
+      # How many violations the steps excuse, such as those the debt plugin
+      # accepts as debt, whatever --quiet or --warnings=none leaves out of
+      # the findings.
+      attr_reader excused: Integer
+
       # What each step says of itself, such as "2 accepted as debt".
       attr_reader steps: Array[String]
 
-      # A summary with these fields, and no paid-off entries or steps unless
-      # given.
+      # A summary with these fields, and no paid-off entries, excused
+      # violations, or steps unless given.
       def self.new: (kinds: Array[[String, Integer]], faults: Integer, errors: Integer, warnings: Integer, warnings_shown: bool,
-                     ?paid_off: Integer, ?steps: Array[String]) -> instance
+                     ?paid_off: Integer, ?excused: Integer, ?steps: Array[String]) -> instance
 
-      # A summary with these fields, and no paid-off entries or steps unless
-      # given.
+      # A summary with these fields, and no paid-off entries, excused
+      # violations, or steps unless given.
       def initialize: (kinds: Array[[String, Integer]], faults: Integer, errors: Integer, warnings: Integer, warnings_shown: bool,
-                       ?paid_off: Integer, ?steps: Array[String]) -> void
+                       ?paid_off: Integer, ?excused: Integer, ?steps: Array[String]) -> void
 
       # How many artifacts the check checked, of every kind.
       def artifacts: () -> Integer
