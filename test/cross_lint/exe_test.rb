@@ -81,21 +81,22 @@ class ExeTest < Minitest::Test
   end
 
   def test_runs_the_plugin_references_ruby_rule_as_written
-    plugin, _regexes, _methods, _helpers, rule = doc_blocks("docs/reference/plugin.md", "kdl")
+    plugin, _regexes, _methods, _helpers, _helped, rule = doc_blocks("docs/reference/plugin.md", "kdl")
     code = doc_blocks("docs/reference/plugin.md", "ruby").first
     Dir.mktmpdir("crosslint") do |project|
-      write(project, ".config/crosslint/signatures/plugin.kdl", "#{plugin}\n#{rule}")
+      write(project, ".config/crosslint/modules/plugin.kdl", "#{plugin}\n#{rule}")
       write(project, code[/\A# (\S+)\n/, 1], code)
-      write(project, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/signatures"\n))
-      {"fledge" => "module Fledge\nend\n", "fledge/archive" => "module Fledge\n  class Archive\n  end\nend\n"}.each do |path, signature|
-        write(project, "lib/#{path}.rb", "")
-        write(project, "sig/#{path}.rbs", signature)
-        write(project, "test/#{path}_test.rb", "")
+      write(project, ".config/crosslint/config.kdl", %(plugin ".config/crosslint/modules"\n))
+      {"cart" => "export function add() {}\n", "cart/total" => "export function total() {}\nexport function tax() {}\n"}.each do |path, source|
+        write(project, "src/#{path}.js", source)
+        write(project, "src/#{path}.d.ts", "export function add(): void\n")
+        write(project, "test/#{path}.test.js", "")
       end
       Open3.capture3("git", "init", "-q", chdir: project)
 
-      assert_equal ["lib/fledge/archive.rb: sig/fledge/archive.rbs declares no class or module Fledge::Archive (signatures/signature-matches)\n",
-        "crosslint: checked 2 ruby-file artifacts: 1 error\n", 1], crosslint("check", chdir: project)
+      assert_equal ["src/cart/total.js: src/cart/total.d.ts declares no function tax (modules/declaration-matches)\n" \
+        "src/cart/total.js: src/cart/total.d.ts declares no function total (modules/declaration-matches)\n",
+        "crosslint: checked 2 module artifacts: 2 errors\n", 1], crosslint("check", chdir: project)
     end
   end
 

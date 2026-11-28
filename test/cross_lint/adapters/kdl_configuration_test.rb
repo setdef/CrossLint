@@ -60,14 +60,14 @@ class KDLConfigurationTest < Minitest::Test
 
   def test_reads_the_example_in_the_configuration_reference
     configuration = read(doc_blocks("docs/reference/configuration.md", "kdl").fetch(0))
-    angular, debt, signatures = configuration.plugins
+    angular, debt, modules = configuration.plugins
 
-    assert_equal [["angular", nil, 1], ["debt", nil, 4], [".config/crosslint/signatures", nil, 7]],
+    assert_equal [["angular", nil, 1], ["debt", nil, 4], [".config/crosslint/modules", nil, 7]],
       configuration.plugins.map { |plugin| [plugin.name, plugin.ref, plugin.line] }
     assert_equal [setting("src-dir", ["src"], {}, 2)], angular.settings
     assert_equal [setting("report-entries", [], {"commented" => "warning"}, 5)], debt.settings
-    assert_empty signatures.settings
-    assert_equal [policy("angular/prefer-css-over-scss", nil, :error, 9), policy("signatures/has-test", false, nil, 10)],
+    assert_empty modules.settings
+    assert_equal [policy("angular/prefer-css-over-scss", nil, :error, 9), policy("modules/has-test", false, nil, 10)],
       configuration.policies
     assert_equal [:all, nil], [configuration.warnings, configuration.verbosity]
   end
@@ -75,7 +75,7 @@ class KDLConfigurationTest < Minitest::Test
   def test_reads_the_configuration_in_the_readme
     configuration = read(doc_blocks("README.md", "kdl").fetch(1))
 
-    assert_equal [".config/crosslint/signatures"], configuration.plugins.map(&:name)
+    assert_equal ["debt", ".config/crosslint/migrations"], configuration.plugins.map(&:name)
   end
 
   def test_reads_a_shared_plugin_with_its_ref

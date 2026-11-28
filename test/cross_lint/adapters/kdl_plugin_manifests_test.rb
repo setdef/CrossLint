@@ -82,19 +82,19 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_every_example_in_the_plugin_reference
-    first, regexes, methods, helpers, ruby_rule, helped, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
+    first, regexes, methods, helpers, helped, ruby_rule, steps, artifacts = doc_blocks("docs/reference/plugin.md", "kdl").map { |text| read(text) }
 
-    assert_equal [["ruby-file", ["signature", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.pieces.map(&:name)] }
-    assert_equal [["has-signature", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
-    assert_equal [nil, '^\s*(?:class|module) '], regexes.artifacts.first.pieces.map { it.regex&.source }
-    assert_equal [["method"], "{path}\#{method}"], [methods.artifacts.first.regex.captures, methods.artifacts.first.name_pattern.source]
-    assert_equal [["signature-names-class", "rules/signature_names_class.rb", 2]],
+    assert_equal [["module", ["declaration", "test"]]], first.artifacts.map { |artifact| [artifact.name, artifact.pieces.map(&:name)] }
+    assert_equal [["has-declaration", nil], ["has-test", :warning]], first.policies.map { |policy| [policy.name, policy.rules.first.severity] }
+    assert_equal [nil, "^export "], regexes.artifacts.first.pieces.map { it.regex&.source }
+    assert_equal [["function"], "{path}\#{function}"], [methods.artifacts.first.regex.captures, methods.artifacts.first.name_pattern.source]
+    assert_equal [["declares-every-export", "rules/declares_every_export.rb", 2]],
       ruby_rule.rules.map { |rule| [rule.name, rule.ruby, rule.line] }
-    assert_equal Condition::PieceExists.new(piece: "signature", line: 6), ruby_rule.policies.first.condition
-    assert_equal [HelperDeclaration.new(name: "angular", command: "node", file: "lib/helper.js", line: 2),
-      HelperDeclaration.new(name: "routes", command: "bundle", arguments: ["exec", "ruby"], file: "routes.rb", line: 3)], helpers.helpers
-    assert_equal [[RuleDeclaration.new(name: "stub-matches-component", helper: "angular", line: 2)], ["angular"]], [helped.rules, helped.helpers.map(&:name)]
-    assert_equal [ArtifactsRuby.new(ruby: "artifacts.rb", line: 4)], [artifacts.artifacts_ruby]
+    assert_equal Condition::PieceExists.new(piece: "declaration", line: 6), ruby_rule.policies.first.condition
+    assert_equal [HelperDeclaration.new(name: "declarations", command: "node", file: "rules/declarations.mjs", line: 1),
+      HelperDeclaration.new(name: "types", command: "uv", arguments: ["run"], file: "rules/types.py", line: 2)], helpers.helpers
+    assert_equal [[RuleDeclaration.new(name: "declares-every-export", helper: "declarations", line: 2)], ["declarations"]], [helped.rules, helped.helpers.map(&:name)]
+    assert_equal [ArtifactsHelper.new(helper: "artifacts", line: 4), ["artifacts"]], [artifacts.artifacts_helper, artifacts.helpers.map(&:name)]
     assert_equal [["track-debt"], ["has-debt"], ["file", "report-entries"], ["update"]],
       [steps.steps, steps.step_policies, steps.settings, steps.commands].map { |list| list.map(&:name) }
     flag = CommandFlag.new(short: "n", long: "dry-run", value: nil, help: "List the entries update would add and remove, and write nothing", line: 9)
@@ -103,11 +103,11 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_the_plugins_in_the_readme_and_the_tutorial
-    [doc_blocks("README.md", "kdl").fetch(0), doc_blocks("docs/getting-started.md", "kdl").fetch(0)].each do |text|
-      manifest = read(text)
+    {"README.md" => ["migration", "db/migrations/{name}.up.sql"], "docs/getting-started.md" => ["ruby-file", "lib/{path}.rb"]}.each do |page, expected|
+      manifest = read(doc_blocks(page, "kdl").fetch(0))
 
-      assert_equal [["ruby-file", "lib/{path}.rb"]], manifest.artifacts.map { |artifact| [artifact.name, artifact.primary.source] }
-      assert_equal [{"piece" => manifest.artifacts.first.pieces.first.name}], manifest.policies.first.rules.map(&:arguments)
+      assert_equal [expected], manifest.artifacts.map { |artifact| [artifact.name, artifact.primary.source] }, page
+      assert_equal [{"piece" => manifest.artifacts.first.pieces.first.name}], manifest.policies.first.rules.map(&:arguments), page
     end
   end
 
