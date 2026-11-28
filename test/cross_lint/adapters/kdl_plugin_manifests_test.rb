@@ -108,11 +108,11 @@ class KDLPluginManifestsTest < Minitest::Test
   end
 
   def test_reads_the_plugins_in_the_readme_and_the_tutorial
-    {"README.md" => ["migration", "db/migrations/{name}.up.sql"], "docs/getting-started.md" => ["ruby-file", "lib/{path}.rb"]}.each do |page, expected|
+    {"README.md" => ["migration", "db/migrations/{name}.up.sql"], "docs/getting-started.md" => ["catalog", "locales/en/{path}.json"]}.each do |page, expected|
       manifest = read(doc_block(page, "kdl", /^artifact "#{expected.first}"/))
 
       assert_equal [expected], manifest.artifacts.map { |artifact| [artifact.name, artifact.primary.source] }, page
-      assert_equal [{"piece" => manifest.artifacts.first.pieces.first.name}], manifest.policies.first.rules.map(&:arguments), page
+      assert_equal manifest.artifacts.first.pieces.map { |piece| [{"piece" => piece.name}] }, manifest.policies.map { |policy| policy.rules.map(&:arguments) }, page
     end
   end
 

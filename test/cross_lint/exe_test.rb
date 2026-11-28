@@ -8,6 +8,7 @@ require "rbconfig"
 # and GitProjectFilesTest are the only tests that start a process.
 class ExeTest < Minitest::Test
   EXE = File.join(ROOT, "exe", "crosslint")
+  TUTORIAL = "docs/getting-started.md"
 
   def test_prints_the_version_and_exits_with_0
     assert_equal ["crosslint #{shipped_spec.version}\n", "", 0], crosslint("--version")
@@ -41,24 +42,21 @@ class ExeTest < Minitest::Test
       crosslint("check", chdir: File.join(ROOT, "lib"))
   end
 
-  def test_runs_the_tutorials_checks_as_it_shows_them
-    plugin = doc_block("docs/getting-started.md", "kdl", /^artifact "ruby-file"/)
-    configuration = doc_block("docs/getting-started.md", "kdl", /^plugin "debt"/)
-    first = doc_block("docs/getting-started.md", "console", /\A\$ crosslint check\n.*: 3 errors\n\z/m)
-    fixed = doc_block("docs/getting-started.md", "console", /\A\$ crosslint check\n.*: 2 errors\n\z/m)
-    Dir.mktmpdir("crosslint") do |project|
-      write(project, ".config/crosslint/tests/plugin.kdl", plugin)
-      write(project, ".config/crosslint/config.kdl", configuration.sub(%(plugin "debt"\n), ""))
-      %w[currency customer discount invoice line_item payment pdf tax total].each { |name| write(project, "lib/invoices/#{name}.rb", "") }
-      %w[customer discount invoice line_item payment total].each { |name| write(project, "test/invoices/#{name}_test.rb", "") }
-      Open3.capture3("git", "init", "-q", chdir: project)
-      out, err, status = crosslint("check", chdir: project)
+  # The tutorial as a reader works through it, from an empty folder: a
+  # file block, whose first line is a comment with the file's path, is
+  # written whole, and each command of a transcript runs in the page's
+  # order and prints exactly what the page shows after it.
+  def test_runs_the_tutorial_as_it_shows_it
+    blocks = File.read(File.join(ROOT, TUTORIAL)).scan(/^```(console|kdl)\n(.*?)^```$/m)
+    Dir.mktmpdir("crosslint") do |folder|
+      shell = Shell.new(folder) { |words, chdir| crosslint(*words, chdir:) }
+      ran = blocks.map do |language, block|
+        next block.tap { shell.write(block[%r{\A// (\S+)\n}, 1], block) } if language == "kdl"
 
-      assert_equal [first.delete_prefix("$ crosslint check\n"), 1], [out + err, status]
-      write(project, "test/invoices/tax_test.rb", "")
-      out, err, status = crosslint("check", chdir: project)
+        block.scan(/^\$ (.*)\n/).map { |(line)| "$ #{line}\n#{shell.run(line)}" }.join
+      end
 
-      assert_equal [fixed.delete_prefix("$ crosslint check\n"), 1], [out + err, status]
+      assert_equal blocks.map(&:last), ran
     end
   end
 
@@ -103,19 +101,67 @@ class ExeTest < Minitest::Test
     end
   end
 
+  # The mistake is the plugin with the typo the tutorial's message
+  # names, so the message's file and line are checked against the page.
   def test_stops_at_the_mistake_the_tutorial_shows
-    plugin = doc_block("docs/getting-started.md", "kdl", /^artifact "ruby-file"/)
-    configuration = doc_block("docs/getting-started.md", "kdl", /^plugin "debt"/)
+    message = File.read(File.join(ROOT, TUTORIAL))[/If instead you see `(crosslint: [^`]+)`/, 1]
+    path = message[/\Acrosslint: ([^:]+):/, 1]
+    typo, meant = message.scan(/"(\w+)"/).flatten
+    plugin = doc_block(TUTORIAL, "kdl", %r{\A// #{Regexp.escape(path)}\n})
+    configuration = doc_block(TUTORIAL, "kdl", %r{\A// \.config/crosslint/config\.kdl\n})
     Dir.mktmpdir("crosslint") do |project|
-      write(project, ".config/crosslint/tests/plugin.kdl", plugin.sub("primary", "primay"))
+      write(project, path, plugin.sub(meant, typo))
       write(project, ".config/crosslint/config.kdl", configuration.sub(%(plugin "debt"\n), ""))
 
-      assert_equal ["", %(crosslint: .config/crosslint/tests/plugin.kdl:2: unknown node "primay", did you mean "primary"?\n), 2],
-        crosslint("check", "-C", project)
+      assert_equal ["", "#{message}\n", 2], crosslint("check", "-C", project)
     end
   end
 
   private
+
+  # A reader at a shell, in a folder of their own, who runs the few
+  # commands the tutorial gives, and sees what each prints: `crosslint`
+  # as the block given runs it, and `touch` with the braces bash expands.
+  class Shell
+    def initialize(folder, &crosslint)
+      @folder = folder
+      @crosslint = crosslint
+      @status = 0
+    end
+
+    def write(path, text)
+      FileUtils.mkdir_p(File.dirname(here(path)))
+      File.binwrite(here(path), text)
+    end
+
+    def run(line)
+      name, *words = line.split
+      case [name, words]
+      in ["crosslint", _] then return crosslint(words)
+      in ["echo", ["$?"]] then return "#{@status}\n"
+      in ["cat", [path]] then return File.binread(here(path))
+      in ["mkdir", _] then FileUtils.mkdir_p(words.grep_v(/\A-/).map { here(it) })
+      in ["cd", [path]] then @folder = here(path)
+      in ["touch", _] then FileUtils.touch(words.flat_map { expand(it) }.map { here(it) })
+      in ["git", ["init", "--quiet"]] then Open3.capture3("git", "init", "--quiet", chdir: @folder)
+      end
+      ""
+    end
+
+    private
+
+    def crosslint(words)
+      out, err, @status = @crosslint.call(words, @folder)
+      out + err
+    end
+
+    def here(path) = File.join(@folder, path)
+
+    def expand(word)
+      before, choices, after = word.match(/\A([^{]*)\{([^}]*)\}(.*)\z/)&.captures
+      choices ? choices.split(",").map { "#{before}#{it}#{after}" } : [word]
+    end
+  end
 
   def crosslint(*argv, chdir: ROOT)
     out, err, status = Open3.capture3(RbConfig.ruby, EXE, *argv, stdin_data: "", chdir:)
