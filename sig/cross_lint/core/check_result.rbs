@@ -94,7 +94,12 @@ module CrossLint
 
       # The violations to report, the paid-off entries, and under --all each
       # artifact checked that has no violation a step didn't excuse,
-      # sorted by the artifact's path, then plugin, policy, and message.
+      # sorted by the path of the artifact's primary piece, then its line
+      # (an artifact found in a whole file first), its name, the plugin,
+      # the policy, and the message, with an error before a warning when
+      # all of these match. An artifact with no violation has no policy or
+      # message, and goes by its role instead. A paid-off entry has no
+      # path, so its artifact takes the path's place.
       attr_reader findings: Array[Violation | PaidOffEntry | Artifact]
 
       # The summary, whatever the verbosity.
