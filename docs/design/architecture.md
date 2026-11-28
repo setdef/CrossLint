@@ -6,7 +6,7 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 
 | Part | Where | Holds | Requires |
 | --- | --- | --- | --- |
-| Core | `lib/cross_lint/core/` | The domain's value objects, one use case per command, and `CrossLint::Rule`, the class a rule in Ruby inherits from | Ruby's core and standard library |
+| Core | `lib/cross_lint/core/` | The domain's value objects, one use case per command, and `CrossLint::Rule` and `CrossLint::Artifacts`, the classes a helper on CrossLint's Ruby inherits from | Ruby's core and standard library |
 | Ports | `sig/cross_lint/ports.rbs` | One RBS interface for each thing outside the core | Nothing; Ruby never loads them |
 | Adapters | `lib/cross_lint/adapters/` | One implementation of a port per format or system, and an in-memory one of each | The core, and gems |
 | Contract tests | `lib/cross_lint/testing.rb` | For each port, the Minitest tests every adapter of it passes | The core, and Minitest |
@@ -16,7 +16,7 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 
 - **The domain:** artifact, piece (the [glossary](../glossary.md)'s piece), policy, rule result, violation with its identity, and debt entry. Each is immutable, and defined as `class Violation < Data.define(...)`: RBS's runtime checker misses a class defined with a block passed to `Data.define`.
 - **The use cases:** check, initialize a configuration, move a project from ng-nudge (`crosslint init --from-ng-nudge`), and update shared plugins (`crosslint update`). A plugin's command, such as `crosslint debt update`, runs the check use case and tells the plugin's step the command's name and the command flags given; the debt plugin's step then rewrites its file. How plugins reach the engine is [ADR 0006](../decisions/0006-a-plugin-reaches-the-engine-only-through-what-its-manifest-declares.md). A use case takes its ports as keyword arguments and returns a value; it never prints, reads a file, or exits.
-- **The ports:** project files (which files exist, as Git sees the working tree), configuration, plugin manifests, debt file (which also moves a debt file as it is), shared plugins (fetching them, and listing a repository's tags), plugins' Ruby, helpers, report, ng-nudge's files (its `rc.json` and the files of its extension folders), and JavaScript (asking Node what a regular expression matches, and what node-glob finds). Each one's contract is its RBS interface plus its contract tests: change the tests first, then the interface, then the adapters.
+- **The ports:** project files (which files exist, as Git sees the working tree), configuration, plugin manifests, debt file (which also moves a debt file as it is), shared plugins (fetching them, and listing a repository's tags), carried Ruby (loading the files of helpers on CrossLint's Ruby), helpers (running the helpers that a program runs), report, ng-nudge's files (its `rc.json` and the files of its extension folders), and JavaScript (asking Node what a regular expression matches, and what node-glob finds). Each one's contract is its RBS interface plus its contract tests: change the tests first, then the interface, then the adapters.
 
 ## Rules
 
@@ -25,4 +25,4 @@ How CrossLint's code divides, and which way dependencies point. The decision is 
 - Every adapter of a port passes that port's contract tests, the in-memory adapter included; the use cases' tests run against the in-memory adapters.
 - Nothing outside `plugins/angular/` refers to anything inside it, so it can move to a separate repository.
 - Every file under `lib/` has an RBS signature at the matching path under `sig/`. Steep checks `lib/` against `sig/`, and the test suite runs a second time under RBS's runtime checker. CrossLint checks that every file has its signature with a local plugin, the one in the README's first example.
-- The Ruby of a plugin in `plugins/`, the file of each helper on `command=(crosslint)"ruby"`, loads at run time, once for each check, so the tests load it once as well, each plugin's into a separate module (`test/plugin_ruby.rb`), and coverage measures it as it measures `lib/`.
+- The file of each helper on `command=(crosslint)"ruby"` in a plugin in `plugins/` loads at run time, once for each check, so the tests load it once as well, each plugin's into a separate module (`test/carried_ruby.rb`), and coverage measures it as it measures `lib/`.

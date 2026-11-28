@@ -4,7 +4,7 @@ How CrossLint loads and runs plugins, and why each is done the way it is. The de
 
 ## The engine and its plugins
 
-- **The engine has no role, language, or policy built in.** It loads the configuration and the plugins, finds each artifact's files, applies policies, runs rules, applies severities and settings, prints the report, and sets the exit status. Angular and debt tracking are plugins like any other, and a project that lists neither runs without them.
+- **The engine has no role, language, or policy built in.** It loads the configuration and the plugins, finds each artifact and its pieces, applies policies, runs rules, applies severities and settings, prints the report, and sets the exit status. Angular and debt tracking are plugins like any other, and a project that lists neither runs without them.
 - **The built-in plugins use only what any plugin can.** Debt tracking needs a step that sees every violation after the rules have run, a command under its name, and settings; the Angular plugin needs a helper that declares its artifacts from its settings and runs its rules, and a key for each artifact that a debt entry can hold. Each is a kind of line in `plugin.kdl`, so a shared plugin can have the same reach, and the surface is used before strangers rely on it.
 - **A local plugin, a shared plugin, and a built-in one load the same way,** from a folder with a `plugin.kdl`. A built-in plugin's folder ships inside CrossLint. Nothing outside `plugins/angular/` depends on what's inside it, so it can move to a repository of its own.
 
@@ -16,20 +16,20 @@ How CrossLint loads and runs plugins, and why each is done the way it is. The de
 - **The first word on the line is settled before any plugin is loaded or fetched,** from CrossLint's commands and the names the configuration lists; a shared plugin's name comes from its URL. Only a word that names a shared plugin not fetched yet fetches it, so a typo never reaches the network.
 - **Help never fails.** Asking for help reads only what is on disk, never fetches, and shows what it can when the configuration can't be read, because help is what someone reaches for when something is wrong.
 
-## Ruby rules
-
-- **A helper on `command=(crosslint)"ruby"` runs inside CrossLint's process,** on the Ruby CrossLint carries, so a project needs no Ruby, and its rules keep what CrossLint guarantees about files (exact names, ignored files left out, links out of the project refused), a trace for each fault, and a time limit for each artifact. `(crosslint)` marks the runtime in the same notation as any other command, so a plugin author writes every helper one way, but CrossLint starts no program for it.
-- **A gem CrossLint wasn't built with can't be loaded,** and `bundler/inline` is refused: it would install gems into CrossLint's install folder at run time, which may not be writable and is shared by every project.
-- **One plugin's fault never stops the others.** A rule that raises, runs too long on one artifact, or recurses until Ruby raises `SystemStackError` is a fault in its plugin; the other plugins still run, and the check exits with 2.
-- **Files a rule requires load into one Ruby,** so two plugins whose files define the same top-level constant collide. A rule keeps its constants inside its class.
-
-## Helpers
+## Helpers a program runs
 
 - **A helper whose command is a program reads files of its language with that language's tools,** on the project's runtime, found on the `PATH`, so it runs with the versions the project has. The Angular plugin's helper runs on the project's Node and reads TypeScript with the ts-morph the plugin carries, which carries TypeScript 6.0, so a project installs no package for it. On Windows, the command is found with each extension in `PATHEXT`, since `node` is `node.exe` or `node.cmd` there.
 - **A helper gets the environment CrossLint was started with,** not the one the app sets up for the Ruby it carries, so `RUBYOPT`, `BUNDLE_*`, and the app's folders on `PATH` never reach it, and a helper that runs `ruby` gets the project's Ruby.
 - **Ending a helper ends everything it started.** Ending only its process leaves its children running, so on macOS and Linux it starts in a process group of its own, and on Windows in a job object; `taskkill /T` alone leaves an MSYS2 child running. A helper CrossLint can't contain is ended at once, never left running, which is why every call that sets up the job object is checked.
 - **Helpers end in parallel** at the end of a check, so one slow helper doesn't hold up the rest.
 - **On Windows, a helper is written to in binary mode,** or Ruby turns each `\n` into `\r\n`, and a helper that has already exited makes closing its input raise `EPIPE`, which isn't an error of the check.
+
+## Helpers on CrossLint's Ruby
+
+- **A helper on `command=(crosslint)"ruby"` runs inside CrossLint's process,** on the Ruby CrossLint carries, so a project needs no Ruby, and its rules keep what CrossLint guarantees about files (exact names, ignored files left out, links out of the project refused), a trace for each fault, and a time limit for each artifact. `(crosslint)` marks the runtime in the same notation as any other command, so a plugin author writes every helper one way, but CrossLint starts no program for it.
+- **A gem CrossLint wasn't built with can't be loaded,** and `bundler/inline` is refused: it would install gems into CrossLint's install folder at run time, which may not be writable and is shared by every project.
+- **One plugin's fault never stops the others.** A rule that raises, runs too long on one artifact, or recurses until Ruby raises `SystemStackError` is a fault in its plugin; the other plugins still run, and the check exits with 2.
+- **Files a rule requires load into one Ruby,** so two plugins whose files define the same top-level constant collide. A rule keeps its constants inside its class.
 
 ## Shared plugins
 
