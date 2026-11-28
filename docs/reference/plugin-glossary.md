@@ -1,6 +1,6 @@
 # Glossary for plugin authors
 
-The words for writing a plugin, with the meaning each has in a `plugin.kdl` and in a plugin's Ruby. The words every user of CrossLint shares, such as artifact, piece, role, policy, and rule, are in [the glossary](../glossary.md); everything a `plugin.kdl` can hold is in [the plugin reference](plugin.md).
+The words for writing a plugin, with the meaning each has in a `plugin.kdl` and in a plugin's helpers. The words every user of CrossLint shares, such as artifact, piece, role, policy, and rule, are in [the glossary](../glossary.md); everything a `plugin.kdl` can hold is in [the plugin reference](plugin.md).
 
 ## Declaring
 
@@ -16,15 +16,17 @@ The words for writing a plugin, with the meaning each has in a `plugin.kdl` and 
 | **built-in rule** | A rule CrossLint has, which it runs wherever a policy's `rule` line gives its name, with no code: `piece-exists` and `piece-absent`. | core rule |
 | **setting** | A value a plugin takes in its block in the project's configuration, such as the Angular plugin's `src-dir`, declared in the manifest with `setting NAME`. | option |
 
-## Ruby and helpers
+## Helpers
 
 | Word | Meaning | Avoid |
 | --- | --- | --- |
-| **Ruby rule** | A rule whose helper runs on the Ruby CrossLint carries: a class that inherits from `CrossLint::Rule`, in the helper's file. Its `check` gets one artifact and returns its violations. | custom rule |
+| **helper** | A command and a file a plugin carries, in any language, which run its rules or declare its artifacts: on a program on the project's `PATH`, such as the Angular plugin's, which runs on Node and reads TypeScript with ts-morph, or on CrossLint's Ruby, written `command=(crosslint)"ruby"`, so that every project can run it. | adapter, sidecar |
+| **line protocol** | How CrossLint and a helper that a program runs talk: CrossLint writes each request to the helper's standard input as one line of JSON, and the helper answers each with one line of JSON on its standard output. | |
+| **CrossLint's Ruby** | The Ruby that CrossLint carries and runs on, which every project has. A helper on it runs inside CrossLint and speaks no line protocol. | |
+| **Ruby rule** | A rule whose helper runs on CrossLint's Ruby: a class that inherits from `CrossLint::Rule`, in the helper's file. Its `check` gets one artifact and returns its violations. | custom rule |
 | **project files** | The files a Ruby rule sees through `project_files`: those Git tracks, and the untracked ones it doesn't ignore. | |
 | **detail** | What tells apart the violations one rule finds on one artifact, such as a missing input's name, so the debt plugin can excuse each alone. | |
-| **helper** | A command and a file a plugin carries, which run its rules or declare its artifacts: on the Ruby CrossLint carries, written `command=(crosslint)"ruby"`, so that every project can run it, or on a program on the project's `PATH`, such as the Angular plugin's, which runs on Node and reads TypeScript with ts-morph. | adapter, sidecar |
-| **fault** | What stops a plugin, such as an exception its Ruby raises, a gem it requires that CrossLint wasn't built with, a helper that fails, a regex search that runs past its time limit, or two artifacts of one role with one name. The plugin reports nothing else, and `crosslint check` exits with 2. | crash |
+| **fault** | What stops a plugin, such as a helper that fails or answers with an error, a regex search that runs past its time limit, two artifacts of one role with one name, or, in CrossLint's Ruby, an exception the helper raises or a gem it requires that CrossLint wasn't built with. The plugin reports nothing else, and `crosslint check` exits with 2. | crash |
 | **mistake** | A line of a manifest or a configuration that CrossLint can't use. CrossLint stops at it with exit status 2, before it checks anything, and says which file and line. | invalid config |
 | **notice** | A warning CrossLint gives about a plugin rather than an artifact, such as an artifact declaration whose `primary` pattern matches nothing. | |
 
