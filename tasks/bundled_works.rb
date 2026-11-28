@@ -197,8 +197,17 @@ module BundledWorks
       unless thread.join(seconds)
         Process.kill("KILL", thread.pid)
         thread.join
+        # A process the killed one started can still hold the output open,
+        # and the block's end then closes it under its reader.
+        readers.each do |reader|
+          reader.report_on_exception = false
+          reader.join(1)
+        end
         raise Failure, "#{command.join(' ')} took more than #{seconds} seconds"
       end
+      # The output ends only once every process holding it has exited, so
+      # the readers finish before the block's end closes it.
+      readers.each(&:join)
       raise Failure, "#{command.join(' ')} failed:\n#{readers.last.value}" unless thread.value.success?
     end
   end

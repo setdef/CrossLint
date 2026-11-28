@@ -99,6 +99,16 @@ class BundledWorksTest < Minitest::Test
     assert_match(/ failed:\nno network\n\z/, error.message)
   end
 
+  # npm exits while a process it started still holds its output open, so
+  # the readers are still reading when the run ends.
+  def test_reads_until_the_output_ends_after_npm_exits
+    late = [RbConfig.ruby, "-e", %(spawn(#{RbConfig.ruby.dump}, "-e", "sleep 0.3; print 'late'"))]
+
+    _, error = capture_io { BundledWorks.limited(late, 30) }
+
+    assert_equal "", error
+  end
+
   def test_stops_a_run_of_npm_that_takes_longer_than_its_time_limit
     error = assert_raises(BundledWorks::Failure) { BundledWorks.limited([RbConfig.ruby, "-e", "sleep"], 0.5) }
 
