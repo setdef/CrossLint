@@ -14,10 +14,12 @@ module CrossLint
     # from what the project's configuration lists: it is the name of a
     # plugin listed, fetched or not, or else this raises Error. When
     # `listing` is the mistake that stopped the reading, only a word near a
-    # command of CrossLint's is an error, since it may be a plugin's name.
+    # command of CrossLint's, or a flag's name, is an error, since it may
+    # be a plugin's name; any other word raises the mistake, unless
+    # `helping`, because help never fails.
     # `built_in` gives the names of the commands of each built-in plugin,
     # which a message may need to name a plugin that isn't listed.
-    def resolve: (Array[String] words, Core::PluginListing | Core::Mistake listing, ^() -> Hash[String, Array[String]] built_in) -> void
+    def resolve: (Array[String] words, Core::PluginListing | Core::Mistake listing, ^() -> Hash[String, Array[String]] built_in, ?helping: bool) -> void
 
     # The plugin that the first of `words` names, which `resolve` found
     # among `plugins`, and its command, or nil for the command when
@@ -31,9 +33,10 @@ module CrossLint
     # The names of the shared plugins `listing` lists that aren't fetched.
     def unfetched: (Core::PluginListing listing) -> Array[String]
 
-    # Raises Error naming the nearest command of CrossLint's to `word`, if
-    # one is near.
-    def refuse_typo: (String word) -> void
+    # Raises Error naming the nearest command of CrossLint's to `word`, or
+    # the flag it is the name of, if there is one, and else raises `mistake`
+    # unless `helping`.
+    def refuse_unreadable: (String word, Core::Mistake mistake, bool helping) -> void
 
     # Raises Error for `name`, which no listed plugin has: with the
     # command's place in a built-in plugin the project doesn't list when
@@ -42,6 +45,14 @@ module CrossLint
 
     # The message for `word`, which none of the plugin's `commands` is.
     def missing: (String name, String word, Array[String] commands) -> String
+
+    # The names `word` may be a mistake for: the nearest command of
+    # CrossLint's, the nearest of `others`, and the flag it is the name of.
+    def guesses: (String word, Array[String] others) -> Array[String]
+
+    # The names of the flags every command takes, as the program's help
+    # lists them.
+    def flag_names: () -> Array[String]
 
     # The names of CrossLint's commands.
     def commands: () -> Array[String]

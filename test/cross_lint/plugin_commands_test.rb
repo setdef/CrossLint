@@ -76,7 +76,8 @@ class PluginCommandsTest < Minitest::Test
     refusal = assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(%w[chek], broken, -> { {} }) }
 
     assert_equal "crosslint has no command chek; did you mean check?", refusal.message
-    assert_nil @commands.resolve(%w[debt], broken, -> { {} })
+    assert_nil @commands.resolve(%w[debt], broken, -> { {} }, helping: true)
+    assert_same broken, assert_raises(Core::Mistake) { @commands.resolve(%w[debt], broken, -> { {} }) }
     # Whatever kind of mistake stopped the reading.
     kind = Class.new(Core::Mistake).new("lists nothing", file: FILE)
 
@@ -84,6 +85,15 @@ class PluginCommandsTest < Minitest::Test
       assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(%w[chek], kind, -> { {} }) }.message
     assert_equal %(crosslint has no command "ch\\u00E9ck"; did you mean check?),
       assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(["ch\u00E9ck"], broken, -> { {} }) }.message
+  end
+
+  def test_points_a_word_that_is_a_flags_name_at_the_flag
+    assert_refused "crosslint has no command version, and the configuration lists no plugin of that name; did you mean --version?", %w[version]
+    assert_refused "crosslint has no command debug, and the configuration lists no plugin of that name; did you mean --debug?", %w[debug], plugins: [@plain]
+    broken = Core::Mistake.new("lists nothing", file: FILE)
+
+    assert_equal "crosslint has no command version; did you mean --version?",
+      assert_raises(CrossLint::CommandLine::Error) { @commands.resolve(%w[version], broken, -> { {} }, helping: true) }.message
   end
 
   def test_a_shared_plugin_not_fetched_yet_is_listed_by_the_name_its_url_gives

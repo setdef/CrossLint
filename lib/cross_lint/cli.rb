@@ -161,7 +161,7 @@ module CrossLint
     def resolved(spec, line)
       commands = PluginCommands.new(spec)
       found = listing(spec, line)
-      commands.resolve(line.words, found, -> { application(spec).built_in_commands })
+      commands.resolve(line.words, found, -> { application(spec).built_in_commands }, helping: line.action == :help || line.command&.name == "help")
       [commands, found]
     end
 

@@ -331,6 +331,25 @@ class CLITest < Minitest::Test
       check("chekc", "now", app: app(debt: true))
   end
 
+  def test_a_word_that_is_a_flags_name_stops_with_2_and_names_the_flag
+    assert_equal ["", "crosslint: crosslint has no command version, and the configuration lists no plugin of that name; did you mean --version?\n", 2],
+      check("version", app: app)
+    assert_equal ["", "crosslint: crosslint has no command quiet, and the configuration lists no plugin of that name; did you mean --quiet?\n", 2],
+      check("quiet", app: app(debt: true))
+  end
+
+  def test_a_word_when_the_project_cant_be_read_stops_with_the_mistake_unless_it_is_a_typo_or_a_flags_name_or_help_is_asked
+    mistake = CrossLint::Core::Mistake.new("lists nothing", file: ".config/crosslint/config.kdl")
+    broken = app(broken: mistake)
+
+    assert_equal ["", "crosslint: .config/crosslint/config.kdl: lists nothing\n", 2], check("bogus", app: broken)
+    assert_equal ["", "crosslint: .config/crosslint/config.kdl: lists nothing\n", 2], check("debt", app: broken)
+    assert_equal ["", "crosslint: crosslint has no command version; did you mean --version?\n", 2], check("version", app: broken)
+    assert_equal ["", "crosslint: crosslint has no command version; did you mean --version?\n", 2], helping("version", "--help", app: broken)
+    assert_equal 0, helping("bogus", "--help", app: broken).last
+    assert_equal 0, helping("help", "bogus", app: broken).last
+  end
+
   def test_a_mistyped_command_fetches_no_shared_plugin
     fetched = StringIO.new
 

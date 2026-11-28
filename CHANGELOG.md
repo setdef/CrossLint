@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The warning that no file matches a role's `primary` pattern says `the primary pattern of role "doc"`, where it said `the files of artifact "doc"`. The warning that no file matches the pattern of any of a plugin's roles says `the primary pattern of any role of plugin NAME`, where it said `the files of any artifact of plugin NAME`.
 - The Angular plugin reads TypeScript 6.0 with the ts-morph the plugin carries, so a project needs no `typescript` package. The plugin still needs [Node](https://nodejs.org/) on the `PATH`.
 
+### Fixed
+
+- `crosslint version`, and any other word that isn't one of CrossLint's commands, stops with exit status 2 in a folder with no `.config/crosslint/config.kdl`, where it printed the program's help and exited with 0. The word `version` gets `did you mean --version?`, as does any word that is the name of a flag. A word that may be a plugin's name, which CrossLint can't know without the configuration, stops with the message that says the configuration is missing. `--help`, `-h`, and `help` still print help.
+
 ## [0.2.0] - 2026-11-26
 
 ### Added

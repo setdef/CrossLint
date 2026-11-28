@@ -9,10 +9,12 @@ module CrossLint
     # Settles the first word before any plugin is fetched or loaded: the
     # name of a plugin the configuration lists, whether or not it is
     # fetched, or else a mistake, which raises. When the configuration
-    # can't be read, only a typo of a command of CrossLint's is one.
-    def resolve(words, listing, built_in)
+    # can't be read, it may be a plugin's name, so only a typo of a command
+    # of CrossLint's, or a flag's name, is a mistake, unless `helping`: help
+    # never fails, so it goes on, and anything else raises the configuration's.
+    def resolve(words, listing, built_in, helping: false)
       name = words.fetch(0)
-      return refuse_typo(name) if listing.is_a?(Core::Mistake)
+      return refuse_unreadable(name, listing, helping) if listing.is_a?(Core::Mistake)
 
       listed = listing.plugins.map(&:name) + unfetched(listing)
       unlisted(name, words.fetch(1, nil), listing, built_in) unless listed.include?(name)
@@ -45,9 +47,11 @@ module CrossLint
       end
     end
 
-    def refuse_typo(word)
-      guess = nearest(word, commands)
-      raise error("#{@spec.bin} has no command #{shown(word)}; did you mean #{guess}?") if guess
+    def refuse_unreadable(word, mistake, helping)
+      names = guesses(word, [])
+      raise error("#{@spec.bin} has no command #{shown(word)}; did you mean #{Core::Spelling.list(names)}?") unless names.empty?
+
+      raise mistake unless helping
     end
 
     def unlisted(name, word, listing, built_in)
@@ -56,15 +60,24 @@ module CrossLint
       end
 
       others = listing.plugins.reject { |plugin| plugin.manifest.commands.empty? }.map(&:name) + unfetched(listing)
-      guesses = [nearest(name, commands), nearest(name, others)].compact.uniq
+      names = guesses(name, others)
       raise error("#{@spec.bin} has no command #{shown(name)}, and the configuration lists no plugin of that name; " +
-        (guesses.empty? ? "#{@spec.bin} --help lists the commands" : "did you mean #{Core::Spelling.list(guesses)}?"))
+        (names.empty? ? "#{@spec.bin} --help lists the commands" : "did you mean #{Core::Spelling.list(names)}?"))
     end
 
     def missing(name, word, commands)
       guess = nearest(word, commands)
       "#{scope(name)} has no command #{shown(word)}; " + (guess ? "did you mean #{guess}?" : "its commands are #{Core::Spelling.list(commands, "and")}")
     end
+
+    # The nearest command of CrossLint's and the nearest of `others`, and
+    # the flag the word is the name of, such as --version for version.
+    def guesses(word, others)
+      flag = "--#{word}" if flag_names.include?(word)
+      [nearest(word, commands), nearest(word, others), flag].compact.uniq
+    end
+
+    def flag_names = (@spec.global_flags + [CommandLine::HELP, CommandLine::VERSION]).map(&:long)
 
     def commands = @spec.commands.map(&:name)
 
